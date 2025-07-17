@@ -1,306 +1,49 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
-import { useState } from "react";
-import { Link, useNavigate } from 'react-router-dom';
 
-const NavBar = () => {
-  const [activeItem, setActiveItem] = useState<string | null>(null);
-  const navigate = useNavigate();
-  
-  const handleNavigate = (url: string) => {
-    navigate(url);
-  }
+import { Bell, Menu, User } from "lucide-react";
+import MobileSidebar from "./MobileSidebar";
+import { Button } from "./ui/button";
+import { Separator } from "@/components/ui/separator"
 
-  return (
-    <NavigationMenu>
-      {/* Usamos group para mantener hover entre trigger y dropdown */}
-      <div
-        className="relative flex items-start group"
-        onMouseLeave={() => setActiveItem(null)}
-      >
-        {/* Menú lateral */}
-        <NavigationMenuList className="flex flex-col items-start gap-2 z-10 bg-white pt-1">
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter hover:bg-amber-400" onClick={() => handleNavigate('/fotografia')} onMouseEnter={() => setActiveItem("item1")}>
-              Fotografía & filmación
-            </NavigationMenuTrigger>
-          </NavigationMenuItem>
+interface NavBarProps{
+  onToggle: () => void
+}
 
+const NavBar: React.FC<NavBarProps> = ({onToggle}) => {
+  return <>
+       {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Mobile Hamburger */}
+              <MobileSidebar />
 
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter" onClick={() => handleNavigate('/electronica')} onMouseEnter={() => setActiveItem("item2")}>
-              Electrónica
-            </NavigationMenuTrigger>
-          </NavigationMenuItem>
+              {/* Desktop Hamburger */}
+              <Button variant="ghost" size="icon" onClick={onToggle} className="hidden lg:flex hover:bg-gray-100 cursor-pointer">
+                <Menu className="h-5 w-5" />
+              </Button>
 
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter" onMouseEnter={() => setActiveItem("item3")}>
-              Informática
-            </NavigationMenuTrigger>
-          </NavigationMenuItem>
+              <div className="lg:hidden">
+                <h1 className="text-xl font-semibold text-gray-900">GROUP TOURS</h1>
+              </div>
+            </div>
 
-          {/* <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter" onMouseEnter={() => setActiveItem("item4")}>
-              Videojuegos & juguetes
-            </NavigationMenuTrigger>
-          </NavigationMenuItem>
-
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter" onMouseEnter={() => setActiveItem("item5")}>
-              Belleza, salud & cosméticos
-            </NavigationMenuTrigger>
-          </NavigationMenuItem>
-
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter" onMouseEnter={() => setActiveItem("item6")}>
-              Electrodomésticos
-            </NavigationMenuTrigger>
-          </NavigationMenuItem>
-
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter" onMouseEnter={() => setActiveItem("item7")}>
-              Muebles
-            </NavigationMenuTrigger>
-          </NavigationMenuItem>
-
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter" onMouseEnter={() => setActiveItem("item8")}>
-              Deportes & Fitness
-            </NavigationMenuTrigger>
-          </NavigationMenuItem>
-
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="ponter" onMouseEnter={() => setActiveItem("item9")}>
-              Accesorio para auto & moto
-            </NavigationMenuTrigger>
-          </NavigationMenuItem> */}
-        </NavigationMenuList>
-
-        {/* Dropdown pegado al menú (sin espacio) */}
-        {activeItem && (
-          <div
-            className="absolute top-0 left-full w-fit p-4 border rounded-md shadow-lg z-0 bg-white"
-          >
-            {activeItem === "item1" && (
-              <div className="flex gap-2 w-10/12 ">
-                <div className="w-full">
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Cámaras</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink asChild className="hover:text-amber-400 hover:font-medium">
-                    <Link to="/camaras">Compactas</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Especial Zoom</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Reflex/Mirrorless</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Drones</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="whitespace-nowrap hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Drones & cuadricópteros</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Baterias & Cargadores</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Flash</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Lentes</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Memoria</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Mochilas & Estuche</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Tripode & Monopies</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Otros accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">LED</Link>
-                  </NavigationMenuLink>
-                </div>
-                
-                <div>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Filmadoras</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Compactas</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="whitespace-nowrap hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Deportes y Acción</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Profesionales</Link>
-                  </NavigationMenuLink>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-400 rounded-full"></div>
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+              <div className="flex items-center gap-3 bg-blue-50 rounded-full px-4 py-2 border border-blue-200">
+                <span className="text-sm text-blue-700 font-medium">Bienvenido</span>
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <User className="h-4 w-4 text-white" />
                 </div>
               </div>
-            )}
-
-            {activeItem === "item2" && (
-              <div className="flex gap-2 w-10/12 ">
-                <div className="w-full">
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Cámaras</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink asChild className="hover:text-amber-400 hover:font-medium">
-                    <Link to="/camaras">Compactas</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Especial Zoom</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Reflex/Mirrorless</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Drones</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="whitespace-nowrap hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Drones & cuadricópteros</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Baterias & Cargadores</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Flash</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Lentes</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Memoria</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Mochilas & Estuche</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Tripode & Monopies</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Otros accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">LED</Link>
-                  </NavigationMenuLink>
-                </div>
-                
-                <div>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Filmadoras</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Compactas</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="whitespace-nowrap hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Deportes y Acción</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Profesionales</Link>
-                  </NavigationMenuLink>
-                </div>
-              </div>
-            )}
-
-            {activeItem === "item3" && (
-              <div className="flex gap-2 w-10/12 ">
-                <div className="w-full">
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Cámaras</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink asChild className="hover:text-amber-400 hover:font-medium">
-                    <Link to="/camaras">Compactas</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Especial Zoom</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Reflex/Mirrorless</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Drones</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="whitespace-nowrap hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Drones & cuadricópteros</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Baterias & Cargadores</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Flash</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Lentes</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Memoria</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Mochilas & Estuche</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Tripode & Monopies</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Otros accesorios</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">LED</Link>
-                  </NavigationMenuLink>
-                </div>
-                
-                <div>
-                  <NavigationMenuLink className="font-semibold hover:text-amber-400" asChild>
-                    <Link to="/camaras">Filmadoras</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Compactas</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="whitespace-nowrap hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Deportes y Acción</Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink className="hover:text-amber-400 hover:font-medium" asChild>
-                    <Link to="/camaras">Profesionales</Link>
-                  </NavigationMenuLink>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
-        )}
-      </div>
-    </NavigationMenu>
-  );
+        </header>
+  </>
 };
 
 export default NavBar;

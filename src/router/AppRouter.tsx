@@ -1,9 +1,10 @@
-import Camaras from '@/pages/Camaras';
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 const MainLayout = lazy(() => import('@/layout/MainLayout'));
-const Home = lazy(() => import('@/pages/Home'));
+const HomePage = lazy(() => import('@/pages/Home'));
+const PermisosPage = lazy(() => import('@/pages/PermisosPage'));
+const RolesPage = lazy(() => import('@/pages/RolesPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const AppRouter = () => {
@@ -15,12 +16,13 @@ const AppRouter = () => {
                               </div>
                             </div>}>
             <Routes>
-            <Route element={<MainLayout />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/camaras" element={<Camaras />} />
-            </Route>
+              <Route element={<MainLayout />}>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/permisos" element={<PermisosPage />} />
+                  <Route path="/roles" element={<RolesPage />} />
+              </Route>
 
-            <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
         </Suspense>
       </BrowserRouter>

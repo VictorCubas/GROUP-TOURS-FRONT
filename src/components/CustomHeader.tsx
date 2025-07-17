@@ -1,9 +1,9 @@
 import nisseiLogo from '@/assets/nissei-logo-oficial.jpg';
 import CartContainer from './CartContainer';
-import FavoritosContainer from './FavoritosContainer';
+// import FavoritosContainer from './FavoritosContainer';
 import AuthContainer from './AuthContainer';
 import BuscadorContainer from './BuscadorContainer';
-import MenuCustom from './MenuCustom';
+// import MenuCustom from './MenuCustom';
 
 
 const CustomHeader = () => {
@@ -18,13 +18,13 @@ const CustomHeader = () => {
 
         <BuscadorContainer />
         <div className='flex items-center gap-x-6 ml-3 w-3/12'>
-          <FavoritosContainer />        
+          {/* <FavoritosContainer />         */}
           <CartContainer />
           <AuthContainer />
         </div>
 
       </header>
-      <MenuCustom />
+      {/* <MenuCustom /> */}
     </>
   )
 }
