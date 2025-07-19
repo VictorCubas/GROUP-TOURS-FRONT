@@ -45,7 +45,6 @@ interface SiderBarProps{
     onToggle: () => void
 }
 
-// Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
 
 const SideBar: React.FC<SiderBarProps> = ({isCollapsed, onToggle}) => {
   const [expandedItems, setExpandedItems] = useState<string[]>(["Seguridad"])
