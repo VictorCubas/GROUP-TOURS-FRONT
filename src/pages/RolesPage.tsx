@@ -801,18 +801,18 @@ export default function RolesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="border-gray-200">
-                            <DropdownMenuItem className="hover:bg-blue-50">
+                            <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer">
                               <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                              Ver permisos
+                              Ver detalles
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="hover:bg-emerald-50">
+                            <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer">
                               <Edit className="h-4 w-4 mr-2 text-emerald-500" />
                               Editar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600 hover:bg-red-50">
+                            <DropdownMenuItem className="text-red-600 hover:bg-red-50 cursor-pointer">
                               <Trash2 className="h-4 w-4 mr-2" />
-                              Eliminar
+                              Desactivar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

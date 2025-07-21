@@ -78,7 +78,7 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed, onToggle}) => {
           )}
         </div>
 
-        <nav className={`flex-1 p-4 space-y-2 overflow-y-auto ${isCollapsed ? "px-2" : ""}`}>
+        <nav className={`flex-1 p-4 space-y-2 overflow-y-auto scrollable ${isCollapsed ? "px-2" : ""}`}>
           {sidebarItems.map((item) => (
             <div key={item.label}>
               {item.submenu ? (
@@ -152,7 +152,7 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed, onToggle}) => {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className={`flex items-center gap-3 p-3 rounded-lg hover:bg-red-900/20 transition-colors w-full group ${
+                className={`cursor-pointer flex items-center gap-3 p-3 rounded-lg hover:bg-red-900/20 transition-colors w-full group ${
                   isCollapsed ? "justify-center" : ""
                 }`}
               >
