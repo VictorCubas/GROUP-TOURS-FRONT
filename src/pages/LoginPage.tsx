@@ -4,7 +4,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { Eye, EyeOff, Lock, Mail, Shield, ArrowRight, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail, Shield, Plane, ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -78,7 +78,7 @@ export default function LoginPage() {
         {/* Logo y Header */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
-            <Shield className="w-10 h-10 text-white" />
+            <Plane className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">GROUP TOURS</h1>
           <p className="text-blue-200">Sistema de Gestión de Tours</p>
