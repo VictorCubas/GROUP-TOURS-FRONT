@@ -151,14 +151,15 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed, onToggle}) => {
         <div className={`p-4 border-t border-slate-700 ${isCollapsed ? "px-2" : ""}`}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Link
+              to='/login'
                 className={`cursor-pointer flex items-center gap-3 p-3 rounded-lg hover:bg-red-900/20 transition-colors w-full group ${
                   isCollapsed ? "justify-center" : ""
                 }`}
               >
                 <LogOut className="h-5 w-5 text-red-400" />
                 {!isCollapsed && <span>Logout</span>}
-              </button>
+              </Link>
             </TooltipTrigger>
             {isCollapsed && <TooltipContent side="right">Logout</TooltipContent>}
           </Tooltip>
