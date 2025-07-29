@@ -11,8 +11,7 @@ const RolesPage = lazy(() => import('@/pages/RolesPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const AppRouter = () => {
-  const {initializeSession, session} = useSessionStore()
-  console.log('session 1: ', session)
+  const {initializeSession} = useSessionStore();
   
   useEffect(() => {
     initializeSession();

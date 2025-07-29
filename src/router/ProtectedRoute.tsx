@@ -2,8 +2,7 @@ import { useSessionStore } from '@/store/sessionStore'
 import { Navigate, Outlet } from 'react-router-dom'
 
 const ProtectedRoute = () => {
-  const { session, loading } = useSessionStore()
-  console.log('protecting session: ', session)
+  const { session, loading } = useSessionStore();
 
   if (loading) {
     return (
