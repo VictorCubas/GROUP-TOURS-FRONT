@@ -1,5 +1,7 @@
-import { lazy, Suspense } from 'react'
+import { useSessionStore } from '@/store/sessionStore';
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import ProtectedRoute from './ProtectedRoute';
 
 const MainLayout = lazy(() => import('@/layout/MainLayout'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -9,6 +11,13 @@ const RolesPage = lazy(() => import('@/pages/RolesPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const AppRouter = () => {
+  const {initializeSession, session} = useSessionStore()
+  console.log('session 1: ', session)
+  
+  useEffect(() => {
+    initializeSession();
+  }, [initializeSession,])
+  
   return (
      <BrowserRouter>
         <Suspense fallback={<div id="global-loader-fallback">
@@ -18,10 +27,12 @@ const AppRouter = () => {
                             </div>}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route element={<MainLayout />}>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/permisos" element={<PermisosPage />} />
-                  <Route path="/roles" element={<RolesPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/permisos" element={<PermisosPage />} />
+                    <Route path="/roles" element={<RolesPage />} />
+                </Route>
               </Route>
 
               <Route path="*" element={<NotFound />} />
