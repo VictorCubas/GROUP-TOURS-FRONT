@@ -21,6 +21,8 @@ const sidebarItems = [
     submenu: [
       { label: "Terrestres", href: "/paquetes/terrestres", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Aereos", href: "/paquetes/aereos", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      { label: "Pasajeros", href: "/paquetes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      // { icon: Users, label: "Pasajeros", href: "#", color: "text-emerald-400" },
     ],
   },
   {
@@ -36,7 +38,6 @@ const sidebarItems = [
       { label: "Permisos", href: "/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
     ],
   },
-  { icon: Users, label: "Pasajeros", href: "#", color: "text-emerald-400" },
   { icon: FileText, label: "Facturación", href: "#", color: "text-amber-400" },
   { icon: Settings, label: "Proveedores", href: "#", color: "text-indigo-400" },
   { icon: FileText, label: "Documentos", href: "#", color: "text-teal-400" },
