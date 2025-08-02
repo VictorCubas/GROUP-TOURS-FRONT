@@ -7,18 +7,22 @@ import {
   ChevronUp,
   Shield,
   Users,
-  Package,
   FileText,
   Settings,
   LogOut,
+  Plane,
 } from "lucide-react";
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Button } from './ui/button';
+import { useSessionStore } from '@/store/sessionStore';
 
 const sidebarItems = [
-  { icon: Package, label: "Paquetes de viajes", href: "#", color: "text-purple-400" ,
+  { icon: Plane, label: "Paquetes de viajes", href: "#", color: "text-purple-400" ,
     submenu: [
       { label: "Terrestres", href: "/paquetes/terrestres", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Aereos", href: "/paquetes/aereos", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      { label: "Pasajeros", href: "/paquetes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      // { icon: Users, label: "Pasajeros", href: "#", color: "text-emerald-400" },
     ],
   },
   {
@@ -31,10 +35,9 @@ const sidebarItems = [
       { label: "Empleados", href: "/empleados", color: "text-orange-400", bgcolor: "bg-orange-400" },
       { label: "Personas", href: "/personas", color: "text-pink-400", bgcolor: "bg-pink-400" },
       { label: "Roles", href: "/roles", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
-      { label: "Permisos", href: "/permisos", active: true, color: "text-blue-400", bgcolor: "bg-blue-400" },
+      { label: "Permisos", href: "/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
     ],
   },
-  { icon: Users, label: "Pasajeros", href: "#", color: "text-emerald-400" },
   { icon: FileText, label: "Facturación", href: "#", color: "text-amber-400" },
   { icon: Settings, label: "Proveedores", href: "#", color: "text-indigo-400" },
   { icon: FileText, label: "Documentos", href: "#", color: "text-teal-400" },
@@ -46,12 +49,19 @@ interface SiderBarProps{
 }
 
 
-const SideBar: React.FC<SiderBarProps> = ({isCollapsed, onToggle}) => {
-  const [expandedItems, setExpandedItems] = useState<string[]>(["Seguridad"])
+const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
+  const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const {logout} = useSessionStore();
+  const navigate = useNavigate()
 
   const toggleExpanded = (label: string) => {
     if (isCollapsed) return // No expandir si está colapsado
     setExpandedItems((prev) => (prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]))
+  }
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   }
 
   const cssDefault = 'flex items-center gap-3 p-2 rounded-lg transition-colors';
@@ -151,15 +161,15 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed, onToggle}) => {
         <div className={`p-4 border-t border-slate-700 ${isCollapsed ? "px-2" : ""}`}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-              to='/login'
-                className={`cursor-pointer flex items-center gap-3 p-3 rounded-lg hover:bg-red-900/20 transition-colors w-full group ${
+              <Button
+                onClick={handleLogout}
+                className={`cursor-pointer flex items-center justify-start gap-3 p-6 rounded-lg hover:bg-red-900/20 transition-colors w-full group ${
                   isCollapsed ? "justify-center" : ""
                 }`}
               >
                 <LogOut className="h-5 w-5 text-red-400" />
                 {!isCollapsed && <span>Logout</span>}
-              </Link>
+              </Button>
             </TooltipTrigger>
             {isCollapsed && <TooltipContent side="right">Logout</TooltipContent>}
           </Tooltip>

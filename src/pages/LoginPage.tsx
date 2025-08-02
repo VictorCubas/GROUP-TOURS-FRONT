@@ -1,29 +1,34 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
-import type React from "react"
-
 import { useEffect, useState } from "react"
-import { Eye, EyeOff, Lock, Mail, Shield, ArrowRight, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Lock, Plane, Loader2, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
 import { useNavigate } from "react-router-dom"
+import { useForm } from 'react-hook-form';
+import axios from "axios"
+import { API_BASE_URL } from "@/service/api"
+import { useSessionStore, type SessionDataStore } from "@/store/sessionStore"
+
+interface LoginFormData{
+  username: string,
+  password: string
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useSessionStore();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loginData, setLoginData] = useState({
-    email: "",
-    password: "",
-  })
   const [error, setError] = useState("");
   const [anioActual, setAnioActual] = useState<number>();
+
+  const {register, handleSubmit, formState: {errors, }} = useForm<LoginFormData>({mode: "onBlur"});
 
   useEffect(() => {
     const fechaActual = new Date();
@@ -32,33 +37,32 @@ export default function LoginPage() {
   }, []);
 
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleLogin = async (dataForm: LoginFormData) => {
     setIsLoading(true);
     setError("");
 
-    // Simulación de autenticación
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const dataResp = await loginFetch({username: dataForm.username.trim(), password: dataForm.password.trim()});
 
-      // Validación simple para demo
-      if (loginData.email === "admin@grouptours.com" && loginData.password === "admin123") {
-        // Redirigir al dashboard
-        navigate('/');
-      } else {
-        setError("Credenciales incorrectas.")
+      const session: SessionDataStore = {
+        usuario: dataForm.username,
+        token: dataResp.data.access
       }
-    } catch (err) {
-      setError("Error de conexión. Intenta nuevamente.")
+
+      login(session);
+      navigate('/');
+      
+    } catch (err: any) {
+      console.log(err);
+      setError(err?.response?.data?.message ?? 'Ocurrió algo inesperado')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleInputChange = (field: string, value: string) => {
-    setLoginData((prev) => ({ ...prev, [field]: value }))
-    if (error) setError("")
-  }
+  const loginFetch = (credentials: LoginFormData) => {
+    return axios.post(`${API_BASE_URL}/login`, credentials);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
@@ -78,7 +82,7 @@ export default function LoginPage() {
         {/* Logo y Header */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
-            <Shield className="w-10 h-10 text-white" />
+            <Plane className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">GROUP TOURS</h1>
           <p className="text-blue-200">Sistema de Gestión de Tours</p>
@@ -94,7 +98,7 @@ export default function LoginPage() {
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleSubmit(handleLogin)} className="space-y-6">
               {/* Error Alert */}
               {error && (
                 <Alert className="border-red-200 bg-red-50">
@@ -104,20 +108,26 @@ export default function LoginPage() {
 
               {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  Correo Electrónico
+                <Label htmlFor="username" className="text-sm font-medium text-gray-700">
+                  Usuario
                 </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <div className="relative margin-bottom-cero">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="tu@email.com"
-                    value={loginData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    id="username"
+                    type="text"
+                    autoComplete="username"
+                    placeholder="username"
                     className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    required
+                    {...register('username', {
+                      required: true, 
+                      validate: {blankSpace: (value) => !!value.trim()},
+                      minLength: 3})}
                   />
+                </div>
+                <div className="text-center">
+                  {(errors?.username?.type === 'required' || errors?.username?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                  {errors?.username?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
                 </div>
               </div>
 
@@ -126,16 +136,19 @@ export default function LoginPage() {
                 <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Contraseña
                 </Label>
-                <div className="relative">
+                <div className="relative margin-bottom-cero">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    value={loginData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    autoComplete="current-password"
                     className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    required
+                     {...register('password', {
+                      required: true, 
+                      validate: {blankSpace: (value) => !!value.trim()},
+                      minLength: 3
+                    })}
                   />
                   <button
                     type="button"
@@ -144,6 +157,11 @@ export default function LoginPage() {
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
+                </div>
+
+                <div className="text-center">
+                  {(errors?.password?.type === 'required' || errors?.password?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                  {errors?.password?.type === 'minLength' && <span className='text-red-400 text-sm'>La contraseña debe tener minimo 3 caracteres</span>}
                 </div>
               </div>
 
@@ -182,7 +200,7 @@ export default function LoginPage() {
               <h4 className="text-sm font-medium text-blue-900 mb-2">Credenciales de Demo:</h4>
               <div className="text-sm text-blue-700 space-y-1">
                 <p>
-                  <strong>Email:</strong> admin@grouptours.com
+                  <strong>Usuario:</strong> grouptours
                 </p>
                 <p>
                   <strong>Contraseña:</strong> admin123
