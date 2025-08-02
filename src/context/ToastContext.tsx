@@ -18,7 +18,7 @@ interface ToastConextProviderProps{
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const ToastContext = createContext<ToastContextType>({
-    handleShowToast: (message?: string, tipo?: 'success' | 'error') => {},
+    handleShowToast: (_message?: string, _tipo?: 'success' | 'error') => {},
     showMessageToast: null
 });
 
