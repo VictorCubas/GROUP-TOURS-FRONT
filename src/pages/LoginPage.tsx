@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { Eye, EyeOff, Lock, Plane, Loader2, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import { useForm } from 'react-hook-form';
 import axios from "axios"
 import { API_BASE_URL } from "@/service/api"
 import { useSessionStore, type SessionDataStore } from "@/store/sessionStore"
+import { ToastContext } from "@/context/ToastContext"
 
 interface LoginFormData{
   username: string,
@@ -27,6 +28,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [anioActual, setAnioActual] = useState<number>();
+  const {handleShowToast} = use(ToastContext);
 
   const {register, handleSubmit, formState: {errors, }} = useForm<LoginFormData>({mode: "onBlur"});
 
@@ -50,6 +52,7 @@ export default function LoginPage() {
       }
 
       login(session);
+      handleShowToast('Bienvenido a GroupTours', "success");
       navigate('/');
       
     } catch (err: any) {
