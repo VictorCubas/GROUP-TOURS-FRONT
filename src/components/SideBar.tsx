@@ -6,7 +6,6 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
-  Users,
   FileText,
   Settings,
   LogOut,
