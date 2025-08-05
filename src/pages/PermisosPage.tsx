@@ -19,6 +19,7 @@ import {
   Eye,
   Calendar,
   AlertCircle,
+  Loader2Icon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FaAngleDoubleLeft, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { FaAngleDoubleRight } from "react-icons/fa";
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 
 import {
@@ -44,183 +46,188 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
+import type { Permiso, RespuestaPaginada } from "@/types/permisos"
+import { formatearFecha } from "@/helper/formatter"
+import { fetchData } from "@/components/utils/httpPermisos"
+import { queryClient } from "@/components/utils/http"
 
-const permissions = [
-  {
-    id: 1,
-    name: "Modificar Usuarios",
-    type: "Modificación",
-    active: true,
-    inUse: true,
-    description: "Permite editar los datos de usuarios del sistema",
-    form: "Usuarios",
-    createdAt: "2024-01-15",
-    lastUsed: "2024-01-22",
-  },
-  {
-    id: 2,
-    name: "Visualizar Paquetes",
-    type: "Lectura",
-    active: true,
-    inUse: true,
-    description: "Permite visualizar la información de paquetes de viaje",
-    form: "Paquetes",
-    createdAt: "2024-01-10",
-    lastUsed: "2024-01-22",
-  },
-  {
-    id: 3,
-    name: "Eliminar Reservas",
-    type: "Eliminación",
-    active: false,
-    inUse: false,
-    description: "Permite eliminar reservas del sistema",
-    form: "Reservas",
-    createdAt: "2024-01-05",
-    lastUsed: "2024-01-18",
-  },
-  {
-    id: 4,
-    name: "Crear Reportes",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 5,
-    name: "Crear Reportes1",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 6,
-    name: "Crear Reportes2",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 7,
-    name: "Crear Reportes3",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 8,
-    name: "Crear Reportes4",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 9,
-    name: "Crear Reportes5",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 10,
-    name: "Crear Reportes6",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 11,
-    name: "Crear Reportes7",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 12,
-    name: "Crear Reportes8",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 13,
-    name: "Crear Reportes9",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 14,
-    name: "Crear Reportes10",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-  {
-    id: 15,
-    name: "Crear Reportes11",
-    type: "Escritura",
-    active: true,
-    inUse: true,
-    description: "Permite generar y exportar reportes del sistema",
-    form: "Reportes",
-    createdAt: "2024-01-12",
-    lastUsed: "2024-01-21",
-  },
-]
+// const permissions = [
+//   {
+//     id: 1,
+//     name: "Modificar Usuarios",
+//     type: "Modificación",
+//     active: true,
+//     inUse: true,
+//     description: "Permite editar los datos de usuarios del sistema",
+//     form: "Usuarios",
+//     createdAt: "2024-01-15",
+//     lastUsed: "2024-01-22",
+//   },
+//   {
+//     id: 2,
+//     name: "Visualizar Paquetes",
+//     type: "Lectura",
+//     active: true,
+//     inUse: true,
+//     description: "Permite visualizar la información de paquetes de viaje",
+//     form: "Paquetes",
+//     createdAt: "2024-01-10",
+//     lastUsed: "2024-01-22",
+//   },
+//   {
+//     id: 3,
+//     name: "Eliminar Reservas",
+//     type: "Eliminación",
+//     active: false,
+//     inUse: false,
+//     description: "Permite eliminar reservas del sistema",
+//     form: "Reservas",
+//     createdAt: "2024-01-05",
+//     lastUsed: "2024-01-18",
+//   },
+//   {
+//     id: 4,
+//     name: "Crear Reportes",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 5,
+//     name: "Crear Reportes1",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 6,
+//     name: "Crear Reportes2",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 7,
+//     name: "Crear Reportes3",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 8,
+//     name: "Crear Reportes4",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 9,
+//     name: "Crear Reportes5",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 10,
+//     name: "Crear Reportes6",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 11,
+//     name: "Crear Reportes7",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 12,
+//     name: "Crear Reportes8",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 13,
+//     name: "Crear Reportes9",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 14,
+//     name: "Crear Reportes10",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+//   {
+//     id: 15,
+//     name: "Crear Reportes11",
+//     type: "Creacion",
+//     active: true,
+//     inUse: true,
+//     description: "Permite generar y exportar reportes del sistema",
+//     form: "Reportes",
+//     createdAt: "2024-01-12",
+//     lastUsed: "2024-01-21",
+//   },
+// ]
 
 type TypePermission = keyof typeof typeColors;
 
 
 const typeColors = {
   Lectura: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Escritura: "bg-blue-100 text-blue-700 border-blue-200",
-  Modificación: "bg-amber-100 text-amber-700 border-amber-200",
-  Eliminación: "bg-red-100 text-red-700 border-red-200",
+  Creacion: "bg-blue-100 text-blue-700 border-blue-200",
+  Exportar: "bg-blue-100 text-blue-700 border-blue-200",
+  Modificacion: "bg-amber-100 text-amber-700 border-amber-200",
+  Eliminacion: "bg-red-100 text-red-700 border-red-200",
 }
 
 type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
@@ -274,57 +281,86 @@ export default function PermisosPage() {
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [selectedType, setSelectedType] = useState("all")
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  // const [permisos, setPermisos] = useState<Permiso[]>([])
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  // const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
+                                                      next: null,
+                                                      totalItems: 5,
+                                                      previous: null,
+                                                      totalPages: 5,
+                                                      pageSize: 10
+                                              });
 
-  console.log('permissions: ', permissions);
+   const {data, isFetching, isError, error} = useQuery({
+    queryKey: ['permisos', currentPage, paginacion.pageSize], //data cached
+    queryFn: () => fetchData(currentPage, paginacion.pageSize),
+    staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  });
 
-  const filteredPermissions = permissions.filter((permission) => {
-    const matchesSearch =
-      permission.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      permission.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesActive = !showActiveOnly || permission.active
-    const matchesType = selectedType === "all" || permission.type === selectedType
-    return matchesSearch && matchesActive && matchesType
-  })
+  // let filteredPermissions: Permiso[] = [];
+  let permisos: Permiso[] = [];
+
+  if(!isFetching && !isError){
+    permisos = data.results;
+
+    // filteredPermissions = permisos.filter((permission: Permiso) => {
+    //   const matchesSearch =
+    //     permission.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //     permission.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+    //   const matchesActive = !showActiveOnly || permission.activo
+    //   const matchesType = selectedType === "all" || permission.tipo === selectedType
+    //   return matchesSearch && matchesActive && matchesType
+    // })
+  }
 
 
   const handleSelectPermission = (id: number) => {
     setSelectedPermissions((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
   }
 
-  console.log('filteredPermissions: ', filteredPermissions);
+  // console.log('filteredPermissions: ', filteredPermissions);
   
   // Cálculos de paginación
-  const totalItems = filteredPermissions.length
-  const totalPages = Math.ceil(totalItems / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedPermisos = filteredPermissions.slice(startIndex, endIndex);
-
-  console.log('paginatedRoles: ', paginatedPermisos);
+  const totalItems = permisos?.length
+  // const totalPages = Math.ceil(totalItems / itemsPerPage)
+  const startIndex = (currentPage - 1) * paginacion.pageSize
+  const endIndex = startIndex + paginacion.pageSize
+  // const paginatedPermisos = filteredPermissions.slice(startIndex, endIndex);
 
   // Función para cambiar página
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
+    setCurrentPage(page);
   }
 
   // Función para cambiar items por página
   const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(Number(value))
+    // setItemsPerPage(Number(value))
+    setPaginacion(prevPagination => ({...prevPagination, pageSize: Number(value)}))
     setCurrentPage(1) // Reset a la primera página
   }
   
     // Reset página cuando cambian los filtros
     useEffect(() => {
-      setCurrentPage(1)
+      setCurrentPage(1);
     }, [searchTerm, showActiveOnly])
 
+    useEffect(() => {
+      if (!data) return;
+      setPaginacion({
+              next: data?.next ?? null,
+              totalItems: data?.count ?? null,
+              previous: data?.previous ??  null,
+              totalPages: data?.totalPages,
+              pageSize: data?.pageSize ?? null
+            });
+    }, [data])
+
   const handleSelectAll = () => {
-    if (selectedPermissions.length === paginatedPermisos.length) {
+    if (selectedPermissions.length === permisos.length) {
       setSelectedPermissions([])
     } else {
-      setSelectedPermissions(paginatedPermisos.map((r) => r.id))
+      setSelectedPermissions(permisos.map((r: Permiso) => r.id))
     }
   }
 
@@ -439,10 +475,10 @@ export default function PermisosPage() {
                             Lectura
                           </div>
                         </SelectItem>
-                        <SelectItem value="escritura">
+                        <SelectItem value="Creacion">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                            Escritura
+                            Creacion
                           </div>
                         </SelectItem>
                         <SelectItem value="modificacion">
@@ -569,7 +605,7 @@ export default function PermisosPage() {
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="Lectura">Lectura</SelectItem>
-                        <SelectItem value="Escritura">Escritura</SelectItem>
+                        <SelectItem value="Creacion">Creacion</SelectItem>
                         <SelectItem value="Modificación">Modificación</SelectItem>
                         <SelectItem value="Eliminación">Eliminación</SelectItem>
                       </SelectContent>
@@ -602,7 +638,7 @@ export default function PermisosPage() {
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={selectedPermissions.length === paginatedPermisos.length && paginatedPermisos.length > 0}
+                          checked={selectedPermissions.length === permisos.length && permisos.length > 0}
                           onCheckedChange={handleSelectAll}
                         />
                       </TableHead>
@@ -616,8 +652,15 @@ export default function PermisosPage() {
                       <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
-                    {paginatedPermisos.map((permission) => (
+                  <TableBody className="w-full">
+                    {isFetching && <TableRow className="w-full h-64">
+                                  <TableCell className="w-full absolute top-5/12">
+                                    <div className="w-full flex items-center justify-center">
+                                      <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>}
+                    {!isFetching && permisos.map((permission: Permiso) => (
                       <TableRow
                         key={permission.id}
                         className={`hover:bg-gray-50 transition-colors ${
@@ -632,32 +675,32 @@ export default function PermisosPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium text-gray-900">{permission.name}</div>
-                            <div className="text-sm text-gray-500 truncate max-w-xs">{permission.description}</div>
+                            <div className="font-medium text-gray-900">{permission.nombre}</div>
+                            <div className="text-sm text-gray-500 truncate max-w-xs">{permission.descripcion}</div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${typeColors[permission.type as TypePermission]} border`}>{permission.type}</Badge>
+                          <Badge className={`${typeColors[permission.tipo as TypePermission]} border`}>{permission.tipo}</Badge>
                         </TableCell>
 
                         <TableCell>
-                          <Badge className={`${moduleColors[permission.form as ModuleKey]} border`}>{permission.form}</Badge>
+                          <Badge className={`${moduleColors[permission.modulo as ModuleKey]} border`}>{permission.modulo}</Badge>
                         </TableCell>
 
                         <TableCell>
                           <Badge
                             className={
-                              permission.active
+                              permission.activo
                                 ? "bg-emerald-100 text-emerald-700 border-emerald-200"
                                 : "bg-gray-100 text-gray-700 border-gray-200"
                             }
                           >
-                            {permission.active ? "Activo" : "Inactivo"}
+                            {permission.activo ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center">
-                            {permission.inUse ? (
+                            {permission.en_uso ? (
                               <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                                 <Check className="h-4 w-4 text-emerald-600" />
                               </div>
@@ -673,7 +716,7 @@ export default function PermisosPage() {
                           <div className="text-sm text-gray-500">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {permission.createdAt}
+                              {formatearFecha(permission.fechaCreacion)}
                             </div>
                           </div>
                         </TableCell>
@@ -707,12 +750,12 @@ export default function PermisosPage() {
                 </Table>
 
                 {/* Controles de Paginación */}
-              {totalItems > 0 && (
+              
                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                       <Label className="text-sm text-gray-600">Mostrar:</Label>
-                      <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+                      <Select value={paginacion?.pageSize?.toString() ?? 5} onValueChange={handleItemsPerPageChange}>
                         <SelectTrigger className="w-20 h-8">
                           <SelectValue />
                         </SelectTrigger>
@@ -727,7 +770,7 @@ export default function PermisosPage() {
                     </div>
 
                     <div className="text-sm text-gray-600">
-                      Página {currentPage} de {totalPages}
+                      Página {currentPage} de {paginacion?.totalPages ?? 0}
                     </div>
                   </div>
 
@@ -755,14 +798,14 @@ export default function PermisosPage() {
 
                     {/* Números de página */}
                     <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      {Array.from({ length: Math.min(5, paginacion!.totalPages) }, (_, i) => {
                         let pageNumber
-                        if (totalPages <= 5) {
+                        if (paginacion!.totalPages <= 5) {
                           pageNumber = i + 1
                         } else if (currentPage <= 3) {
                           pageNumber = i + 1
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNumber = totalPages - 4 + i
+                        } else if (currentPage >= paginacion!.totalPages - 2) {
+                          pageNumber = paginacion!.totalPages - 4 + i
                         } else {
                           pageNumber = currentPage - 2 + i
                         }
@@ -786,8 +829,8 @@ export default function PermisosPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
+                      onClick={() => currentPage < paginacion!.totalPages && handlePageChange(currentPage + 1)}
+                      disabled={currentPage === paginacion!.totalPages}
                       className="h-8 cursor-pointer"
                       title="Siguiente"
                     >
@@ -796,8 +839,8 @@ export default function PermisosPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePageChange(totalPages)}
-                      disabled={currentPage === totalPages}
+                      onClick={() => (currentPage > 1 || currentPage < paginacion?.totalPages) && handlePageChange(paginacion.totalPages)}
+                      disabled={currentPage === paginacion!.totalPages}
                       className="h-8 cursor-pointer"
                       title="Última"
                     >
@@ -805,9 +848,9 @@ export default function PermisosPage() {
                     </Button>
                   </div>
                 </div>
-              )}
+              
 
-                {totalItems === 0 && (
+                {!isFetching && totalItems === 0 && (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                       <Search className="h-8 w-8 text-gray-400" />

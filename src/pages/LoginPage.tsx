@@ -64,7 +64,7 @@ export default function LoginPage() {
   }
 
   const loginFetch = (credentials: LoginFormData) => {
-    return axios.post(`${API_BASE_URL}/login`, credentials);
+    return axios.post(`${API_BASE_URL}/login/`, credentials);
   };
 
   return (
