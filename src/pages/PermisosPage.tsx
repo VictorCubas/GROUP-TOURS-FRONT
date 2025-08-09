@@ -176,9 +176,9 @@ export default function PermisosPage() {
   }
   
     // Reset página cuando cambian los filtros
-    useEffect(() => {
-      setCurrentPage(1);
-    }, [showActiveOnly])
+    // useEffect(() => {
+    //   setCurrentPage(1);
+    // }, [showActiveOnly])
 
     useEffect(() => {
       if (!data) return;
@@ -203,6 +203,11 @@ export default function PermisosPage() {
         setShowActiveOnly(true);
         setNombrePaquetePorBuscar("")
       });
+  }
+
+  const handleActiveOnly = () => {
+    setShowActiveOnly(prev => !prev)
+    setCurrentPage(1);
   }
 
 
@@ -513,7 +518,7 @@ export default function PermisosPage() {
                     <div className="flex items-center gap-2 bg-emerald-50 rounded-full px-3 py-2 border border-emerald-200">
                       <Switch
                         checked={showActiveOnly}
-                        onCheckedChange={setShowActiveOnly}
+                        onCheckedChange={handleActiveOnly}
                         id="active-filter"
                         className="data-[state=checked]:bg-emerald-500"
                       />
