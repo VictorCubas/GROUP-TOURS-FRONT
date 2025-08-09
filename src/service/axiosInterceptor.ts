@@ -27,7 +27,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.log('error: ', error);
+    console.error('error interceptor: ', error);
     if (error.response?.status === 401) {
        const { logout } = useSessionStore.getState();
        const { setRedirect } = useNavigationStore.getState();
@@ -39,6 +39,9 @@ axiosInstance.interceptors.response.use(
         setRedirect('/login');
         // navigate('/login', { replace: true });
       }, 2500);
+    }
+    else{
+      showToastOutsider(error?.message ?? 'Ocurrió algo inesperado', 'error');
     }
     return Promise.reject(error);
   }

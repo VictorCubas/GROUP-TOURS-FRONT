@@ -303,17 +303,6 @@ export default function PermisosPage() {
 
   if(!isFetching && !isError){
     permisos = data.results;
-    console.log('recuperando permisos...')
-    console.log('permisos: ', permisos)
-
-    // filteredPermissions = permisos.filter((permission: Permiso) => {
-    //   const matchesSearch =
-    //     permission.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    //     permission.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
-    //   const matchesActive = !showActiveOnly || permission.activo
-    //   const matchesType = selectedType === "all" || permission.tipo === selectedType
-    //   return matchesSearch && matchesActive && matchesType
-    // })
   }
 
 
