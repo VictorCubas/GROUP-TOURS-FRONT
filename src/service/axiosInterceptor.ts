@@ -35,9 +35,7 @@ axiosInstance.interceptors.response.use(
 
       showToastOutsider('Sesión expirada. Inicia sesión nuevamente.', 'error');
       setTimeout(() => {
-        // window.location.href = '/login';
         setRedirect('/login');
-        // navigate('/login', { replace: true });
       }, 2500);
     }
     else{

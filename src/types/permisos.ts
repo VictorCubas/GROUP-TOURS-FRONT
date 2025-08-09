@@ -1,5 +1,6 @@
 export interface Permiso {
   id: number;
+  numero: number;
   nombre: string;
   descripcion: string;
   tipo: 'C' | 'R' | 'U' | 'D' | 'E';

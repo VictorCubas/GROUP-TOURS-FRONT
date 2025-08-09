@@ -33,7 +33,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FaAngleDoubleLeft, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { FaAngleDoubleRight } from "react-icons/fa";
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 
 import {
@@ -45,179 +45,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
-import type { Permiso, PermisoType, RespuestaPaginada } from "@/types/permisos"
+import type { Permiso, RespuestaPaginada } from "@/types/permisos"
 import { formatearFecha } from "@/helper/formatter"
 import { fetchData } from "@/components/utils/httpPermisos"
-import { queryClient } from "@/components/utils/http"
-
-// const permissions = [
-//   {
-//     id: 1,
-//     name: "Modificar Usuarios",
-//     type: "Modificación",
-//     active: true,
-//     inUse: true,
-//     description: "Permite editar los datos de usuarios del sistema",
-//     form: "Usuarios",
-//     createdAt: "2024-01-15",
-//     lastUsed: "2024-01-22",
-//   },
-//   {
-//     id: 2,
-//     name: "Visualizar Paquetes",
-//     type: "Lectura",
-//     active: true,
-//     inUse: true,
-//     description: "Permite visualizar la información de paquetes de viaje",
-//     form: "Paquetes",
-//     createdAt: "2024-01-10",
-//     lastUsed: "2024-01-22",
-//   },
-//   {
-//     id: 3,
-//     name: "Eliminar Reservas",
-//     type: "Eliminación",
-//     active: false,
-//     inUse: false,
-//     description: "Permite eliminar reservas del sistema",
-//     form: "Reservas",
-//     createdAt: "2024-01-05",
-//     lastUsed: "2024-01-18",
-//   },
-//   {
-//     id: 4,
-//     name: "Crear Reportes",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 5,
-//     name: "Crear Reportes1",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 6,
-//     name: "Crear Reportes2",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 7,
-//     name: "Crear Reportes3",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 8,
-//     name: "Crear Reportes4",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 9,
-//     name: "Crear Reportes5",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 10,
-//     name: "Crear Reportes6",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 11,
-//     name: "Crear Reportes7",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 12,
-//     name: "Crear Reportes8",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 13,
-//     name: "Crear Reportes9",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 14,
-//     name: "Crear Reportes10",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 15,
-//     name: "Crear Reportes11",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-// ]
 
 type TypePermission = keyof typeof typeColors;
 
@@ -283,7 +113,7 @@ export default function PermisosPage() {
   const [selectedType, setSelectedType] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [currentPage, setCurrentPage] = useState(1);
-  const [resetFilter, setResetFilter] = useState(false);
+  // const [resetFilter, setResetFilter] = useState(false);
   const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
                                                       next: null,
                                                       totalItems: 5,
@@ -292,7 +122,7 @@ export default function PermisosPage() {
                                                       pageSize: 10
                                               });
 
-   const {data, isFetching, isError, error} = useQuery({
+   const {data, isFetching, isError} = useQuery({
     queryKey: ['permisos', currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly], //data cached
     queryFn: () => fetchData(currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
@@ -302,13 +132,13 @@ export default function PermisosPage() {
   let permisos: Permiso[] = [];
 
   if(!isFetching && !isError){
-    permisos = data.results;
+    permisos = data.results.map((per: Permiso, index: number) => ({...per, numero: index + 1}));
   }
 
 
-  const handleSelectPermission = (id: number) => {
-    setSelectedPermissions((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
-  }
+  // const handleSelectPermission = (id: number) => {
+  //   setSelectedPermissions((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
+  // }
 
   // console.log('filteredPermissions: ', filteredPermissions);
   
@@ -347,13 +177,13 @@ export default function PermisosPage() {
             });
     }, [data])
 
-  const handleSelectAll = () => {
-    if (selectedPermissions.length === permisos.length) {
-      setSelectedPermissions([])
-    } else {
-      setSelectedPermissions(permisos.map((r: Permiso) => r.id))
-    }
-  }
+  // const handleSelectAll = () => {
+  //   if (selectedPermissions.length === permisos.length) {
+  //     setSelectedPermissions([])
+  //   } else {
+  //     setSelectedPermissions(permisos.map((r: Permiso) => r.id))
+  //   }
+  // }
 
 
   const handleBuscarPorNombre = () => {
@@ -365,7 +195,7 @@ export default function PermisosPage() {
         setSearchTerm("");
         setSelectedType("all");
         setShowActiveOnly(true);
-        setResetFilter(true);
+        // setResetFilter(true);
         setNombrePaquetePorBuscar("")
       });
     // queryClient.invalidateQueries({ queryKey: ['permisos'] });
@@ -655,10 +485,11 @@ export default function PermisosPage() {
                   <TableHeader>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
                       <TableHead className="w-12">
-                        <Checkbox
+                        {/* <Checkbox
                           checked={selectedPermissions.length === permisos.length && permisos.length > 0}
                           onCheckedChange={handleSelectAll}
-                        />
+                        /> */}
+                        <TableHead className="font-semibold text-gray-700">#</TableHead>
                       </TableHead>
                       <TableHead className="font-semibold text-gray-700">Información</TableHead>
                       <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
@@ -686,10 +517,9 @@ export default function PermisosPage() {
                         }`}
                       >
                         <TableCell>
-                          <Checkbox
-                            checked={selectedPermissions.includes(permission.id)}
-                            onCheckedChange={() => handleSelectPermission(permission.id)}
-                          />
+                          <div>
+                            <div className="font-medium text-gray-900 pl-2">{permission.numero}</div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div>
