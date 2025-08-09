@@ -17,3 +17,8 @@ export interface RespuestaPaginada {
   totalPages: number;
   pageSize: number;
 }
+
+
+export interface PermisoType{
+  tipo: 'C' | 'R' | 'U' | 'D' | 'E';
+}

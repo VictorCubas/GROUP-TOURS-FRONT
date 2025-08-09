@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
-import { useEffect, useState } from "react"
+import { startTransition, useEffect, useState } from "react"
 import {
   Search,
   Plus,
@@ -46,7 +46,7 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
-import type { Permiso, RespuestaPaginada } from "@/types/permisos"
+import type { Permiso, PermisoType, RespuestaPaginada } from "@/types/permisos"
 import { formatearFecha } from "@/helper/formatter"
 import { fetchData } from "@/components/utils/httpPermisos"
 import { queryClient } from "@/components/utils/http"
@@ -278,12 +278,12 @@ function StatsCards() {
 
 export default function PermisosPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [nombrePaquetePorBuscar, setNombrePaquetePorBuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [selectedType, setSelectedType] = useState("all")
+  const [selectedType, setSelectedType] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
-  // const [permisos, setPermisos] = useState<Permiso[]>([])
-  const [currentPage, setCurrentPage] = useState(1)
-  // const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [resetFilter, setResetFilter] = useState(false);
   const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
                                                       next: null,
                                                       totalItems: 5,
@@ -293,8 +293,8 @@ export default function PermisosPage() {
                                               });
 
    const {data, isFetching, isError, error} = useQuery({
-    queryKey: ['permisos', currentPage, paginacion.pageSize], //data cached
-    queryFn: () => fetchData(currentPage, paginacion.pageSize),
+    queryKey: ['permisos', currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly], //data cached
+    queryFn: () => fetchData(currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
@@ -303,6 +303,8 @@ export default function PermisosPage() {
 
   if(!isFetching && !isError){
     permisos = data.results;
+    console.log('recuperando permisos...')
+    console.log('permisos: ', permisos)
 
     // filteredPermissions = permisos.filter((permission: Permiso) => {
     //   const matchesSearch =
@@ -343,7 +345,7 @@ export default function PermisosPage() {
     // Reset página cuando cambian los filtros
     useEffect(() => {
       setCurrentPage(1);
-    }, [searchTerm, showActiveOnly])
+    }, [showActiveOnly])
 
     useEffect(() => {
       if (!data) return;
@@ -364,6 +366,31 @@ export default function PermisosPage() {
     }
   }
 
+
+  const handleBuscarPorNombre = () => {
+      setNombrePaquetePorBuscar(searchTerm);
+  }
+
+  const handleReset = () => {
+    startTransition(() => {
+        setSearchTerm("");
+        setSelectedType("all");
+        setShowActiveOnly(true);
+        setResetFilter(true);
+        setNombrePaquetePorBuscar("")
+      });
+    // queryClient.invalidateQueries({ queryKey: ['permisos'] });
+  }
+
+
+//   useEffect(() => {
+//   if (resetFilter) {
+//     queryClient.invalidateQueries({
+//       queryKey: ['permisos', 1, paginacion.pageSize, "all", "", true]
+//     });
+//     setResetFilter(false);
+//   }
+// }, [currentPage, paginacion.pageSize, resetFilter]);
   
 
   return (
@@ -598,16 +625,17 @@ export default function PermisosPage() {
                       </Label>
                     </div>
 
-                    <Select value={selectedType} onValueChange={setSelectedType}>
+                    <Select value={selectedType} onValueChange={(value) => setSelectedType(value as 'C' | 'R' | 'U' | 'D' | 'E' | 'all')}>
                       <SelectTrigger className="w-40 border-purple-200 focus:border-purple-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="Lectura">Lectura</SelectItem>
-                        <SelectItem value="Creacion">Creacion</SelectItem>
-                        <SelectItem value="Modificación">Modificación</SelectItem>
-                        <SelectItem value="Eliminación">Eliminación</SelectItem>
+                        <SelectItem value="R">Lectura</SelectItem>
+                        <SelectItem value="C">Creacion</SelectItem>
+                        <SelectItem value="U">Modificación</SelectItem>
+                        <SelectItem value="D">Eliminación</SelectItem>
+                        <SelectItem value="E">Exportación</SelectItem>
                       </SelectContent>
                     </Select>
 
@@ -622,6 +650,7 @@ export default function PermisosPage() {
                     </div>
 
                     <Button
+                      onClick={handleBuscarPorNombre}
                       variant="outline"
                       size="icon"
                       className="border-gray-300 hover:bg-gray-50 bg-transparent cursor-pointer"
@@ -653,14 +682,14 @@ export default function PermisosPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="w-full">
-                    {isFetching && <TableRow className="w-full h-64">
+                    {isFetching && <TableRow className="w-full">
                                   <TableCell className="w-full absolute top-5/12">
                                     <div className="w-full flex items-center justify-center">
                                       <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
                                     </div>
                                   </TableCell>
                                 </TableRow>}
-                    {!isFetching && permisos.map((permission: Permiso) => (
+                    {!isFetching && permisos.length > 0 && permisos.map((permission: Permiso) => (
                       <TableRow
                         key={permission.id}
                         className={`hover:bg-gray-50 transition-colors ${
@@ -746,6 +775,27 @@ export default function PermisosPage() {
                         </TableCell>
                       </TableRow>
                     ))}
+
+                     {!isFetching && permisos.length === 0 && (
+                      <TableRow className="">
+                        <TableCell className="w-full flex items-center justify-center">
+                          <div className="text-center py-12  absolute-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                              <Search className="h-8 w-8 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron permisos</h3>
+                            <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
+                            <Button
+                              onClick={handleReset}
+                              className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                            >
+                              Limpiar filtros
+                            </Button>
+                          </div>
+                        </TableCell>
+
+                      </TableRow>
+                      )}
                   </TableBody>
                 </Table>
 
@@ -850,25 +900,7 @@ export default function PermisosPage() {
                 </div>
               
 
-                {!isFetching && totalItems === 0 && (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <Search className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron permisos</h3>
-                    <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
-                    <Button
-                      onClick={() => {
-                        setSearchTerm("")
-                        setSelectedType("all")
-                        setShowActiveOnly(false)
-                      }}
-                      className="bg-blue-500 hover:bg-blue-600"
-                    >
-                      Limpiar filtros
-                    </Button>
-                  </div>
-                )}
+                
               </CardContent>
             </Card>
           </TabsContent>

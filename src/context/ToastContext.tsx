@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { registerToastHandler } from "@/helper/toastService";
 import { createContext, useState, type ReactNode } from "react";
 
 interface ShowMessageType{
@@ -47,6 +48,7 @@ export const ToastConextProvider = ({children}: ToastConextProviderProps  )=> {
         showMessageToast
     }
 
+    registerToastHandler(handleShowToast);
     
     return (
         <ToastContext.Provider value={contextValue}>
