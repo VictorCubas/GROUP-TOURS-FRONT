@@ -113,7 +113,7 @@ export default function PermisosPage() {
   const [selectedType, setSelectedType] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
   // const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [currentPage, setCurrentPage] = useState(1);
-  // const [resetFilter, setResetFilter] = useState(false);
+  const [activeTab, setActiveTab] = useState('list');
   const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
                                                       next: null,
                                                       totalItems: 5,
@@ -134,13 +134,6 @@ export default function PermisosPage() {
   if(!isFetching && !isError){
     permisos = data.results.map((per: Permiso, index: number) => ({...per, numero: index + 1}));
   }
-
-
-  // const handleSelectPermission = (id: number) => {
-  //   setSelectedPermissions((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
-  // }
-
-  // console.log('filteredPermissions: ', filteredPermissions);
   
   // Cálculos de paginación
   const totalItems = permisos?.length
@@ -187,22 +180,9 @@ export default function PermisosPage() {
         setSearchTerm("");
         setSelectedType("all");
         setShowActiveOnly(true);
-        // setResetFilter(true);
         setNombrePaquetePorBuscar("")
       });
-    // queryClient.invalidateQueries({ queryKey: ['permisos'] });
   }
-
-
-//   useEffect(() => {
-//   if (resetFilter) {
-//     queryClient.invalidateQueries({
-//       queryKey: ['permisos', 1, paginacion.pageSize, "all", "", true]
-//     });
-//     setResetFilter(false);
-//   }
-// }, [currentPage, paginacion.pageSize, resetFilter]);
-  
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -220,12 +200,13 @@ export default function PermisosPage() {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 bg-transparent"
+              className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
             >
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button className="bg-blue-500 hover:bg-blue-600">
+            <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+              onClick={() => setActiveTab('form')}>
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Permiso
             </Button>
@@ -236,38 +217,15 @@ export default function PermisosPage() {
         <StatsCards />
 
         {/* Main Content */}
-        <Tabs defaultValue="list" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 lg:w-80 bg-gray-100">
-            <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+            <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
               Lista de Permisos
             </TabsTrigger>
-            <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
               Crear Permiso
             </TabsTrigger>
           </TabsList>
-
-          {/* Bulk Actions */}
-          {/* {selectedPermissions.length > 0 && (
-            <Card className="border-orange-200 bg-orange-50">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-orange-800">
-                    {selectedPermissions.length} permisos seleccionados
-                  </span>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                      <Check className="h-3 w-3 mr-1" />
-                      Activar
-                    </Button>
-                    <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white">
-                      <X className="h-3 w-3 mr-1" />
-                      Desactivar
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )} */}
 
           {/* Registration Form Tab */}
           <TabsContent value="form">
@@ -476,13 +434,7 @@ export default function PermisosPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
-                      <TableHead className="w-12">
-                        {/* <Checkbox
-                          checked={selectedPermissions.length === permisos.length && permisos.length > 0}
-                          onCheckedChange={handleSelectAll}
-                        /> */}
-                        <TableHead className="font-semibold text-gray-700">#</TableHead>
-                      </TableHead>
+                      <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
                       <TableHead className="font-semibold text-gray-700">Información</TableHead>
                       <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
                       <TableHead className="font-semibold text-gray-700">Módulo</TableHead>
