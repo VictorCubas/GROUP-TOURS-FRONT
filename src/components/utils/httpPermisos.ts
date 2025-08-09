@@ -1,4 +1,5 @@
 import axiosInstance from "@/service/axiosInterceptor";
+import type { NuevoPermisoFormData } from "@/types/permisos";
 
 
 export const fetchData = async (page: number, page_size: number = 5, selectedType: 'C' | 'R' | 'U' | 'D' | 'E' | 'all', 
@@ -31,17 +32,7 @@ export const fetchData = async (page: number, page_size: number = 5, selectedTyp
   }
 
 
-//   export async function fetchEvent({ id, signal }) {
-//   const response = await fetch(`http://localhost:3000/events/${id}`, { signal });
-
-//   if (!response.ok) {
-//     const error = new Error('An error occurred while fetching the event');
-//     error.code = response.status;
-//     error.info = await response.json();
-//     throw error;
-//   }
-
-//   const { event } = await response.json();
-
-//   return event;
-// }
+//tanstackquery ya maneja el error y en el interceptor tambien
+export async function nuevoPermisoFetch(permiso: NuevoPermisoFormData) {
+    await axiosInstance.post(`/permisos/`, permiso);    
+}

@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
-import { startTransition, useEffect, useState } from "react"
+import { startTransition, use, useEffect, useRef, useState } from "react"
 import {
   Search,
   Plus,
@@ -33,7 +34,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FaAngleDoubleLeft, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { FaAngleDoubleRight } from "react-icons/fa";
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 
 import {
@@ -45,9 +46,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Permiso, RespuestaPaginada } from "@/types/permisos"
+import type { NuevoPermisoFormData, Permiso, RespuestaPaginada } from "@/types/permisos"
 import { formatearFecha } from "@/helper/formatter"
-import { fetchData } from "@/components/utils/httpPermisos"
+import { fetchData, nuevoPermisoFetch } from "@/components/utils/httpPermisos"
+import { Controller, useForm } from "react-hook-form"
+import { queryClient } from "@/components/utils/http"
+import { ToastContext } from "@/context/ToastContext"
 
 type TypePermission = keyof typeof typeColors;
 
@@ -111,7 +115,23 @@ export default function PermisosPage() {
   const [nombrePaquetePorBuscar, setNombrePaquetePorBuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [selectedType, setSelectedType] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
-  // const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  const {handleShowToast} = use(ToastContext);
+  
+  // DATOS DEL FORMULARIO 
+  const {control, register, handleSubmit, formState: {errors, }, clearErrors, reset} = 
+            useForm<NuevoPermisoFormData>({
+              mode: "onBlur",
+              defaultValues: {
+                nombre: "",
+                descripcion: "",
+                tipo: "",     // valor inicial vacío
+                modulo: "",   // valor inicial vacío
+              }
+            });
+  // DATOS DEL FORMULARIO 
+
+
+
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('list');
   const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
@@ -121,6 +141,7 @@ export default function PermisosPage() {
                                                       totalPages: 5,
                                                       pageSize: 10
                                               });
+                                              
 
    const {data, isFetching, isError} = useQuery({
     queryKey: ['permisos', currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly], //data cached
@@ -184,6 +205,28 @@ export default function PermisosPage() {
       });
   }
 
+
+  const {mutate, isPending: isPendingMutation, isError: mutationIsError, error: errorMutation} = useMutation({
+    mutationFn: nuevoPermisoFetch,
+    onSuccess: () => {
+        handleShowToast('Se hace creado un nuevo permiso satisfactoriamente', 'success');
+        reset();
+        setActiveTab('list');
+        queryClient.invalidateQueries({queryKey: ['permisos', 1, paginacion.pageSize, "all", ""]}) //is outdated and should 
+    },
+  });
+
+
+  const handleCancel = () => {
+        reset()
+        setActiveTab('list')
+  }
+
+
+  const handleNuevoPermiso = async (dataForm: NuevoPermisoFormData) => {
+      mutate({...dataForm, activo: true, en_uso: false});
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-8">
         {/* Page Header */}
@@ -229,139 +272,224 @@ export default function PermisosPage() {
 
           {/* Registration Form Tab */}
           <TabsContent value="form">
-            <Card className="border-emerald-200 pt-0">
-              <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
-                    <Plus className="h-5 w-5 text-white" />
+            <form onSubmit={handleSubmit(handleNuevoPermiso)}>
+              <Card className="border-emerald-200 pt-0">
+                <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
+                      <Plus className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-emerald-900">Crear Nuevo Permiso</CardTitle>
+                      <CardDescription className="text-emerald-700">
+                        Complete la información para crear un nuevo permiso
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-emerald-900">Crear Nuevo Permiso</CardTitle>
-                    <CardDescription className="text-emerald-700">
-                      Complete la información para crear un nuevo permiso
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-gray-700 font-medium">
-                      Nombre del Permiso *
-                    </Label>
-                    <Input
-                      id="name"
-                      placeholder="Nombre del permiso"
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    />
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="nombre" className="text-gray-700 font-medium">
+                        Nombre del Permiso *
+                      </Label>
+                      <Input
+                        id="nombre"
+                        autoComplete="nombre"
+                        placeholder="Nombre del permiso"
+                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        {...register('nombre', {
+                        required: true, 
+                        validate: {blankSpace: (value) => !!value.trim()},
+                        minLength: 3})}
+                      />
+                      <div>
+                        {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                        {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="type" className="text-gray-700 font-medium">
+                        Tipo *
+                      </Label>
+                      <Controller
+                          name="tipo"
+                          control={control}
+                          rules={{ required: "Este campo es requerido" }}
+                          render={({ field }) => (
+                            <Select
+                              value={field.value}
+                               onValueChange={(value) => {
+                                        field.onChange(value)
+                                        if (value) {
+                                          clearErrors("tipo") // Limpia el error cuando selecciona un valor
+                                        }
+                                      }}
+                              onOpenChange={(open) => {
+                                  if (!open && !field.value) {
+                                    field.onBlur(); 
+                                  }
+                                }}
+                            >
+                              <SelectTrigger 
+                                className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                                <SelectValue placeholder="Selecciona el tipo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="R">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
+                                    Lectura
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="C">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                    Creación
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="U">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-amber-400 rounded-full"></div>
+                                    Modificación
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="D">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                                    Eliminación
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="E">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                                    Exportación
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        {errors.tipo && (
+                          <p className="text-red-400 text-sm">{errors.tipo.message}</p>
+                        )}
+                      </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="form" className="text-gray-700 font-medium">
+                        Módulo *
+                      </Label>
+                      <Controller
+                       name="modulo"
+                          control={control}
+                          rules={{ required: "Este campo es requerido" }}
+                          render={({ field }) => (
+                            <Select
+                              value={field.value}
+                              onValueChange={(value) => {
+                                        field.onChange(value)
+                                        if (value) {
+                                          clearErrors("modulo") // Limpia el error cuando selecciona un valor
+                                        }
+                                      }}
+                              onOpenChange={(open) => {
+                                  if (!open && !field.value) {
+                                    field.onBlur(); 
+                                  }
+                                }}>
+                              <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                                <SelectValue placeholder="Selecciona el módulo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="usuarios">
+                                  <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-emerald-500" />
+                                    Usuarios
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="paquetes">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-purple-500" />
+                                    Paquetes
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="empleados">
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-orange-500" />
+                                    Empleados
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="roles">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-yellow-500" />
+                                    Roles
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="reservas">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-pink-500" />
+                                    Reservas
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                      />
+                        {errors.modulo && (
+                          <p className="text-red-400 text-sm">{errors.modulo.message}</p>
+                        )}
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="descripcion" className="text-gray-700 font-medium">
+                        Descripción *
+                      </Label>
+                      <Textarea
+                        id="descripcion"
+                        autoComplete="descripcion"
+                        placeholder="Describe el permiso"
+                        className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        {...register('descripcion', {
+                        required: true, 
+                        validate: {blankSpace: (value) => !!value.trim()},
+                        minLength: 15})}
+                        />
+                        <div>
+                          {(errors?.descripcion?.type === 'required' || errors?.descripcion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                          {errors?.descripcion?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 15 caracteres</span>}
+                        </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="type" className="text-gray-700 font-medium">
-                      Tipo *
-                    </Label>
-                    <Select>
-                      <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                        <SelectValue placeholder="Selecciona el tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="lectura">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                            Lectura
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="Creacion">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                            Creacion
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="modificacion">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-amber-400 rounded-full"></div>
-                            Modificación
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="eliminacion">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                            Eliminación
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex gap-3">
+                    {/* {isPendingMutation && <>
+                    </>} */}
+                    <Button 
+                        disabled={isPendingMutation}
+                        type="submit"
+                        className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
+                      {isPendingMutation ? 
+                          <>
+                              <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                              Creando...
+                          </> : 
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Crear Permiso  
+                          </>}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent cursor-pointer"
+                      onClick={handleCancel}
+                    >
+                      Cancelar
+                    </Button>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="form" className="text-gray-700 font-medium">
-                      Módulo *
-                    </Label>
-                    <Select>
-                      <SelectTrigger className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-                        <SelectValue placeholder="Selecciona el módulo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="usuarios">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-emerald-500" />
-                            Usuarios
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="paquetes">
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-purple-500" />
-                            Paquetes
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="empleados">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-orange-500" />
-                            Empleados
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="roles">
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-yellow-500" />
-                            Roles
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="reservas">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-pink-500" />
-                            Reservas
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="description" className="text-gray-700 font-medium">
-                      Descripción *
-                    </Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Describe el permiso"
-                      className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button className="bg-emerald-500 hover:bg-emerald-600">
-                    <Check className="h-4 w-4 mr-2" />
-                    Crear Permiso
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </form>
           </TabsContent>
 
           {/* Permissions List Tab */}

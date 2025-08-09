@@ -23,3 +23,13 @@ export interface RespuestaPaginada {
 export interface PermisoType{
   tipo: 'C' | 'R' | 'U' | 'D' | 'E';
 }
+
+
+export interface NuevoPermisoFormData{ 
+  nombre: string;
+  descripcion: string;
+  tipo: 'C' | 'R' | 'U' | 'D' | 'E' | "";
+  modulo: string;
+  activo: boolean;
+  en_uso: boolean; 
+}

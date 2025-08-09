@@ -32,8 +32,10 @@ const AppRouter = () => {
               <Route element={<ProtectedRoute />}>
                 <Route element={<MainLayout />}>
                     <Route path="/" element={<HomePage />} />
-                    <Route path="/permisos" element={<PermisosPage />} />
-                    <Route path="/roles" element={<RolesPage />} />
+                    <Route path='/seguridad'>
+                      <Route path="permisos" element={<PermisosPage />} />
+                      <Route path="roles" element={<RolesPage />} />
+                    </Route>
                 </Route>
               </Route>
 
