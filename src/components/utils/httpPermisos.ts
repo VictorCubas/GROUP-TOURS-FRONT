@@ -1,5 +1,5 @@
 import axiosInstance from "@/service/axiosInterceptor";
-import type { NuevoPermisoFormData } from "@/types/permisos";
+import type { NuevoAEditarPermisoFormData, NuevoPermisoFormData } from "@/types/permisos";
 
 
 export const fetchData = async (page: number, page_size: number = 5, selectedType: 'C' | 'R' | 'U' | 'D' | 'E' | 'all', 
@@ -35,4 +35,10 @@ export const fetchData = async (page: number, page_size: number = 5, selectedTyp
 //tanstackquery ya maneja el error y en el interceptor tambien
 export async function nuevoPermisoFetch(permiso: NuevoPermisoFormData) {
     await axiosInstance.post(`/permisos/`, permiso);    
+}
+
+export async function guardarPermisoEditado(permiso: NuevoAEditarPermisoFormData) {
+  console.log('permiso antes de guardar: ', permiso);
+  console.log('permiso antes de guardar: ', permiso.id);
+  await axiosInstance.put(`/permisos/${permiso.id}/`, permiso);    
 }

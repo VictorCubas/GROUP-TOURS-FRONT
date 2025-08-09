@@ -33,3 +33,14 @@ export interface NuevoPermisoFormData{
   activo: boolean;
   en_uso: boolean; 
 }
+
+export interface NuevoAEditarPermisoFormData{ 
+  id: number;
+  nombre: string;
+  descripcion: string;
+  tipo: 'C' | 'R' | 'U' | 'D' | 'E' | "";
+  modulo: string;
+  activo: boolean;
+  en_uso: boolean; 
+  fechaCreacion: string;
+}

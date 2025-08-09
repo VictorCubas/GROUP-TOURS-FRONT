@@ -48,7 +48,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { NuevoPermisoFormData, Permiso, RespuestaPaginada } from "@/types/permisos"
 import { formatearFecha } from "@/helper/formatter"
-import { fetchData, nuevoPermisoFetch } from "@/components/utils/httpPermisos"
+import { fetchData, guardarPermisoEditado, nuevoPermisoFetch } from "@/components/utils/httpPermisos"
 import { Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
@@ -114,7 +114,8 @@ export default function PermisosPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [nombrePaquetePorBuscar, setNombrePaquetePorBuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [selectedType, setSelectedType] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
+  const [permisoAEditar, setPermisoAEditar] = useState<Permiso>();
+  const [tipoDePermiso, setTipoDePermiso] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
   const {handleShowToast} = use(ToastContext);
   
   // DATOS DEL FORMULARIO 
@@ -144,8 +145,8 @@ export default function PermisosPage() {
                                               
 
    const {data, isFetching, isError} = useQuery({
-    queryKey: ['permisos', currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly], //data cached
-    queryFn: () => fetchData(currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly),
+    queryKey: ['permisos', currentPage, paginacion.pageSize, tipoDePermiso, nombrePaquetePorBuscar, showActiveOnly], //data cached
+    queryFn: () => fetchData(currentPage, paginacion.pageSize, tipoDePermiso, nombrePaquetePorBuscar, showActiveOnly),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
@@ -199,7 +200,7 @@ export default function PermisosPage() {
   const handleReset = () => {
     startTransition(() => {
         setSearchTerm("");
-        setSelectedType("all");
+        setTipoDePermiso("all");
         setShowActiveOnly(true);
         setNombrePaquetePorBuscar("")
       });
@@ -214,7 +215,17 @@ export default function PermisosPage() {
   const {mutate, isPending: isPendingMutation, isError: mutationIsError, error: errorMutation} = useMutation({
     mutationFn: nuevoPermisoFetch,
     onSuccess: () => {
-        handleShowToast('Se hace creado un nuevo permiso satisfactoriamente', 'success');
+        handleShowToast('Se ha creado un nuevo permiso satisfactoriamente', 'success');
+        reset();
+        setActiveTab('list');
+        queryClient.invalidateQueries({queryKey: ['permisos', 1, paginacion.pageSize, "all", ""]}) //is outdated and should 
+    },
+  });
+
+  const {mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
+    mutationFn: guardarPermisoEditado,
+    onSuccess: () => {
+        handleShowToast('Se ha guardado el permiso satisfactoriamente', 'success');
         reset();
         setActiveTab('list');
         queryClient.invalidateQueries({queryKey: ['permisos', 1, paginacion.pageSize, "all", ""]}) //is outdated and should 
@@ -223,13 +234,53 @@ export default function PermisosPage() {
 
 
   const handleCancel = () => {
-        reset()
-        setActiveTab('list')
+        reset();
+        setActiveTab('list');
   }
 
 
-  const handleNuevoPermiso = async (dataForm: NuevoPermisoFormData) => {
+  const handleGuardarNuevoPermiso = async (dataForm: NuevoPermisoFormData) => {
       mutate({...dataForm, activo: true, en_uso: false});
+  }
+
+  const handleGuardarPermisosEditado = async (dataForm: any) => {
+    const dataPermisoEditado = {...permisoAEditar, ...dataForm};
+    delete dataPermisoEditado.numero;
+    mutateGuardarEditado({...dataPermisoEditado, ...dataForm});
+  }
+
+
+
+  useEffect(() => {
+    let tipo: "" | "C" | "R" | "U" | "D" | "E" = "C"
+
+    if((permisoAEditar?.tipo as any) === 'Eliminacion'){
+      tipo = 'D';
+    }
+    else if((permisoAEditar?.tipo as any) === 'Modificacion'){
+      tipo = 'U';
+    }
+    else if((permisoAEditar?.tipo as any) === 'Lectura'){
+      tipo = 'R';
+    }
+    else if((permisoAEditar?.tipo as any) === 'Exportar'){
+      tipo = 'E';
+    }
+    
+    if (permisoAEditar) {
+      reset({
+        nombre: permisoAEditar.nombre,
+        descripcion: permisoAEditar.descripcion,
+        tipo: tipo,
+        modulo: permisoAEditar.modulo
+      });
+    }
+  }, [permisoAEditar, reset]);
+
+
+  const handleEditar = (permission: Permiso) => {
+    setActiveTab('form');
+    setPermisoAEditar(permission);
   }
 
   return (
@@ -277,7 +328,7 @@ export default function PermisosPage() {
 
           {/* Registration Form Tab */}
           <TabsContent value="form">
-            <form onSubmit={handleSubmit(handleNuevoPermiso)}>
+            <form onSubmit={handleSubmit(!permisoAEditar ? handleGuardarNuevoPermiso: handleGuardarPermisosEditado)}>
               <Card className="border-emerald-200 pt-0">
                 <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
                   <div className="flex items-center gap-3">
@@ -470,20 +521,39 @@ export default function PermisosPage() {
                   <div className="flex gap-3">
                     {/* {isPendingMutation && <>
                     </>} */}
-                    <Button 
-                        disabled={isPendingMutation}
+
+                    {!permisoAEditar &&
+                      <Button 
+                          disabled={isPendingMutation}
+                          type="submit"
+                          className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
+                        {isPendingMutation ? 
+                            <>
+                                <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                                Creando...
+                            </> : 
+                            <>
+                              <Check className="h-4 w-4 mr-2" />
+                              Crear Permiso  
+                            </>}
+                      </Button>
+                    }
+                    {permisoAEditar &&
+                      <Button 
+                        disabled={isPendingEdit}
                         type="submit"
                         className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
-                      {isPendingMutation ? 
+                      {isPendingEdit ? 
                           <>
                               <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
-                              Creando...
+                              Guardando...
                           </> : 
                           <>
                             <Check className="h-4 w-4 mr-2" />
-                            Crear Permiso  
+                            Guardar Permiso  
                           </>}
-                    </Button>
+                    </Button>}
+
                     <Button
                       variant="outline"
                       className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent cursor-pointer"
@@ -527,7 +597,7 @@ export default function PermisosPage() {
                       </Label>
                     </div>
 
-                    <Select value={selectedType} onValueChange={(value) => setSelectedType(value as 'C' | 'R' | 'U' | 'D' | 'E' | 'all')}>
+                    <Select value={tipoDePermiso} onValueChange={(value) => setTipoDePermiso(value as 'C' | 'R' | 'U' | 'D' | 'E' | 'all')}>
                       <SelectTrigger className="w-40 border-purple-200 focus:border-purple-500">
                         <SelectValue />
                       </SelectTrigger>
@@ -655,7 +725,7 @@ export default function PermisosPage() {
                                 <Eye className="h-4 w-4 mr-2 text-blue-500" />
                                 Ver
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer">
+                              <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(permission)}>
                                 <Edit className="h-4 w-4 mr-2 text-emerald-500" />
                                 Editar
                               </DropdownMenuItem>
