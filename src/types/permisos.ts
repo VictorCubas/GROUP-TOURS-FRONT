@@ -1,5 +1,6 @@
 export interface Permiso {
   id: number;
+  numero: number;
   nombre: string;
   descripcion: string;
   tipo: 'C' | 'R' | 'U' | 'D' | 'E';
@@ -16,4 +17,9 @@ export interface RespuestaPaginada {
   previous: string | null;
   totalPages: number;
   pageSize: number;
+}
+
+
+export interface PermisoType{
+  tipo: 'C' | 'R' | 'U' | 'D' | 'E';
 }

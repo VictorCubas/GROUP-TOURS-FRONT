@@ -2,6 +2,7 @@ import { useSessionStore } from '@/store/sessionStore';
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute';
+import { NavigationWatcher } from '@/components/NavigationWatcher';
 
 const MainLayout = lazy(() => import('@/layout/MainLayout'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -19,6 +20,8 @@ const AppRouter = () => {
   
   return (
      <BrowserRouter>
+        {/* Ideal para escuchar cuando el token ha expirado */}
+        <NavigationWatcher />
         <Suspense fallback={<div id="global-loader-fallback">
                               <div className="dot-loader-fallback">
                                 <span></span><span></span><span></span>

@@ -1,8 +1,24 @@
 import axiosInstance from "@/service/axiosInterceptor";
 
-export const fetchData = async (page: number, page_size: number = 5) => {
+
+export const fetchData = async (page: number, page_size: number = 5, selectedType: 'C' | 'R' | 'U' | 'D' | 'E' | 'all', 
+    nombrePaquete: string = '', activo: boolean) => {
+    let url = `/permisos/?page=${page}&page_size=${page_size}`;
+ 
+    if(selectedType !== 'all'){
+      url = url + `&tipo=${selectedType}`;
+    }
+
+
+    console.log('nombrePaquete: ', nombrePaquete)
+    if(nombrePaquete){
+      url = url + `&nombre=${nombrePaquete}`;
+    }
+
+    url = url + `&activo=${activo}`;
+
     try {
-      const resp = await axiosInstance.get(`/permisos/?page=${page}&page_size=${page_size}`);
+      const resp = await axiosInstance.get(url);
       console.log('permisos list: ', resp?.data);
       if(resp?.data?.results){
         // setPermisos(resp?.data?.results ?? []);

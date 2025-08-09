@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
-import { useEffect, useState } from "react"
+import { startTransition, useEffect, useState } from "react"
 import {
   Search,
   Plus,
@@ -33,7 +33,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FaAngleDoubleLeft, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { FaAngleDoubleRight } from "react-icons/fa";
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 
 import {
@@ -45,179 +45,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
 import type { Permiso, RespuestaPaginada } from "@/types/permisos"
 import { formatearFecha } from "@/helper/formatter"
 import { fetchData } from "@/components/utils/httpPermisos"
-import { queryClient } from "@/components/utils/http"
-
-// const permissions = [
-//   {
-//     id: 1,
-//     name: "Modificar Usuarios",
-//     type: "Modificación",
-//     active: true,
-//     inUse: true,
-//     description: "Permite editar los datos de usuarios del sistema",
-//     form: "Usuarios",
-//     createdAt: "2024-01-15",
-//     lastUsed: "2024-01-22",
-//   },
-//   {
-//     id: 2,
-//     name: "Visualizar Paquetes",
-//     type: "Lectura",
-//     active: true,
-//     inUse: true,
-//     description: "Permite visualizar la información de paquetes de viaje",
-//     form: "Paquetes",
-//     createdAt: "2024-01-10",
-//     lastUsed: "2024-01-22",
-//   },
-//   {
-//     id: 3,
-//     name: "Eliminar Reservas",
-//     type: "Eliminación",
-//     active: false,
-//     inUse: false,
-//     description: "Permite eliminar reservas del sistema",
-//     form: "Reservas",
-//     createdAt: "2024-01-05",
-//     lastUsed: "2024-01-18",
-//   },
-//   {
-//     id: 4,
-//     name: "Crear Reportes",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 5,
-//     name: "Crear Reportes1",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 6,
-//     name: "Crear Reportes2",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 7,
-//     name: "Crear Reportes3",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 8,
-//     name: "Crear Reportes4",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 9,
-//     name: "Crear Reportes5",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 10,
-//     name: "Crear Reportes6",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 11,
-//     name: "Crear Reportes7",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 12,
-//     name: "Crear Reportes8",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 13,
-//     name: "Crear Reportes9",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 14,
-//     name: "Crear Reportes10",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-//   {
-//     id: 15,
-//     name: "Crear Reportes11",
-//     type: "Creacion",
-//     active: true,
-//     inUse: true,
-//     description: "Permite generar y exportar reportes del sistema",
-//     form: "Reportes",
-//     createdAt: "2024-01-12",
-//     lastUsed: "2024-01-21",
-//   },
-// ]
 
 type TypePermission = keyof typeof typeColors;
 
@@ -278,12 +108,12 @@ function StatsCards() {
 
 export default function PermisosPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [nombrePaquetePorBuscar, setNombrePaquetePorBuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [selectedType, setSelectedType] = useState("all")
-  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
-  // const [permisos, setPermisos] = useState<Permiso[]>([])
-  const [currentPage, setCurrentPage] = useState(1)
-  // const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedType, setSelectedType] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
+  // const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  const [currentPage, setCurrentPage] = useState(1);
+  // const [resetFilter, setResetFilter] = useState(false);
   const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
                                                       next: null,
                                                       totalItems: 5,
@@ -292,9 +122,9 @@ export default function PermisosPage() {
                                                       pageSize: 10
                                               });
 
-   const {data, isFetching, isError, error} = useQuery({
-    queryKey: ['permisos', currentPage, paginacion.pageSize], //data cached
-    queryFn: () => fetchData(currentPage, paginacion.pageSize),
+   const {data, isFetching, isError} = useQuery({
+    queryKey: ['permisos', currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly], //data cached
+    queryFn: () => fetchData(currentPage, paginacion.pageSize, selectedType, nombrePaquetePorBuscar, showActiveOnly),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
@@ -302,22 +132,13 @@ export default function PermisosPage() {
   let permisos: Permiso[] = [];
 
   if(!isFetching && !isError){
-    permisos = data.results;
-
-    // filteredPermissions = permisos.filter((permission: Permiso) => {
-    //   const matchesSearch =
-    //     permission.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    //     permission.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
-    //   const matchesActive = !showActiveOnly || permission.activo
-    //   const matchesType = selectedType === "all" || permission.tipo === selectedType
-    //   return matchesSearch && matchesActive && matchesType
-    // })
+    permisos = data.results.map((per: Permiso, index: number) => ({...per, numero: index + 1}));
   }
 
 
-  const handleSelectPermission = (id: number) => {
-    setSelectedPermissions((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
-  }
+  // const handleSelectPermission = (id: number) => {
+  //   setSelectedPermissions((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
+  // }
 
   // console.log('filteredPermissions: ', filteredPermissions);
   
@@ -343,7 +164,7 @@ export default function PermisosPage() {
     // Reset página cuando cambian los filtros
     useEffect(() => {
       setCurrentPage(1);
-    }, [searchTerm, showActiveOnly])
+    }, [showActiveOnly])
 
     useEffect(() => {
       if (!data) return;
@@ -356,14 +177,31 @@ export default function PermisosPage() {
             });
     }, [data])
 
-  const handleSelectAll = () => {
-    if (selectedPermissions.length === permisos.length) {
-      setSelectedPermissions([])
-    } else {
-      setSelectedPermissions(permisos.map((r: Permiso) => r.id))
-    }
+
+  const handleBuscarPorNombre = () => {
+      setNombrePaquetePorBuscar(searchTerm);
   }
 
+  const handleReset = () => {
+    startTransition(() => {
+        setSearchTerm("");
+        setSelectedType("all");
+        setShowActiveOnly(true);
+        // setResetFilter(true);
+        setNombrePaquetePorBuscar("")
+      });
+    // queryClient.invalidateQueries({ queryKey: ['permisos'] });
+  }
+
+
+//   useEffect(() => {
+//   if (resetFilter) {
+//     queryClient.invalidateQueries({
+//       queryKey: ['permisos', 1, paginacion.pageSize, "all", "", true]
+//     });
+//     setResetFilter(false);
+//   }
+// }, [currentPage, paginacion.pageSize, resetFilter]);
   
 
   return (
@@ -409,7 +247,7 @@ export default function PermisosPage() {
           </TabsList>
 
           {/* Bulk Actions */}
-          {selectedPermissions.length > 0 && (
+          {/* {selectedPermissions.length > 0 && (
             <Card className="border-orange-200 bg-orange-50">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -429,7 +267,7 @@ export default function PermisosPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
+          )} */}
 
           {/* Registration Form Tab */}
           <TabsContent value="form">
@@ -598,16 +436,17 @@ export default function PermisosPage() {
                       </Label>
                     </div>
 
-                    <Select value={selectedType} onValueChange={setSelectedType}>
+                    <Select value={selectedType} onValueChange={(value) => setSelectedType(value as 'C' | 'R' | 'U' | 'D' | 'E' | 'all')}>
                       <SelectTrigger className="w-40 border-purple-200 focus:border-purple-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="Lectura">Lectura</SelectItem>
-                        <SelectItem value="Creacion">Creacion</SelectItem>
-                        <SelectItem value="Modificación">Modificación</SelectItem>
-                        <SelectItem value="Eliminación">Eliminación</SelectItem>
+                        <SelectItem value="R">Lectura</SelectItem>
+                        <SelectItem value="C">Creacion</SelectItem>
+                        <SelectItem value="U">Modificación</SelectItem>
+                        <SelectItem value="D">Eliminación</SelectItem>
+                        <SelectItem value="E">Exportación</SelectItem>
                       </SelectContent>
                     </Select>
 
@@ -622,6 +461,7 @@ export default function PermisosPage() {
                     </div>
 
                     <Button
+                      onClick={handleBuscarPorNombre}
                       variant="outline"
                       size="icon"
                       className="border-gray-300 hover:bg-gray-50 bg-transparent cursor-pointer"
@@ -637,10 +477,11 @@ export default function PermisosPage() {
                   <TableHeader>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
                       <TableHead className="w-12">
-                        <Checkbox
+                        {/* <Checkbox
                           checked={selectedPermissions.length === permisos.length && permisos.length > 0}
                           onCheckedChange={handleSelectAll}
-                        />
+                        /> */}
+                        <TableHead className="font-semibold text-gray-700">#</TableHead>
                       </TableHead>
                       <TableHead className="font-semibold text-gray-700">Información</TableHead>
                       <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
@@ -653,25 +494,22 @@ export default function PermisosPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="w-full">
-                    {isFetching && <TableRow className="w-full h-64">
+                    {isFetching && <TableRow className="w-full">
                                   <TableCell className="w-full absolute top-5/12">
                                     <div className="w-full flex items-center justify-center">
                                       <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
                                     </div>
                                   </TableCell>
                                 </TableRow>}
-                    {!isFetching && permisos.map((permission: Permiso) => (
+                    {!isFetching && permisos.length > 0 && permisos.map((permission: Permiso) => (
                       <TableRow
                         key={permission.id}
-                        className={`hover:bg-gray-50 transition-colors ${
-                          selectedPermissions.includes(permission.id) ? "bg-blue-50" : ""
-                        }`}
+                        className={`hover:bg-blue-50 transition-colors cursor-pointer`}
                       >
                         <TableCell>
-                          <Checkbox
-                            checked={selectedPermissions.includes(permission.id)}
-                            onCheckedChange={() => handleSelectPermission(permission.id)}
-                          />
+                          <div>
+                            <div className="font-medium text-gray-900 pl-2">{permission.numero}</div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div>
@@ -746,6 +584,27 @@ export default function PermisosPage() {
                         </TableCell>
                       </TableRow>
                     ))}
+
+                     {!isFetching && permisos.length === 0 && (
+                      <TableRow className="">
+                        <TableCell className="w-full flex items-center justify-center">
+                          <div className="text-center py-12  absolute-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                              <Search className="h-8 w-8 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron permisos</h3>
+                            <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
+                            <Button
+                              onClick={handleReset}
+                              className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                            >
+                              Limpiar filtros
+                            </Button>
+                          </div>
+                        </TableCell>
+
+                      </TableRow>
+                      )}
                   </TableBody>
                 </Table>
 
@@ -850,25 +709,7 @@ export default function PermisosPage() {
                 </div>
               
 
-                {!isFetching && totalItems === 0 && (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <Search className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron permisos</h3>
-                    <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
-                    <Button
-                      onClick={() => {
-                        setSearchTerm("")
-                        setSelectedType("all")
-                        setShowActiveOnly(false)
-                      }}
-                      className="bg-blue-500 hover:bg-blue-600"
-                    >
-                      Limpiar filtros
-                    </Button>
-                  </div>
-                )}
+                
               </CardContent>
             </Card>
           </TabsContent>
