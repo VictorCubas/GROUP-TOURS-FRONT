@@ -111,7 +111,7 @@ export default function PermisosPage() {
   const [nombrePaquetePorBuscar, setNombrePaquetePorBuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [selectedType, setSelectedType] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
-  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  // const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [currentPage, setCurrentPage] = useState(1);
   // const [resetFilter, setResetFilter] = useState(false);
   const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
@@ -176,14 +176,6 @@ export default function PermisosPage() {
               pageSize: data?.pageSize ?? null
             });
     }, [data])
-
-  // const handleSelectAll = () => {
-  //   if (selectedPermissions.length === permisos.length) {
-  //     setSelectedPermissions([])
-  //   } else {
-  //     setSelectedPermissions(permisos.map((r: Permiso) => r.id))
-  //   }
-  // }
 
 
   const handleBuscarPorNombre = () => {
@@ -255,7 +247,7 @@ export default function PermisosPage() {
           </TabsList>
 
           {/* Bulk Actions */}
-          {selectedPermissions.length > 0 && (
+          {/* {selectedPermissions.length > 0 && (
             <Card className="border-orange-200 bg-orange-50">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -275,7 +267,7 @@ export default function PermisosPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
+          )} */}
 
           {/* Registration Form Tab */}
           <TabsContent value="form">
@@ -512,9 +504,7 @@ export default function PermisosPage() {
                     {!isFetching && permisos.length > 0 && permisos.map((permission: Permiso) => (
                       <TableRow
                         key={permission.id}
-                        className={`hover:bg-gray-50 transition-colors ${
-                          selectedPermissions.includes(permission.id) ? "bg-blue-50" : ""
-                        }`}
+                        className={`hover:bg-blue-50 transition-colors cursor-pointer`}
                       >
                         <TableCell>
                           <div>
