@@ -217,7 +217,7 @@ export default function PermisosPage() {
   }
 
 
-  const {mutate, isPending: isPendingMutation, isError: mutationIsError, error: errorMutation} = useMutation({
+  const {mutate, isPending: isPendingMutation} = useMutation({
     mutationFn: nuevoPermisoFetch,
     onSuccess: () => {
         handleShowToast('Se ha creado un nuevo permiso satisfactoriamente', 'success');
