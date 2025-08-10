@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom'
 
 interface ModalProps{
     children: ReactNode,
+    claseCss: string,
     onClose: () => void,
 }
 
 
-const Modal: React.FC<ModalProps> = ({children, onClose}) => {
+const Modal: React.FC<ModalProps> = ({children, onClose, claseCss}) => {
     const dialogRef = useRef<HTMLDialogElement | null>(null);
 
     useEffect(() => {
@@ -29,7 +30,7 @@ const Modal: React.FC<ModalProps> = ({children, onClose}) => {
 
     return createPortal(
         <dialog ref={dialogRef} onClose={onClose}
-            className='modal'>
+            className={claseCss}>
             {children}
         </dialog>, modalRoot);
 }
