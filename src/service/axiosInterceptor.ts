@@ -6,17 +6,30 @@ import { useNavigationStore } from '@/store/navigationStore';
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 // Interceptor para adjuntar token
 axiosInstance.interceptors.request.use(
   (config) => {
-    const sessionStorage = localStorage.getItem('session');
-    if (sessionStorage) {
-      const sessionParsed: SessionDataStore = JSON.parse(sessionStorage);
-      config.headers = config.headers || {};
-      config.headers['Authorization'] = `Bearer ${sessionParsed.token}`;
+    // Normalizar URL: asegurar que termine con /
+    if (config.url && !config.url.endsWith("/")) {
+      config.url = `${config.url}/`;
     }
+
+    // No agregar token si es login
+    const isLoginRequest = config.url?.includes("login/");
+    if (!isLoginRequest) {
+      const sessionStorage = localStorage.getItem('session');
+      if (sessionStorage) {
+        const sessionParsed: SessionDataStore = JSON.parse(sessionStorage);
+        config.headers = config.headers || {};
+        config.headers['Authorization'] = `Bearer ${sessionParsed.token}`;
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

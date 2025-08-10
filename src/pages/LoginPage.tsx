@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useNavigate } from "react-router-dom"
 import { useForm } from 'react-hook-form';
-import axios from "axios"
+import axiosInstance from "@/service/axiosInterceptor";
 import { API_BASE_URL } from "@/service/api"
 import { useSessionStore, type SessionDataStore } from "@/store/sessionStore"
 import { ToastContext } from "@/context/ToastContext"
@@ -64,7 +64,7 @@ export default function LoginPage() {
   }
 
   const loginFetch = (credentials: LoginFormData) => {
-    return axios.post(`${API_BASE_URL}/login/`, credentials);
+    return axiosInstance.post(`${API_BASE_URL}/login/`, credentials);
   };
 
   return (
