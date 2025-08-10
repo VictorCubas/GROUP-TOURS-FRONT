@@ -50,7 +50,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { NuevoPermisoFormData, Permiso, PermisoResumen, RespuestaPaginada } from "@/types/permisos"
+import type { NuevoPermisoFormData, Permiso, RespuestaPaginada } from "@/types/permisos"
 import { formatearFecha } from "@/helper/formatter"
 import { activarDesactivarPermiso, fetchData, fetchResumenPermiso, guardarPermisoEditado, nuevoPermisoFetch } from "@/components/utils/httpPermisos"
 import { Controller, useForm } from "react-hook-form"
@@ -73,14 +73,14 @@ const typeColors = {
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
 
-const moduleColors = {
-  Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
-  Paquetes: "bg-purple-50 text-purple-600 border-purple-200",
-  Empleados: "bg-orange-50 text-orange-600 border-orange-200",
-  Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
-  Reservas: "bg-pink-50 text-pink-600 border-pink-200",
-  Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
-}
+// const moduleColors = {
+//   Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
+//   Paquetes: "bg-purple-50 text-purple-600 border-purple-200",
+//   Empleados: "bg-orange-50 text-orange-600 border-orange-200",
+//   Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
+//   Reservas: "bg-pink-50 text-pink-600 border-pink-200",
+//   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
+// }
 
 interface StatsCardsProps{
   total_permisos: number;
