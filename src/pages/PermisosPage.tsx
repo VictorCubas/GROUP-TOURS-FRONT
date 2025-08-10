@@ -180,7 +180,7 @@ export default function PermisosPage() {
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
-  const {data: dataResumen, isFetching: isFetchingResumen, isError: isErrorResumen} = useQuery({
+  const {data: dataResumen, isFetching: isFetchingResumen} = useQuery({
     queryKey: ['resumen'], //data cached
     queryFn: () => fetchResumenPermiso(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
