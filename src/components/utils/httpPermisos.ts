@@ -38,7 +38,9 @@ export async function nuevoPermisoFetch(permiso: NuevoPermisoFormData) {
 }
 
 export async function guardarPermisoEditado(permiso: NuevoAEditarPermisoFormData) {
-  console.log('permiso antes de guardar: ', permiso);
-  console.log('permiso antes de guardar: ', permiso.id);
   await axiosInstance.put(`/permisos/${permiso.id}/`, permiso);    
+}
+
+export async function activarDesactivarPermiso({ permisoId, activo }: { permisoId: number; activo: boolean }) {
+  await axiosInstance.patch(`/permisos/${permisoId}/`, {activo});    
 }
