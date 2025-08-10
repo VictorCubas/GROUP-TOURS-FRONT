@@ -44,3 +44,11 @@ export interface NuevoAEditarPermisoFormData{
   en_uso: boolean; 
   fechaCreacion: string;
 }
+
+
+export interface PermisoResumen {
+  total_permisos: number;
+  total_activos: number;
+  total_inactivos: number;
+  total_en_uso: number;
+}

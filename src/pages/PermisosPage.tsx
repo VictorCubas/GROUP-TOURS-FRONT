@@ -22,6 +22,9 @@ import {
   AlertCircle,
   Loader2Icon,
   CheckIcon,
+  FileText,
+  Activity,
+  Tag,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -49,7 +52,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { NuevoPermisoFormData, Permiso, RespuestaPaginada } from "@/types/permisos"
 import { formatearFecha } from "@/helper/formatter"
-import { activarDesactivarPermiso, fetchData, guardarPermisoEditado, nuevoPermisoFetch } from "@/components/utils/httpPermisos"
+import { activarDesactivarPermiso, fetchData, fetchResumenPermiso, guardarPermisoEditado, nuevoPermisoFetch } from "@/components/utils/httpPermisos"
 import { Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
@@ -67,32 +70,44 @@ const typeColors = {
   Eliminacion: "bg-red-100 text-red-700 border-red-200",
 }
 
-type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
+// type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
 
-const moduleColors = {
-  Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
-  Paquetes: "bg-purple-50 text-purple-600 border-purple-200",
-  Empleados: "bg-orange-50 text-orange-600 border-orange-200",
-  Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
-  Reservas: "bg-pink-50 text-pink-600 border-pink-200",
-  Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
+// const moduleColors = {
+//   Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
+//   Paquetes: "bg-purple-50 text-purple-600 border-purple-200",
+//   Empleados: "bg-orange-50 text-orange-600 border-orange-200",
+//   Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
+//   Reservas: "bg-pink-50 text-pink-600 border-pink-200",
+//   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
+// }
+
+interface StatsCardsProps{
+  total_permisos: number;
+  total_activos: number;
+  total_inactivos: number;
+  total_en_uso: number;
 }
 
+const StatsCards: React.FC<StatsCardsProps> = 
+              ({total_permisos, total_activos, total_inactivos, total_en_uso}) => {
+  // console.log(dataResumen)
+  // let stats: any = [];
 
-function StatsCards() {
-  const stats = [
-    { title: "Total", value: "24", icon: Shield, color: "border-blue-200 bg-blue-50", iconColor: "text-blue-500" },
-    {
-      title: "Activos",
-      value: "18",
-      icon: Check,
-      color: "border-emerald-200 bg-emerald-50",
-      iconColor: "text-emerald-500",
-    },
-    { title: "En Uso", value: "12", icon: Eye, color: "border-purple-200 bg-purple-50", iconColor: "text-purple-500" },
-    { title: "Críticos", value: "3", icon: AlertCircle, color: "border-red-200 bg-red-50", iconColor: "text-red-500" },
-  ]
+  // if(dataResumen){
+   const stats = [
+      { title: "Total", value: total_permisos, icon: Shield, color: "border-blue-200 bg-blue-50", iconColor: "text-blue-500" },
+      {
+        title: "Activos",
+        value: total_activos,
+        icon: Check,
+        color: "border-emerald-200 bg-emerald-50",
+        iconColor: "text-emerald-500",
+      },
+      { title: "Inactivos", value: total_inactivos, icon: Eye, color: "border-purple-200 bg-purple-50", iconColor: "text-purple-500" },
+      { title: "En Uso", value: total_en_uso, icon: AlertCircle, color: "border-red-200 bg-red-50", iconColor: "text-red-500" },
+    ]
+  // }
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -121,6 +136,8 @@ export default function PermisosPage() {
   const [permisoADesactivar, setPermisoADesactivar] = useState<Permiso>();
   const [tipoDePermiso, setTipoDePermiso] = useState<'C' | 'R' | 'U' | 'D' | 'E' | 'all'>("all");
   const [onDesactivarPermiso, setOnDesactivarPermiso] = useState(false);
+  const [onVerPermiso, setOnVerPermiso] = useState(false);
+  const [permisoDetalle, setPermisoDetalle] = useState<Permiso>();
   const {handleShowToast} = use(ToastContext);
   
   // DATOS DEL FORMULARIO 
@@ -149,9 +166,15 @@ export default function PermisosPage() {
                                               });
                                               
 
-   const {data, isFetching, isError} = useQuery({
+  const {data, isFetching, isError} = useQuery({
     queryKey: ['permisos', currentPage, paginacion.pageSize, tipoDePermiso, nombrePaquetePorBuscar, showActiveOnly], //data cached
     queryFn: () => fetchData(currentPage, paginacion.pageSize, tipoDePermiso, nombrePaquetePorBuscar, showActiveOnly),
+    staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  });
+
+  const {data: dataResumen, isFetching: isFetchingResumen, isError: isErrorResumen} = useQuery({
+    queryKey: ['resumen'], //data cached
+    queryFn: () => fetchResumenPermiso(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
@@ -160,6 +183,12 @@ export default function PermisosPage() {
 
   if(!isFetching && !isError){
     permisos = data.results.map((per: Permiso, index: number) => ({...per, numero: index + 1}));
+  }
+
+  if(!isFetchingResumen && dataResumen && !isErrorResumen){
+    console.log('dataResumen 1: ', dataResumen);
+    // setPermisoResumen()
+    // setResumenPermiso(dataResumen.results)
   }
   
   // Cálculos de paginación
@@ -232,6 +261,10 @@ export default function PermisosPage() {
           queryKey: ['permisos'],
           exact: false
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['resumen'],
+        });
     },
   });
 
@@ -264,6 +297,9 @@ export default function PermisosPage() {
         queryClient.invalidateQueries({
           queryKey: ['permisos'],
           exact: false
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['resumen'],
         });
     },
   });
@@ -325,27 +361,129 @@ export default function PermisosPage() {
     setPermisoAEditar(permission);
   }
 
-  // const handleDesactivar = (permidoId: number) => {
-  // }
-
-   const handleDesactivar = (permiso: Permiso) => {
+  const handleDesactivar = (permiso: Permiso) => {
     setOnDesactivarPermiso(true);
     setPermisoADesactivar(permiso);
   }
 
-  const handleCloaseModal = () => {
+  const handleCloseModal = () => {
     setOnDesactivarPermiso(false);
   }
 
   const handleConfirmActivo = (activo=true) => {
     mutateDesactivar({ permisoId: permisoADesactivar!.id, activo })
-    // handleNroCedulaForResetChange(0);
-    // clearNroCedulaUsuarioActual()
+  }
+
+  const handleVerDetalles = (permiso: Permiso) => {
+    setOnVerPermiso(true);
+    setPermisoDetalle(permiso);
+  }
+
+  const handleCloseVerDetalles = () => {
+    setOnVerPermiso(false);
+    setPermisoDetalle(undefined);
   }
 
   return (
     <>
-       {onDesactivarPermiso && <Modal onClose={handleCloaseModal}>
+       {onVerPermiso && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Detalles del Permiso</h2>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCloseVerDetalles}
+                  className="cursor-pointer w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Header Info */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{permisoDetalle?.nombre}</h3>
+                <p className="text-gray-700">{permisoDetalle?.descripcion}</p>
+              </div>
+
+              {/* Status and Type */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Tag className="w-4 h-4 text-gray-500" />
+                    <h4 className="font-medium text-gray-900">Tipo</h4>
+                  </div>
+                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border bg-blue-100 text-blue-800 border-blue-200`}>
+                    {permisoDetalle?.tipo}
+                  </span>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Activity className="w-4 h-4 text-gray-500" />
+                    <h4 className="font-medium text-gray-900">Estado</h4>
+                  </div>
+                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${permisoDetalle?.activo ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'} border`}>
+                    {permisoDetalle?.activo ? 'Activo': 'Inactivo'}
+                  </span>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Users className="w-4 h-4 text-gray-500" />
+                    <h4 className="font-medium text-gray-900">En uso</h4>
+                  </div>
+                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${
+                    permisoDetalle?.en_uso 
+                      ? 'bg-orange-100 text-orange-800 border-orange-200' 
+                      : 'bg-gray-100 text-gray-800 border-gray-200'
+                  }`}>
+                    {permisoDetalle?.en_uso ? 'Asignado' : 'Sin asignar'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Module and Creation Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <h4 className="font-medium text-gray-900">Módulo</h4>
+                  </div>
+                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-indigo-900 text-white`}>
+                    {permisoDetalle?.modulo}
+                  </span>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <h4 className="font-medium text-gray-900">Fecha de Creación</h4>
+                  </div>
+                  <p className="text-sm text-gray-700">{formatearFecha(permisoDetalle!.fechaCreacion)}</p>
+                </div>
+              </div>
+            
+              <div className='modal-actions'>
+                    <Button 
+                      className={`cursor-pointer bg-blue-500 hover:bg-blue-600 flex justify-center 
+                                  items-center shadow-none hover:shadow-none`}
+                                  onClick={handleCloseVerDetalles}>
+                                    Aceptar
+                    </Button>
+              </div>
+              
+            </div>
+        </Modal>}
+
+       {onDesactivarPermiso && <Modal onClose={handleCloseModal} claseCss="modal">
               <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${permisoADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
                   {permisoADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
                   {!permisoADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
@@ -357,7 +495,7 @@ export default function PermisosPage() {
              </p>
 
              <div className='modal-actions'>
-                   <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloaseModal}>Cancelar</Button>
+                   <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
                    <Button 
                     disabled={isPendingDesactivar}
                     className={`cursor-pointer ${permisoADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
@@ -397,7 +535,7 @@ export default function PermisosPage() {
           </div>
 
           {/* Stats Cards */}
-          <StatsCards />
+          <StatsCards {...dataResumen}/>
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -761,7 +899,8 @@ export default function PermisosPage() {
                           </TableCell>
 
                           <TableCell>
-                            <Badge className={`${moduleColors[permission.modulo as ModuleKey]} border`}>{permission.modulo}</Badge>
+                            {/* <Badge className={`${moduleColors[permission.modulo as ModuleKey]} border`}>{permission.modulo}</Badge> */}
+                            <Badge className={`bg-purple-50 text-purple-600 border-purple-200 border`}>{permission.modulo}</Badge>
                           </TableCell>
 
                           <TableCell>
@@ -805,7 +944,8 @@ export default function PermisosPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="border-gray-200">
-                                <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer">
+                                <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
+                                  onClick={() => handleVerDetalles(permission)}>
                                   <Eye className="h-4 w-4 mr-2 text-blue-500" />
                                   Ver
                                 </DropdownMenuItem>

@@ -15,7 +15,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     // Normalizar URL: asegurar que termine con /
-    if (config.url && !config.url.endsWith("/")) {
+    if (config.url && !config.url.includes('?') && !config.url.endsWith("/")) {
       config.url = `${config.url}/`;
     }
 

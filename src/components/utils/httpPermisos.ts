@@ -44,3 +44,8 @@ export async function guardarPermisoEditado(permiso: NuevoAEditarPermisoFormData
 export async function activarDesactivarPermiso({ permisoId, activo }: { permisoId: number; activo: boolean }) {
   await axiosInstance.patch(`/permisos/${permisoId}/`, {activo});    
 }
+
+export async function fetchResumenPermiso() {
+  const resp = await axiosInstance.get(`/permisos/resumen/`);
+  return resp?.data
+}
