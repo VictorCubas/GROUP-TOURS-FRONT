@@ -138,7 +138,6 @@ export default function PermisosPage() {
   const [onDesactivarPermiso, setOnDesactivarPermiso] = useState(false);
   const [onVerPermiso, setOnVerPermiso] = useState(false);
   const [permisoDetalle, setPermisoDetalle] = useState<Permiso>();
-  const [permisoResumen, setPermisoResumen] = useState<PermisoResumen>();
   const {handleShowToast} = use(ToastContext);
   
   // DATOS DEL FORMULARIO 
