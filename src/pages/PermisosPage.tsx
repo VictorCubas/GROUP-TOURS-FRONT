@@ -87,10 +87,11 @@ interface StatsCardsProps{
   total_activos: number;
   total_inactivos: number;
   total_en_uso: number;
+  isFetchingResumen: boolean
 }
 
 const StatsCards: React.FC<StatsCardsProps> = 
-              ({total_permisos, total_activos, total_inactivos, total_en_uso}) => {
+              ({total_permisos, total_activos, total_inactivos, total_en_uso, isFetchingResumen}) => {
   // console.log(dataResumen)
   // let stats: any = [];
 
@@ -110,21 +111,28 @@ const StatsCards: React.FC<StatsCardsProps> =
   // }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {stats.map((stat, index) => (
-        <Card key={index} className={`border ${stat.color} hover:shadow-md transition-shadow`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
-                <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
-              </div>
-              <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <>
+      {isFetchingResumen && <div className="h-32 flex items-center justify-center w-full">
+        <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+        </div>}
+      {!isFetchingResumen &&
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat, index) => (
+            <Card key={index} className={`border ${stat.color} hover:shadow-md transition-shadow`}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                  </div>
+                  <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      }
+    </>
   )
 }
 
@@ -172,7 +180,7 @@ export default function PermisosPage() {
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
-  const {data: dataResumen, isFetching: isFetchingResumen, isError: isErrorResumen} = useQuery({
+  const {data: dataResumen, isFetching: isFetchingResumen} = useQuery({
     queryKey: ['resumen'], //data cached
     queryFn: () => fetchResumenPermiso(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
@@ -185,11 +193,11 @@ export default function PermisosPage() {
     permisos = data.results.map((per: Permiso, index: number) => ({...per, numero: index + 1}));
   }
 
-  if(!isFetchingResumen && dataResumen && !isErrorResumen){
-    console.log('dataResumen 1: ', dataResumen);
-    // setPermisoResumen()
-    // setResumenPermiso(dataResumen.results)
-  }
+  // if(!isFetchingResumen && dataResumen && !isErrorResumen){
+  //   console.log('dataResumen 1: ', dataResumen);
+  //   // setPermisoResumen()
+  //   // setResumenPermiso(dataResumen.results)
+  // }
   
   // Cálculos de paginación
   const totalItems = permisos?.length
@@ -535,7 +543,7 @@ export default function PermisosPage() {
           </div>
 
           {/* Stats Cards */}
-          <StatsCards {...dataResumen}/>
+          <StatsCards {...dataResumen} isFetchingResumen={isFetchingResumen}/>
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
