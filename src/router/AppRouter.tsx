@@ -9,6 +9,7 @@ const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const PermisosPage = lazy(() => import('@/pages/PermisosPage'));
 const RolesPage = lazy(() => import('@/pages/RolesPage'));
+const ModuloPage = lazy(() => import('@/pages/ModulosPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const AppRouter = () => {
@@ -35,6 +36,10 @@ const AppRouter = () => {
                     <Route path='/seguridad'>
                       <Route path="permisos" element={<PermisosPage />} />
                       <Route path="roles" element={<RolesPage />} />
+                    </Route>
+
+                    <Route path='/configuracion'>
+                      <Route path="modulos" element={<ModuloPage />} />
                     </Route>
                 </Route>
               </Route>
