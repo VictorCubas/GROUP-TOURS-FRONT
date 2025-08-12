@@ -10,32 +10,32 @@ import {
   Trash2,
   MoreHorizontal,
   Check,
-  X,
+  // X,
   Shield,
-  Users,
-  Package,
-  User,
+  // Users,
+  // Package,
+  // User,
   Download,
   RefreshCw,
   Eye,
   Calendar,
-  AlertCircle,
+  // AlertCircle,
   Loader2Icon,
   CheckIcon,
-  FileText,
-  Activity,
-  Tag,
+  // FileText,
+  // Activity,
+  // Tag,
   Boxes,
 } from "lucide-react"
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogDescription,
+//   DialogFooter,
+//   DialogHeader,
+//   DialogTitle,
+// } from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,23 +63,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { aEditarDataForm, Modulo, RespuestaPaginada } from "@/types/modulos"
 import { capitalizePrimeraLetra, formatearFecha } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoPermisoFetch } from "@/components/utils/httpModulos"
-import { Controller, useForm } from "react-hook-form"
+import {useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCards from "@/components/ResumenCards"
-
-type TypePermission = keyof typeof typeColors;
-
-
-const typeColors = {
-  Lectura: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Creacion: "bg-blue-100 text-blue-700 border-blue-200",
-  Exportar: "bg-blue-100 text-blue-700 border-blue-200",
-  Modificacion: "bg-amber-100 text-amber-700 border-amber-200",
-  Eliminacion: "bg-red-100 text-red-700 border-red-200",
-}
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
