@@ -17,12 +17,11 @@ import { useSessionStore } from '@/store/sessionStore';
 
 const sidebarItems = [
   { icon: Plane, label: "Paquetes de viajes", href: "#", color: "text-purple-400" ,
-    submenu: [
-      { label: "Terrestres", href: "/paquetes/terrestres", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
-      { label: "Aereos", href: "/paquetes/aereos", color: "text-orange-400", bgcolor: "bg-orange-400" },
-      { label: "Pasajeros", href: "/paquetes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
-      // { icon: Users, label: "Pasajeros", href: "#", color: "text-emerald-400" },
-    ],
+    // submenu: [
+    //   { label: "Terrestres", href: "/paquetes/terrestres", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+    //   { label: "Aereos", href: "/paquetes/aereos", color: "text-orange-400", bgcolor: "bg-orange-400" },
+    //   { label: "Pasajeros", href: "/paquetes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
+    // ],
   },
   {
     icon: Shield,
@@ -39,6 +38,15 @@ const sidebarItems = [
   },
   { icon: FileText, label: "Facturación", href: "#", color: "text-amber-400" },
   { icon: Settings, label: "Proveedores", href: "#", color: "text-indigo-400" },
+  { icon: Settings, label: "Configuración", href: "#", color: "text-indigo-400" ,
+      submenu: [
+      { label: "Modulos", href: "/configuracion/modulos", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      // { label: "Empleados", href: "/empleados", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      // { label: "Personas", href: "/personas", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      // { label: "Roles", href: "/seguridad/roles", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      // { label: "Permisos", href: "/seguridad/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
+    ],
+  },
   { icon: FileText, label: "Documentos", href: "#", color: "text-teal-400" },
 ]
 

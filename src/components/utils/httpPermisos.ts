@@ -3,7 +3,7 @@ import type { NuevoAEditarPermisoFormData, NuevoPermisoFormData } from "@/types/
 
 
 export const fetchData = async (page: number, page_size: number = 5, selectedType: 'C' | 'R' | 'U' | 'D' | 'E' | 'all', 
-    nombrePaquete: string = '', activo: boolean) => {
+    nombrePermiso: string = '', activo: boolean) => {
     let url = `/permisos/?page=${page}&page_size=${page_size}`;
  
     if(selectedType !== 'all'){
@@ -11,9 +11,9 @@ export const fetchData = async (page: number, page_size: number = 5, selectedTyp
     }
 
 
-    console.log('nombrePaquete: ', nombrePaquete)
-    if(nombrePaquete){
-      url = url + `&nombre=${nombrePaquete}`;
+    console.log('nombrePermiso: ', nombrePermiso)
+    if(nombrePermiso){
+      url = url + `&nombre=${nombrePermiso}`;
     }
 
     url = url + `&activo=${activo}`;

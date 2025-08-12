@@ -23,3 +23,9 @@ export const formatearSeparadorMiles = new Intl.NumberFormat('es-PY', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   });
+
+
+export function capitalizePrimeraLetra(text: string): string {
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
