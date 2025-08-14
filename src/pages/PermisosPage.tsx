@@ -13,8 +13,6 @@ import {
   X,
   Shield,
   Users,
-  Package,
-  User,
   Download,
   RefreshCw,
   Eye,
@@ -175,7 +173,7 @@ export default function PermisosPage() {
                                               });
                                               
 
-  const {data: dataModuloList, isFetching: isFetchingModulo, isError: isErrorModulo} = useQuery({
+  const {data: dataModuloList, isFetching: isFetchingModulo} = useQuery({
     queryKey: ['moduos-permisos',], //data cached
     queryFn: () => fetchDataModulo(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
