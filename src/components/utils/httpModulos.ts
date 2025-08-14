@@ -46,3 +46,8 @@ export async function fetchResumen() {
   const resp = await axiosInstance.get(`/modulos/resumen/`);
   return resp?.data
 }
+
+export async function fetchDataModulo() {
+  const resp = await axiosInstance.get(`/modulos/todos/`);
+  return resp?.data
+}

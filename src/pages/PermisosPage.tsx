@@ -58,6 +58,7 @@ import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
+import { fetchDataModulo } from "@/components/utils/httpModulos"
 
 type TypePermission = keyof typeof typeColors;
 
@@ -173,6 +174,15 @@ export default function PermisosPage() {
                                                       pageSize: 10
                                               });
                                               
+
+  const {data: dataModuloList, isFetching: isFetchingModulo, isError: isErrorModulo} = useQuery({
+    queryKey: ['moduos-permisos',], //data cached
+    queryFn: () => fetchDataModulo(),
+    staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  });
+
+
+  console.log('dataModuloList: ', dataModuloList);
 
   const {data, isFetching, isError} = useQuery({
     queryKey: ['permisos', currentPage, paginacion.pageSize, tipoDePermiso, nombrePaquetePorBuscar, showActiveOnly], //data cached
@@ -325,14 +335,27 @@ export default function PermisosPage() {
   }
 
 
-  const handleGuardarNuevoPermiso = async (dataForm: NuevoPermisoFormData) => {
-      mutate({...dataForm, activo: true, en_uso: false});
+  const handleGuardarNuevoPermiso = async (dataForm: any) => {
+    // console.log('dataForm: ', dataForm)
+    const modulo_id = dataForm.modulo;
+    delete dataForm.modulo;
+    const payLoad = {...dataForm, activo: true, en_uso: false, modulo_id}
+
+      mutate(payLoad);
   }
 
   const handleGuardarPermisosEditado = async (dataForm: any) => {
-    const dataPermisoEditado = {...permisoAEditar, ...dataForm};
+    const modulo_id = dataForm.modulo;
+
+    const dataPermisoEditado = {...permisoAEditar, ...dataForm, modulo_id};
+    console.log('dataForm: ', dataForm)
+    console.log('dataPermisoEditado: ', dataPermisoEditado);
     delete dataPermisoEditado.numero;
-    mutateGuardarEditado({...dataPermisoEditado, ...dataForm});
+    delete dataPermisoEditado.modulo;
+
+    // const payLoad = {}
+    console.log('payload: ', dataPermisoEditado)
+    mutateGuardarEditado({...dataPermisoEditado});
   }
 
 
@@ -358,7 +381,7 @@ export default function PermisosPage() {
         nombre: permisoAEditar.nombre,
         descripcion: permisoAEditar.descripcion,
         tipo: tipo,
-        modulo: permisoAEditar.modulo
+        modulo: permisoAEditar.modulo.id.toString()
       });
     }
   }, [permisoAEditar, reset]);
@@ -466,7 +489,7 @@ export default function PermisosPage() {
                     <h4 className="font-medium text-gray-900">Módulo</h4>
                   </div>
                   <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-indigo-900 text-white`}>
-                    {permisoDetalle?.modulo}
+                    {permisoDetalle?.modulo?.nombre}
                   </span>
                 </div>
 
@@ -666,8 +689,19 @@ export default function PermisosPage() {
                         <Label htmlFor="form" className="text-gray-700 font-medium">
                           Módulo *
                         </Label>
-                        <Controller
-                        name="modulo"
+
+                        {isFetchingModulo &&
+                        <Select>
+                          <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
+                            <div className="w-full flex items-center justify-center">
+                              <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                            </div>
+                          </SelectTrigger>
+                        </Select>}
+
+                        {!isFetchingModulo && 
+                          <Controller
+                            name="modulo"
                             control={control}
                             rules={{ required: "Este campo es requerido" }}
                             render={({ field }) => (
@@ -684,44 +718,25 @@ export default function PermisosPage() {
                                       field.onBlur(); 
                                     }
                                   }}>
+                                
                                 <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
                                   <SelectValue placeholder="Selecciona el módulo" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="usuarios">
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-4 w-4 text-emerald-500" />
-                                      Usuarios
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="paquetes">
-                                    <div className="flex items-center gap-2">
-                                      <Package className="h-4 w-4 text-purple-500" />
-                                      Paquetes
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="empleados">
-                                    <div className="flex items-center gap-2">
-                                      <User className="h-4 w-4 text-orange-500" />
-                                      Empleados
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="roles">
-                                    <div className="flex items-center gap-2">
-                                      <Shield className="h-4 w-4 text-yellow-500" />
-                                      Roles
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="reservas">
-                                    <div className="flex items-center gap-2">
-                                      <Calendar className="h-4 w-4 text-pink-500" />
-                                      Reservas
-                                    </div>
-                                  </SelectItem>
+                                  {dataModuloList.map((modulo: {id:number, nombre: string}) => 
+                                          <SelectItem key={modulo.id} value={modulo.id.toString()}>
+                                          <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-emerald-500" />
+                                            {modulo.nombre}
+                                          </div>
+                                        </SelectItem>)}
+                              
+                                  
                                 </SelectContent>
                               </Select>
                             )}
-                        />
+                        /> }
+
                           {errors.modulo && (
                             <p className="text-red-400 text-sm">{errors.modulo.message}</p>
                           )}
@@ -908,7 +923,7 @@ export default function PermisosPage() {
 
                           <TableCell>
                             {/* <Badge className={`${moduleColors[permission.modulo as ModuleKey]} border`}>{permission.modulo}</Badge> */}
-                            <Badge className={`bg-purple-50 text-purple-600 border-purple-200 border`}>{permission.modulo}</Badge>
+                            <Badge className={`bg-purple-50 text-purple-600 border-purple-200 border`}>{permission.modulo.nombre}</Badge>
                           </TableCell>
 
                           <TableCell>

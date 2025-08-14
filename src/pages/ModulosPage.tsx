@@ -213,6 +213,11 @@ export default function ModulosPage() {
         queryClient.invalidateQueries({
           queryKey: ['modulo-resumen'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['permisos'],
+          exact: false
+        });
     },
   });
 
@@ -228,6 +233,11 @@ export default function ModulosPage() {
         setActiveTab('list');
          queryClient.invalidateQueries({
           queryKey: ['modulos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['permisos'],
           exact: false
         });
     },

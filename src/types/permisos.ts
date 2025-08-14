@@ -4,7 +4,10 @@ export interface Permiso {
   nombre: string;
   descripcion: string;
   tipo: 'C' | 'R' | 'U' | 'D' | 'E';
-  modulo: string;
+  modulo: {
+    id: number,
+    nombre: string
+  };
   fechaCreacion: string;
   activo: boolean;
   en_uso: boolean;
