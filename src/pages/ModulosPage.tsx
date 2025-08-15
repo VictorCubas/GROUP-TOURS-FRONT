@@ -303,7 +303,7 @@ export default function ModulosPage() {
     setModuloAEditar(data);
   }
 
-  const handleDesactivar = (modulo: Modulo) => {
+  const toggleActivar = (modulo: Modulo) => {
     setOnDesactivarData(true);
     setDataADesactivar(modulo);
   }
@@ -329,73 +329,6 @@ export default function ModulosPage() {
   return (
     <>
        {onVerData && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
-            {/* <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Detalles del Modulo</h2>
-                  </div>
-                </div>
-                <button
-                  onClick={handleCloseVerDetalles}
-                  className="cursor-pointer w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                >
-                  <X className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{capitalizePrimeraLetra(dataDetalle?.nombre ?? '')}</h3>
-                <p className="text-gray-700">{dataDetalle?.descripcion}</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Activity className="w-4 h-4 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">Estado</h4>
-                  </div>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${dataDetalle?.activo ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'} border`}>
-                    {dataDetalle?.activo ? 'Activo': 'Inactivo'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <FileText className="w-4 h-4 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">Módulo</h4>
-                  </div>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-indigo-900 text-white`}>
-                    {capitalizePrimeraLetra(dataDetalle?.nombre ?? '')}
-                  </span>
-                </div>
-
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">Fecha de Creación</h4>
-                  </div>
-                  <p className="text-sm text-gray-700">{formatearFecha(dataDetalle!.fecha_creacion)}</p>
-                </div>
-              </div>
-            
-              <div className='modal-actions'>
-                    <Button 
-                      className={`cursor-pointer bg-blue-500 hover:bg-blue-600 flex justify-center 
-                                  items-center shadow-none hover:shadow-none`}
-                                  onClick={handleCloseVerDetalles}>
-                                    Aceptar
-                    </Button>
-              </div>
-              
-            </div> */}
             <div className=" bg-white rounded-lg shadow-lg p-6">
                 {/* Header */}
                 <div className="mb-6 border-b pb-4">
@@ -838,7 +771,7 @@ export default function ModulosPage() {
                                 <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
                                   onClick={() => handleVerDetalles(data)}>
                                   <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                                  Ver
+                                  Ver detalles
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
                                   <Edit className="h-4 w-4 mr-2 text-emerald-500" />
@@ -846,7 +779,7 @@ export default function ModulosPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
-                                  onClick={() => handleDesactivar(data)}>
+                                  onClick={() => toggleActivar(data)}>
                                   
                                   {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
                                   {data.activo ? 'Desactivar' : 'Activar'}
