@@ -57,6 +57,7 @@ import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import { fetchDataModulo } from "@/components/utils/httpModulos"
+import ResumenCards from "@/components/ResumenCards"
 
 type TypePermission = keyof typeof typeColors;
 
@@ -173,14 +174,11 @@ export default function PermisosPage() {
                                               });
                                               
 
-  const {data: dataModuloList, isFetching: isFetchingModulo} = useQuery({
-    queryKey: ['moduos-permisos',], //data cached
+  const {data: dataModuloList, isFetching: isFetchingModulo,} = useQuery({
+    queryKey: ['modulos-de-permiso',], //data cached
     queryFn: () => fetchDataModulo(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
-
-
-  console.log('dataModuloList: ', dataModuloList);
 
   const {data, isFetching, isError} = useQuery({
     queryKey: ['permisos', currentPage, paginacion.pageSize, tipoDePermiso, nombrePaquetePorBuscar, showActiveOnly], //data cached
@@ -188,7 +186,7 @@ export default function PermisosPage() {
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
-  const {data: dataResumen, isFetching: isFetchingResumen} = useQuery({
+  const {data: dataResumen, isFetching: isFetchingResumen, isError: isErrorResumen} = useQuery({
     queryKey: ['resumen'], //data cached
     queryFn: () => fetchResumenPermiso(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
@@ -564,7 +562,8 @@ export default function PermisosPage() {
           </div>
 
           {/* Stats Cards */}
-          <StatsCards {...dataResumen} isFetchingResumen={isFetchingResumen}/>
+          {/* <StatsCards {...dataResumen} isFetchingResumen={isFetchingResumen}/> */}
+          <ResumenCards {...dataResumen} isFetchingResumen={isFetchingResumen} isErrorResumen={isErrorResumen}/>
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

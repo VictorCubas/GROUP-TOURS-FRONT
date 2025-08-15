@@ -136,11 +136,11 @@ export default function ModulosPage() {
     dataList = data.results.map((per: Modulo, index: number) => ({...per, numero: index + 1}));
   }
 
-  if(!isFetchingResumen && dataResumen && !isErrorResumen){
-    console.log('dataResumen 1: ', dataResumen);
-    // setPermisoResumen()
-    // setResumenPermiso(dataResumen.results)
-  }
+  // if(!isFetchingResumen && dataResumen && !isErrorResumen){
+  //   console.log('dataResumen 1: ', dataResumen);
+  //   // setPermisoResumen()
+  //   // setResumenPermiso(dataResumen.results)
+  // }
   
   // Cálculos de paginación
   const totalItems = dataList?.length
@@ -216,6 +216,11 @@ export default function ModulosPage() {
 
         queryClient.invalidateQueries({
           queryKey: ['permisos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['modulos-de-permiso'],
           exact: false
         });
     },
@@ -560,7 +565,7 @@ export default function ModulosPage() {
           </div>
 
           {/* Stats Cards */}
-          <ResumenCards {...dataResumen} isFetchingResumen={isFetchingResumen}/>
+          <ResumenCards {...dataResumen} isFetchingResumen={isFetchingResumen} isErrorResumen={isErrorResumen}/>
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -859,7 +864,7 @@ export default function ModulosPage() {
                               <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                 <Search className="h-8 w-8 text-gray-400" />
                               </div>
-                              <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron dataList</h3>
+                              <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron modulos</h3>
                               <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
                               <Button
                                 onClick={handleReset}

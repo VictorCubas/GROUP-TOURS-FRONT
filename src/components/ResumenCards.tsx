@@ -2,7 +2,7 @@ import { AlertCircle, Check, Eye, Loader2Icon, Shield } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 
 const ResumenCards: React.FC<ResumenCardsProps> = 
-              ({total_permisos, total_activos, total_inactivos, total_en_uso, isFetchingResumen}) => {
+              ({total_permisos, total_activos, total_inactivos, total_en_uso, isFetchingResumen, isErrorResumen}) => {
 
    const stats = [
       { title: "Total", value: total_permisos, icon: Shield, color: "border-blue-200 bg-blue-50", iconColor: "text-blue-500" },
@@ -23,7 +23,12 @@ const ResumenCards: React.FC<ResumenCardsProps> =
       {isFetchingResumen && <div className="h-32 flex items-center justify-center w-full">
         <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
         </div>}
-      {!isFetchingResumen &&
+      {!isFetchingResumen && isErrorResumen && <>
+          <div className="h-32 flex items-center justify-center w-full">
+            <p>No se pudieron recuperar los datos</p>
+          </div>
+      </>}
+      {!isFetchingResumen && !isErrorResumen &&
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat, index) => (
             <Card key={index} className={`border ${stat.color} hover:shadow-md transition-shadow`}>
@@ -53,4 +58,5 @@ interface ResumenCardsProps{
   total_inactivos: number;
   total_en_uso: number;
   isFetchingResumen: boolean
+  isErrorResumen: boolean
 }
