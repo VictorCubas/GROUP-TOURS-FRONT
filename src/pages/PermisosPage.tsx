@@ -279,6 +279,10 @@ export default function PermisosPage() {
         queryClient.invalidateQueries({
           queryKey: ['resumen'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['roles'],
+        });
     },
   });
 
@@ -296,6 +300,11 @@ export default function PermisosPage() {
         setActiveTab('list');
          queryClient.invalidateQueries({
           queryKey: ['permisos'],
+          exact: false
+        });
+
+         queryClient.invalidateQueries({
+          queryKey: ['roles'],
           exact: false
         });
     },

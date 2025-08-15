@@ -38,19 +38,18 @@ export interface RolPaginatedResponse {
 export interface NuevoRolFormData{ 
   nombre: string;
   descripcion: string;
-  modulo: string;
+  permisos_id: number[];
   activo: boolean;
   en_uso: boolean; 
 }
 
-export interface NuevoAEditarPermisoFormData{ 
+export interface NuevoAEditarRolFormData{ 
   id: number;
   nombre: string;
   descripcion: string;
-  modulo: string;
+  permisos_id: number[];
   activo: boolean;
   en_uso: boolean; 
-  fechaCreacion: string;
 }
 
 

@@ -210,6 +210,11 @@ export default function ModulosPage() {
         });
 
         queryClient.invalidateQueries({
+          queryKey: ['roles'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
           queryKey: ['modulos-de-permiso'],
           exact: false
         });
@@ -233,6 +238,11 @@ export default function ModulosPage() {
 
         queryClient.invalidateQueries({
           queryKey: ['permisos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['roles'],
           exact: false
         });
     },

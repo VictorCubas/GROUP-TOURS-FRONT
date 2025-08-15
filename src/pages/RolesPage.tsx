@@ -1,3 +1,4 @@
+/* eslint-disable no-constant-condition */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
@@ -39,15 +40,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa"
-import { useQuery } from "@tanstack/react-query"
-import { fetchData, fetchResumen } from "@/components/utils/httpRoles"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { fetchData, fetchDataPermisos, fetchResumen, guardarDataEditado, nuevoRolFetch } from "@/components/utils/httpRoles"
 import ResumenCards from "@/components/ResumenCards"
 import type { Rol, RolPaginatedResponse } from "@/types/roles"
 import { ToastContext } from "@/context/ToastContext"
 import { useForm } from "react-hook-form"
 import { formatearFecha } from "@/helper/formatter"
+import { queryClient } from "@/components/utils/http"
 
-
+type TipoPermiso = 'C' | 'R' | 'U' | 'D' | 'E'; 
 const permissions = [
   {
     id: 1,
@@ -244,16 +246,28 @@ const roles = [
   },
 ]
 
+
+const tiposPermisosList: Record<TipoPermiso, string> = {
+  C: 'Creacion',
+  R: 'Lectura',
+  U: 'Modificación',
+  D: 'Eliminación',
+  E: 'Exportación',
+};
+
 export default function RolesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [nombreABuscar, setNombreABuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [moduloAEditar, setModuloAEditar] = useState<Rol>();
+  const [dataAEditar, setDataAEditar] = useState<Rol>();
   const [dataADesactivar, setDataADesactivar] = useState<Rol>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerData, setOnVerData] = useState(false);
   const [dataDetalle, setDataDetalle] = useState<Rol>();
   const {handleShowToast} = use(ToastContext);
+  const [permissionSearchTerm, setPermissionSearchTerm] = useState("")
+  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  const [onGuardar, setOnGuardar] = useState(false)
   
   // DATOS DEL FORMULARIO 
   const {register, handleSubmit, formState: {errors, }, reset} = 
@@ -291,6 +305,13 @@ export default function RolesPage() {
     queryFn: () => fetchResumen(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
+
+  const {data: dataPermisosList, isFetching: isFetchingPermisos,} = useQuery({
+      queryKey: ['todos-permisos',], //data cached
+      queryFn: () => fetchDataPermisos(),
+      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  });
+
 
   let dataList: Rol[] = [];
 
@@ -349,57 +370,51 @@ export default function RolesPage() {
   }
 
 
-  // const {mutate, isPending: isPendingMutation} = useMutation({
-  //   mutationFn: nuevoPermisoFetch,
-  //   onSuccess: () => {
-  //       handleShowToast('Se ha creado un nuevo modulo satisfactoriamente', 'success');
-  //       reset({
-  //           nombre: "",
-  //           descripcion: "",
-  //         });
-  //       setActiveTab('list');
-  //        queryClient.invalidateQueries({
-  //         queryKey: ['modulos'],
-  //         exact: false
-  //       });
+  const {mutate, isPending: isPendingMutation} = useMutation({
+    mutationFn: nuevoRolFetch,
+    onSuccess: () => {
+        handleShowToast('Se ha creado un nuevo rol satisfactoriamente', 'success');
+        reset({
+            nombre: "",
+            descripcion: "",
+          });
 
-  //       queryClient.invalidateQueries({
-  //         queryKey: ['modulo-resumen'],
-  //       });
+        setSelectedPermissions([])
+        setOnGuardar(false);
 
-  //       queryClient.invalidateQueries({
-  //         queryKey: ['permisos'],
-  //         exact: false
-  //       });
+        setActiveTab('list');
+         queryClient.invalidateQueries({
+          queryKey: ['roles'],
+          exact: false
+        });
 
-  //       queryClient.invalidateQueries({
-  //         queryKey: ['modulos-de-permiso'],
-  //         exact: false
-  //       });
-  //   },
-  // });
+        queryClient.invalidateQueries({
+          queryKey: ['roles-resumen'],
+        });
+    },
+  });
 
-  // const {mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
-  //   mutationFn: guardarDataEditado,
-  //   onSuccess: () => {
-  //       handleShowToast('Se ha guardado el modulo satisfactoriamente', 'success');
-  //       setModuloAEditar(undefined);
-  //       reset({
-  //           nombre: "",
-  //           descripcion: "",
-  //         });
-  //       setActiveTab('list');
-  //        queryClient.invalidateQueries({
-  //         queryKey: ['modulos'],
-  //         exact: false
-  //       });
+  const {mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
+    mutationFn: guardarDataEditado,
+    onSuccess: () => {
+        handleShowToast('Se ha guardado el modulo satisfactoriamente', 'success');
+        setDataAEditar(undefined);
+        reset({
+            nombre: "",
+            descripcion: "",
+          });
+        setActiveTab('list');
+         queryClient.invalidateQueries({
+          queryKey: ['roles'],
+          exact: false
+        });
 
-  //       queryClient.invalidateQueries({
-  //         queryKey: ['permisos'],
-  //         exact: false
-  //       });
-  //   },
-  // });
+        queryClient.invalidateQueries({
+          queryKey: ['permisos'],
+          exact: false
+        });
+    },
+  });
 
   // const {mutate: mutateDesactivar, isPending: isPendingDesactivar} = useMutation({
   //   mutationFn: activarDesactivarData,
@@ -420,40 +435,58 @@ export default function RolesPage() {
 
 
   const handleCancel = () => {
-        // setModuloAEditar(undefined);
-        // reset({
-        //     nombre: "",
-        //     descripcion: "",
-        //   });
-        // setActiveTab('list');
+        setOnGuardar(false);
+        setDataAEditar(undefined);
+        reset({
+            nombre: "",
+            descripcion: "",
+          });
+        setActiveTab('list');
   }
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
-      // mutate({...dataForm, activo: true, en_uso: false});
+    console.log('dataForm: ', dataForm);
+    console.log('selectedPermissions: ', selectedPermissions)
+    if(selectedPermissions.length){
+      mutate({...dataForm, activo: true, en_uso: false, permisos_id: selectedPermissions});
+    }
   }
 
   const handleGuardarDataEditado = async (dataForm: any) => {
-    const dataEditado = {...moduloAEditar, ...dataForm};
+    const dataEditado = {...dataAEditar, ...dataForm};
     delete dataEditado.numero;
-    // mutateGuardarEditado({...dataEditado, ...dataForm});
+    delete dataEditado.permisos;
+    delete dataEditado.fecha_creacion;
+    delete dataEditado.fecha_modificacion;
+
+
+    if(selectedPermissions.length){
+      const payLoad = {...dataEditado, permisos_id: selectedPermissions};
+      console.log('payload: ', payLoad)
+      mutateGuardarEditado(payLoad);
+    }
   }
 
 
 
-  // useEffect(() => {
-  //   if (moduloAEditar) {
-  //     reset({
-  //       nombre: moduloAEditar.nombre,
-  //       descripcion: moduloAEditar.descripcion,
-  //     });
-  //   }
-  // }, [moduloAEditar, reset]);
+  useEffect(() => {
+    if (dataAEditar) {
+      reset({
+        nombre: dataAEditar.nombre,
+        descripcion: dataAEditar.descripcion,
+      });
+    }
+  }, [dataAEditar, reset]);
 
 
   const handleEditar = (data: Rol) => {
     setActiveTab('form');
-    setModuloAEditar(data);
+    setDataAEditar(data);
+    const permisos = data.permisos;
+    const permisosIds = permisos.map(rol => rol.id)
+    console.log(data)
+    setSelectedPermissions(permisosIds);
   }
 
   const handleDesactivar = (modulo: Rol) => {
@@ -479,7 +512,11 @@ export default function RolesPage() {
     setDataDetalle(undefined);
   }
 
-
+  const handlePermissionToggle = (permissionId: number) => {
+    setSelectedPermissions((prev) =>
+      prev.includes(permissionId) ? prev.filter((p) => p !== permissionId) : [...prev, permissionId],
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -516,10 +553,10 @@ export default function RolesPage() {
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 lg:w-80 bg-gray-100">
-          <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+          <TabsTrigger value="list" className="cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white">
             Lista de Roles
           </TabsTrigger>
-          <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+          <TabsTrigger value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
             Crear Rol
           </TabsTrigger>
         </TabsList>
@@ -527,242 +564,292 @@ export default function RolesPage() {
 
         {/* Registration Form Tab */}
         <TabsContent value="form">
-          <Card className="border-emerald-200 pt-0">
-            <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
-                  <Plus className="h-5 w-5 text-white" />
+          <form onSubmit={handleSubmit(!dataAEditar ? handleGuardarNuevaData: handleGuardarDataEditado)}>
+            <Card className="border-emerald-200 pt-0">
+              <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
+                    <Plus className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-emerald-900">Crear Nuevo Rol</CardTitle>
+                    <CardDescription className="text-emerald-700">
+                      Complete la información para crear un nuevo rol
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-emerald-900">Crear Nuevo Rol</CardTitle>
-                  <CardDescription className="text-emerald-700">
-                    Complete la información para crear un nuevo rol
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            {/* <CardContent className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-gray-700 font-medium">
-                    Nombre del Rol *
-                  </Label>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-gray-700 font-medium">
+                      Nombre del Rol *
+                    </Label>
                   <Input
-                    id="name"
-                    placeholder="Nombre del rol"
-                    value={newRoleName}
-                    onChange={(e) => setNewRoleName(e.target.value)}
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="description" className="text-gray-700 font-medium">
-                    Descripción *
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe el rol"
-                    value={newRoleDescription}
-                    onChange={(e) => setNewRoleDescription(e.target.value)}
-                    className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label className="text-gray-700 font-medium">Seleccione los permisos *</Label>
-
-                  
-                  <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Buscar permisos..."
-                      value={permissionSearchTerm}
-                      onChange={(e) => setPermissionSearchTerm(e.target.value)}
-                      className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      id="nombre"
+                      autoComplete="nombre"
+                      placeholder="Nombre del rol"
+                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      {...register('nombre', {
+                      required: true, 
+                      validate: {blankSpace: (value) => !!value.trim()},
+                      minLength: 3})}
                     />
+                    <div>
+                      {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                      {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
+                    </div>
                   </div>
 
-                  
-                  {selectedPermissions.length > 0 && (
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                        {selectedPermissions.length} permisos seleccionados
-                      </Badge>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedPermissions([])}
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Limpiar selección
-                      </Button>
-                    </div>
-                  )}
-
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4">
-                    {permissions
-                      .filter(
-                        (permission) =>
-                          permission.name.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                          permission.description.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                          permission.type.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                          permission.form.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
-                      )
-                      .map((permission) => (
-                        <div
-                          key={permission.id}
-                          className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          <Checkbox
-                            id={`permission-${permission.id}`}
-                            checked={selectedPermissions.includes(permission.id)}
-                            onCheckedChange={() => handlePermissionToggle(permission.id)}
-                            className="mt-1"
-                          />
-                          <div className="flex-1">
-                            <Label
-                              htmlFor={`permission-${permission.id}`}
-                              className="text-sm font-medium text-gray-900 cursor-pointer"
-                            >
-                              {permission.name}
-                            </Label>
-                            <p className="text-xs text-gray-500 mt-1">{permission.description}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Badge
-                                className={`text-xs ${
-                                  permission.type === "Lectura"
-                                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                    : permission.type === "Escritura"
-                                      ? "bg-blue-100 text-blue-700 border-blue-200"
-                                      : permission.type === "Modificación"
-                                        ? "bg-amber-100 text-amber-700 border-amber-200"
-                                        : permission.type === "Eliminación"
-                                          ? "bg-red-100 text-red-700 border-red-200"
-                                          : "bg-purple-100 text-purple-700 border-purple-200"
-                                }`}
-                              >
-                                {permission.type}
-                              </Badge>
-                              <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                {permission.form}
-                              </Badge>
-                            </div>
-                          </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="description" className="text-gray-700 font-medium">
+                      Descripción *
+                    </Label>
+                    <Textarea
+                        id="descripcion"
+                        autoComplete="descripcion"
+                        placeholder="Describe el rol y su funcionalidad"
+                        className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        {...register('descripcion', {
+                        required: true, 
+                        validate: {blankSpace: (value) => !!value.trim()},
+                        minLength: 15})}
+                        />
+                        <div>
+                          {(errors?.descripcion?.type === 'required' || errors?.descripcion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                          {errors?.descripcion?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 15 caracteres</span>}
                         </div>
-                      ))}
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-gray-700 font-medium">Seleccione los permisos *</Label>
 
                     
-                    {permissions.filter(
-                      (permission) =>
-                        permission.name.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                        permission.description.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                        permission.type.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                        permission.form.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
-                    ).length === 0 && (
-                      <div className="col-span-2 text-center py-8">
-                        <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                          <Search className="h-6 w-6 text-gray-400" />
-                        </div>
-                        <p className="text-gray-500 text-sm">
-                          No se encontraron permisos que coincidan con "{permissionSearchTerm}"
-                        </p>
+                    <div className="relative mb-4">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Buscar permisos..."
+                        value={permissionSearchTerm}
+                        onChange={(e) => setPermissionSearchTerm(e.target.value)}
+                        className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    
+                    {selectedPermissions.length > 0 && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                          {selectedPermissions.length} permisos seleccionados
+                        </Badge>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => setPermissionSearchTerm("")}
-                          className="mt-2"
+                          onClick={() => setSelectedPermissions([])}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
                         >
-                          Limpiar búsqueda
+                          <X className="h-3 w-3 mr-1" />
+                          Limpiar selección
                         </Button>
                       </div>
                     )}
-                  </div>
 
-                  
-                  <div className="flex items-center gap-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const filteredPermissions = permissions.filter(
-                          (permission) =>
-                            permission.name.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                            permission.description.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                            permission.type.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                            permission.form.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
-                        )
-                        const allFilteredSelected = filteredPermissions.every((p) =>
-                          selectedPermissions.includes(p.id),
-                        )
-
-                        if (allFilteredSelected) {
-                          setSelectedPermissions((prev) =>
-                            prev.filter((id) => !filteredPermissions.map((p) => p.id).includes(id)),
-                          )
-                        } else {
-                          const newSelections = filteredPermissions
-                            .map((p) => p.id)
-                            .filter((id) => !selectedPermissions.includes(id))
-                          setSelectedPermissions((prev) => [...prev, ...newSelections])
-                        }
-                      }}
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                    >
-                      <Check className="h-3 w-3 mr-1" />
-                      {permissions
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                      {dataPermisosList && dataPermisosList
                         .filter(
-                          (permission) =>
-                            permission.name.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                            permission.description.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                            permission.type.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                            permission.form.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
+                          (permission: any) => 
+                            permission.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                            permission.descripcion.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                            permission.tipo.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                            permission.modulo.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
+                          
                         )
-                        .every((p) => selectedPermissions.includes(p.id))
-                        ? "Deseleccionar"
-                        : "Seleccionar"}{" "}
-                      visibles
-                    </Button>
+                        .map((permission: any) => (
+                          <div
+                            key={permission.id}
+                            className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <Checkbox
+                              id={`permission-${permission.id}`}
+                              checked={selectedPermissions.includes(permission.id)}
+                              onCheckedChange={() => handlePermissionToggle(permission.id)}
+                              className="mt-1"
+                            />
+                            <div className="flex-1">
+                              <Label
+                                htmlFor={`permission-${permission.id}`}
+                                className="text-sm font-medium text-gray-900 cursor-pointer"
+                              >
+                                {permission.nombre}
+                              </Label>
+                              <p className="text-xs text-gray-500 mt-1">{permission.descripcion}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Badge
+                                  className={`text-xs ${
+                                    permission.tipo === "R"
+                                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                      : permission.tipo === "C"
+                                        ? "bg-blue-100 text-blue-700 border-blue-200"
+                                        : permission.tipo === "U"
+                                          ? "bg-amber-100 text-amber-700 border-amber-200"
+                                          : permission.tipo === "D"
+                                            ? "bg-red-100 text-red-700 border-red-200"
+                                            : "bg-purple-100 text-purple-700 border-purple-200"
+                                  }`}
+                                >
+                                  {tiposPermisosList[`${permission.tipo as TipoPermiso}`]}
+                                </Badge>
+                                <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                                  {permission.modulo.nombre}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      
+                      {dataPermisosList && dataPermisosList.filter(
+                        (permission: any) =>
+                          permission.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                          permission.descripcion.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                          permission.tipo.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                          permission.modulo.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
+                      ).length === 0 && (
+                        <div className="col-span-2 text-center py-8">
+                          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <Search className="h-6 w-6 text-gray-400" />
+                          </div>
+                          <p className="text-gray-500 text-sm">
+                            No se encontraron permisos que coincidan con "{permissionSearchTerm}"
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPermissionSearchTerm("")}
+                            className="mt-2"
+                          >
+                            Limpiar búsqueda
+                          </Button>
+                        </div>
+                      )}
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedPermissions(permissions.map((p) => p.id))}
-                      className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                    >
-                      <Check className="h-3 w-3 mr-1" />
-                      Seleccionar todos
-                    </Button>
+                    </div>
+
+                    {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un permiso</span>}
+                    
+                    <div className="flex items-center gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const filteredPermissions = dataPermisosList.filter(
+                            (permission: any) =>
+                              permission.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                              permission.descripcion.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                              permission.tipo.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                              permission.modulo.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
+                          )
+                          const allFilteredSelected = filteredPermissions.every((p: any) =>
+                            selectedPermissions.includes(p.id),
+                          )
+
+                          if (allFilteredSelected) {
+                            setSelectedPermissions((prev) =>
+                              prev.filter((id) => !filteredPermissions.map((p: any) => p.id).includes(id)),
+                            )
+                          } else {
+                            const newSelections = filteredPermissions
+                              .map((p:any) => p.id)
+                              .filter((id:any) => !selectedPermissions.includes(id))
+                            setSelectedPermissions((prev) => [...prev, ...newSelections])
+                          }
+                        }}
+                        className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        {dataPermisosList && dataPermisosList
+                          .filter(
+                            (permission: any) =>
+                              permission.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                              permission.descripcion.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                              permission.tipo.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+                              permission.modulo.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
+                          )
+                          .every((p: any) => selectedPermissions.includes(p.id))
+                          ? "Deseleccionar"
+                          : "Seleccionar"}{" "}
+                        todos
+                      </Button>
+
+                      {/* <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedPermissions(permissions.map((p) => p.id))}
+                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Seleccionar todos
+                      </Button> */}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-3">
-                <Button className="bg-emerald-500 hover:bg-emerald-600">
-                  <Check className="h-4 w-4 mr-2" />
-                  Crear Rol
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
-                  onClick={() => {
-                    setNewRoleName("")
-                    setNewRoleDescription("")
-                    setSelectedPermissions([])
-                    setPermissionSearchTerm("")
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </CardContent> */}
-          </Card>
+                <div className="flex gap-3">
+                  {!dataAEditar &&
+                      <Button 
+                          disabled={isPendingMutation}
+                          type="submit"
+                          onClick={() => setOnGuardar(true)}
+                          className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
+                        {isPendingMutation ? 
+                            <>
+                                <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                                Creando...
+                            </> : 
+                            <>
+                              <Check className="h-4 w-4 mr-2" />
+                              Crear Rol
+                            </>}
+                      </Button>
+                        }
+
+                      {dataAEditar &&
+                          <Button 
+                              disabled={isPendingEdit}
+                              type="submit"
+                              onClick={() => setOnGuardar(true)}
+                              className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
+                            {isPendingMutation ? 
+                                <>
+                                    <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                                    Guardando...
+                                </> : 
+                                <>
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Guardar Rol
+                                </>}
+                          </Button>
+                        }
+                  <Button
+                    variant="outline"
+                    className="cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
+                    onClick={() => {
+                      // setNewRoleName("")
+                      // setNewRoleDescription("")
+                      setSelectedPermissions([])
+                      setPermissionSearchTerm("")
+                      handleCancel()
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </form>
         </TabsContent>
 
         {/* Roles List Tab */}
@@ -919,7 +1006,7 @@ export default function RolesPage() {
                                     <Eye className="h-4 w-4 mr-2 text-blue-500" />
                                     Ver detalles
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer">
+                                  <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
                                     <Edit className="h-4 w-4 mr-2 text-emerald-500" />
                                     Editar
                                   </DropdownMenuItem>

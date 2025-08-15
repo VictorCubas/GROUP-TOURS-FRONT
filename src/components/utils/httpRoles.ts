@@ -1,6 +1,5 @@
 import axiosInstance from "@/service/axiosInterceptor";
-import type { NuevoModuloFormData } from "@/types/modulos";
-import type { NuevoAEditarPermisoFormData } from "@/types/permisos";
+import type { NuevoAEditarRolFormData, NuevoRolFormData } from "@/types/roles";
 
 
 export const fetchData = async (page: number, page_size: number = 5, 
@@ -14,7 +13,7 @@ export const fetchData = async (page: number, page_size: number = 5,
     }
 
     url = url + `&activo=${activo}`;
-    
+
 
     try {
       const resp = await axiosInstance.get(url);
@@ -31,11 +30,11 @@ export const fetchData = async (page: number, page_size: number = 5,
 
 
 //tanstackquery ya maneja el error y en el interceptor tambien
-export async function nuevoPermisoFetch(data: NuevoModuloFormData) {
+export async function nuevoRolFetch(data: NuevoRolFormData) {
     await axiosInstance.post(`/roles/`, data);    
 }
 
-export async function guardarDataEditado(data: NuevoAEditarPermisoFormData) {
+export async function guardarDataEditado(data: NuevoAEditarRolFormData) {
   await axiosInstance.put(`/roles/${data.id}/`, data);    
 }
 
@@ -48,7 +47,7 @@ export async function fetchResumen() {
   return resp?.data
 }
 
-export async function fetchDataModulo() {
-  const resp = await axiosInstance.get(`/roles/todos/`);
+export async function fetchDataPermisos() {
+  const resp = await axiosInstance.get(`/permisos/todos/`);
   return resp?.data
 }
