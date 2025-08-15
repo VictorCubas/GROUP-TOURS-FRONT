@@ -2,10 +2,10 @@ import { AlertCircle, Check, Eye, Loader2Icon, Shield } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 
 const ResumenCards: React.FC<ResumenCardsProps> = 
-              ({total_permisos, total_activos, total_inactivos, total_en_uso, isFetchingResumen, isErrorResumen}) => {
+              ({total, total_activos, total_inactivos, total_en_uso, isFetchingResumen, isErrorResumen}) => {
 
    const stats = [
-      { title: "Total", value: total_permisos, icon: Shield, color: "border-blue-200 bg-blue-50", iconColor: "text-blue-500" },
+      { title: "Total", value: total, icon: Shield, color: "border-blue-200 bg-blue-50", iconColor: "text-blue-500" },
       {
         title: "Activos",
         value: total_activos,
@@ -53,7 +53,7 @@ export default ResumenCards;
 
 
 interface ResumenCardsProps{
-  total_permisos: number;
+  total: number;
   total_activos: number;
   total_inactivos: number;
   total_en_uso: number;

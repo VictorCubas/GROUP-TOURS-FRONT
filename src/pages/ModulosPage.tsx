@@ -136,11 +136,6 @@ export default function ModulosPage() {
     dataList = data.results.map((per: Modulo, index: number) => ({...per, numero: index + 1}));
   }
 
-  // if(!isFetchingResumen && dataResumen && !isErrorResumen){
-  //   console.log('dataResumen 1: ', dataResumen);
-  //   // setPermisoResumen()
-  //   // setResumenPermiso(dataResumen.results)
-  // }
   
   // Cálculos de paginación
   const totalItems = dataList?.length
@@ -160,11 +155,6 @@ export default function ModulosPage() {
     setPaginacion(prevPagination => ({...prevPagination, pageSize: Number(value)}))
     setCurrentPage(1) // Reset a la primera página
   }
-  
-    // Reset página cuando cambian los filtros
-    // useEffect(() => {
-    //   setCurrentPage(1);
-    // }, [showActiveOnly])
 
     useEffect(() => {
       if (!data) return;
