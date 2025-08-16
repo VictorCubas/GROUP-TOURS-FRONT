@@ -315,3 +315,12 @@ div:has(> table) {
     left: 50%;
     transform: translate(-50%, -50%);
 }
+
+input[type="checkbox"][aria-hidden="true"] {
+  position: absolute !important;
+  left: -9999px; /* lo manda fuera de la pantalla */
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
