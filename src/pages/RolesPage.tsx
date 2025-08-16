@@ -799,8 +799,12 @@ export default function RolesPage() {
                       )}
 
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4">
-                        {dataPermisosList && dataPermisosList
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
+                        {isFetchingPermisos && <div className="w-full flex items-center justify-center">
+                          <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                        </div>}
+
+                        {!isFetchingPermisos && dataPermisosList && dataPermisosList
                           .filter(
                             (permission: any) => 
                               permission.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
@@ -926,17 +930,6 @@ export default function RolesPage() {
                             : "Seleccionar"}{" "}
                           todos
                         </Button>
-
-                        {/* <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedPermissions(permissions.map((p) => p.id))}
-                          className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                        >
-                          <Check className="h-3 w-3 mr-1" />
-                          Seleccionar todos
-                        </Button> */}
                       </div>
                     </div>
                   </div>
@@ -1055,8 +1048,8 @@ export default function RolesPage() {
                       <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
                       <TableHead className="font-semibold text-gray-700">Información</TableHead>
                       <TableHead className="font-semibold text-gray-700">Estado</TableHead>
-                      {/* <TableHead className="font-semibold text-gray-700">Usuarios Asignados</TableHead> */}
-                      {/* <TableHead className="font-semibold text-gray-700">Permisos</TableHead> */}
+                      <TableHead className="font-semibold text-gray-700">Usuarios Asignados</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Permisos</TableHead>
                       <TableHead className="font-semibold text-gray-700">Fecha Creación</TableHead>
                       <TableHead className="font-semibold text-gray-700">Última Modificación</TableHead>
                       <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
@@ -1099,19 +1092,19 @@ export default function RolesPage() {
                                   {data.activo ? "Activo" : "Inactivo"}
                                 </Badge>
                               </TableCell>
-                              {/* <TableCell>
+                              <TableCell>
                                 <div className="flex items-center gap-2">
                                   <Users className="h-4 w-4 text-gray-400" />
-                                  <span className="font-medium">{data.assignedUsers}</span>
+                                  <span className="font-medium">5</span>
                                 </div>
-                              </TableCell> */}
-                              {/* <TableCell>
+                              </TableCell>
+                              <TableCell>
                                 <div className="flex flex-wrap gap-1 max-w-xs">
-                                  {data.permisos.slice(0, 2).map((permId) => {
-                                    const permission = permissions?.find((p) => p.id === permId)
+                                  {data.permisos.slice(0, 2).map((permi) => {
+                                    const permission = dataPermisosList?.find((p: any) => p.id === permi.id)
                                     return permission ? (
-                                      <Badge key={permId} className="text-xs bg-blue-100 text-blue-700 border-blue-200">
-                                        {permission.name}
+                                      <Badge key={permi.id} className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                                        {permission.nombre}
                                       </Badge>
                                     ) : null
                                   })}
@@ -1121,7 +1114,7 @@ export default function RolesPage() {
                                     </Badge>
                                   )}
                                 </div>
-                              </TableCell> */}
+                              </TableCell>
                               <TableCell>
                                 <div className="text-sm text-gray-500">
                                   <div className="flex items-center gap-1">

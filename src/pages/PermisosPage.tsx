@@ -283,6 +283,11 @@ export default function PermisosPage() {
         queryClient.invalidateQueries({
           queryKey: ['roles'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['todos-permisos'],
+          exact: false
+        });
     },
   });
 
@@ -305,6 +310,11 @@ export default function PermisosPage() {
 
          queryClient.invalidateQueries({
           queryKey: ['roles'],
+          exact: false
+        });
+
+         queryClient.invalidateQueries({
+          queryKey: ['todos-permisos'],
           exact: false
         });
     },
