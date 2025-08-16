@@ -556,7 +556,7 @@ export default function ModulosPage() {
                           {...register('nombre', {
                           required: true, 
                           validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 3})}
+                          minLength: 2})}
                         />
                         <div>
                           {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
