@@ -726,7 +726,7 @@ export default function ModulosPage() {
                         <Select 
                           value={filtros.tipo}
                           onValueChange={(val) => setFiltros({ ...filtros, tipo: val })}>
-                          <SelectTrigger className="w-40 border-blue-200 focus:border-blue-500">
+                          <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
                             <SelectValue placeholder="Tipo Persona" />
                           </SelectTrigger>
                           <SelectContent>
@@ -739,7 +739,7 @@ export default function ModulosPage() {
                         <Select 
                           value={filtros.sexo}
                           onValueChange={(val) => setFiltros({ ...filtros, sexo: val })}>
-                          <SelectTrigger className="w-40 border-blue-200 focus:border-blue-500">
+                          <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
                             <SelectValue placeholder="Sexo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -792,9 +792,9 @@ export default function ModulosPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Label className="text-sm text-gray-600 font-medium">Documento:</Label>
+                        {/* <Label className="text-sm text-gray-600 font-medium">Documento:</Label> */}
                         <Input
-                          placeholder="Filtrar por documento"
+                          placeholder="Buscar por documento.."
                           value={buscarPorDocumento}
                             onChange={(e) => setBuscarPorDocumento(e.target.value)}
                           className="w-48 border-indigo-200 focus:border-indigo-500"
@@ -802,9 +802,9 @@ export default function ModulosPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Label className="text-sm text-gray-600 font-medium">Teléfono:</Label>
+                        {/* <Label className="text-sm text-gray-600 font-medium">Teléfono:</Label> */}
                         <Input
-                          placeholder="Filtrar por teléfono"
+                          placeholder="Buscar por teléfono.."
                           value={buscarPorTelefono}
                           onChange={(e) => setBuscarPorTelefono(e.target.value)}
                           className="w-48 border-green-200 focus:border-green-500"
@@ -829,7 +829,7 @@ export default function ModulosPage() {
                           setBuscarPorTelefono("");
                           setNombreABuscar(""); 
                         }}
-                      className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                      className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
                         <X className="h-3 w-3 mr-1" />
                         Limpiar filtros 
