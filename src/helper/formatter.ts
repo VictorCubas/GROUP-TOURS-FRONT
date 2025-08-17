@@ -1,4 +1,4 @@
-export const formatearFecha = (fechaString: string | Date): string => {
+export const formatearFecha = (fechaString: string | Date, mostrarMinuto: boolean=  true): string => {
   const fecha = new Date(fechaString);
 
   const pad = (n: number) => (n < 10 ? `0${n}` : n);
@@ -10,7 +10,13 @@ export const formatearFecha = (fechaString: string | Date): string => {
   const horas = pad(fecha.getHours());
   const minutos = pad(fecha.getMinutes());
 
-  return `${dia}/${mes}/${anio} ${horas}:${minutos}`;
+  let fechaResult: string = `${dia}/${mes}/${anio}`;
+
+  if(mostrarMinuto){
+    fechaResult += ` ${horas}:${minutos}`
+  }
+
+  return fechaResult;
 }
 
 export const formatearMoneda = new Intl.NumberFormat('es-PY', {
@@ -28,4 +34,10 @@ export const formatearSeparadorMiles = new Intl.NumberFormat('es-PY', {
 export function capitalizePrimeraLetra(text: string): string {
   if (!text) return "";
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function getNombreCompleto(nombre?: string, apellido?: string): string{
+  if (!nombre && !apellido) return "";
+
+  return `${nombre} ${apellido}`
 }
