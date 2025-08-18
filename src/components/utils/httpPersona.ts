@@ -61,8 +61,8 @@ export async function guardarDataEditado(data: NuevoAEditarPermisoFormData) {
   await axiosInstance.put(`/personas/${data.id}/`, data);    
 }
 
-export async function activarDesactivarData({ dataId, activo }: { dataId: number; activo: boolean }) {
-  await axiosInstance.patch(`/personas/${dataId}/`, {activo});    
+export async function activarDesactivarData({ dataId, activo, tipo }: { dataId: number; activo: boolean, tipo: string }) {
+  await axiosInstance.patch(`/personas/${dataId}/`, {activo, tipo});    
 }
 
 export async function fetchResumen() {

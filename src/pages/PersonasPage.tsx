@@ -106,7 +106,7 @@ export default function ModulosPage() {
   const [dataAEditar, setDataAEditar] = useState<Persona>();
   const [dataADesactivar, setDataADesactivar] = useState<Persona>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
-  const [onVerData, setOnVerData] = useState(false);
+  const [onVerDetalles, setOnVerDetalles] = useState(false);
   const [dataDetalle, setDataDetalle] = useState<Persona>();
   const {handleShowToast} = use(ToastContext);
   const [filtros, setFiltros] = useState({
@@ -366,16 +366,16 @@ export default function ModulosPage() {
   }
 
   const handleConfirmActivo = (activo=true) => {
-    mutateDesactivar({ dataId: dataADesactivar!.id, activo })
+    mutateDesactivar({ dataId: dataADesactivar!.id, activo, tipo: dataADesactivar!.tipo })
   }
 
   const handleVerDetalles = (data: Persona) => {
     setDataDetalle(data);
-    setOnVerData(true);
+    setOnVerDetalles(true);
   }
 
   const handleCloseVerDetalles = () => {
-    setOnVerData(false);
+    setOnVerDetalles(false);
     setDataDetalle(undefined);
   }
 
@@ -412,102 +412,121 @@ export default function ModulosPage() {
 
   return (
     <>
-       {onVerData && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
+       {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
             <div className=" bg-white rounded-lg shadow-lg p-6">
                 {/* Header */}
                 <div className="mb-6 border-b pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-cyan-500 rounded-xl flex items-center justify-center">
-                      <Boxes className="h-6 w-6 text-white" />
+                    <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                      <User className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
                         {dataDetalle?.nombre}
                       </h2>
-                      <p className="text-gray-600">Detalles completos del módulo</p>
+                      <p className="text-gray-600">Detalles completos de la persona</p>
                     </div>
                   </div>
                 </div>
 
                 
-                  <div className="space-y-6">
-                    {/* Estado */}
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="text-sm font-medium text-gray-700">Estado:</div>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold border ${
-                            dataDetalle?.activo
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                              : "bg-gray-100 text-gray-600 border-gray-300"
-                          }`}
-                        >
-                          {dataDetalle?.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Descripción */}
-                    <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-900">Descripción</label>
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-gray-700 leading-relaxed">DSKFNSDKFJDS</p>
-                      </div>
-                    </div>
-
-                    {/* Fechas */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-900">Fecha de Creación</label>
-                        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                          <Calendar className="h-4 w-4 text-emerald-600" />
-                          <span className="text-sm text-gray-700">
-                            {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-900">Última Modificación</label>
-                        <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                          <Calendar className="h-4 w-4 text-orange-600" />
-                          <span className="text-sm text-gray-700">
-                            {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Información del Módulo */}
-                    <div className="p-4 bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                          <Boxes className="h-4 w-4 text-white" />
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-cyan-900">Información del Módulo</h4>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-600">Nombre:</span>
-                              <span className="ml-2 font-medium text-gray-900 capitalize">
-                                {dataDetalle?.nombre}
+                 <div className="p-3 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">INFORMACIÓN PERSONAL</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Nombre completo:</span>
+                              <span className="font-medium">
+                                {dataDetalle?.nombre} {dataDetalle?.apellido}
                               </span>
                             </div>
-                            <div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Fecha de nacimiento:</span>
+                              <span className="font-medium">{formatearFecha(dataDetalle?.fecha_nacimiento ?? '', false)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Edad:</span>
+                              <span className="font-medium">{dataDetalle?.edad} años</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Género:</span>
+                              <Badge className={`${genderColors[dataDetalle?.sexo ?? 'M']} border`}>
+                                {dataDetalle?.sexo === 'F' ? 'Femenino': 'Masculino'}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Nacionalidad:</span>
+                              <span className="font-medium">{dataDetalle?.nacionalidad}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Tipo:</span>
+                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                {dataDetalle?.tipo_documento.nombre}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Número:</span>
+                              <span className="font-medium">{dataDetalle?.documento}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">CONTACTO</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Email:</span>
+                              <span className="font-medium">{dataDetalle?.email}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Teléfono:</span>
+                              <span className="font-medium">{dataDetalle?.telefono}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Dirección:</span>
+                              <span className="font-medium text-right">{dataDetalle?.direccion}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">ESTADO Y FECHAS</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
                               <span className="text-gray-600">Estado:</span>
-                              <span
-                                className={`ml-2 font-medium ${
-                                  dataDetalle?.activo ? "text-emerald-600" : "text-gray-600"
-                                }`}
+                              <Badge
+                                className={
+                                  dataDetalle?.activo
+                                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                    : "bg-gray-100 text-gray-700 border-gray-200"
+                                }
                               >
-                                {dataDetalle?.activo ? "Activo" : "Inactivo"}
-                              </span>
+                                {dataDetalle?.activo ? "Activa" : "Inactiva"}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Fecha de registro:</span>
+                              <span className="font-medium">{formatearFecha(dataDetalle?.fecha_creacion ?? '')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Última modificación:</span>
+                              <span className="font-medium">{formatearFecha(dataDetalle?.fecha_modificacion ?? '')}</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> 
 
 
                 {/* Footer */}
@@ -531,7 +550,7 @@ export default function ModulosPage() {
                </div>
               <h2 className='text-center'>Confirmacion de operación</h2>
              <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} el módulo de <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
+               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} los datos de la persona <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
              </p>
 
              <div className='modal-actions'>
