@@ -316,11 +316,24 @@ div:has(> table) {
     transform: translate(-50%, -50%);
 }
 
-input[type="checkbox"][aria-hidden="true"] {
+input[aria-hidden="true"] {
   position: absolute !important;
-  left: -9999px; /* lo manda fuera de la pantalla */
+  left: -9999px !important; /* los saca de la pantalla */
   width: 0 !important;
   height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
+  border: 0 !important;
+  pointer-events: none !important; /* opcional */
+}
+
+.mi-select-wrapper input[aria-hidden="true"] {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  pointer-events: none !important;
 }

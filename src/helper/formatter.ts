@@ -1,5 +1,15 @@
-export const formatearFecha = (fechaString: string | Date, mostrarMinuto: boolean=  true): string => {
-  const fecha = new Date(fechaString);
+export const formatearFecha = (fechaString: string | Date,mostrarMinuto: boolean = true): string => {
+
+  let fecha: Date;
+
+  // Si es string con formato YYYY-MM-DD sin hora
+  if (typeof fechaString === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+    const [anio, mes, dia] = fechaString.split("-").map(Number);
+    // Creamos fecha en local sin ajustar por zona horaria
+    fecha = new Date(anio, mes - 1, dia);
+  } else {
+    fecha = new Date(fechaString);
+  }
 
   const pad = (n: number) => (n < 10 ? `0${n}` : n);
 
@@ -12,12 +22,12 @@ export const formatearFecha = (fechaString: string | Date, mostrarMinuto: boolea
 
   let fechaResult: string = `${dia}/${mes}/${anio}`;
 
-  if(mostrarMinuto){
-    fechaResult += ` ${horas}:${minutos}`
+  if (mostrarMinuto) {
+    fechaResult += ` ${horas}:${minutos}`;
   }
 
   return fechaResult;
-}
+};
 
 export const formatearMoneda = new Intl.NumberFormat('es-PY', {
     style: 'currency',

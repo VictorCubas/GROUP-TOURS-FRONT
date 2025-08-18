@@ -47,7 +47,7 @@ export async function fetchResumen() {
   return resp?.data
 }
 
-export async function fetchDataModulo() {
+export async function fetchDataTodo() {
   const resp = await axiosInstance.get(`/tipo_documentos/todos/`);
   return resp?.data
 }

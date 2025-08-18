@@ -65,12 +65,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { aEditarDataForm, Persona, RespuestaPaginada } from "@/types/personas"
 import { capitalizePrimeraLetra, formatearFecha, getNombreCompleto } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch } from "@/components/utils/httpPersona"
-import {useForm } from "react-hook-form"
+import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
+import { fetchDataTodo } from "@/components/utils/httpTipoDocumentos"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
@@ -102,7 +103,7 @@ export default function ModulosPage() {
   const [buscarPorDocumento, setBuscarPorDocumento] = useState("");
   const [buscarPorTelefono, setBuscarPorTelefono] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [moduloAEditar, setModuloAEditar] = useState<Persona>();
+  const [dataAEditar, setDataAEditar] = useState<Persona>();
   const [dataADesactivar, setDataADesactivar] = useState<Persona>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerData, setOnVerData] = useState(false);
@@ -120,8 +121,8 @@ export default function ModulosPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {register, handleSubmit, formState: {errors, }, reset} = 
-            useForm<aEditarDataForm>({
+  const {control, register, handleSubmit, formState: {errors, },clearErrors, reset} = 
+            useForm<any>({
               mode: "onBlur",
               defaultValues: {
                 nombre: "",
@@ -143,11 +144,11 @@ export default function ModulosPage() {
                                               });
                                               
 
-  // const {data, isFetching, isError} = useQuery({
-  //   queryKey: ['personas', currentPage, paginacion.pageSize, nombreABuscar, showActiveOnly], //data cached
-  //   queryFn: () => fetchData(currentPage, paginacion.pageSize, nombreABuscar, showActiveOnly),
-  //   staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-  // });
+  const {data: dataTipoDocumentoList, isFetching: isFetchingTipoDocumento,} = useQuery({
+      queryKey: ['tipo-documentos-de-personas',], //data cached
+      queryFn: () => fetchDataTodo(),
+      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
 
   const {data, isFetching, isError} = useQuery({
     queryKey: ['personas', currentPage, paginacion.pageSize, filtros], //data cached
@@ -248,10 +249,10 @@ export default function ModulosPage() {
         //   exact: false
         // });
 
-        queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos-de-personas'],
-          exact: false
-        });
+        // queryClient.invalidateQueries({
+        //   queryKey: ['tipo-documentos-de-personas'],
+        //   exact: false
+        // });
     },
   });
 
@@ -259,7 +260,7 @@ export default function ModulosPage() {
     mutationFn: guardarDataEditado,
     onSuccess: () => {
         handleShowToast('Se ha guardado la persona satisfactoriamente', 'success');
-        setModuloAEditar(undefined);
+        setDataAEditar(undefined);
         reset({
             nombre: "",
             descripcion: "",
@@ -310,7 +311,7 @@ export default function ModulosPage() {
 
 
   const handleCancel = () => {
-        setModuloAEditar(undefined);
+        setDataAEditar(undefined);
         reset({
             nombre: "",
             descripcion: "",
@@ -320,12 +321,15 @@ export default function ModulosPage() {
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
+    console.log('dataForm: ', dataForm)
       mutate({...dataForm, activo: true, en_uso: false});
   }
 
   const handleGuardarDataEditado = async (dataForm: any) => {
-    const dataEditado = {...moduloAEditar, ...dataForm};
+    const dataEditado = {...dataAEditar, ...dataForm};
     delete dataEditado.numero;
+
+    console.log('dataEditado: ', dataEditado);
     mutateGuardarEditado({...dataEditado, ...dataForm});
   }
 
@@ -337,18 +341,19 @@ export default function ModulosPage() {
    * CORREGIR ESTA PARTE
    *******************************/
   useEffect(() => {
-    if (moduloAEditar) {
+    if (dataAEditar) {
+      console.log('reset data: ', dataAEditar)
       reset({
-        nombre: moduloAEditar.nombre,
-        // descripcion: moduloAEditar.descripcion,
+        ...dataAEditar,
+        tipo_documento: dataAEditar.tipo_documento.id.toString()
       });
     }
-  }, [moduloAEditar, reset]);
+  }, [dataAEditar, reset]);
 
 
   const handleEditar = (data: Persona) => {
     setActiveTab('form');
-    setModuloAEditar(data);
+    setDataAEditar(data);
   }
 
   const toggleActivar = (modulo: Persona) => {
@@ -585,7 +590,7 @@ export default function ModulosPage() {
 
             {/* Registration Form Tab */}
             <TabsContent value="form">
-              <form onSubmit={handleSubmit(!moduloAEditar ? handleGuardarNuevaData: handleGuardarDataEditado)}>
+              <form onSubmit={handleSubmit(!dataAEditar ? handleGuardarNuevaData: handleGuardarDataEditado)}>
                 <Card className="border-emerald-200 pt-0">
                   <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
                     <div className="flex items-center gap-3">
@@ -609,7 +614,7 @@ export default function ModulosPage() {
                         <Input
                           id="nombre"
                           autoComplete="nombre"
-                          placeholder="Nombre del modulo"
+                          placeholder="Nombre de la persona"
                           className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           {...register('nombre', {
                           required: true, 
@@ -622,32 +627,325 @@ export default function ModulosPage() {
                         </div>
                       </div>
 
-                      {/* <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="descripcion" className="text-gray-700 font-medium">
-                          Descripción *
+                      <div className="space-y-2">
+                        <Label htmlFor="apellido" className="text-gray-700 font-medium">
+                          Apellido *
                         </Label>
-                        <Textarea
-                          id="descripcion"
-                          autoComplete="descripcion"
-                          placeholder="Describe el modulo y su funcionalidad"
-                          className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('descripcion', {
+                        <Input
+                          id="apellido"
+                          autoComplete="apellido"
+                          placeholder="Apellido"
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...register('apellido', {
                           required: true, 
                           validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 15})}
+                          minLength: 3})}
+                        />
+                        <div>
+                          {(errors?.apellido?.type === 'required' || errors?.apellido?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                          {errors?.apellido?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-gray-700 font-medium">
+                          Email *
+                        </Label>
+                        <Input
+                          id="email"
+                          autoComplete="email"
+                          placeholder="correo@gmail.com"
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...register('email', {
+                          required: true, 
+                          validate: {blankSpace: (value) => !!value.trim()},
+                          minLength: 3})}
+                        />
+                        <div>
+                          {(errors?.email?.type === 'required' || errors?.email?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                          {errors?.email?.type === 'minLength' && <span className='text-red-400 text-sm'>El email debe tener minimo 3 caracteres</span>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="telefono" className="text-gray-700 font-medium">
+                          Telélfono *
+                        </Label>
+                        <Input
+                          id="telefono"
+                          autoComplete="telefono"
+                          placeholder="0981123456"
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...register('telefono', {
+                          required: true, 
+                          validate: {blankSpace: (value) => !!value.trim()},
+                          minLength: 3})}
+                        />
+                        <div>
+                          {(errors?.telefono?.type === 'required' || errors?.telefono?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                          {errors?.telefono?.type === 'minLength' && <span className='text-red-400 text-sm'>El telefono debe tener minimo 3 caracteres</span>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mi-select-wrapper">
+                        <Label htmlFor="tipo_documento" className="text-gray-700 font-medium">
+                          Tipo Documento *
+                        </Label>
+
+                        {isFetchingTipoDocumento &&
+                        <Select>
+                          <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
+                            <div className="w-full flex items-center justify-center">
+                              <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                            </div>
+                          </SelectTrigger>
+                        </Select>}
+
+                        {!isFetchingTipoDocumento && 
+                          <Controller
+                            name="tipo_documento"
+                            control={control}
+                            rules={{ required: "Este campo es requerido" }}
+                            render={({ field }) => (
+                              <Select
+                                value={field.value}
+                                onValueChange={(value) => {
+                                          field.onChange(value)
+                                          if (value) {
+                                            clearErrors("tipo_documento") // Limpia el error cuando selecciona un valor
+                                          }
+                                        }}
+                                onOpenChange={(open) => {
+                                    if (!open && !field.value) {
+                                      field.onBlur(); 
+                                    }
+                                  }}>
+                                
+                                <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                                  <SelectValue placeholder="Selecciona el tipo de documento" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {dataTipoDocumentoList.map((tipo_documento: {id:number, nombre: string}) => 
+                                          <SelectItem key={tipo_documento.id} value={tipo_documento.id.toString()}>
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                            {tipo_documento.nombre}
+                                          </div>
+                                        </SelectItem>)}
+                              
+                                  
+                                </SelectContent>
+                              </Select>
+                            )}
+                        /> }
+
+                          {errors.tipo_documento && (
+                            <p className="text-red-400 text-sm">{errors.tipo_documento.message as string}</p>
+                          )}
+                      </div>
+
+
+                        <div className="space-y-2">
+                            <Label htmlFor="documento" className="text-gray-700 font-medium">
+                              Documento *
+                            </Label>
+                            <Input
+                              id="documento"
+                              autoComplete="documento"
+                              placeholder="123456"
+                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                              {...register('documento', {
+                              required: true, 
+                              validate: {blankSpace: (value) => !!value.trim()},
+                              minLength: 3})}
+                            />
+                            <div>
+                              {(errors?.documento?.type === 'required' || errors?.documento?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                              {errors?.documento?.type === 'minLength' && <span className='text-red-400 text-sm'>El campo debe tener minimo 3 caracteres</span>}
+                            </div>
+                        </div>
+
+
+                        <div className="space-y-2">
+                            <Label htmlFor="fecha_nacimiento" className="text-gray-700 font-medium">
+                               Fecha de Nacimiento *
+                            </Label>
+                            <Input
+                              id="fecha_nacimiento"
+                              type="date"
+                              autoComplete="fecha_nacimiento"
+                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                              {...register('fecha_nacimiento', {
+                              required: true, 
+                              validate: {blankSpace: (value) => !!value.trim()},
+                              minLength: 3})}
+                            />
+                            <div>
+                              {(errors?.fecha_nacimiento?.type === 'required' || errors?.fecha_nacimiento?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                              {/* {errors?.documento?.type === 'minLength' && <span className='text-red-400 text-sm'>El campo debe tener minimo 3 caracteres</span>} */}
+                            </div>
+                        </div>
+
+
+                        <div className="space-y-2">
+                        <Label htmlFor="sexo" className="text-gray-700 font-medium">
+                          Genero *
+                        </Label>
+                        <Controller
+                            name="sexo"
+                            control={control}
+                            rules={{ required: "Este campo es requerido" }}
+                            render={({ field }) => (
+                              <Select
+                                value={field.value}
+                                onValueChange={(value) => {
+                                          field.onChange(value)
+                                          if (value) {
+                                            clearErrors("sexo") // Limpia el error cuando selecciona un valor
+                                          }
+                                        }}
+                                onOpenChange={(open) => {
+                                    if (!open && !field.value) {
+                                      field.onBlur(); 
+                                    }
+                                  }}
+                              >
+                                <SelectTrigger 
+                                  className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                                  <SelectValue placeholder="Selecciona el tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="M">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
+                                      Masculino
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="F">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                      Femenino
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
                           />
-                          <div>
-                            {(errors?.descripcion?.type === 'required' || errors?.descripcion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                            {errors?.descripcion?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 15 caracteres</span>}
-                          </div>
+                          {errors.sexo && (
+                            <p className="text-red-400 text-sm">{errors.sexo.message as string}</p>
+                          )}
+                        </div>
+
+                        
+                        <div className="space-y-2">
+                        <Label htmlFor="sexo" className="text-gray-700 font-medium">
+                          Tipo Persona *
+                        </Label>
+                        <Controller
+                            name="tipo"
+                            control={control}
+                            rules={{ required: "Este campo es requerido" }}
+                            render={({ field }) => (
+                              <Select
+                                value={field.value}
+                                onValueChange={(value) => {
+                                          field.onChange(value)
+                                          if (value) {
+                                            clearErrors("sexo") // Limpia el error cuando selecciona un valor
+                                          }
+                                        }}
+                                onOpenChange={(open) => {
+                                    if (!open && !field.value) {
+                                      field.onBlur(); 
+                                    }
+                                  }}
+                              >
+                                <SelectTrigger 
+                                  className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                                  <SelectValue placeholder="Selecciona el tipo de persona" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="fisica">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
+                                        Persona Física
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="F">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                        Persona Jurídica
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                          {errors.tipo && (
+                            <p className="text-red-400 text-sm">{errors.tipo.message as string}</p>
+                          )}
+                        </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="nacionalidad" className="text-gray-700 font-medium">
+                              Nacionalidad *
+                            </Label>
+                            <Input
+                              id="nacionalidad"
+                              autoComplete="nacionalidad"
+                              placeholder="Paraguaya"
+                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                              {...register('nacionalidad', {
+                              required: true, 
+                              validate: {blankSpace: (value) => !!value.trim()},
+                              minLength: 3})}
+                            />
+                            <div>
+                              {(errors?.nacionalidad?.type === 'required' || errors?.nacionalidad?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                              {errors?.nacionalidad?.type === 'minLength' && <span className='text-red-400 text-sm'>El campo debe tener minimo 3 caracteres</span>}
+                            </div>
+                        </div>
+
+
+                         <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="direccion" className="text-gray-700 font-medium">
+                              Direccion *
+                            </Label>
+                            <Input
+                              id="direccion"
+                              autoComplete="direccion"
+                              placeholder="Calle 123 Capiata"
+                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                              {...register('direccion', {
+                              required: true, 
+                              validate: {blankSpace: (value) => !!value.trim()},
+                              minLength: 3})}
+                            />
+                            <div>
+                              {(errors?.direccion?.type === 'required' || errors?.direccion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                              {errors?.direccion?.type === 'minLength' && <span className='text-red-400 text-sm'>El campo debe tener minimo 3 caracteres</span>}
+                            </div>
+                        </div>
+
+
+                        {/* <div className="space-y-2">
+                        <Label htmlFor="fecha_nacimiento" className="text-gray-700 font-medium">
+                          Fecha de Nacimiento *
+                        </Label>
+                        <Input
+                          id="fecha_nacimiento"
+                          type="date"
+                          className="border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+                        />
                       </div> */}
+
                     </div>
 
                     <div className="flex gap-3">
                       {/* {isPendingMutation && <>
                       </>} */}
 
-                      {!moduloAEditar &&
+                      {!dataAEditar &&
                         <Button 
                             disabled={isPendingMutation}
                             type="submit"
@@ -663,7 +961,7 @@ export default function ModulosPage() {
                               </>}
                         </Button>
                       }
-                      {moduloAEditar &&
+                      {dataAEditar &&
                         <Button 
                           disabled={isPendingEdit}
                           type="submit"
