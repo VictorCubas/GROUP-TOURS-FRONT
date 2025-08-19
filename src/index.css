@@ -318,13 +318,15 @@ div:has(> table) {
 
 input[aria-hidden="true"] {
   position: absolute !important;
-  left: -9999px !important; /* los saca de la pantalla */
-  width: 0 !important;
-  height: 0 !important;
-  margin: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
   padding: 0 !important;
   border: 0 !important;
-  pointer-events: none !important; /* opcional */
+  white-space: nowrap !important; /* evita ocupar línea */
 }
 
 .mi-select-wrapper input[aria-hidden="true"] {
