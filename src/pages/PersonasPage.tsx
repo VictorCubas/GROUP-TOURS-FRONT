@@ -16,7 +16,7 @@ import {
   // Package,
   // User,
   Download,
-  RefreshCw,
+  // RefreshCw,
   Eye,
   Calendar,
   // AlertCircle,
@@ -25,7 +25,7 @@ import {
   // FileText,
   // Activity,
   // Tag,
-  Boxes,
+  // Boxes,
   User,
   Building,
   X,
@@ -62,7 +62,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { aEditarDataForm, Persona, RespuestaPaginada } from "@/types/personas"
+import type { Persona, RespuestaPaginada } from "@/types/personas"
 import { capitalizePrimeraLetra, formatearFecha, getNombreCompleto } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch } from "@/components/utils/httpPersona"
 import {Controller, useForm } from "react-hook-form"
@@ -98,7 +98,7 @@ const tipoPersonaColores = {
 let dataList: Persona[] = [];
 
 export default function ModulosPage() {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [setSearchTerm] = useState("")
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [buscarPorDocumento, setBuscarPorDocumento] = useState("");
   const [buscarPorTelefono, setBuscarPorTelefono] = useState("");
