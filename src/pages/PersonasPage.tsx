@@ -98,7 +98,7 @@ const tipoPersonaColores = {
 let dataList: Persona[] = [];
 
 export default function ModulosPage() {
-  const [setSearchTerm] = useState("")
+  // const [setSearchTerm] = useState("")
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [buscarPorDocumento, setBuscarPorDocumento] = useState("");
   const [buscarPorTelefono, setBuscarPorTelefono] = useState("");
@@ -219,7 +219,7 @@ export default function ModulosPage() {
 
   const handleReset = () => {
     startTransition(() => {
-        setSearchTerm("");
+        // setSearchTerm("");
         setShowActiveOnly(true);
         setNombreABuscar("")
       });
