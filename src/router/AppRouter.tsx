@@ -10,6 +10,7 @@ const HomePage = lazy(() => import('@/pages/HomePage'));
 const PermisosPage = lazy(() => import('@/pages/PermisosPage'));
 const RolesPage = lazy(() => import('@/pages/RolesPage'));
 const ModuloPage = lazy(() => import('@/pages/ModulosPage'));
+const NacionalidadesPage = lazy(() => import('@/pages/NacionalidadesPage'));
 const TipoDocumentosPage = lazy(() => import('@/pages/TipoDocumentosPage'));
 const PersonasPage = lazy(() => import('@/pages/PersonasPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -44,6 +45,7 @@ const AppRouter = () => {
                     <Route path='/configuracion'>
                       <Route path="modulos" element={<ModuloPage />} />
                       <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
+                      <Route path="nacionalidades" element={<NacionalidadesPage />} />
                     </Route>
                 </Route>
               </Route>

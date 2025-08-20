@@ -72,6 +72,8 @@ import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { fetchDataTodo } from "@/components/utils/httpTipoDocumentos"
+import { fetchDataNacionalidadTodos } from "@/components/utils/httpNacionalidades"
+import { CountrySearchSelect } from "@/components/CountrySearchSelect"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
@@ -99,6 +101,8 @@ let dataList: Persona[] = [];
 
 export default function ModulosPage() {
   // const [setSearchTerm] = useState("")
+  const [selectedNacionalidadID, setSelectedNacionalidadid] = useState<number | "">("");
+  const [nacionalidadNoSeleccionada, setNacionalidadNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [buscarPorDocumento, setBuscarPorDocumento] = useState("");
   const [buscarPorTelefono, setBuscarPorTelefono] = useState("");
@@ -154,6 +158,12 @@ export default function ModulosPage() {
                                                       pageSize: 10
                                               });
                                               
+
+  const {data: dataNacionalidadList, isFetching: isFetchingNacionalidad,} = useQuery({
+      queryKey: ['nacionalidades-de-personas',], //data cached
+      queryFn: () => fetchDataNacionalidadTodos(),
+      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
 
   const {data: dataTipoDocumentoList, isFetching: isFetchingTipoDocumento,} = useQuery({
       queryKey: ['tipo-documentos-de-personas',], //data cached
@@ -249,6 +259,8 @@ export default function ModulosPage() {
           sexo: '',
           razon_social: '',
         });
+
+        setTipoDePersonaCreacion(undefined);
         setActiveTab('list');
         queryClient.invalidateQueries({
           queryKey: ['personas'],
@@ -332,6 +344,8 @@ export default function ModulosPage() {
 
   const handleCancel = () => {
         setDataAEditar(undefined);
+        setSelectedNacionalidadid("");
+        handleNacionalidadNoSeleccionada(undefined)
         reset({
           nombre: '',
           apellido: '',
@@ -352,6 +366,7 @@ export default function ModulosPage() {
   const handleGuardarNuevaData = async (dataForm: any) => {
     console.log('dataForm: ', dataForm)
     if(dataForm.tipo === 'fisica'){
+      dataForm.nacionalidad = selectedNacionalidadID;
       delete dataForm.razon_social;
     }
     else{
@@ -384,8 +399,22 @@ export default function ModulosPage() {
     const dataEditado = {...dataAEditar, ...dataForm};
     delete dataEditado.numero;
 
+    console.log('selectedNacionalidadID: ', selectedNacionalidadID)
+    dataEditado.nacionalidad = selectedNacionalidadID;
     console.log('dataEditado: ', dataEditado);
-    mutateGuardarEditado({...dataEditado, ...dataForm});
+
+    if(dataForm.tipo === 'fisica'){
+      dataEditado.nacionalidad = selectedNacionalidadID;
+      delete dataEditado.razon_social;
+    }
+    else{
+      delete dataEditado.nombre;
+      delete dataEditado.apellido;
+      delete dataEditado.sexo;
+      delete dataEditado.fecha_nacimiento;
+      delete dataEditado.nacionalidad;
+    }
+    mutateGuardarEditado(dataEditado);
   }
 
 
@@ -409,6 +438,11 @@ export default function ModulosPage() {
   const handleEditar = (data: Persona) => {
     setActiveTab('form');
     setDataAEditar(data);
+    setTipoDePersonaCreacion(data.tipo);
+
+    if(data.tipo === 'fisica'){
+      setSelectedNacionalidadid(data!.nacionalidad!.id)
+    }
   }
 
   const toggleActivar = (modulo: Persona) => {
@@ -464,6 +498,11 @@ export default function ModulosPage() {
       clearTimeout(handler) // limpia el timeout si se sigue escribiendo
     }
   }, [buscarPorTelefono]);
+
+
+  const handleNacionalidadNoSeleccionada = (value: boolean | undefined) => {
+    setNacionalidadNoSeleccionada(value);
+  }
 
   return (
     <>
@@ -523,7 +562,7 @@ export default function ModulosPage() {
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Nacionalidad:</span>
-                                  <span className="font-medium">{dataDetalle?.nacionalidad}</span>
+                                  <span className="font-medium">{dataDetalle?.nacionalidad?.nombre}</span>
                                 </div>
                               </>
                             }
@@ -628,7 +667,7 @@ export default function ModulosPage() {
                </div>
               <h2 className='text-center'>Confirmacion de operación</h2>
              <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} los datos de la persona <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
+               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} los datos de la persona <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? (dataADesactivar?.razon_social ?? ''))}</b>? 
              </p>
 
              <div className='modal-actions'>
@@ -779,6 +818,26 @@ export default function ModulosPage() {
                         
 
                       <div className="space-y-2">
+                        <Label htmlFor="nombre" className="text-gray-700 font-medium">
+                          Nombre *
+                        </Label>
+                        <Input
+                          id="nombre"
+                          autoComplete="nombre"
+                          placeholder="Nombre"
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...register('nombre', {
+                          required: true, 
+                          validate: {blankSpace: (value) => !!value.trim()},
+                          minLength: 3})}
+                        />
+                        <div>
+                          {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                          {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El nombre debe tener minimo 3 caracteres</span>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
                         <Label htmlFor="apellido" className="text-gray-700 font-medium">
                           Apellido *
                         </Label>
@@ -867,25 +926,38 @@ export default function ModulosPage() {
                             <p className="text-red-400 text-sm">{errors.sexo.message as string}</p>
                           )}
                         </div>
+                        
+                        <div className="space-y-2 mi-select-wrapper">
+                          <Label htmlFor="nacionalidad" className="text-gray-700 font-medium">
+                            Nacionalidad *
+                          </Label>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="nacionalidad" className="text-gray-700 font-medium">
-                              Nacionalidad *
-                            </Label>
-                            <Input
-                              id="nacionalidad"
-                              autoComplete="nacionalidad"
-                              placeholder="Paraguaya"
-                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                              {...register('nacionalidad', {
-                              required: true, 
-                              validate: {blankSpace: (value) => !!value.trim()},
-                              minLength: 3})}
-                            />
-                            <div>
-                              {(errors?.nacionalidad?.type === 'required' || errors?.nacionalidad?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                              {errors?.nacionalidad?.type === 'minLength' && <span className='text-red-400 text-sm'>El campo debe tener minimo 3 caracteres</span>}
+                          {isFetchingNacionalidad &&
+                          <Select>
+                            <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
+                              <div className="w-full flex items-center justify-center">
+                                <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                              </div>
+                            </SelectTrigger>
+                          </Select>
+                          }
+                          {!isFetchingNacionalidad && 
+                            <>
+                              <div className="space-y-2">
+                              <CountrySearchSelect
+                                nacionalidades={dataNacionalidadList}
+                                value={selectedNacionalidadID}
+                                onValueChange={setSelectedNacionalidadid}
+                                handleNacionalidadNoSeleccionada={handleNacionalidadNoSeleccionada}
+                                placeholder="Selecciona tu país..."
+                              />
                             </div>
+                            </>
+                          }
+
+                            {nacionalidadNoSeleccionada === false && (
+                              <p className="text-red-400 text-sm">Este campo es requerido</p>
+                            )}
                         </div>
                       </>}
 
@@ -1298,7 +1370,7 @@ export default function ModulosPage() {
                               <div className="font-medium text-gray-900 truncate max-w-xs">
                                 {capitalizePrimeraLetra(data.tipo === 'fisica' ? getNombreCompleto(data.nombre, data?.apellido) : (data?.razon_social ?? ''))}
                               </div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">{capitalizePrimeraLetra(data.nacionalidad ?? '')}</div>
+                              <div className="text-sm text-gray-500 truncate max-w-xs">{capitalizePrimeraLetra(data.nacionalidad?.nombre ?? '')}</div>
                             </div>
                           </TableCell>
                           <TableCell>

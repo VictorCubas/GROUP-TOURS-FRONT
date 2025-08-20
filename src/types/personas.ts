@@ -13,7 +13,7 @@ export interface Persona {
     fecha_nacimiento?: string; // Podés usar Date si lo parseás
     edad?: number;
     sexo?: 'M' | 'F';
-    nacionalidad?: string;
+    nacionalidad?: Nacionalidad;
     documento: string;
     email: string;
     telefono: string;
@@ -26,7 +26,11 @@ export interface Persona {
     representante?: string;
 }
 
-
+interface Nacionalidad{
+  id: number;
+  nombre: string;
+  codigo_alpha2: string;
+}
 
 export interface RespuestaPaginada {
   totalItems: number;
