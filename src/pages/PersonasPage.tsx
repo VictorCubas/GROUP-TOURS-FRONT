@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Persona, RespuestaPaginada } from "@/types/personas"
+import type { Persona, RespuestaPaginada, TipoDocumento } from "@/types/personas"
 import { capitalizePrimeraLetra, formatearFecha, getNombreCompleto } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch } from "@/components/utils/httpPersona"
 import {Controller, useForm } from "react-hook-form"
@@ -110,6 +110,7 @@ export default function ModulosPage() {
   const [dataADesactivar, setDataADesactivar] = useState<Persona>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
+  const [tipoDocumentoRuc, setTipoDocumentoRuc] = useState<TipoDocumento>();
   const [dataDetalle, setDataDetalle] = useState<Persona>();
   const {handleShowToast} = use(ToastContext);
   const [tipoDePersonaCreacion, setTipoDePersonaCreacion] = useState<string>();
@@ -125,7 +126,7 @@ export default function ModulosPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {control, register, handleSubmit, formState: {errors, },clearErrors, reset} = 
+  const {control, register, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -503,6 +504,15 @@ export default function ModulosPage() {
     setNacionalidadNoSeleccionada(value);
   }
 
+  useEffect(() => {
+    if (tipoDePersonaCreacion === "juridica" && tipoDocumentoRuc?.id) {
+      setValue("tipo_documento", tipoDocumentoRuc.id.toString());
+      clearErrors("tipo_documento");
+    }else{
+      // set
+    }
+  }, [tipoDePersonaCreacion, tipoDocumentoRuc, setValue, clearErrors]);
+
   return (
     <>
        {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
@@ -754,8 +764,19 @@ export default function ModulosPage() {
                               <Select
                                 value={field.value}
                                 onValueChange={(value) => {
+                                          console.log(value)
                                           field.onChange(value);
                                           setTipoDePersonaCreacion(value)
+
+                                          if(value === 'juridica'){
+                                              const tipoRuc = dataTipoDocumentoList.filter((doc: TipoDocumento) => doc.nombre === 'RUC')
+                                              console.log('tipoRuc: ', tipoRuc)
+                                              setTipoDocumentoRuc(tipoRuc[0]);
+                                          }
+                                          else{
+                                            setTipoDocumentoRuc(undefined);
+                                          }
+
                                           if (value) {
                                             clearErrors("tipo") // Limpia el error cuando selecciona un valor
                                           }
@@ -1025,6 +1046,7 @@ export default function ModulosPage() {
                             render={({ field }) => (
                               <Select
                                 value={field.value}
+                                disabled={tipoDePersonaCreacion === 'juridica'}
                                 onValueChange={(value) => {
                                           field.onChange(value)
                                           if (value) {
