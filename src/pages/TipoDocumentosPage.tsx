@@ -521,7 +521,7 @@ export default function ModulosPage() {
                 Lista de Tipo Documentos
               </TabsTrigger>
               <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
-                Crear Modulo
+                Crear Tipo Documentos
               </TabsTrigger>
             </TabsList>
 
@@ -535,7 +535,7 @@ export default function ModulosPage() {
                         <Plus className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <CardTitle className="text-emerald-900">Crear Nuevo Modulo</CardTitle>
+                        <CardTitle className="text-emerald-900">Crear Nuevo Tipo Documento</CardTitle>
                         <CardDescription className="text-emerald-700">
                           Complete la información para crear un nuevo tipo de documento
                         </CardDescription>
@@ -546,12 +546,12 @@ export default function ModulosPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="nombre" className="text-gray-700 font-medium">
-                          Nombre del Modulo *
+                          Codigo del tipo de documento *
                         </Label>
                         <Input
                           id="nombre"
                           autoComplete="nombre"
-                          placeholder="Nombre del modulo"
+                          placeholder="Codigo del tipo de documento  (CI, RUC, etc) "
                           className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           {...register('nombre', {
                           required: true, 
@@ -571,7 +571,7 @@ export default function ModulosPage() {
                         <Textarea
                           id="descripcion"
                           autoComplete="descripcion"
-                          placeholder="Describe el modulo y su funcionalidad"
+                          placeholder="Describe el tipo de documento. Ejemplo: Cedula de Identidad Paraguaya"
                           className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           {...register('descripcion', {
                           required: true, 
@@ -601,7 +601,7 @@ export default function ModulosPage() {
                               </> : 
                               <>
                                 <Check className="h-4 w-4 mr-2" />
-                                Crear Modulo  
+                                Crear Tipo Documento
                               </>}
                         </Button>
                       }

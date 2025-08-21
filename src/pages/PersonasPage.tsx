@@ -1255,7 +1255,7 @@ export default function ModulosPage() {
                             Solo activos
                           </Label>
                         </div>
-
+                          
                         <Select 
                           value={filtros.tipo}
                           onValueChange={(val) => setFiltros({ ...filtros, tipo: val })}>
