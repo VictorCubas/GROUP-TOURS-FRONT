@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
 import { startTransition, use, useEffect, useState } from "react"
@@ -26,6 +25,7 @@ import {
   // Activity,
   // Tag,
   Boxes,
+  Map,
 } from "lucide-react"
 
 // import {
@@ -40,7 +40,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -61,14 +60,14 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { capitalizePrimeraLetra, formatearFecha } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoPermisoFetch } from "@/components/utils/httpTipoDocumentos"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoPermisoFetch } from "@/components/utils/httpNacionalidades"
 import {useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
-import { IoCheckmarkCircleOutline, IoDocumentSharp, IoWarningOutline } from "react-icons/io5";
+import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCards from "@/components/ResumenCards"
-import type { aEditarDataForm, RespuestaPaginada, TipoDocumento } from "@/types/tipoDocumentos"
+import type { aEditarDataForm, RespuestaPaginada, Nacionalidad } from "@/types/nacionalidades"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
@@ -86,11 +85,11 @@ export default function ModulosPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [nombreABuscar, setNombreABuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [dataAEditar, setDataAEditar] = useState<TipoDocumento>();
-  const [dataADesactivar, setDataADesactivar] = useState<TipoDocumento>();
+  const [dataAEditar, setDataAEditar] = useState<Nacionalidad>();
+  const [dataADesactivar, setDataADesactivar] = useState<Nacionalidad>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerData, setOnVerData] = useState(false);
-  const [dataDetalle, setDataDetalle] = useState<TipoDocumento>();
+  const [dataDetalle, setDataDetalle] = useState<Nacionalidad>();
   const [textActivarDesactivar, setTextActivarDesactivar] = useState('');
   const {handleShowToast} = use(ToastContext);
   
@@ -100,7 +99,7 @@ export default function ModulosPage() {
               mode: "onBlur",
               defaultValues: {
                 nombre: "",
-                descripcion: "",
+                codigo_alpha2: "",
               }
             });
   // DATOS DEL FORMULARIO 
@@ -119,22 +118,22 @@ export default function ModulosPage() {
                                               
 
   const {data, isFetching, isError} = useQuery({
-    queryKey: ['tipo-documentos', currentPage, paginacion.pageSize, nombreABuscar, showActiveOnly], //data cached
+    queryKey: ['nacionalidades', currentPage, paginacion.pageSize, nombreABuscar, showActiveOnly], //data cached
     queryFn: () => fetchData(currentPage, paginacion.pageSize, nombreABuscar, showActiveOnly),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
   const {data: dataResumen, isFetching: isFetchingResumen, isError: isErrorResumen} = useQuery({
-    queryKey: ['tipo-documentos-resumen'], //data cached
+    queryKey: ['nacionalidades-resumen'], //data cached
     queryFn: () => fetchResumen(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
   // let filteredPermissions: Modulo[] = [];
-  let dataList: TipoDocumento[] = [];
+  let dataList: Nacionalidad[] = [];
 
   if(!isFetching && !isError){
-    dataList = data.results.map((per: TipoDocumento, index: number) => ({...per, numero: index + 1}));
+    dataList = data.results.map((per: Nacionalidad, index: number) => ({...per, numero: index + 1}));
   }
 
   
@@ -193,17 +192,17 @@ export default function ModulosPage() {
         handleShowToast('Se ha creado un nuevo tipo de documento satisfactoriamente', 'success');
         reset({
             nombre: "",
-            descripcion: "",
+            // descripcion: "",
           });
         setActiveTab('list');
         
          queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos'],
+          queryKey: ['nacionalidades'],
           exact: false
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos-resumen'],
+          queryKey: ['nacionalidades-resumen'],
         });
 
         queryClient.invalidateQueries({
@@ -212,7 +211,7 @@ export default function ModulosPage() {
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos-de-personas'],
+          queryKey: ['nacionalidades-de-personas'],
           exact: false
         });
     },
@@ -225,16 +224,16 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         reset({
             nombre: "",
-            descripcion: "",
+            // descripcion: "",
           });
         setActiveTab('list');
          queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos'],
+          queryKey: ['nacionalidades'],
           exact: false
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos-resumen'],
+          queryKey: ['nacionalidades-resumen'],
         });
 
         queryClient.invalidateQueries({
@@ -243,7 +242,7 @@ export default function ModulosPage() {
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos-de-personas'],
+          queryKey: ['nacionalidades-de-personas'],
           exact: false
         });
     },
@@ -258,12 +257,12 @@ export default function ModulosPage() {
         setTextActivarDesactivar('');
         //desactivamos todas las queies
         queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos'],
+          queryKey: ['nacionalidades'],
           exact: false
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos-resumen'],
+          queryKey: ['nacionalidades-resumen'],
         });
 
         queryClient.invalidateQueries({
@@ -272,7 +271,7 @@ export default function ModulosPage() {
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['tipo-documentos-de-personas'],
+          queryKey: ['nacionalidades-de-personas'],
           exact: false
         });
     },
@@ -283,7 +282,7 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         reset({
             nombre: "",
-            descripcion: "",
+            // descripcion: "",
           });
         setActiveTab('list');
   }
@@ -304,19 +303,20 @@ export default function ModulosPage() {
   useEffect(() => {
     if (dataAEditar) {
       reset({
-        nombre: dataAEditar.nombre,
-        descripcion: dataAEditar.descripcion,
-      });
+          nombre: dataAEditar.nombre,
+          codigo_alpha2: dataAEditar.codigo_alpha2,
+        });
     }
   }, [dataAEditar, reset]);
 
 
-  const handleEditar = (data: TipoDocumento) => {
+  const handleEditar = (data: Nacionalidad) => {
     setActiveTab('form');
+    console.log(data);
     setDataAEditar(data);
   }
 
-  const toggleActivar = (modulo: TipoDocumento) => {
+  const toggleActivar = (modulo: Nacionalidad) => {
     setOnDesactivarData(true);
     setDataADesactivar(modulo);
   }
@@ -330,7 +330,7 @@ export default function ModulosPage() {
     mutateDesactivar({ dataId: dataADesactivar!.id, activo })
   }
 
-  const handleVerDetalles = (data: TipoDocumento) => {
+  const handleVerDetalles = (data: Nacionalidad) => {
     setDataDetalle(data);
     setOnVerData(true);
   }
@@ -348,13 +348,13 @@ export default function ModulosPage() {
                 <div className="mb-6 border-b pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                      <IoDocumentSharp className="h-5 w-5 text-white" />
+                      <Map className="h-5 w-5 text-white" />
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
                         {dataDetalle?.nombre}
                       </h2>
-                      <p className="text-gray-600">Detalles completos del tipo de documento</p>
+                      <p className="text-gray-600">Detalles completos del país</p>
                     </div>
                   </div>
                 </div>
@@ -379,9 +379,9 @@ export default function ModulosPage() {
 
                     {/* Descripción */}
                     <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-900">Descripción</label>
+                      <label className="text-base font-semibold text-gray-900">Codigo</label>
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-gray-700 leading-relaxed">{dataDetalle?.descripcion}</p>
+                        <p className="text-gray-700 leading-relaxed">{dataDetalle?.codigo_alpha2}</p>
                       </div>
                     </div>
 
@@ -468,7 +468,7 @@ export default function ModulosPage() {
                </div>
               <h2 className='text-center'>Confirmacion de operación</h2>
              <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} el tipo de documento <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
+               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} la nacionalidad <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
              </p>
 
              <div className='modal-actions'>
@@ -489,11 +489,11 @@ export default function ModulosPage() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                   <IoDocumentSharp className="h-5 w-5 text-white" />
+                   <Map className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-3xl font-semibold text-gray-900">Tipo Documentos</h1>
+                <h1 className="text-3xl font-semibold text-gray-900">Nacionalidades</h1>
               </div>
-              <p className="text-gray-600">Gestiona los tipos de documentos del sistema y sus estados.</p>
+              <p className="text-gray-600">Gestiona todas las nacionalides de las personas y sus estados.</p>
             </div>
             <div className="flex gap-3">
               <Button
@@ -518,10 +518,10 @@ export default function ModulosPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2 lg:w-fit bg-gray-100">
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
-                Lista de Tipo Documentos
+                Lista de Nacionalidades
               </TabsTrigger>
               <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
-                Crear Modulo
+                Crear Nacionalidad
               </TabsTrigger>
             </TabsList>
 
@@ -535,9 +535,9 @@ export default function ModulosPage() {
                         <Plus className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <CardTitle className="text-emerald-900">Crear Nuevo Modulo</CardTitle>
+                        <CardTitle className="text-emerald-900">Crear Nueva Nacionalidad</CardTitle>
                         <CardDescription className="text-emerald-700">
-                          Complete la información para crear un nuevo tipo de documento
+                          Complete la información para crear una nueva nacionalidad
                         </CardDescription>
                       </div>
                     </div>
@@ -546,12 +546,12 @@ export default function ModulosPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="nombre" className="text-gray-700 font-medium">
-                          Nombre del Modulo *
+                          Nombre del país *
                         </Label>
                         <Input
                           id="nombre"
                           autoComplete="nombre"
-                          placeholder="Nombre del modulo"
+                          placeholder="Nombre del país"
                           className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           {...register('nombre', {
                           required: true, 
@@ -564,7 +564,28 @@ export default function ModulosPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-2 md:col-span-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="codigo_alpha2" className="text-gray-700 font-medium">
+                          Codigo alpha *
+                        </Label>
+                        <Input
+                          id="codigo_alpha2"
+                          autoComplete="codigo_alpha2"
+                          placeholder="Codigo del país. Solo dos caracteres"
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...register('codigo_alpha2', {
+                          required: true, 
+                          validate: {blankSpace: (value) => !!value.trim()},
+                          minLength: 2, maxLength: 2})}
+                        />
+                        <div>
+                          {(errors?.codigo_alpha2?.type === 'required' || errors?.codigo_alpha2?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                          {errors?.codigo_alpha2?.type === 'minLength' && <span className='text-red-400 text-sm'>El código debe tener dos caracteres</span>}
+                          {errors?.codigo_alpha2?.type === 'maxLength' && <span className='text-red-400 text-sm'>El código debe tener dos caracteres</span>}
+                        </div>
+                      </div>
+
+                      {/* <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="descripcion" className="text-gray-700 font-medium">
                           Descripción *
                         </Label>
@@ -582,7 +603,7 @@ export default function ModulosPage() {
                             {(errors?.descripcion?.type === 'required' || errors?.descripcion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
                             {errors?.descripcion?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 5 caracteres</span>}
                           </div>
-                      </div>
+                      </div> */}
                     </div>
 
                     <div className="flex gap-3">
@@ -644,9 +665,9 @@ export default function ModulosPage() {
                         <Shield className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <CardTitle className="text-blue-900">Lista de Tipo Documentos</CardTitle>
+                        <CardTitle className="text-blue-900">Lista de Nacionalidades</CardTitle>
                         <CardDescription className="text-blue-700">
-                          Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems} tipos de documentos
+                          Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems} nacionalidades
                         </CardDescription>
                       </div>
                     </div>
@@ -708,7 +729,7 @@ export default function ModulosPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && dataList.map((data: TipoDocumento) => (
+                      {!isFetching && dataList.length > 0 && dataList.map((data: Nacionalidad) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -721,7 +742,7 @@ export default function ModulosPage() {
                           <TableCell>
                             <div>
                               <div className="font-medium text-gray-900">{capitalizePrimeraLetra(data.nombre)}</div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">{data.descripcion}</div>
+                              <div className="text-sm text-gray-500 truncate max-w-xs">{data.codigo_alpha2}</div>
                             </div>
                           </TableCell>
                           {/* <TableCell>

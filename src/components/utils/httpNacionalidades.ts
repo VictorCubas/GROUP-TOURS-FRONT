@@ -5,7 +5,7 @@ import type { NuevoModuloFormData } from "@/types/modulos";
 
 export const fetchData = async (page: number, page_size: number = 5, 
     nombre: string = '', activo: boolean) => {
-    let url = `/tipo_documentos/?page=${page}&page_size=${page_size}`;
+    let url = `/nacionalidades/?page=${page}&page_size=${page_size}`;
 
 
     console.log('nombre: ', nombre)
@@ -31,23 +31,23 @@ export const fetchData = async (page: number, page_size: number = 5,
 
 //tanstackquery ya maneja el error y en el interceptor tambien
 export async function nuevoPermisoFetch(data: NuevoModuloFormData) {
-    await axiosInstance.post(`/tipo_documentos/`, data);    
+    await axiosInstance.post(`/nacionalidades/`, data);    
 }
 
 export async function guardarDataEditado(data: any) {
-  await axiosInstance.put(`/tipo_documentos/${data.id}/`, data);    
+  await axiosInstance.put(`/nacionalidades/${data.id}/`, data);    
 }
 
 export async function activarDesactivarData({ dataId, activo }: { dataId: number; activo: boolean }) {
-  await axiosInstance.patch(`/tipo_documentos/${dataId}/`, {activo});    
+  await axiosInstance.patch(`/nacionalidades/${dataId}/`, {activo});    
 }
 
 export async function fetchResumen() {
-  const resp = await axiosInstance.get(`/tipo_documentos/resumen/`);
+  const resp = await axiosInstance.get(`/nacionalidades/resumen/`);
   return resp?.data
 }
 
-export async function fetchDataTodo() {
-  const resp = await axiosInstance.get(`/tipo_documentos/todos/`);
+export async function fetchDataNacionalidadTodos() {
+  const resp = await axiosInstance.get(`/nacionalidades/todos/`);
   return resp?.data
 }
