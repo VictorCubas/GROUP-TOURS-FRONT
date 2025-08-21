@@ -189,7 +189,7 @@ export default function ModulosPage() {
   const {mutate, isPending: isPendingMutation} = useMutation({
     mutationFn: nuevoPermisoFetch,
     onSuccess: () => {
-        handleShowToast('Se ha creado un nuevo tipo de documento satisfactoriamente', 'success');
+        handleShowToast('Se ha creado una nueva nacionalidad satisfactoriamente', 'success');
         reset({
             nombre: "",
             // descripcion: "",
@@ -220,7 +220,7 @@ export default function ModulosPage() {
   const {mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
     mutationFn: guardarDataEditado,
     onSuccess: () => {
-        handleShowToast('Se ha guardado el tipo de documento satisfactoriamente', 'success');
+        handleShowToast('Se ha guardado la nueva nacionalidad satisfactoriamente', 'success');
         setDataAEditar(undefined);
         reset({
             nombre: "",
