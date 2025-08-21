@@ -15,6 +15,10 @@ export const fetchData = async (page: number, page_size: number = 5,
       url = url + `&nombre=${filtros.nombre}`;
     }
 
+    if(filtros.razon_social){
+      url = url + `&razon_social=${filtros.razon_social}`;
+    }
+
     if(filtros.tipo !== 'all'){
       url = url + `&tipo=${filtros.tipo}`;
     }

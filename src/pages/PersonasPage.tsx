@@ -103,6 +103,7 @@ export default function ModulosPage() {
   const [selectedNacionalidadID, setSelectedNacionalidadid] = useState<number | "">("");
   const [nacionalidadNoSeleccionada, setNacionalidadNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
+  const [razonSocialABuscar, setRazonSocialABuscar] = useState("");
   const [buscarPorDocumento, setBuscarPorDocumento] = useState("");
   const [buscarPorTelefono, setBuscarPorTelefono] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
@@ -232,6 +233,7 @@ export default function ModulosPage() {
         // setSearchTerm("");
         setShowActiveOnly(true);
         setNombreABuscar("")
+        setRazonSocialABuscar("")
       });
   }
 
@@ -504,6 +506,17 @@ export default function ModulosPage() {
       clearTimeout(handler) // limpia el timeout si se sigue escribiendo
     }
   }, [nombreABuscar]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      console.log('cambiando nombre')
+      setFiltros(filtroAnterior => ({...filtroAnterior, razon_social: razonSocialABuscar}))
+    }, 750) // ⏱️ medio segundo de espera
+
+    return () => {
+      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+    }
+  }, [razonSocialABuscar]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -1230,7 +1243,7 @@ export default function ModulosPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-2 bg-emerald-50 rounded-full px-3 py-2 border border-emerald-200">
                           <Switch
                             checked={showActiveOnly}
@@ -1275,7 +1288,17 @@ export default function ModulosPage() {
                             placeholder="Buscar por nombre..."
                             value={nombreABuscar}
                             onChange={(e) => setNombreABuscar(e.target.value)}
-                            className="pl-10 w-64 border-gray-300 focus:border-blue-500"
+                            className="pl-10 w-72 border-gray-300 focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Buscar por razon social..."
+                            value={razonSocialABuscar}
+                            onChange={(e) => setRazonSocialABuscar(e.target.value)}
+                            className="pl-10 w-72 border-gray-300 focus:border-blue-500"
                           />
                         </div>
 
@@ -1290,7 +1313,7 @@ export default function ModulosPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 mt-4 pt-4 border-t border-blue-200 w-full">
+                    <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-blue-200 w-full flex-wrap">
                       <div className="flex items-center gap-2">
                         <Label className="text-sm text-gray-600 font-medium">Fecha desde:</Label>
                         <Input
@@ -1348,6 +1371,7 @@ export default function ModulosPage() {
                           setBuscarPorDocumento("");
                           setBuscarPorTelefono("");
                           setNombreABuscar(""); 
+                          setRazonSocialABuscar("");
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
