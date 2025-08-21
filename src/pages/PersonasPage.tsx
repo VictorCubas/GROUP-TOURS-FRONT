@@ -62,7 +62,7 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Persona, RespuestaPaginada, TipoDocumento } from "@/types/personas"
-import { capitalizePrimeraLetra, formatearFecha, getNombreCompleto } from "@/helper/formatter"
+import { capitalizePrimeraLetra, formatearFecha, getFechaPorDefecto, getNombreCompleto } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch } from "@/components/utils/httpPersona"
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -136,7 +136,7 @@ export default function ModulosPage() {
                 documento: '',
                 telefono: '',
                 nacionalidad: '',
-                fecha_nacimiento: '',
+                fecha_nacimiento: getFechaPorDefecto(),
                 tipo: '',
                 tipo_documento: '',
                 sexo: '',
@@ -253,7 +253,7 @@ export default function ModulosPage() {
           documento: '',
           telefono: '',
           nacionalidad: '',
-          fecha_nacimiento: '',
+          fecha_nacimiento: getFechaPorDefecto(),
           tipo: '',
           tipo_documento: '',
           sexo: '',
@@ -261,6 +261,7 @@ export default function ModulosPage() {
         });
 
         setTipoDePersonaCreacion(undefined);
+        setTipoDocumentoRuc(undefined);
         setActiveTab('list');
         queryClient.invalidateQueries({
           queryKey: ['personas'],
@@ -294,9 +295,23 @@ export default function ModulosPage() {
         handleShowToast('Se ha guardado la persona satisfactoriamente', 'success');
         setDataAEditar(undefined);
         reset({
-            nombre: "",
-            descripcion: "",
+            nombre: '',
+            apellido: '',
+            direccion: '',
+            documento: '',
+            telefono: '',
+            nacionalidad: '',
+            fecha_nacimiento: getFechaPorDefecto(),
+            tipo: '',
+            tipo_documento: '',
+            sexo: '',
+            razon_social: '',
+            email: '',
           });
+
+
+        setTipoDePersonaCreacion(undefined);
+        setTipoDocumentoRuc(undefined);
         setActiveTab('list');
         queryClient.invalidateQueries({
           queryKey: ['personas'],
@@ -353,12 +368,18 @@ export default function ModulosPage() {
           documento: '',
           telefono: '',
           nacionalidad: '',
-          fecha_nacimiento: '',
+          fecha_nacimiento: getFechaPorDefecto(),
           tipo: '',
           tipo_documento: '',
           sexo: '',
           razon_social: '',
+          email: '',
         });
+
+
+        setTipoDePersonaCreacion(undefined);
+        setTipoDocumentoRuc(undefined);
+        
         setActiveTab('list');
   }
 
@@ -385,14 +406,19 @@ export default function ModulosPage() {
           documento: '',
           telefono: '',
           nacionalidad: '',
-          fecha_nacimiento: '',
+          fecha_nacimiento: getFechaPorDefecto(),
           tipo: '',
           tipo_documento: '',
           sexo: '',
           razon_social: '',
           email: '',
         });
-      mutate({...dataForm, activo: true, en_uso: false});
+
+
+    setTipoDePersonaCreacion(undefined);
+    setTipoDocumentoRuc(undefined);
+
+    mutate({...dataForm, activo: true, en_uso: false});
   }
 
   const handleGuardarDataEditado = async (dataForm: any) => {

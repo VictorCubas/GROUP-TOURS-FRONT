@@ -51,3 +51,18 @@ export function getNombreCompleto(nombre?: string, apellido?: string): string{
 
   return `${nombre} ${apellido}`
 }
+
+/**
+ * Función que retorna la fecha correspondiente al 01 de enero 
+ * de hace 20 años a partir del año actual.
+ * 
+ * Esta fecha se puede utilizar como valor por defecto para 
+ * campos de fecha de nacimiento en formularios.
+ * 
+ * @returns {string} Fecha en formato 'YYYY-01-01'
+ */
+export function getFechaPorDefecto() {
+    const hoy = new Date();
+    const hace20Anios = hoy.getFullYear() - 20;
+    return `${hace20Anios}-01-01`;
+  }
