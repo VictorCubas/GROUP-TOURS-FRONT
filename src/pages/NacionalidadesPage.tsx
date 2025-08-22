@@ -192,7 +192,7 @@ export default function ModulosPage() {
         handleShowToast('Se ha creado una nueva nacionalidad satisfactoriamente', 'success');
         reset({
             nombre: "",
-            // descripcion: "",
+            codigo_alpha2: "",
           });
         setActiveTab('list');
         
@@ -224,7 +224,7 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         reset({
             nombre: "",
-            // descripcion: "",
+            codigo_alpha2: ""
           });
         setActiveTab('list');
          queryClient.invalidateQueries({
