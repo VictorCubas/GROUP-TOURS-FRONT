@@ -186,7 +186,7 @@ export default function ModulosPage() {
   }
 
 
-  const {mutate, isPending: isPendingMutation} = useMutation({
+  const {mutate, isPending: isPendingMutation, isError: isErrorAdd, error} = useMutation({
     mutationFn: nuevoPermisoFetch,
     onSuccess: () => {
         handleShowToast('Se ha creado una nueva nacionalidad satisfactoriamente', 'success');
@@ -216,6 +216,10 @@ export default function ModulosPage() {
         });
     },
   });
+
+  if(isErrorAdd){
+    console.log(error);
+  }
 
   const {mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
     mutationFn: guardarDataEditado,
@@ -532,7 +536,7 @@ export default function ModulosPage() {
                   <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
-                        <Plus className="h-5 w-5 text-white" />
+                        <Check className="h-5 w-5 text-white" />
                       </div>
                       <div>
                         <CardTitle className="text-emerald-900">Crear Nueva Nacionalidad</CardTitle>

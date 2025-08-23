@@ -41,6 +41,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('error interceptor: ', error);
+
     if (error.response?.status === 401) {
        const { logout } = useSessionStore.getState();
        const { setRedirect } = useNavigationStore.getState();
@@ -52,7 +53,30 @@ axiosInstance.interceptors.response.use(
       }, 2500);
     }
     else{
-      showToastOutsider(error?.message ?? 'Ocurrió algo inesperado', 'error');
+      if (error.response) {
+        // Accedemos a lo que devuelve el backend
+        const backendErrors = error.response.data;
+        console.log('backendErrors: ', backendErrors);
+
+        if (typeof backendErrors === 'string') {
+          // Si es solo un string, lo mostramos directo
+          showToastOutsider(backendErrors, 'error');
+        } else if (typeof backendErrors === 'object') {
+          // Si es un objeto con campos y mensajes
+          console.log('mostrando errores....')
+
+          const messages = Object.values(backendErrors)
+            .flat() // aplanar en caso de arrays
+            .join('\n'); // unir con saltos de línea
+
+            console.log(messages)
+          showToastOutsider(messages, 'error');
+        }
+      } else {
+        // Si no hay respuesta del servidor
+        showToastOutsider(error?.message ?? 'Ocurrió algo inesperado', 'error');
+      }
+      // showToastOutsider(error?.message ?? 'Ocurrió algo inesperado', 'error');
     }
     return Promise.reject(error);
   }
