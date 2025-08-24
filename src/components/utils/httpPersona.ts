@@ -74,7 +74,12 @@ export async function fetchResumen() {
   return resp?.data
 }
 
-export async function fetchDataModulo() {
-  const resp = await axiosInstance.get(`/personas/todos/`);
+// export async function fetchDataModulo() {
+//   const resp = await axiosInstance.get(`/personas/todos/`);
+//   return resp?.data
+// }
+
+export async function fetchDataPersonasTodos(busqueda: string) {
+  const resp = await axiosInstance.get(`/personas/todos/?q=${busqueda}`);
   return resp?.data
 }

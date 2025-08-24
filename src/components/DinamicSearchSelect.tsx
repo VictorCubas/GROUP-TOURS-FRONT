@@ -6,95 +6,131 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, ChevronDown, ChevronUp, X, Check } from "lucide-react"
+import { Search, ChevronDown, ChevronUp, X, Check, Loader2Icon } from "lucide-react"
 
 interface GenericSearchSelectProps<T> {
-  value: number | ""
-  onValueChange?: (value: number | "") => void
-  handleDataNoSeleccionada?: (value: boolean | undefined) => void
-  placeholder?: string
-  disabled?: boolean
-  dataList: T[]
-  labelKey: keyof T
-  valueKey: keyof T
-  secondaryLabelKey?: keyof T // opcional, por si quieres mostrar un código o algo extra
+  value: number | "";
+  onValueChange?: (value: number | "") => void;
+  handleDataNoSeleccionada?: (value: boolean | undefined) => void;
+  onSearchChange?: (search: string) => void; // 🔹 Nuevo para notificar búsqueda
+  placeholder?: string;
+  disabled?: boolean;
+  isFetchingPersonas?: boolean;
+  dataList: T[];
+  labelKey?: keyof T; // lo dejamos opcional porque vamos a manejar casos especiales
+  valueKey: keyof T;
+  secondaryLabelKey?: keyof T;
 }
 
-export function GenericSearchSelect<T extends Record<string, any>>({
+export function DinamicSearchSelect<T extends Record<string, any>>({
   value,
   onValueChange,
   handleDataNoSeleccionada,
+  onSearchChange,
   placeholder = "Seleccionar...",
   disabled = false,
   dataList = [],
   labelKey,
+  isFetchingPersonas,
   valueKey,
   secondaryLabelKey
 }: GenericSearchSelectProps<T>) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedItem, setSelectedItem] = useState<T | null>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const primeraVezRef = useRef(true)
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedItem, setSelectedItem] = useState<T | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const primeraVezRef = useRef(true);
 
-  const filteredItems = dataList.filter((item) =>
-    String(item[labelKey]).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (secondaryLabelKey && String(item[secondaryLabelKey]).toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  // 🔹 Cuando el usuario escribe, notificamos al padre
+  useEffect(() => {
+      const handler = setTimeout(() => {
+        if (onSearchChange) {
+          onSearchChange(searchTerm)
+        }
+      }, 750) // ⏱️ medio segundo de espera
+  
+      return () => {
+        clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+      }
+    }, [searchTerm, onSearchChange]);
+
+  // 🔹 Función para obtener el label dinámico (razon_social o nombre+apellido)
+  const getItemLabel = (item: T) => {
+    if ("razon_social" in item && item.razon_social) {
+      return String(item.razon_social);
+    }
+    if ("nombre" in item && "apellido" in item) {
+      return `${item.nombre} ${item.apellido}`;
+    }
+    return labelKey ? String(item[labelKey]) : "";
+  };
+
+  // 🔹 Filtro local por razon_social, nombre, apellido o documento
+  const filteredItems = dataList;
+  // const filteredItems = dataList.filter((item) => {
+  //   const label = getItemLabel(item).toLowerCase();
+  //   const documento = String(item.documento ?? "").toLowerCase();
+  //   return (
+  //     label.includes(searchTerm.toLowerCase()) ||
+  //     documento.includes(searchTerm.toLowerCase())
+  //   );
+  // });
 
   const handleSelect = (item: T) => {
-    setSelectedItem(item)
-    onValueChange?.(item[valueKey])
-    setIsOpen(false)
-    setSearchTerm("")
-  }
+    setSelectedItem(item);
+    onValueChange?.(item[valueKey]);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
 
   const handleClear = () => {
-    setSelectedItem(null)
-    onValueChange?.("")
-    setSearchTerm("")
-  }
+    setSelectedItem(null);
+    onValueChange?.("");
+    setSearchTerm("");
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-        setSearchTerm("")
+        setIsOpen(false);
+        setSearchTerm("");
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
+    console.log('actualizando valor: ', value)
+    console.log('valueKey: ', valueKey)
     if (value) {
-      const item = dataList.find((c) => c[valueKey] === value)
+      const item = dataList.find((c) => c[valueKey] === value);
+      console.log('item selected: ', item)
       if (item) {
-        setSelectedItem(item)
-        handleDataNoSeleccionada?.(true)
+        setSelectedItem(item);
+        handleDataNoSeleccionada?.(true);
       }
     } else {
-      setSelectedItem(null)
+      setSelectedItem(null);
     }
-  }, [value, dataList, valueKey])
+  }, [value, dataList, valueKey, handleDataNoSeleccionada]);
 
   useEffect(() => {
     if (primeraVezRef.current) {
-      primeraVezRef.current = false
-      return
+      primeraVezRef.current = false;
+      return;
     }
     if (!isOpen && !selectedItem) {
-      handleDataNoSeleccionada?.(false)
+      handleDataNoSeleccionada?.(false);
     }
-  }, [isOpen, selectedItem])
+  }, [isOpen, selectedItem]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus()
+      inputRef.current.focus();
     }
-  }, [isOpen])
-
+  }, [isOpen]);
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
@@ -109,7 +145,7 @@ export function GenericSearchSelect<T extends Record<string, any>>({
         <div className="flex items-center gap-2 flex-1 text-left">
           {selectedItem ? (
             <>
-              <span className="font-medium">{String(selectedItem[labelKey])}</span>
+              <span className="font-medium">{getItemLabel(selectedItem)}</span>
               {secondaryLabelKey && (
                 <Badge variant="secondary" className="text-xs">
                   {String(selectedItem[secondaryLabelKey])}
@@ -128,14 +164,18 @@ export function GenericSearchSelect<T extends Record<string, any>>({
               size="sm"
               className="h-6 w-6 p-0 hover:bg-gray-100"
               onClick={(e) => {
-                e.stopPropagation()
-                handleClear()
+                e.stopPropagation();
+                handleClear();
               }}
             >
               <X className="h-3 w-3" />
             </Button>
           )}
-          {isOpen ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+          {isOpen ? (
+            <ChevronUp className="h-4 w-4 text-gray-500" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          )}
         </div>
       </div>
 
@@ -155,7 +195,11 @@ export function GenericSearchSelect<T extends Record<string, any>>({
           </div>
 
           <div className="max-h-64 overflow-y-auto">
-            {filteredItems.length === 0 ? (
+            {isFetchingPersonas && <div className="w-full flex items-center justify-center">
+                                        <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
+                                      </div>}
+
+            {!isFetchingPersonas && filteredItems.length === 0 ? (
               <div className="p-4 text-center text-gray-500">No se encontraron resultados</div>
             ) : (
               filteredItems.map((item) => (
@@ -163,13 +207,15 @@ export function GenericSearchSelect<T extends Record<string, any>>({
                   key={String(item[valueKey])}
                   type="button"
                   className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between group ${
-                    selectedItem?.[valueKey] === item[valueKey] ? "bg-blue-50 border-r-2 border-blue-500" : ""
+                    selectedItem?.[valueKey] === item[valueKey]
+                      ? "bg-blue-50 border-r-2 border-blue-500"
+                      : ""
                   }`}
                   onClick={() => handleSelect(item)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 cursor-pointer">
-                      <span className="font-medium">{String(item[labelKey])}</span>
+                      <span className="font-medium">{getItemLabel(item)}</span>
                       {secondaryLabelKey && (
                         <Badge variant="outline" className="text-xs">
                           {String(item[secondaryLabelKey])}
@@ -187,5 +233,5 @@ export function GenericSearchSelect<T extends Record<string, any>>({
         </Card>
       )}
     </div>
-  )
+  );
 }

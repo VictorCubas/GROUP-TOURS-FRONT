@@ -42,11 +42,11 @@ export const fetchData = async (page: number, page_size: number = 5,
 
 //tanstackquery ya maneja el error y en el interceptor tambien
 export async function nuevoDataFetch(data: any) {
-    await axiosInstance.post(`/personas/`, data);    
+    await axiosInstance.post(`/empleados/`, data);    
 }
 
 export async function guardarDataEditado(data: any) {
-  await axiosInstance.put(`/personas/${data.id}/`, data);    
+  await axiosInstance.put(`/empleados/${data.id}/`, data);    
 }
 
 export async function activarDesactivarData({ dataId, activo }: { dataId: number; activo: boolean }) {

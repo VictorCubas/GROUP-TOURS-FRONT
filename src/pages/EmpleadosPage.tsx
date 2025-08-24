@@ -62,7 +62,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Empleado, PersonaFisica, PersonaJuridica, RespuestaPaginada, } from "@/types/empleados"
+import type { Empleado, Persona, PersonaFisica, PersonaJuridica, RespuestaPaginada, TipoRemuneracion, } from "@/types/empleados"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getFechaPorDefecto, getNombreCompleto } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTodo, fetchDataPuestosTodos } from "@/components/utils/httpEmpleado"
 import {Controller, useForm } from "react-hook-form"
@@ -72,6 +72,8 @@ import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
+import { fetchDataPersonasTodos } from "@/components/utils/httpPersona"
+import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
@@ -106,26 +108,22 @@ let dataList: Empleado[] = [];
 export default function ModulosPage() {
   // const [setSearchTerm] = useState("")
   const [selectedPuestosID, setSelectedPuestosID] = useState<number | "">("");
-  const [nacionalidadNoSeleccionada, setNacionalidadNoSeleccionada] = useState<boolean | undefined>();
+  const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
+  const [puestoNoSeleccionada, setPuestoNoSeleccionada] = useState<boolean | undefined>();
+  const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
+  const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
-  const [razonSocialABuscar, setRazonSocialABuscar] = useState("");
-  const [buscarPorDocumento, setBuscarPorDocumento] = useState("");
-  const [buscarPorTelefono, setBuscarPorTelefono] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Empleado>();
   const [dataADesactivar, setDataADesactivar] = useState<Empleado>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
-  // const [tipoDocumentoRuc, setTipoDocumentoRuc] = useState<TipoDocumento>();
+  const [tipoRemuneracionSelected, setTipoRemuneracionSelected] = useState<TipoRemuneracion>();
   const [dataDetalle, setDataDetalle] = useState<Empleado>();
   const {handleShowToast} = use(ToastContext);
-  const [tipoDePersonaCreacion, setTipoDePersonaCreacion] = useState<string>();
+  const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
-                  tipo: "all",                      // fisica | juridica | all
-                  sexo: "all",                      // M | F | all
-                  documento: "",
-                  telefono: "",
                   fecha_desde: "",
                   fecha_hasta: "",
                   nombre: ""
@@ -136,18 +134,12 @@ export default function ModulosPage() {
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
-                nombre: '',
-                apellido: '',
-                direccion: '',
-                documento: '',
-                telefono: '',
-                nacionalidad: '',
-                fecha_nacimiento: getFechaPorDefecto(),
-                tipo: '',
-                tipo_documento: '',
-                sexo: '',
-                razon_social: '',
-                email: '',
+                salario: '',
+                porcentaje_comision: '',
+                puesto: '',
+                persona: '',
+                tipo_remuneracion: '',
+                fecha_ingreso: ''
               }
             });
   // DATOS DEL FORMULARIO 
@@ -168,6 +160,12 @@ export default function ModulosPage() {
   const {data: dataPuestosList, isFetching: isFetchingPuestos,} = useQuery({
       queryKey: ['puestos-disponibles',], //data cached
       queryFn: () => fetchDataPuestosTodos(),
+      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
+  const {data: dataPersonaList, isFetching: isFetchingPersonas,} = useQuery({
+      queryKey: ['personas-disponibles', personaBusqueda], //data cached
+      queryFn: () => fetchDataPersonasTodos(personaBusqueda),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
@@ -202,6 +200,22 @@ export default function ModulosPage() {
       // dataList = [];
   }
 
+
+  if(!isFetchingPersonas){
+    console.log('dataListPersonas: ', dataPersonaList)
+  }
+
+
+  useEffect(() => {  
+    if(dataPersonaList){
+      if(dataAEditar){
+        setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
+      }
+      else{
+        setNewDataPersonaList([...dataPersonaList])
+      }
+    }
+  }, [dataAEditar, dataPersonaList]);
   
   // Cálculos de paginación
   const totalItems = dataList?.length
@@ -238,7 +252,6 @@ export default function ModulosPage() {
         // setSearchTerm("");
         setShowActiveOnly(true);
         setNombreABuscar("")
-        setRazonSocialABuscar("")
       });
   }
 
@@ -254,21 +267,16 @@ export default function ModulosPage() {
     onSuccess: () => {
         handleShowToast('Se ha creado un nueva persona satisfactoriamente', 'success');
         reset({
-          nombre: '',
-          apellido: '',
-          direccion: '',
-          documento: '',
-          telefono: '',
-          nacionalidad: '',
-          fecha_nacimiento: getFechaPorDefecto(),
-          tipo: '',
-          tipo_documento: '',
-          sexo: '',
-          razon_social: '',
+          salario: '',
+          porcentaje_comision: '',
+          puesto: '',
+          persona: '',
+          tipo_remuneracion: '',
+          fecha_ingreso: ''
         });
 
         // setTipoDePersonaCreacion(undefined);
-        // setTipoDocumentoRuc(undefined);
+        // setTipoRemuneracionSelected(undefined);
         setActiveTab('list');
         queryClient.invalidateQueries({
           queryKey: ['empleados'],
@@ -278,6 +286,12 @@ export default function ModulosPage() {
         queryClient.invalidateQueries({
           queryKey: ['empleados-resumen'],
         });
+
+
+        // setSelectedPersonaID("");
+        // setSelectedPuestosID("");
+        // setPersonaNoSeleccionada(undefined);
+        // setPuestoNoSeleccionada(undefined);
 
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
@@ -302,23 +316,17 @@ export default function ModulosPage() {
         handleShowToast('Se ha guardado la persona satisfactoriamente', 'success');
         setDataAEditar(undefined);
         reset({
-            nombre: '',
-            apellido: '',
-            direccion: '',
-            documento: '',
-            telefono: '',
-            nacionalidad: '',
-            fecha_nacimiento: getFechaPorDefecto(),
-            tipo: '',
-            tipo_documento: '',
-            sexo: '',
-            razon_social: '',
-            email: '',
+            salario: '',
+            porcentaje_comision: '',
+            puesto: '',
+            persona: '',
+            tipo_remuneracion: '',
+            fecha_ingreso: ''
           });
 
 
         // setTipoDePersonaCreacion(undefined);
-        // setTipoDocumentoRuc(undefined);
+        // setTipoRemuneracionSelected(undefined);
         setActiveTab('list');
         queryClient.invalidateQueries({
           queryKey: ['empleados'],
@@ -367,25 +375,22 @@ export default function ModulosPage() {
   const handleCancel = () => {
         setDataAEditar(undefined);
         setSelectedPuestosID("");
+        setSelectedPersonaID("");
         handleDataNoSeleccionada(undefined)
+        handleDataNoPersonaSeleccionada(undefined)
+        setNewDataPersonaList([...dataPersonaList])
         reset({
-          nombre: '',
-          apellido: '',
-          direccion: '',
-          documento: '',
-          telefono: '',
-          nacionalidad: '',
-          fecha_nacimiento: getFechaPorDefecto(),
-          tipo: '',
-          tipo_documento: '',
-          sexo: '',
-          razon_social: '',
-          email: '',
+          salario: '',
+            porcentaje_comision: '',
+            puesto: '',
+            persona: '',
+            tipo_remuneracion: '',
+            fecha_ingreso: ''
         });
 
 
         // setTipoDePersonaCreacion(undefined);
-        // setTipoDocumentoRuc(undefined);
+        // setTipoRemuneracionSelected(undefined);
         
         setActiveTab('list');
   }
@@ -393,61 +398,121 @@ export default function ModulosPage() {
 
   const handleGuardarNuevaData = async (dataForm: any) => {
     console.log('dataForm: ', dataForm)
-    if(dataForm.tipo === 'fisica'){
-      dataForm.nacionalidad = selectedPuestosID;
-      delete dataForm.razon_social;
-    }
-    else{
-      delete dataForm.nombre;
-      delete dataForm.apellido;
-      delete dataForm.sexo;
-      delete dataForm.fecha_nacimiento;
-      delete dataForm.nacionalidad;
-    }
+    console.log('puesto: ', selectedPuestosID);
+    console.log('persona: ', selectedPersonaID);
 
-    console.log('dataForm cleaned: ', dataForm);
-    reset({
-          nombre: '',
-          apellido: '',
-          direccion: '',
-          documento: '',
-          telefono: '',
-          nacionalidad: '',
-          fecha_nacimiento: getFechaPorDefecto(),
-          tipo: '',
-          tipo_documento: '',
-          sexo: '',
-          razon_social: '',
-          email: '',
-        });
+    const payload = {...dataForm, 
+          puesto: selectedPuestosID,
+          persona: selectedPersonaID,
+          activo: true
+        }
+
+    console.log('payload: ', payload)
+//     {
+//     "salario": "10000000",
+//     "porcentaje_comision": "10",
+//     "tipo_remuneracion": "2",
+//     "fecha_ingreso": "2025-08-24"
+// }
+
+//     {
+//     "persona": null,
+//     "puesto": null,
+//     "tipo_remuneracion": null,
+//     "salario": null,
+//     "porcentaje_comision": null,
+//     "activo": false,
+//     "fecha_ingreso": null
+// }
+    // if(dataForm.tipo === 'fisica'){
+    //   dataForm.nacionalidad = selectedPuestosID;
+    //   delete dataForm.razon_social;
+    // }
+    // else{
+    //   delete dataForm.nombre;
+    //   delete dataForm.apellido;
+    //   delete dataForm.sexo;
+    //   delete dataForm.fecha_nacimiento;
+    //   delete dataForm.nacionalidad;
+    // }
+
+    // console.log('dataForm cleaned: ', dataForm);
+    // reset({
+    //       nombre: '',
+    //       apellido: '',
+    //       direccion: '',
+    //       documento: '',
+    //       telefono: '',
+    //       nacionalidad: '',
+    //       fecha_nacimiento: getFechaPorDefecto(),
+    //       tipo: '',
+    //       tipo_documento: '',
+    //       sexo: '',
+    //       razon_social: '',
+    //       email: '',
+    //     });
 
 
-    // setTipoDePersonaCreacion(undefined);
-    // setTipoDocumentoRuc(undefined);
-
-    mutate({...dataForm, activo: true, en_uso: false});
+    mutate(payload);
   }
 
   const handleGuardarDataEditado = async (dataForm: any) => {
     const dataEditado = {...dataAEditar, ...dataForm};
     delete dataEditado.numero;
 
-    console.log('selectedPuestosID: ', selectedPuestosID)
-    dataEditado.nacionalidad = selectedPuestosID;
-    console.log('dataEditado: ', dataEditado);
+    console.log('dataForm editar: ', dataForm)
+    // console.log('puesto: ', selectedPuestosID);
+    // console.log('persona: ', selectedPersonaID);
+    const tipoRemuneracion = dataTipoRemuneracionList.filter((doc: TipoRemuneracion) => doc.id.toString() === tipoRemuneracionSelected?.id.toString())
 
-    if(dataForm.tipo === 'fisica'){
-      dataEditado.nacionalidad = selectedPuestosID;
-      delete dataEditado.razon_social;
+    console.log('tipoRemuneracion: ', tipoRemuneracion)
+
+    let salario: number = 0;
+    let porcentaje_comision: number = 0;
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Salario fijo')){
+      console.log('aca 1');
+      salario = dataForm?.salario;
+      porcentaje_comision = dataAEditar!.porcentaje_comision;
     }
-    else{
-      delete dataEditado.nombre;
-      delete dataEditado.apellido;
-      delete dataEditado.sexo;
-      delete dataEditado.fecha_nacimiento;
-      delete dataEditado.nacionalidad;
+    
+
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Comisión' || tipoRemuneracion[0].nombre === 'Comision')){
+      console.log('aca 2');
+      porcentaje_comision = dataForm.porcentaje_comision;
+      salario = dataAEditar!.salario;
     }
-    mutateGuardarEditado(dataEditado);
+    
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Mixto')){
+        porcentaje_comision = dataForm.porcentaje_comision;
+        salario = dataForm?.salario;
+    }
+
+
+    const payload = {...dataForm, 
+          puesto: selectedPuestosID,
+          persona: selectedPersonaID,
+          activo: true,
+          porcentaje_comision,
+          salario
+        }
+
+    delete payload.numero
+
+    console.log('dataAEditar: ', dataAEditar)
+    console.log('payload editar: ', payload)
+
+    // if(dataForm.tipo === 'fisica'){
+    //   dataEditado.nacionalidad = selectedPuestosID;
+    //   delete dataEditado.razon_social;
+    // }
+    // else{
+    //   delete dataEditado.nombre;
+    //   delete dataEditado.apellido;
+    //   delete dataEditado.sexo;
+    //   delete dataEditado.fecha_nacimiento;
+    //   delete dataEditado.nacionalidad;
+    // }
+    mutateGuardarEditado(payload);
   }
 
 
@@ -459,23 +524,33 @@ export default function ModulosPage() {
    *******************************/
   useEffect(() => {
     if (dataAEditar) {
-      console.log('reset data: ', dataAEditar)
+      console.log('reset data para editar: ', dataAEditar)
       reset({
         ...dataAEditar,
-        tipo_documento: dataAEditar.persona.tipo_documento.id.toString()
+        tipo_remuneracion: dataAEditar.tipo_remuneracion.id.toString(),
+        persona: dataAEditar.persona.id.toString()
       });
+
+      // const item = dataPersonaList.find((c: any) => c[valueKey] === value);
+      console.log('dataAEditar.persona.id: ', dataAEditar.persona.id)
+      setSelectedPersonaID(dataAEditar.persona.id);
+      // setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
+      handleDataNoSeleccionada(true);
     }
   }, [dataAEditar, reset]);
 
 
   const handleEditar = (data: Empleado) => {
+    console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
     // setTipoDePersonaCreacion(data.persona.tipo);
 
-    if(data.persona.tipo === 'fisica'){
-      setSelectedPuestosID(data!.persona!.nacionalidad!.id)
-    }
+    // if(data.persona.tipo === 'fisica'){
+      setSelectedPuestosID(data!.puesto.id)
+      setSelectedPersonaID(data!.persona.id)
+      setTipoRemuneracionSelected(data?.tipo_remuneracion)
+    // }
   }
 
   const toggleActivar = (modulo: Empleado) => {
@@ -512,50 +587,33 @@ export default function ModulosPage() {
     }
   }, [nombreABuscar]);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      console.log('cambiando nombre')
-      setFiltros(filtroAnterior => ({...filtroAnterior, razon_social: razonSocialABuscar}))
-    }, 750) // ⏱️ medio segundo de espera
-
-    return () => {
-      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
-    }
-  }, [razonSocialABuscar]);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setFiltros(filtroAnterior => ({...filtroAnterior, documento: buscarPorDocumento}))
-    }, 750) // ⏱️ medio segundo de espera
-
-    return () => {
-      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
-    }
-  }, [buscarPorDocumento]);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setFiltros(filtroAnterior => ({...filtroAnterior, telefono: buscarPorTelefono}))
-    }, 750) // ⏱️ medio segundo de espera
-
-    return () => {
-      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
-    }
-  }, [buscarPorTelefono]);
-
-
   const handleDataNoSeleccionada = (value: boolean | undefined) => {
-    setNacionalidadNoSeleccionada(value);
+    setPuestoNoSeleccionada(value);
   }
 
-  // useEffect(() => {
-  //   if (tipoDePersonaCreacion === "juridica" && tipoDocumentoRuc?.id) {
-  //     setValue("tipo_documento", tipoDocumentoRuc.id.toString());
-  //     clearErrors("tipo_documento");
-  //   }else{
-  //     // set
-  //   }
-  // }, [tipoDePersonaCreacion, tipoDocumentoRuc, setValue, clearErrors]);
+  const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
+    setPersonaNoSeleccionada(value);
+  }
+
+
+  useEffect(() => {
+    if(activeTab === 'list'){
+        queryClient.invalidateQueries({
+                queryKey: ['puestos-disponibles'],
+                exact: false
+              });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (tipoRemuneracionSelected?.nombre === 'Comision' || tipoRemuneracionSelected?.nombre === 'Comisión') {
+      setValue("salario", "");
+      clearErrors("salario");
+    }else if (tipoRemuneracionSelected?.nombre === 'Salario fijo') {
+      setValue("porcentaje_comision", "");
+      clearErrors("porcentaje_comision");
+    }
+  }, [tipoRemuneracionSelected, setValue, clearErrors]);
 
   return (
     <>
@@ -571,7 +629,7 @@ export default function ModulosPage() {
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
                         {dataDetalle?.persona.tipo === 'fisica' ? dataDetalle?.persona.nombre : (dataDetalle?.persona as PersonaJuridica)?.razon_social}
                       </h2>
-                      <p className="text-gray-600">Detalles completos de la persona</p>
+                      <p className="text-gray-600">Detalles completos del empleado</p>
                     </div>
                   </div>
                 </div>
@@ -579,6 +637,72 @@ export default function ModulosPage() {
                 
                  <div className="p-3 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">DATOS LABORALES</h3>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Puesto:</span>
+                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                {capitalizePrimeraLetra(dataDetalle?.puesto.nombre ?? '')}
+                              </Badge>
+                            </div>
+
+                            <div className="flex justify-between mt-1">
+                              <span className="text-gray-600">Tipo Remuneración:</span>
+                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                {capitalizePrimeraLetra(dataDetalle?.tipo_remuneracion.nombre ?? '')}
+                              </Badge>
+                            </div>
+
+                          <div className="space-y-3">
+                            {/* {dataDetalle?.persona.tipo === 'fisica' && */}
+                              <> 
+                                <div className="flex justify-between mt-1">
+                                  <span className="text-gray-600">Salario:</span>
+                                  <span className="font-medium">
+                                    {formatearSeparadorMiles.format(dataDetalle?.salario ?? 0)} Gs.
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Porcetanje de comisión:</span>
+                                  <span className="font-medium">
+                                    {dataDetalle?.porcentaje_comision} %
+                                  </span>
+                                </div>
+
+                                 
+                              </>
+                            {/* } */}
+
+                            {/* {dataDetalle?.persona?.tipo === 'juridica' &&
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Razon social:</span>
+                                <span className="font-medium">
+                                  {(dataDetalle?.persona as PersonaJuridica).razon_social}
+                                </span>
+                              </div>
+                            } */}
+
+                           
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Tipo Documento:</span>
+                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                {dataDetalle?.persona?.tipo_documento.nombre}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Número:</span>
+                              <span className="font-medium">{dataDetalle?.persona?.documento}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                       <div className="space-y-4">
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 mb-2">INFORMACIÓN PERSONAL</h3>
@@ -603,16 +727,16 @@ export default function ModulosPage() {
                                   <span className="text-gray-600">Fecha de nacimiento:</span>
                                   <span className="font-medium">{formatearFecha(dataDetalle?.persona?.fecha_nacimiento ?? '', false)}</span>
                                 </div>
-                                <div className="flex justify-between">
+                                {/* <div className="flex justify-between">
                                   <span className="text-gray-600">Edad:</span>
                                   <span className="font-medium">{dataDetalle?.persona?.edad} años</span>
-                                </div>
-                                <div className="flex justify-between">
+                                </div> */}
+                                {/* <div className="flex justify-between">
                                   <span className="text-gray-600">Género:</span>
                                   <Badge className={`${genderColors[dataDetalle?.persona?.sexo ?? 'M']} border`}>
                                     {dataDetalle?.persona?.sexo === 'F' ? 'Femenino': 'Masculino'}
                                   </Badge>
-                                </div>
+                                </div> */}
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Nacionalidad:</span>
                                   <span className="font-medium">{dataDetalle?.persona?.nacionalidad?.nombre}</span>
@@ -669,6 +793,7 @@ export default function ModulosPage() {
                           </div>
                         </div>
 
+                      </div>
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 mb-2">ESTADO Y FECHAS</h3>
                           <div className="space-y-3">
@@ -685,6 +810,10 @@ export default function ModulosPage() {
                               </Badge>
                             </div>
                             <div className="flex justify-between">
+                              <span className="text-gray-600">Fecha de ingreso:</span>
+                              <span className="font-medium">{formatearFecha(dataDetalle?.fecha_ingreso ?? '')}</span>
+                            </div>
+                            <div className="flex justify-between">
                               <span className="text-gray-600">Fecha de registro:</span>
                               <span className="font-medium">{formatearFecha(dataDetalle?.fecha_creacion ?? '')}</span>
                             </div>
@@ -694,7 +823,6 @@ export default function ModulosPage() {
                             </div>
                           </div>
                         </div>
-                      </div>
                     </div>
                   </div> 
 
@@ -800,59 +928,9 @@ export default function ModulosPage() {
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="sexo" className="text-gray-700 font-medium">
-                          Tipo Empleado *
-                        </Label>
-                        <Controller
-                            name="tipo"
-                            control={control}
-                            rules={{ required: "Este campo es requerido" }}
-                            render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                onValueChange={(value) => {
-                                          console.log(value)
-                                          field.onChange(value);
-                                          // setTipoDePersonaCreacion(value)
+                    
 
-                                          if (value) {
-                                            clearErrors("tipo") // Limpia el error cuando selecciona un valor
-                                          }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}
-                              >
-                                <SelectTrigger 
-                                  className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                                  <SelectValue placeholder="Selecciona el tipo de persona" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="fisica">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                                        Empleado Física
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="juridica">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                        Empleado Jurídica
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                          {errors.tipo && (
-                            <p className="text-red-400 text-sm">{errors.tipo.message as string}</p>
-                          )}
-                        </div>
-
-                      <>
+                      
                           {/* MONTO SALARIO */}
                           <div className="space-y-2">
                             <Label htmlFor="salario" className="text-gray-700 font-medium">
@@ -861,16 +939,28 @@ export default function ModulosPage() {
                             <Input
                               id="salario"
                               autoComplete="salario"
+                              disabled={tipoRemuneracionSelected?.nombre === 'Comisión' || tipoRemuneracionSelected?.nombre === 'Comision'}
                               placeholder="Monto salario"
                               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                               {...register('salario', {
-                              required: true, 
-                              validate: {blankSpace: (value) => !!value.trim()},
-                              minLength: 5})}
+                                      validate: (value) => {
+                                        if (tipoRemuneracionSelected?.nombre === 'Comisión' || tipoRemuneracionSelected?.nombre === 'Comision') {
+                                          return true; // ✅ No validar si está deshabilitado
+                                        }
+                                        if (!value || !value.toString().trim()) {
+                                          return 'Este campo es requerido';
+                                        }
+                                        if (value.length < 5) {
+                                          return 'El monto debe tener mínimo 5 dígitos';
+                                        }
+                                        return true;
+                                      }
+                                    })}
                             />
                             <div>
-                              {(errors?.salario?.type === 'required' || errors?.salario?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                              {errors?.salario?.type === 'minLength' && <span className='text-red-400 text-sm'>El monto debe tener mínimo 5 dígitos</span>}
+                              {errors.salario && (
+                                    <span className="text-red-400 text-sm">{errors.salario.message as string}</span>
+                                  )}
                             </div>
                           </div>
 
@@ -882,18 +972,27 @@ export default function ModulosPage() {
                             id="porcentaje_comision"
                             autoComplete="porcentaje_comision"
                             placeholder="Porcentaje comision"
+                            disabled={tipoRemuneracionSelected?.nombre === "Salario fijo"}
                             className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                             {...register('porcentaje_comision', {
-                            required: true, 
-                            validate: {blankSpace: (value) => !!value.trim()},
-                            minLength: 1,
-                            maxLength: 2,
-                          })}
+                                      validate: (value) => {
+                                        if (tipoRemuneracionSelected?.nombre === 'Salario fijo') {
+                                          return true; // ✅ No validar si está deshabilitado
+                                        }
+                                        if (!value || !value.toString().trim()) {
+                                          return 'Este campo es requerido';
+                                        }
+                                        if (value.length > 2) {
+                                          return 'El porcentaje debe tener como maximo 2 digitos';
+                                        }
+                                        return true;
+                                      }
+                                    })}
                           />
                           <div>
-                            {(errors?.porcentaje_comision?.type === 'required' || errors?.porcentaje_comision?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                            {errors?.porcentaje_comision?.type === 'minLength' && <span className='text-red-400 text-sm'>El porcentaje debe tener al menos 1 dígito</span>}
-                            {errors?.porcentaje_comision?.type === 'maxLength' && <span className='text-red-400 text-sm'>El porcentaje debe tener máximo 2 dígitos</span>}
+                            {errors.porcentaje_comision && (
+                                    <span className="text-red-400 text-sm">{errors.porcentaje_comision.message as string}</span>
+                                  )}
                           </div>
                           </div>
 
@@ -946,51 +1045,40 @@ export default function ModulosPage() {
                               </>
                             }
 
-                              {nacionalidadNoSeleccionada === false && (
+                              {puestoNoSeleccionada === false && (
                                 <p className="text-red-400 text-sm">Este campo es requerido</p>
                               )}
                           </div>
 
                           {/* LISTADO DE PERSONAS */}
                           <div className="space-y-2 mi-select-wrapper">
-                            <Label htmlFor="puesto" className="text-gray-700 font-medium">
-                              Puesto *
+                            <Label htmlFor="persona" className="text-gray-700 font-medium">
+                              Persona *
                             </Label>
-
-                            {isFetchingPuestos &&
-                            <Select>
-                              <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
-                                <div className="w-full flex items-center justify-center">
-                                  <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                                </div>
-                              </SelectTrigger>
-                            </Select>
-                            }
-                            {!isFetchingPuestos && 
-                              <>
-                                <div className="space-y-2">
-                                  <GenericSearchSelect
-                                    dataList={dataPuestosList}
-                                    value={selectedPuestosID}
-                                    onValueChange={setSelectedPuestosID}
-                                    handleDataNoSeleccionada={handleDataNoSeleccionada}
-                                    placeholder="Selecciona el cargo..."
-                                    labelKey="nombre"
+                            
+                              <div className="space-y-2">
+                                  <DinamicSearchSelect
+                                    disabled={!!dataAEditar}
+                                    dataList={newDataPersonaList || []}
+                                    value={selectedPersonaID}
+                                    onValueChange={setSelectedPersonaID}
+                                    handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                                    onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                    isFetchingPersonas={isFetchingPersonas}
+                                    placeholder="Buscar persona..."
                                     valueKey="id"
                                   />
                               </div>
-                              </>
-                            }
 
-                              {nacionalidadNoSeleccionada === false && (
+                              {personaNoSeleccionada === false && (
                                 <p className="text-red-400 text-sm">Este campo es requerido</p>
                               )}
                           </div>
-                      </>
+                      
 
 
                       <div className="space-y-2 mi-select-wrapper">
-                        <Label htmlFor="tipo_documento" className="text-gray-700 font-medium">
+                        <Label htmlFor="tipo_remuneracion" className="text-gray-700 font-medium">
                           Tipo Remuneracion *
                         </Label>
 
@@ -1017,6 +1105,18 @@ export default function ModulosPage() {
                                           if (value) {
                                             clearErrors("tipo_remuneracion") // Limpia el error cuando selecciona un valor
                                           }
+
+                                          console.log('value: ', value);
+                                          // if(value === 'juridica'){
+                                          const tipoRemuneracion = dataTipoRemuneracionList.filter((doc: TipoRemuneracion) => doc.id.toString() === value)
+                                          console.log('tipoRemuneracion: ', tipoRemuneracion[0])
+                                          setTipoRemuneracionSelected(tipoRemuneracion[0]);
+
+                                          
+                                          // }
+                                          // else{
+                                            // setTipoRemuneracionSelected(undefined);
+                                          // }
                                         }}
                                 onOpenChange={(open) => {
                                     if (!open && !field.value) {
@@ -1187,18 +1287,11 @@ export default function ModulosPage() {
                         onClick={() => {
                           setFiltros({
                             activo: true,   // null = todos, true = solo activos
-                            tipo: "all",                      // fisica | juridica | all
-                            sexo: "all",                      // M | F | all
-                            documento: "",
-                            telefono: "",
                             fecha_desde: "",
                             fecha_hasta: "",
                             nombre: ""
                           });
-                          setBuscarPorDocumento("");
-                          setBuscarPorTelefono("");
                           setNombreABuscar(""); 
-                          setRazonSocialABuscar("");
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >

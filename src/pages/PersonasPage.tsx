@@ -274,6 +274,10 @@ export default function ModulosPage() {
           queryKey: ['personas-resumen'],
         });
 
+        queryClient.invalidateQueries({
+          queryKey: ['personas-disponibles'],
+        });
+
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
         //   exact: false
@@ -322,6 +326,10 @@ export default function ModulosPage() {
 
         queryClient.invalidateQueries({
           queryKey: ['personas-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['personas-disponibles'],
         });
 
         // queryClient.invalidateQueries({
