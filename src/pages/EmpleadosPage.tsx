@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -63,7 +62,7 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Empleado, Persona, PersonaFisica, PersonaJuridica, RespuestaPaginada, TipoRemuneracion, } from "@/types/empleados"
-import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getFechaPorDefecto, getNombreCompleto } from "@/helper/formatter"
+import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getNombreCompleto } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTodo, fetchDataPuestosTodos } from "@/components/utils/httpEmpleado"
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -86,11 +85,6 @@ import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 //   Reservas: "bg-pink-50 text-pink-600 border-pink-200",
 //   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
 // }
-
-const genderColors = {
-  M: "bg-blue-100 text-blue-700 border-blue-200",
-  F: "bg-pink-100 text-pink-700 border-pink-200",
-}
 
 const tipoPersonaColores = {
   fisica: "bg-blue-100 text-blue-700 border-blue-200",
