@@ -30,7 +30,7 @@ const sidebarItems = [
     color: "text-blue-400",
     submenu: [
       { label: "Usuarios", href: "/usuarios", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
-      { label: "Empleados", href: "/empleados", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      { label: "Empleados", href: "/seguridad/empleados", color: "text-orange-400", bgcolor: "bg-orange-400" },
       { label: "Personas", href: "/seguridad/personas", color: "text-pink-400", bgcolor: "bg-pink-400" },
       { label: "Roles", href: "/seguridad/roles", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
       { label: "Permisos", href: "/seguridad/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },

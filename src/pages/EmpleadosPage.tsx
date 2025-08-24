@@ -61,18 +61,18 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Persona, RespuestaPaginada, TipoDocumento } from "@/types/personas"
-import { capitalizePrimeraLetra, formatearFecha, getFechaPorDefecto, getNombreCompleto } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch } from "@/components/utils/httpPersona"
+import type { Empleado, Persona, PersonaFisica, PersonaJuridica, RespuestaPaginada, TipoRemuneracion, } from "@/types/empleados"
+import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getNombreCompleto } from "@/helper/formatter"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTodo, fetchDataPuestosTodos } from "@/components/utils/httpEmpleado"
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { fetchDataTodo } from "@/components/utils/httpTipoDocumentos"
-import { fetchDataNacionalidadTodos } from "@/components/utils/httpNacionalidades"
-import { CountrySearchSelect } from "@/components/CountrySearchSelect"
+import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
+import { fetchDataPersonasTodos } from "@/components/utils/httpPersona"
+import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
@@ -86,41 +86,38 @@ import { CountrySearchSelect } from "@/components/CountrySearchSelect"
 //   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
 // }
 
-const genderColors = {
-  M: "bg-blue-100 text-blue-700 border-blue-200",
-  F: "bg-pink-100 text-pink-700 border-pink-200",
-}
-
 const tipoPersonaColores = {
   fisica: "bg-blue-100 text-blue-700 border-blue-200",
   juridica: "bg-purple-100 text-purple-700 border-purple-200",
 }
 
-let dataList: Persona[] = [];
+// const tipoRemuneracionColores = {
+//   salario: "bg-blue-100 text-blue-700 border-blue-200",
+//   comision: "bg-blue-100 text-blue-700 border-blue-200",
+//   mixto: "bg-purple-100 text-purple-700 border-purple-200",
+// }
+
+let dataList: Empleado[] = [];
 
 export default function ModulosPage() {
   // const [setSearchTerm] = useState("")
-  const [selectedNacionalidadID, setSelectedNacionalidadid] = useState<number | "">("");
-  const [nacionalidadNoSeleccionada, setNacionalidadNoSeleccionada] = useState<boolean | undefined>();
+  const [selectedPuestosID, setSelectedPuestosID] = useState<number | "">("");
+  const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
+  const [puestoNoSeleccionada, setPuestoNoSeleccionada] = useState<boolean | undefined>();
+  const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
+  const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
-  const [razonSocialABuscar, setRazonSocialABuscar] = useState("");
-  const [buscarPorDocumento, setBuscarPorDocumento] = useState("");
-  const [buscarPorTelefono, setBuscarPorTelefono] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [dataAEditar, setDataAEditar] = useState<Persona>();
-  const [dataADesactivar, setDataADesactivar] = useState<Persona>();
+  const [dataAEditar, setDataAEditar] = useState<Empleado>();
+  const [dataADesactivar, setDataADesactivar] = useState<Empleado>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
-  const [tipoDocumentoRuc, setTipoDocumentoRuc] = useState<TipoDocumento>();
-  const [dataDetalle, setDataDetalle] = useState<Persona>();
+  const [tipoRemuneracionSelected, setTipoRemuneracionSelected] = useState<TipoRemuneracion>();
+  const [dataDetalle, setDataDetalle] = useState<Empleado>();
   const {handleShowToast} = use(ToastContext);
-  const [tipoDePersonaCreacion, setTipoDePersonaCreacion] = useState<string>();
+  const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
-                  tipo: "all",                      // fisica | juridica | all
-                  sexo: "all",                      // M | F | all
-                  documento: "",
-                  telefono: "",
                   fecha_desde: "",
                   fecha_hasta: "",
                   nombre: ""
@@ -131,18 +128,12 @@ export default function ModulosPage() {
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
-                nombre: '',
-                apellido: '',
-                direccion: '',
-                documento: '',
-                telefono: '',
-                nacionalidad: '',
-                fecha_nacimiento: getFechaPorDefecto(),
-                tipo: '',
-                tipo_documento: '',
-                sexo: '',
-                razon_social: '',
-                email: '',
+                salario: '',
+                porcentaje_comision: '',
+                puesto: '',
+                persona: '',
+                tipo_remuneracion: '',
+                fecha_ingreso: ''
               }
             });
   // DATOS DEL FORMULARIO 
@@ -160,20 +151,26 @@ export default function ModulosPage() {
                                               });
                                               
 
-  const {data: dataNacionalidadList, isFetching: isFetchingNacionalidad,} = useQuery({
-      queryKey: ['nacionalidades-de-personas',], //data cached
-      queryFn: () => fetchDataNacionalidadTodos(),
+  const {data: dataPuestosList, isFetching: isFetchingPuestos,} = useQuery({
+      queryKey: ['puestos-disponibles',], //data cached
+      queryFn: () => fetchDataPuestosTodos(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
-  const {data: dataTipoDocumentoList, isFetching: isFetchingTipoDocumento,} = useQuery({
-      queryKey: ['tipo-documentos-de-personas',], //data cached
+  const {data: dataPersonaList, isFetching: isFetchingPersonas,} = useQuery({
+      queryKey: ['personas-disponibles', personaBusqueda], //data cached
+      queryFn: () => fetchDataPersonasTodos(personaBusqueda),
+      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
+  const {data: dataTipoRemuneracionList, isFetching: isFetchingTipoRemuneracion,} = useQuery({
+      queryKey: ['tipo-remuneracion-de-personas',], //data cached
       queryFn: () => fetchDataTodo(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
   const {data, isFetching, isError} = useQuery({
-    queryKey: ['personas', currentPage, paginacion.pageSize, filtros], //data cached
+    queryKey: ['empleados', currentPage, paginacion.pageSize, filtros], //data cached
     queryFn: () => fetchData(currentPage, paginacion.pageSize, filtros),
     staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
     enabled: !((filtros.fecha_desde && !filtros.fecha_hasta) || (!filtros.fecha_desde && filtros.fecha_hasta))
@@ -181,7 +178,7 @@ export default function ModulosPage() {
   });
 
   const {data: dataResumen, isFetching: isFetchingResumen, isError: isErrorResumen} = useQuery({
-    queryKey: ['personas-resumen'], //data cached
+    queryKey: ['empleados-resumen'], //data cached
     queryFn: () => fetchResumen(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
@@ -191,12 +188,28 @@ export default function ModulosPage() {
 
   if(!isFetching && !isError){
     if(data?.results){
-      dataList = data.results.map((per: Persona, index: number) => ({...per, numero: index + 1}));
+      dataList = data.results.map((per: Empleado, index: number) => ({...per, numero: index + 1}));
     }
     // else
       // dataList = [];
   }
 
+
+  if(!isFetchingPersonas){
+    console.log('dataListPersonas: ', dataPersonaList)
+  }
+
+
+  useEffect(() => {  
+    if(dataPersonaList){
+      if(dataAEditar){
+        setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
+      }
+      else{
+        setNewDataPersonaList([...dataPersonaList])
+      }
+    }
+  }, [dataAEditar, dataPersonaList]);
   
   // Cálculos de paginación
   const totalItems = dataList?.length
@@ -233,7 +246,6 @@ export default function ModulosPage() {
         // setSearchTerm("");
         setShowActiveOnly(true);
         setNombreABuscar("")
-        setRazonSocialABuscar("")
       });
   }
 
@@ -249,34 +261,31 @@ export default function ModulosPage() {
     onSuccess: () => {
         handleShowToast('Se ha creado un nueva persona satisfactoriamente', 'success');
         reset({
-          nombre: '',
-          apellido: '',
-          direccion: '',
-          documento: '',
-          telefono: '',
-          nacionalidad: '',
-          fecha_nacimiento: getFechaPorDefecto(),
-          tipo: '',
-          tipo_documento: '',
-          sexo: '',
-          razon_social: '',
+          salario: '',
+          porcentaje_comision: '',
+          puesto: '',
+          persona: '',
+          tipo_remuneracion: '',
+          fecha_ingreso: ''
         });
 
-        setTipoDePersonaCreacion(undefined);
-        setTipoDocumentoRuc(undefined);
+        // setTipoDePersonaCreacion(undefined);
+        // setTipoRemuneracionSelected(undefined);
         setActiveTab('list');
         queryClient.invalidateQueries({
-          queryKey: ['personas'],
+          queryKey: ['empleados'],
           exact: false
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['personas-resumen'],
+          queryKey: ['empleados-resumen'],
         });
 
-        queryClient.invalidateQueries({
-          queryKey: ['personas-disponibles'],
-        });
+
+        // setSelectedPersonaID("");
+        // setSelectedPuestosID("");
+        // setPersonaNoSeleccionada(undefined);
+        // setPuestoNoSeleccionada(undefined);
 
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
@@ -301,35 +310,25 @@ export default function ModulosPage() {
         handleShowToast('Se ha guardado la persona satisfactoriamente', 'success');
         setDataAEditar(undefined);
         reset({
-            nombre: '',
-            apellido: '',
-            direccion: '',
-            documento: '',
-            telefono: '',
-            nacionalidad: '',
-            fecha_nacimiento: getFechaPorDefecto(),
-            tipo: '',
-            tipo_documento: '',
-            sexo: '',
-            razon_social: '',
-            email: '',
+            salario: '',
+            porcentaje_comision: '',
+            puesto: '',
+            persona: '',
+            tipo_remuneracion: '',
+            fecha_ingreso: ''
           });
 
 
-        setTipoDePersonaCreacion(undefined);
-        setTipoDocumentoRuc(undefined);
+        // setTipoDePersonaCreacion(undefined);
+        // setTipoRemuneracionSelected(undefined);
         setActiveTab('list');
         queryClient.invalidateQueries({
-          queryKey: ['personas'],
+          queryKey: ['empleados'],
           exact: false
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['personas-resumen'],
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['personas-disponibles'],
+          queryKey: ['empleados-resumen'],
         });
 
         // queryClient.invalidateQueries({
@@ -357,11 +356,11 @@ export default function ModulosPage() {
         setDataADesactivar(undefined);
         //desactivamos todas las queies
         queryClient.invalidateQueries({
-          queryKey: ['personas'],
+          queryKey: ['empleados'],
           exact: false
         });
         queryClient.invalidateQueries({
-          queryKey: ['personas-resumen'],
+          queryKey: ['empleados-resumen'],
         });
     },
   });
@@ -369,26 +368,23 @@ export default function ModulosPage() {
 
   const handleCancel = () => {
         setDataAEditar(undefined);
-        setSelectedNacionalidadid("");
-        handleNacionalidadNoSeleccionada(undefined)
+        setSelectedPuestosID("");
+        setSelectedPersonaID("");
+        handleDataNoSeleccionada(undefined)
+        handleDataNoPersonaSeleccionada(undefined)
+        setNewDataPersonaList([...dataPersonaList])
         reset({
-          nombre: '',
-          apellido: '',
-          direccion: '',
-          documento: '',
-          telefono: '',
-          nacionalidad: '',
-          fecha_nacimiento: getFechaPorDefecto(),
-          tipo: '',
-          tipo_documento: '',
-          sexo: '',
-          razon_social: '',
-          email: '',
+          salario: '',
+            porcentaje_comision: '',
+            puesto: '',
+            persona: '',
+            tipo_remuneracion: '',
+            fecha_ingreso: ''
         });
 
 
-        setTipoDePersonaCreacion(undefined);
-        setTipoDocumentoRuc(undefined);
+        // setTipoDePersonaCreacion(undefined);
+        // setTipoRemuneracionSelected(undefined);
         
         setActiveTab('list');
   }
@@ -396,61 +392,121 @@ export default function ModulosPage() {
 
   const handleGuardarNuevaData = async (dataForm: any) => {
     console.log('dataForm: ', dataForm)
-    if(dataForm.tipo === 'fisica'){
-      dataForm.nacionalidad = selectedNacionalidadID;
-      delete dataForm.razon_social;
-    }
-    else{
-      delete dataForm.nombre;
-      delete dataForm.apellido;
-      delete dataForm.sexo;
-      delete dataForm.fecha_nacimiento;
-      delete dataForm.nacionalidad;
-    }
+    console.log('puesto: ', selectedPuestosID);
+    console.log('persona: ', selectedPersonaID);
 
-    console.log('dataForm cleaned: ', dataForm);
-    reset({
-          nombre: '',
-          apellido: '',
-          direccion: '',
-          documento: '',
-          telefono: '',
-          nacionalidad: '',
-          fecha_nacimiento: getFechaPorDefecto(),
-          tipo: '',
-          tipo_documento: '',
-          sexo: '',
-          razon_social: '',
-          email: '',
-        });
+    const payload = {...dataForm, 
+          puesto: selectedPuestosID,
+          persona: selectedPersonaID,
+          activo: true
+        }
+
+    console.log('payload: ', payload)
+//     {
+//     "salario": "10000000",
+//     "porcentaje_comision": "10",
+//     "tipo_remuneracion": "2",
+//     "fecha_ingreso": "2025-08-24"
+// }
+
+//     {
+//     "persona": null,
+//     "puesto": null,
+//     "tipo_remuneracion": null,
+//     "salario": null,
+//     "porcentaje_comision": null,
+//     "activo": false,
+//     "fecha_ingreso": null
+// }
+    // if(dataForm.tipo === 'fisica'){
+    //   dataForm.nacionalidad = selectedPuestosID;
+    //   delete dataForm.razon_social;
+    // }
+    // else{
+    //   delete dataForm.nombre;
+    //   delete dataForm.apellido;
+    //   delete dataForm.sexo;
+    //   delete dataForm.fecha_nacimiento;
+    //   delete dataForm.nacionalidad;
+    // }
+
+    // console.log('dataForm cleaned: ', dataForm);
+    // reset({
+    //       nombre: '',
+    //       apellido: '',
+    //       direccion: '',
+    //       documento: '',
+    //       telefono: '',
+    //       nacionalidad: '',
+    //       fecha_nacimiento: getFechaPorDefecto(),
+    //       tipo: '',
+    //       tipo_documento: '',
+    //       sexo: '',
+    //       razon_social: '',
+    //       email: '',
+    //     });
 
 
-    setTipoDePersonaCreacion(undefined);
-    setTipoDocumentoRuc(undefined);
-
-    mutate({...dataForm, activo: true, en_uso: false});
+    mutate(payload);
   }
 
   const handleGuardarDataEditado = async (dataForm: any) => {
     const dataEditado = {...dataAEditar, ...dataForm};
     delete dataEditado.numero;
 
-    console.log('selectedNacionalidadID: ', selectedNacionalidadID)
-    dataEditado.nacionalidad = selectedNacionalidadID;
-    console.log('dataEditado: ', dataEditado);
+    console.log('dataForm editar: ', dataForm)
+    // console.log('puesto: ', selectedPuestosID);
+    // console.log('persona: ', selectedPersonaID);
+    const tipoRemuneracion = dataTipoRemuneracionList.filter((doc: TipoRemuneracion) => doc.id.toString() === tipoRemuneracionSelected?.id.toString())
 
-    if(dataForm.tipo === 'fisica'){
-      dataEditado.nacionalidad = selectedNacionalidadID;
-      delete dataEditado.razon_social;
+    console.log('tipoRemuneracion: ', tipoRemuneracion)
+
+    let salario: number = 0;
+    let porcentaje_comision: number = 0;
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Salario fijo')){
+      console.log('aca 1');
+      salario = dataForm?.salario;
+      porcentaje_comision = dataAEditar!.porcentaje_comision;
     }
-    else{
-      delete dataEditado.nombre;
-      delete dataEditado.apellido;
-      delete dataEditado.sexo;
-      delete dataEditado.fecha_nacimiento;
-      delete dataEditado.nacionalidad;
+    
+
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Comisión' || tipoRemuneracion[0].nombre === 'Comision')){
+      console.log('aca 2');
+      porcentaje_comision = dataForm.porcentaje_comision;
+      salario = dataAEditar!.salario;
     }
-    mutateGuardarEditado(dataEditado);
+    
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Mixto')){
+        porcentaje_comision = dataForm.porcentaje_comision;
+        salario = dataForm?.salario;
+    }
+
+
+    const payload = {...dataForm, 
+          puesto: selectedPuestosID,
+          persona: selectedPersonaID,
+          activo: true,
+          porcentaje_comision,
+          salario
+        }
+
+    delete payload.numero
+
+    console.log('dataAEditar: ', dataAEditar)
+    console.log('payload editar: ', payload)
+
+    // if(dataForm.tipo === 'fisica'){
+    //   dataEditado.nacionalidad = selectedPuestosID;
+    //   delete dataEditado.razon_social;
+    // }
+    // else{
+    //   delete dataEditado.nombre;
+    //   delete dataEditado.apellido;
+    //   delete dataEditado.sexo;
+    //   delete dataEditado.fecha_nacimiento;
+    //   delete dataEditado.nacionalidad;
+    // }
+    mutateGuardarEditado(payload);
   }
 
 
@@ -462,26 +518,36 @@ export default function ModulosPage() {
    *******************************/
   useEffect(() => {
     if (dataAEditar) {
-      console.log('reset data: ', dataAEditar)
+      console.log('reset data para editar: ', dataAEditar)
       reset({
         ...dataAEditar,
-        tipo_documento: dataAEditar.tipo_documento.id.toString()
+        tipo_remuneracion: dataAEditar.tipo_remuneracion.id.toString(),
+        persona: dataAEditar.persona.id.toString()
       });
+
+      // const item = dataPersonaList.find((c: any) => c[valueKey] === value);
+      console.log('dataAEditar.persona.id: ', dataAEditar.persona.id)
+      setSelectedPersonaID(dataAEditar.persona.id);
+      // setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
+      handleDataNoSeleccionada(true);
     }
   }, [dataAEditar, reset]);
 
 
-  const handleEditar = (data: Persona) => {
+  const handleEditar = (data: Empleado) => {
+    console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
-    setTipoDePersonaCreacion(data.tipo);
+    // setTipoDePersonaCreacion(data.persona.tipo);
 
-    if(data.tipo === 'fisica'){
-      setSelectedNacionalidadid(data!.nacionalidad!.id)
-    }
+    // if(data.persona.tipo === 'fisica'){
+      setSelectedPuestosID(data!.puesto.id)
+      setSelectedPersonaID(data!.persona.id)
+      setTipoRemuneracionSelected(data?.tipo_remuneracion)
+    // }
   }
 
-  const toggleActivar = (modulo: Persona) => {
+  const toggleActivar = (modulo: Empleado) => {
     setOnDesactivarData(true);
     setDataADesactivar(modulo);
   }
@@ -491,10 +557,10 @@ export default function ModulosPage() {
   }
 
   const handleConfirmActivo = (activo=true) => {
-    mutateDesactivar({ dataId: dataADesactivar!.id, activo, tipo: dataADesactivar!.tipo })
+    mutateDesactivar({ dataId: dataADesactivar!.id, activo, })
   }
 
-  const handleVerDetalles = (data: Persona) => {
+  const handleVerDetalles = (data: Empleado) => {
     setDataDetalle(data);
     setOnVerDetalles(true);
   }
@@ -515,50 +581,38 @@ export default function ModulosPage() {
     }
   }, [nombreABuscar]);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      console.log('cambiando nombre')
-      setFiltros(filtroAnterior => ({...filtroAnterior, razon_social: razonSocialABuscar}))
-    }, 750) // ⏱️ medio segundo de espera
-
-    return () => {
-      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
-    }
-  }, [razonSocialABuscar]);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setFiltros(filtroAnterior => ({...filtroAnterior, documento: buscarPorDocumento}))
-    }, 750) // ⏱️ medio segundo de espera
-
-    return () => {
-      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
-    }
-  }, [buscarPorDocumento]);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setFiltros(filtroAnterior => ({...filtroAnterior, telefono: buscarPorTelefono}))
-    }, 750) // ⏱️ medio segundo de espera
-
-    return () => {
-      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
-    }
-  }, [buscarPorTelefono]);
-
-
-  const handleNacionalidadNoSeleccionada = (value: boolean | undefined) => {
-    setNacionalidadNoSeleccionada(value);
+  const handleDataNoSeleccionada = (value: boolean | undefined) => {
+    setPuestoNoSeleccionada(value);
   }
 
+  const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
+    setPersonaNoSeleccionada(value);
+  }
+
+
   useEffect(() => {
-    if (tipoDePersonaCreacion === "juridica" && tipoDocumentoRuc?.id) {
-      setValue("tipo_documento", tipoDocumentoRuc.id.toString());
-      clearErrors("tipo_documento");
-    }else{
-      // set
+    if(activeTab === 'list'){
+        queryClient.invalidateQueries({
+                queryKey: ['puestos-disponibles'],
+                exact: false
+              });
+
+        queryClient.invalidateQueries({
+                queryKey: ['tipo-remuneracion-de-personas'],
+                exact: false
+              });
     }
-  }, [tipoDePersonaCreacion, tipoDocumentoRuc, setValue, clearErrors]);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (tipoRemuneracionSelected?.nombre === 'Comision' || tipoRemuneracionSelected?.nombre === 'Comisión') {
+      setValue("salario", "");
+      clearErrors("salario");
+    }else if (tipoRemuneracionSelected?.nombre === 'Salario fijo') {
+      setValue("porcentaje_comision", "");
+      clearErrors("porcentaje_comision");
+    }
+  }, [tipoRemuneracionSelected, setValue, clearErrors]);
 
   return (
     <>
@@ -572,9 +626,9 @@ export default function ModulosPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                        {dataDetalle?.tipo === 'fisica' ? dataDetalle?.nombre : dataDetalle?.razon_social}
+                        {dataDetalle?.persona.tipo === 'fisica' ? dataDetalle?.persona.nombre : (dataDetalle?.persona as PersonaJuridica)?.razon_social}
                       </h2>
-                      <p className="text-gray-600">Detalles completos de la persona</p>
+                      <p className="text-gray-600">Detalles completos del empleado</p>
                     </div>
                   </div>
                 </div>
@@ -584,50 +638,116 @@ export default function ModulosPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">INFORMACIÓN PERSONAL</h3>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">DATOS LABORALES</h3>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Tipo:</span>
+                              <span className="text-gray-600">Puesto:</span>
                               <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {capitalizePrimeraLetra(dataDetalle?.tipo ?? '')}
+                                {capitalizePrimeraLetra(dataDetalle?.puesto.nombre ?? '')}
+                              </Badge>
+                            </div>
+
+                            <div className="flex justify-between mt-1">
+                              <span className="text-gray-600">Tipo Remuneración:</span>
+                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                {capitalizePrimeraLetra(dataDetalle?.tipo_remuneracion.nombre ?? '')}
                               </Badge>
                             </div>
 
                           <div className="space-y-3">
-                            {dataDetalle?.tipo === 'fisica' &&
+                            {/* {dataDetalle?.persona.tipo === 'fisica' && */}
+                              <> 
+                                <div className="flex justify-between mt-1">
+                                  <span className="text-gray-600">Salario:</span>
+                                  <span className="font-medium">
+                                    {formatearSeparadorMiles.format(dataDetalle?.salario ?? 0)} Gs.
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Porcetanje de comisión:</span>
+                                  <span className="font-medium">
+                                    {dataDetalle?.porcentaje_comision} %
+                                  </span>
+                                </div>
+
+                                 
+                              </>
+                            {/* } */}
+
+                            {/* {dataDetalle?.persona?.tipo === 'juridica' &&
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Razon social:</span>
+                                <span className="font-medium">
+                                  {(dataDetalle?.persona as PersonaJuridica).razon_social}
+                                </span>
+                              </div>
+                            } */}
+
+                           
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Tipo Documento:</span>
+                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                {dataDetalle?.persona?.tipo_documento.nombre}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Número:</span>
+                              <span className="font-medium">{dataDetalle?.persona?.documento}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-2">INFORMACIÓN PERSONAL</h3>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Tipo:</span>
+                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                {capitalizePrimeraLetra(dataDetalle?.persona.tipo ?? '')}
+                              </Badge>
+                            </div>
+
+                          <div className="space-y-3">
+                            {dataDetalle?.persona.tipo === 'fisica' &&
                               <> 
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Nombre completo:</span>
                                   <span className="font-medium">
-                                    {dataDetalle?.nombre} {dataDetalle?.apellido}
+                                    {dataDetalle?.persona.nombre} {dataDetalle?.persona.apellido}
                                   </span>
                                 </div>
 
                                  <div className="flex justify-between">
                                   <span className="text-gray-600">Fecha de nacimiento:</span>
-                                  <span className="font-medium">{formatearFecha(dataDetalle?.fecha_nacimiento ?? '', false)}</span>
+                                  <span className="font-medium">{formatearFecha(dataDetalle?.persona?.fecha_nacimiento ?? '', false)}</span>
                                 </div>
-                                <div className="flex justify-between">
+                                {/* <div className="flex justify-between">
                                   <span className="text-gray-600">Edad:</span>
-                                  <span className="font-medium">{dataDetalle?.edad} años</span>
-                                </div>
-                                <div className="flex justify-between">
+                                  <span className="font-medium">{dataDetalle?.persona?.edad} años</span>
+                                </div> */}
+                                {/* <div className="flex justify-between">
                                   <span className="text-gray-600">Género:</span>
-                                  <Badge className={`${genderColors[dataDetalle?.sexo ?? 'M']} border`}>
-                                    {dataDetalle?.sexo === 'F' ? 'Femenino': 'Masculino'}
+                                  <Badge className={`${genderColors[dataDetalle?.persona?.sexo ?? 'M']} border`}>
+                                    {dataDetalle?.persona?.sexo === 'F' ? 'Femenino': 'Masculino'}
                                   </Badge>
-                                </div>
+                                </div> */}
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Nacionalidad:</span>
-                                  <span className="font-medium">{dataDetalle?.nacionalidad?.nombre}</span>
+                                  <span className="font-medium">{dataDetalle?.persona?.nacionalidad?.nombre}</span>
                                 </div>
                               </>
                             }
 
-                            {dataDetalle?.tipo === 'juridica' &&
+                            {dataDetalle?.persona?.tipo === 'juridica' &&
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Razon social:</span>
                                 <span className="font-medium">
-                                  {dataDetalle?.razon_social}
+                                  {(dataDetalle?.persona as PersonaJuridica).razon_social}
                                 </span>
                               </div>
                             }
@@ -642,12 +762,12 @@ export default function ModulosPage() {
                             <div className="flex justify-between">
                               <span className="text-gray-600">Tipo Documento:</span>
                               <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {dataDetalle?.tipo_documento.nombre}
+                                {dataDetalle?.persona?.tipo_documento.nombre}
                               </Badge>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Número:</span>
-                              <span className="font-medium">{dataDetalle?.documento}</span>
+                              <span className="font-medium">{dataDetalle?.persona?.documento}</span>
                             </div>
                           </div>
                         </div>
@@ -659,19 +779,20 @@ export default function ModulosPage() {
                           <div className="space-y-3">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Email:</span>
-                              <span className="font-medium">{dataDetalle?.email}</span>
+                              <span className="font-medium">{dataDetalle?.persona?.email}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Teléfono:</span>
-                              <span className="font-medium">{dataDetalle?.telefono}</span>
+                              <span className="font-medium">{dataDetalle?.persona?.telefono}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Dirección:</span>
-                              <span className="font-medium text-right">{dataDetalle?.direccion}</span>
+                              <span className="font-medium text-right">{dataDetalle?.persona?.direccion}</span>
                             </div>
                           </div>
                         </div>
 
+                      </div>
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 mb-2">ESTADO Y FECHAS</h3>
                           <div className="space-y-3">
@@ -688,6 +809,10 @@ export default function ModulosPage() {
                               </Badge>
                             </div>
                             <div className="flex justify-between">
+                              <span className="text-gray-600">Fecha de ingreso:</span>
+                              <span className="font-medium">{formatearFecha(dataDetalle?.fecha_ingreso ?? '')}</span>
+                            </div>
+                            <div className="flex justify-between">
                               <span className="text-gray-600">Fecha de registro:</span>
                               <span className="font-medium">{formatearFecha(dataDetalle?.fecha_creacion ?? '')}</span>
                             </div>
@@ -697,7 +822,6 @@ export default function ModulosPage() {
                             </div>
                           </div>
                         </div>
-                      </div>
                     </div>
                   </div> 
 
@@ -723,7 +847,11 @@ export default function ModulosPage() {
                </div>
               <h2 className='text-center'>Confirmacion de operación</h2>
              <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} los datos de la persona <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? (dataADesactivar?.razon_social ?? ''))}</b>? 
+               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al empleado  
+               <b>
+                  {' ' + capitalizePrimeraLetra((dataADesactivar?.persona as PersonaFisica)?.nombre ?? 
+                      ((dataADesactivar?.persona as PersonaJuridica)?.razon_social ?? ''))}
+              </b>? 
              </p>
 
              <div className='modal-actions'>
@@ -746,9 +874,9 @@ export default function ModulosPage() {
                 <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
                    <User className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-3xl font-semibold text-gray-900">Personas</h1>
+                <h1 className="text-3xl font-semibold text-gray-900">Empleados</h1>
               </div>
-              <p className="text-gray-600">Gestiona los datos de personas del sistema y su estado.</p>
+              <p className="text-gray-600">Gestiona los datos de empleados del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
               <Button
@@ -761,7 +889,7 @@ export default function ModulosPage() {
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
                 onClick={() => setActiveTab('form')}>
                 <Plus className="h-4 w-4 mr-2" />
-                Nueva Persona
+                Nuevo Empleado
               </Button>
             </div>
           </div>
@@ -773,10 +901,10 @@ export default function ModulosPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2 lg:w-80 bg-gray-100">
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
-                Lista de Personas
+                Lista de Empleados
               </TabsTrigger>
               <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
-                Crear Persona
+                Crear Empleado
               </TabsTrigger>
             </TabsList>
 
@@ -790,7 +918,7 @@ export default function ModulosPage() {
                         <Check className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <CardTitle className="text-emerald-900">Crear Nueva Persona</CardTitle>
+                        <CardTitle className="text-emerald-900">Crear Nueva Empleado</CardTitle>
                         <CardDescription className="text-emerald-700">
                           Complete la información para crear una nueva persona
                         </CardDescription>
@@ -799,284 +927,161 @@ export default function ModulosPage() {
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="sexo" className="text-gray-700 font-medium">
-                          Tipo Persona *
-                        </Label>
-                        <Controller
-                            name="tipo"
-                            control={control}
-                            rules={{ required: "Este campo es requerido" }}
-                            render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                onValueChange={(value) => {
-                                          console.log(value)
-                                          field.onChange(value);
-                                          setTipoDePersonaCreacion(value)
+                    
 
-                                          if(value === 'juridica'){
-                                              const tipoRuc = dataTipoDocumentoList.filter((doc: TipoDocumento) => doc.nombre === 'RUC')
-                                              console.log('tipoRuc: ', tipoRuc)
-                                              setTipoDocumentoRuc(tipoRuc[0]);
-                                          }
-                                          else{
-                                            setTipoDocumentoRuc(undefined);
-                                          }
-
-                                          if (value) {
-                                            clearErrors("tipo") // Limpia el error cuando selecciona un valor
-                                          }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}
-                              >
-                                <SelectTrigger 
-                                  className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                                  <SelectValue placeholder="Selecciona el tipo de persona" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="fisica">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                                        Persona Física
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="juridica">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                        Persona Jurídica
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                          {errors.tipo && (
-                            <p className="text-red-400 text-sm">{errors.tipo.message as string}</p>
-                          )}
-                        </div>
-
-
-                        <div className="space-y-2">
-                        <Label htmlFor="telefono" className="text-gray-700 font-medium">
-                          Telélfono *
-                        </Label>
-                        <Input
-                          id="telefono"
-                          autoComplete="telefono"
-                          placeholder="0981123456"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('telefono', {
-                          required: true, 
-                          validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 3})}
-                        />
-                        <div>
-                          {(errors?.telefono?.type === 'required' || errors?.telefono?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.telefono?.type === 'minLength' && <span className='text-red-400 text-sm'>El telefono debe tener minimo 3 caracteres</span>}
-                        </div>
-                      </div>
-
-                      {tipoDePersonaCreacion === 'fisica' && <>
-                        
-
-                      <div className="space-y-2">
-                        <Label htmlFor="nombre" className="text-gray-700 font-medium">
-                          Nombre *
-                        </Label>
-                        <Input
-                          id="nombre"
-                          autoComplete="nombre"
-                          placeholder="Nombre"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('nombre', {
-                          required: true, 
-                          validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 3})}
-                        />
-                        <div>
-                          {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El nombre debe tener minimo 3 caracteres</span>}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="apellido" className="text-gray-700 font-medium">
-                          Apellido *
-                        </Label>
-                        <Input
-                          id="apellido"
-                          autoComplete="apellido"
-                          placeholder="Apellido"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('apellido', {
-                          required: true, 
-                          validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 3})}
-                        />
-                        <div>
-                          {(errors?.apellido?.type === 'required' || errors?.apellido?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.apellido?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                            <Label htmlFor="fecha_nacimiento" className="text-gray-700 font-medium">
-                               Fecha de Nacimiento *
+                      
+                          {/* MONTO SALARIO */}
+                          <div className="space-y-2">
+                            <Label htmlFor="salario" className="text-gray-700 font-medium">
+                              Monto Salario *
                             </Label>
                             <Input
-                              id="fecha_nacimiento"
-                              type="date"
-                              autoComplete="fecha_nacimiento"
+                              id="salario"
+                              autoComplete="salario"
+                              disabled={tipoRemuneracionSelected?.nombre === 'Comisión' || tipoRemuneracionSelected?.nombre === 'Comision'}
+                              placeholder="Monto salario"
                               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                              {...register('fecha_nacimiento', {
-                              required: true, 
-                              validate: {blankSpace: (value) => !!value.trim()},
-                              minLength: 3})}
+                              {...register('salario', {
+                                      validate: (value) => {
+                                        if (tipoRemuneracionSelected?.nombre === 'Comisión' || tipoRemuneracionSelected?.nombre === 'Comision') {
+                                          return true; // ✅ No validar si está deshabilitado
+                                        }
+                                        if (!value || !value.toString().trim()) {
+                                          return 'Este campo es requerido';
+                                        }
+                                        if (value.length < 5) {
+                                          return 'El monto debe tener mínimo 5 dígitos';
+                                        }
+                                        return true;
+                                      }
+                                    })}
                             />
                             <div>
-                              {(errors?.fecha_nacimiento?.type === 'required' || errors?.fecha_nacimiento?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                              {/* {errors?.documento?.type === 'minLength' && <span className='text-red-400 text-sm'>El campo debe tener minimo 3 caracteres</span>} */}
+                              {errors.salario && (
+                                    <span className="text-red-400 text-sm">{errors.salario.message as string}</span>
+                                  )}
                             </div>
-                        </div>
+                          </div>
 
-
-                        <div className="space-y-2">
-                        <Label htmlFor="sexo" className="text-gray-700 font-medium">
-                          Genero *
-                        </Label>
-                        <Controller
-                            name="sexo"
-                            control={control}
-                            rules={{ required: "Este campo es requerido" }}
-                            render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                onValueChange={(value) => {
-                                          field.onChange(value)
-                                          if (value) {
-                                            clearErrors("sexo") // Limpia el error cuando selecciona un valor
-                                          }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}
-                              >
-                                <SelectTrigger 
-                                  className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                                  <SelectValue placeholder="Selecciona el tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="M">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                                      Masculino
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="F">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                      Femenino
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                          {errors.sexo && (
-                            <p className="text-red-400 text-sm">{errors.sexo.message as string}</p>
-                          )}
-                        </div>
-                        
-                        <div className="space-y-2 mi-select-wrapper">
-                          <Label htmlFor="nacionalidad" className="text-gray-700 font-medium">
-                            Nacionalidad *
-                          </Label>
-
-                          {isFetchingNacionalidad &&
-                          <Select>
-                            <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
-                              <div className="w-full flex items-center justify-center">
-                                <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                              </div>
-                            </SelectTrigger>
-                          </Select>
-                          }
-                          {!isFetchingNacionalidad && 
-                            <>
-                              <div className="space-y-2">
-                              <CountrySearchSelect
-                                nacionalidades={dataNacionalidadList}
-                                value={selectedNacionalidadID}
-                                onValueChange={setSelectedNacionalidadid}
-                                handleNacionalidadNoSeleccionada={handleNacionalidadNoSeleccionada}
-                                placeholder="Selecciona tu país..."
-                              />
-                            </div>
-                            </>
-                          }
-
-                            {nacionalidadNoSeleccionada === false && (
-                              <p className="text-red-400 text-sm">Este campo es requerido</p>
-                            )}
-                        </div>
-                      </>}
-
-                      {tipoDePersonaCreacion === 'juridica' && <>
                           <div className="space-y-2">
-                        <Label htmlFor="razon_social" className="text-gray-700 font-medium">
-                          Razon social *
-                        </Label>
-                        <Input
-                          id="razon_social"
-                          autoComplete="razon_social"
-                          placeholder="Razón social"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('razon_social', {
-                          required: true, 
-                          validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 3})}
-                        />
-                        <div>
-                          {(errors?.razon_social?.type === 'required' || errors?.razon_social?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.razon_social?.type === 'minLength' && <span className='text-red-400 text-sm'>Este campo debe tener minimo 3 caracteres</span>}
-                        </div>
-                      </div>
-                      </>}
+                          <Label htmlFor="porcentaje_comision" className="text-gray-700 font-medium">
+                            Porcentaje Comision *
+                          </Label>
+                          <Input
+                            id="porcentaje_comision"
+                            autoComplete="porcentaje_comision"
+                            placeholder="Porcentaje comision"
+                            disabled={tipoRemuneracionSelected?.nombre === "Salario fijo"}
+                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            {...register('porcentaje_comision', {
+                                      validate: (value) => {
+                                        if (tipoRemuneracionSelected?.nombre === 'Salario fijo') {
+                                          return true; // ✅ No validar si está deshabilitado
+                                        }
+                                        if (!value || !value.toString().trim()) {
+                                          return 'Este campo es requerido';
+                                        }
+                                        if (value.length > 2) {
+                                          return 'El porcentaje debe tener como maximo 2 digitos';
+                                        }
+                                        return true;
+                                      }
+                                    })}
+                          />
+                          <div>
+                            {errors.porcentaje_comision && (
+                                    <span className="text-red-400 text-sm">{errors.porcentaje_comision.message as string}</span>
+                                  )}
+                          </div>
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-gray-700 font-medium">
-                          Email *
-                        </Label>
-                        <Input
-                          id="email"
-                          autoComplete="email"
-                          placeholder="correo@gmail.com"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('email', {
-                          required: true, 
-                          validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 3})}
-                        />
-                        <div>
-                          {(errors?.email?.type === 'required' || errors?.email?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.email?.type === 'minLength' && <span className='text-red-400 text-sm'>El email debe tener minimo 3 caracteres</span>}
-                        </div>
-                      </div>
+                          <div className="space-y-2">
+                              <Label htmlFor="fecha_ingreso" className="text-gray-700 font-medium">
+                                  Fecha de Ingreso *
+                              </Label>
+                              <Input
+                                id="fecha_ingreso"
+                                type="date"
+                                autoComplete="fecha_ingreso"
+                                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                {...register('fecha_ingreso', {
+                                required: true, 
+                                validate: {blankSpace: (value) => !!value.trim()},})}
+                              />
+                              <div>
+                                {(errors?.fecha_ingreso?.type === 'required' || errors?.fecha_ingreso?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                              </div>
+                          </div>
+
+                          {/* LISTADO DE CARGOS */}
+                          <div className="space-y-2 mi-select-wrapper">
+                            <Label htmlFor="puesto" className="text-gray-700 font-medium">
+                              Puesto *
+                            </Label>
+
+                            {isFetchingPuestos &&
+                            <Select>
+                              <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
+                                <div className="w-full flex items-center justify-center">
+                                  <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                                </div>
+                              </SelectTrigger>
+                            </Select>
+                            }
+                            {!isFetchingPuestos && 
+                              <>
+                                <div className="space-y-2">
+                                  <GenericSearchSelect
+                                    dataList={dataPuestosList}
+                                    value={selectedPuestosID}
+                                    onValueChange={setSelectedPuestosID}
+                                    handleDataNoSeleccionada={handleDataNoSeleccionada}
+                                    placeholder="Selecciona el cargo..."
+                                    labelKey="nombre"
+                                    valueKey="id"
+                                  />
+                              </div>
+                              </>
+                            }
+
+                              {puestoNoSeleccionada === false && (
+                                <p className="text-red-400 text-sm">Este campo es requerido</p>
+                              )}
+                          </div>
+
+                          {/* LISTADO DE PERSONAS */}
+                          <div className="space-y-2 mi-select-wrapper">
+                            <Label htmlFor="persona" className="text-gray-700 font-medium">
+                              Persona *
+                            </Label>
+                            
+                              <div className="space-y-2">
+                                  <DinamicSearchSelect
+                                    disabled={!!dataAEditar}
+                                    dataList={newDataPersonaList || []}
+                                    value={selectedPersonaID}
+                                    onValueChange={setSelectedPersonaID}
+                                    handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                                    onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                    isFetchingPersonas={isFetchingPersonas}
+                                    placeholder="Buscar persona..."
+                                    valueKey="id"
+                                  />
+                              </div>
+
+                              {personaNoSeleccionada === false && (
+                                <p className="text-red-400 text-sm">Este campo es requerido</p>
+                              )}
+                          </div>
+                      
 
 
                       <div className="space-y-2 mi-select-wrapper">
-                        <Label htmlFor="tipo_documento" className="text-gray-700 font-medium">
-                          Tipo Documento *
+                        <Label htmlFor="tipo_remuneracion" className="text-gray-700 font-medium">
+                          Tipo Remuneracion *
                         </Label>
 
-                        {isFetchingTipoDocumento &&
+                        {isFetchingTipoRemuneracion &&
                         <Select>
                           <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
                             <div className="w-full flex items-center justify-center">
@@ -1085,20 +1090,32 @@ export default function ModulosPage() {
                           </SelectTrigger>
                         </Select>}
 
-                        {!isFetchingTipoDocumento && 
+                        {!isFetchingTipoRemuneracion && 
                           <Controller
-                            name="tipo_documento"
+                            name="tipo_remuneracion"
                             control={control}
                             rules={{ required: "Este campo es requerido" }}
                             render={({ field }) => (
                               <Select
                                 value={field.value}
-                                disabled={tipoDePersonaCreacion === 'juridica'}
+                                // disabled={tipoDePersonaCreacion === 'juridica'}
                                 onValueChange={(value) => {
                                           field.onChange(value)
                                           if (value) {
-                                            clearErrors("tipo_documento") // Limpia el error cuando selecciona un valor
+                                            clearErrors("tipo_remuneracion") // Limpia el error cuando selecciona un valor
                                           }
+
+                                          console.log('value: ', value);
+                                          // if(value === 'juridica'){
+                                          const tipoRemuneracion = dataTipoRemuneracionList.filter((doc: TipoRemuneracion) => doc.id.toString() === value)
+                                          console.log('tipoRemuneracion: ', tipoRemuneracion[0])
+                                          setTipoRemuneracionSelected(tipoRemuneracion[0]);
+
+                                          
+                                          // }
+                                          // else{
+                                            // setTipoRemuneracionSelected(undefined);
+                                          // }
                                         }}
                                 onOpenChange={(open) => {
                                     if (!open && !field.value) {
@@ -1107,10 +1124,10 @@ export default function ModulosPage() {
                                   }}>
                                 
                                 <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-                                  <SelectValue placeholder="Selecciona el tipo de documento" />
+                                  <SelectValue placeholder="Selecciona el tipo de pago" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {dataTipoDocumentoList.map((tipo_documento: {id:number, nombre: string}) => 
+                                  {dataTipoRemuneracionList.map((tipo_documento: {id:number, nombre: string}) => 
                                           <SelectItem key={tipo_documento.id} value={tipo_documento.id.toString()}>
                                           <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
@@ -1124,64 +1141,10 @@ export default function ModulosPage() {
                             )}
                         /> }
 
-                          {errors.tipo_documento && (
-                            <p className="text-red-400 text-sm">{errors.tipo_documento.message as string}</p>
+                          {errors.tipo_remuneracion && (
+                            <p className="text-red-400 text-sm">{errors.tipo_remuneracion.message as string}</p>
                           )}
                       </div>
-
-
-                        <div className="space-y-2">
-                            <Label htmlFor="documento" className="text-gray-700 font-medium">
-                              Documento *
-                            </Label>
-                            <Input
-                              id="documento"
-                              autoComplete="documento"
-                              placeholder="123456"
-                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                              {...register('documento', {
-                              required: true, 
-                              validate: {blankSpace: (value) => !!value.trim()},
-                              minLength: 3})}
-                            />
-                            <div>
-                              {(errors?.documento?.type === 'required' || errors?.documento?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                              {errors?.documento?.type === 'minLength' && <span className='text-red-400 text-sm'>El campo debe tener minimo 3 caracteres</span>}
-                            </div>
-                        </div>
-
-                         <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="direccion" className="text-gray-700 font-medium">
-                              Direccion *
-                            </Label>
-                            <Input
-                              id="direccion"
-                              autoComplete="direccion"
-                              placeholder="Calle 123 Capiata"
-                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                              {...register('direccion', {
-                              required: true, 
-                              validate: {blankSpace: (value) => !!value.trim()},
-                              minLength: 3})}
-                            />
-                            <div>
-                              {(errors?.direccion?.type === 'required' || errors?.direccion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                              {errors?.direccion?.type === 'minLength' && <span className='text-red-400 text-sm'>El campo debe tener minimo 3 caracteres</span>}
-                            </div>
-                        </div>
-
-
-                        {/* <div className="space-y-2">
-                        <Label htmlFor="fecha_nacimiento" className="text-gray-700 font-medium">
-                          Fecha de Nacimiento *
-                        </Label>
-                        <Input
-                          id="fecha_nacimiento"
-                          type="date"
-                          className="border-gray-300 focus:border-pink-500 focus:ring-pink-500"
-                        />
-                      </div> */}
-
                     </div>
 
                     <div className="flex gap-3">
@@ -1244,14 +1207,14 @@ export default function ModulosPage() {
                           <Shield className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <CardTitle className="text-blue-900">Lista de Personas</CardTitle>
+                          <CardTitle className="text-blue-900">Lista de Empleado</CardTitle>
                           <CardDescription className="text-blue-700">
-                            Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems} personas
+                            Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems} empleados
                           </CardDescription>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex flex-wrap items-center justify-between gap-4 w-4/6">
                         <div className="flex items-center gap-2 bg-emerald-50 rounded-full px-3 py-2 border border-emerald-200">
                           <Switch
                             checked={showActiveOnly}
@@ -1263,44 +1226,19 @@ export default function ModulosPage() {
                             Solo activos
                           </Label>
                         </div>
-                          
-                        <Select 
-                          value={filtros.tipo}
-                          onValueChange={(val) => setFiltros({ ...filtros, tipo: val })}>
-                          <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
-                            <SelectValue placeholder="Tipo Persona" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            <SelectItem value="fisica">Física</SelectItem>
-                            <SelectItem value="juridica">Jurídica</SelectItem>
-                          </SelectContent>
-                        </Select> 
 
-                        <Select 
-                          value={filtros.sexo}
-                          onValueChange={(val) => setFiltros({ ...filtros, sexo: val })}>
-                          <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
-                            <SelectValue placeholder="Sexo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            <SelectItem value="M">Masculino</SelectItem>
-                            <SelectItem value="F">Femenino</SelectItem>
-                          </SelectContent>
-                        </Select> 
 
-                        <div className="relative">
+                        <div className="relative w-6/8">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
-                            placeholder="Buscar por nombre..."
+                            placeholder="Buscar por nombre, apellido, razon social, documento o teléfono..."
                             value={nombreABuscar}
                             onChange={(e) => setNombreABuscar(e.target.value)}
-                            className="pl-10 w-72 border-gray-300 focus:border-blue-500"
+                            className="pl-10 w-full border-gray-300 focus:border-blue-500"
                           />
                         </div>
 
-                        <div className="relative">
+                        {/* <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
                             placeholder="Buscar por razon social..."
@@ -1308,7 +1246,7 @@ export default function ModulosPage() {
                             onChange={(e) => setRazonSocialABuscar(e.target.value)}
                             className="pl-10 w-72 border-gray-300 focus:border-blue-500"
                           />
-                        </div>
+                        </div> */}
 
                         {/* <Button
                           onClick={handleBuscarPorNombre}
@@ -1323,7 +1261,7 @@ export default function ModulosPage() {
 
                     <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-blue-200 w-full flex-wrap">
                       <div className="flex items-center gap-2">
-                        <Label className="text-sm text-gray-600 font-medium">Fecha desde:</Label>
+                        <Label className="text-sm text-gray-600 font-medium">Fecha Ingreso desde:</Label>
                         <Input
                           type="date"
                           value={filtros.fecha_desde}
@@ -1333,32 +1271,12 @@ export default function ModulosPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Label className="text-sm text-gray-600 font-medium">Fecha hasta:</Label>
+                        <Label className="text-sm text-gray-600 font-medium">Fecha Ingreso hasta:</Label>
                         <Input
                           type="date"
                           value={filtros.fecha_hasta}
                           onChange={(e) => setFiltros({...filtros, fecha_hasta: e.target.value})}
                           className="w-40 border-blue-200 focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {/* <Label className="text-sm text-gray-600 font-medium">Documento:</Label> */}
-                        <Input
-                          placeholder="Buscar por documento.."
-                          value={buscarPorDocumento}
-                            onChange={(e) => setBuscarPorDocumento(e.target.value)}
-                          className="w-48 border-indigo-200 focus:border-indigo-500"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {/* <Label className="text-sm text-gray-600 font-medium">Teléfono:</Label> */}
-                        <Input
-                          placeholder="Buscar por teléfono.."
-                          value={buscarPorTelefono}
-                          onChange={(e) => setBuscarPorTelefono(e.target.value)}
-                          className="w-48 border-green-200 focus:border-green-500"
                         />
                       </div>
 
@@ -1368,18 +1286,11 @@ export default function ModulosPage() {
                         onClick={() => {
                           setFiltros({
                             activo: true,   // null = todos, true = solo activos
-                            tipo: "all",                      // fisica | juridica | all
-                            sexo: "all",                      // M | F | all
-                            documento: "",
-                            telefono: "",
                             fecha_desde: "",
                             fecha_hasta: "",
                             nombre: ""
                           });
-                          setBuscarPorDocumento("");
-                          setBuscarPorTelefono("");
                           setNombreABuscar(""); 
-                          setRazonSocialABuscar("");
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
@@ -1399,13 +1310,14 @@ export default function ModulosPage() {
                         <TableHead className="font-semibold text-gray-700">Información</TableHead>
                         <TableHead className="font-semibold text-gray-700">Contacto</TableHead>
                         <TableHead className="font-semibold text-gray-700">Documento</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Edad</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Genero</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Puesto</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Remuneración</TableHead>
+                        {/* <TableHead className="font-semibold text-gray-700">Genero</TableHead> */}
                         <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                         {/* <TableHead className="font-semibold text-gray-700">Uso</TableHead> */}
                         {/* <TableHead className="font-semibold text-gray-700">Prioridad</TableHead> */}
                         <TableHead className="font-semibold text-gray-700">Fecha Registro</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Fecha Modificación</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Fecha Ingreso</TableHead>
                         <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1417,22 +1329,22 @@ export default function ModulosPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && dataList.map((data: Persona) => (
+                      {!isFetching && dataList.length > 0 && dataList.map((data: Empleado) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
                         >
                           <TableCell>
                             <div>
-                              <div className="font-medium text-gray-900 pl-2">{data.numero}</div>
+                              <div className="font-medium text-gray-900 pl-2">{data?.numero}</div>
                             </div>
                           </TableCell>
 
                           <TableCell>
                             <Badge
-                              className={tipoPersonaColores[`${data.tipo}`]}
+                              className={tipoPersonaColores[`${data?.persona?.tipo}`]}
                             >
-                              {data.tipo === 'fisica' ? 
+                              {data.persona.tipo === 'fisica' ? 
                                   <div className="flex items-center gap-1">
                                     <User className="h-3 w-3" />
                                     Física
@@ -1447,45 +1359,62 @@ export default function ModulosPage() {
                           <TableCell>
                             <div>
                               <div className="font-medium text-gray-900 truncate max-w-xs">
-                                {capitalizePrimeraLetra(data.tipo === 'fisica' ? getNombreCompleto(data.nombre, data?.apellido) : (data?.razon_social ?? ''))}
+                                {capitalizePrimeraLetra(data?.persona?.tipo === 'fisica' ? getNombreCompleto(data?.persona?.nombre, data?.persona?.apellido) : ((data?.persona as PersonaJuridica)?.razon_social ?? ''))}
                               </div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">{capitalizePrimeraLetra(data.nacionalidad?.nombre ?? '')}</div>
+                              <div className="text-sm text-gray-500 truncate max-w-xs">{capitalizePrimeraLetra((data?.persona as PersonaFisica)?.nacionalidad?.nombre ?? '')}</div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium text-gray-900 truncate max-w-xs">{data?.email}</div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">{data?.telefono}</div>
+                              <div className="font-medium text-gray-900 truncate max-w-xs">{data?.persona?.email}</div>
+                              <div className="text-sm text-gray-500 truncate max-w-xs">{data?.persona?.telefono}</div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div>
                               <Badge className='bg-blue-100 text-blue-700 border-blue-200'>
-                                {data.tipo_documento.nombre}
+                                {data?.persona?.tipo_documento.nombre}
                               </Badge>
-                              <div className="text-sm text-gray-500 mt-1">{data.documento}</div>
+                              <div className="text-sm text-gray-500 mt-1">{data.persona?.documento}</div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium text-gray-900 truncate max-w-xs">
-                                {data.tipo === 'fisica' ? `${data?.edad} años` : ''}
-                                
-
-                              </div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
-                                {data.tipo === 'fisica' ? formatearFecha(data?.fecha_nacimiento ?? '', false) : '-'}
+                              <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">{data?.puesto?.nombre}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <Badge className={`${data?.tipo_remuneracion?.nombre === 'Comisión' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                          (data?.tipo_remuneracion?.nombre === 'Mixto' ? 'bg-purple-100 text-purple-700 border-purple-200': 'bg-green-100 text-green-700 border-green-200')
+                              }`}>
+                                  {data?.tipo_remuneracion?.nombre}
+                              </Badge>
+                              <div className="text-sm font-medium text-gray-500 truncate max-w-xs">
+                                {data?.tipo_remuneracion?.nombre === 'Comisión' ?  '% ' + formatearSeparadorMiles.format(data?.porcentaje_comision) : 
+                                (data?.tipo_remuneracion?.nombre === 'Mixto' ? 
+                                  <>
+                                   <p className="font-medium"> 
+                                    {'Gs. ' + formatearSeparadorMiles.format(data?.salario)}</p>
+                                   <p className="font-medium"> 
+                                    {'% ' + formatearSeparadorMiles.format(data?.porcentaje_comision)}
+                                   </p>
+                                  </>
+                                  : <p className="font-medium"> 
+                                      {'Gs. ' + formatearSeparadorMiles.format(data?.salario)}
+                                  </p>
+                                  )}
                               </div>
                             </div>
                           </TableCell>
 
-                          <TableCell>
-                            {data.tipo === 'fisica' ? 
+                          {/* <TableCell>
+                            {data?.persona?.tipo === 'fisica' ? 
                              <div>
-                              <Badge className={`${genderColors[`${data.sexo ?? 'M'}`]}`}>{data.sexo === 'F'? 'Femenino': 'Masculino'}</Badge>
+                              <Badge className={`${genderColors[`${data?.persona?.sexo ?? 'M'}`]}`}>{data.persona?.sexo === 'F'? 'Femenino': 'Masculino'}</Badge>
                             </div>: '-'}
                             
-                          </TableCell>
+                          </TableCell> */}
 
                           <TableCell>
                             <Badge
@@ -1513,7 +1442,7 @@ export default function ModulosPage() {
                             <div className="text-sm text-gray-500">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {formatearFecha(data.fecha_modificacion)}
+                                {formatearFecha(data.fecha_ingreso, false)}
                               </div>
                             </div>
                           </TableCell>

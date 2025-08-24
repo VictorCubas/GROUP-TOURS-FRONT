@@ -1,4 +1,4 @@
-export const formatearFecha = (fechaString: string | Date,mostrarMinuto: boolean = true): string => {
+export const formatearFecha = (fechaString: string | Date, mostrarMinuto: boolean = true): string => {
 
   let fecha: Date;
 
