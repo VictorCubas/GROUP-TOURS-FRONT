@@ -596,6 +596,11 @@ export default function ModulosPage() {
                 queryKey: ['puestos-disponibles'],
                 exact: false
               });
+
+        queryClient.invalidateQueries({
+                queryKey: ['tipo-remuneracion-de-personas'],
+                exact: false
+              });
     }
   }, [activeTab]);
 
