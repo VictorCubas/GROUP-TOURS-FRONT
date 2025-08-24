@@ -62,3 +62,15 @@ export async function fetchDataModulo() {
   const resp = await axiosInstance.get(`/personas/todos/`);
   return resp?.data
 }
+
+
+export async function fetchDataTodo() {
+  const resp = await axiosInstance.get(`/tipo_remuneracion/todos/`);
+  return resp?.data
+}
+
+export async function fetchDataPuestosTodos() {
+  const resp = await axiosInstance.get(`/puestos/todos/`);
+  return resp?.data
+}
+
