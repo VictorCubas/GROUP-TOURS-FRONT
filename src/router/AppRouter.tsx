@@ -13,6 +13,7 @@ const ModuloPage = lazy(() => import('@/pages/ModulosPage'));
 const NacionalidadesPage = lazy(() => import('@/pages/NacionalidadesPage'));
 const TipoDocumentosPage = lazy(() => import('@/pages/TipoDocumentosPage'));
 const PersonasPage = lazy(() => import('@/pages/PersonasPage'));
+const EmpleadosPage = lazy(() => import('@/pages/EmpleadosPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const AppRouter = () => {
@@ -40,6 +41,7 @@ const AppRouter = () => {
                       <Route path="permisos" element={<PermisosPage />} />
                       <Route path="roles" element={<RolesPage />} />
                       <Route path="personas" element={<PersonasPage />} />
+                      <Route path="empleados" element={<EmpleadosPage />} />
                     </Route>
 
                     <Route path='/configuracion'>
