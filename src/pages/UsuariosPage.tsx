@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -27,7 +26,6 @@ import {
   // Tag,
   // Boxes,
   User,
-  Building,
   X,
   Mail,
   UserCheck,
@@ -65,43 +63,25 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Usuario, Persona, PersonaFisica, PersonaJuridica, RespuestaPaginada, TipoRemuneracion, } from "@/types/usuarios"
-import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getNombreCompleto } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTodo, fetchDataPuestosTodos, fetchDataRoles } from "@/components/utils/httpUsuario"
-import {Controller, useForm } from "react-hook-form"
+import type { Usuario, RespuestaPaginada, } from "@/types/usuarios"
+import { capitalizePrimeraLetra, formatearFecha } from "@/helper/formatter"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataRoles } from "@/components/utils/httpUsuario"
+import { useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
-import { fetchDataPersonasTodos } from "@/components/utils/httpPersona"
-import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import { fetchDataEmpleadosTodos } from "@/components/utils/httpEmpleado"
 import { Checkbox } from "@/components/ui/checkbox"
 
-// type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
-
-// const moduleColors = {
-//   Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
-//   Paquetes: "bg-purple-50 text-purple-600 border-purple-200",
-//   Empleados: "bg-orange-50 text-orange-600 border-orange-200",
-//   Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
-//   Reservas: "bg-pink-50 text-pink-600 border-pink-200",
-//   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
-// }
-
-const tipoPersonaColores = {
-  fisica: "bg-blue-100 text-blue-700 border-blue-200",
-  juridica: "bg-purple-100 text-purple-700 border-purple-200",
+const usuariosStatusColors = {
+  true: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  false: "bg-gray-100 text-gray-700 border-gray-200",
 }
 
-// const tipoRemuneracionColores = {
-//   salario: "bg-blue-100 text-blue-700 border-blue-200",
-//   comision: "bg-blue-100 text-blue-700 border-blue-200",
-//   mixto: "bg-purple-100 text-purple-700 border-purple-200",
-// }
 
 let dataList: Usuario[] = [];
 
@@ -110,17 +90,14 @@ export default function ModulosPage() {
   const [selectedEmpleadosID, setSelectedEmpleadosID] = useState<number | "">("");
   const [empleadoNoSeleccionada, setEmpleadoNoSeleccionada] = useState<boolean | undefined>();
   const [newDataEmpleadoList, setNewDataEmpleadoList] = useState<any[]>();
-  const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Usuario>();
   const [dataADesactivar, setDataADesactivar] = useState<Usuario>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
-  const [tipoRemuneracionSelected, setTipoRemuneracionSelected] = useState<TipoRemuneracion>();
   const [dataDetalle, setDataDetalle] = useState<Usuario>();
   const {handleShowToast} = use(ToastContext);
-  const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
 
   const [rolesSearchTerm, setRolSearchTerm] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<number[] | undefined>([])
@@ -134,7 +111,7 @@ export default function ModulosPage() {
   const [onGuardar, setOnGuardar] = useState(false)
   
   // DATOS DEL FORMULARIO 
-  const {control, register, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
+  const {handleSubmit, formState: reset} = 
             useForm<any>({
               mode: "onBlur",
               
@@ -159,12 +136,6 @@ export default function ModulosPage() {
       queryFn: () => fetchDataEmpleadosTodos(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
-
-  // const {data: dataPersonaList, isFetching: isFetchingPersonas,} = useQuery({
-  //     queryKey: ['roles-disponibles', personaBusqueda], //data cached
-  //     queryFn: () => fetchDataPersonasTodos(personaBusqueda),
-  //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-  //   });
 
 
   const {data, isFetching, isError} = useQuery({
@@ -195,15 +166,7 @@ export default function ModulosPage() {
     if(data?.results){
       dataList = data.results.map((per: Usuario, index: number) => ({...per, numero: index + 1}));
     }
-    // else
-      // dataList = [];
   }
-
-
-  // if(!isFetchingPersonas){
-  //   console.log('dataListPersonas: ', dataPersonaList)
-  // }
-
 
   useEffect(() => {  
     if(dataEmpleadosList){
@@ -277,27 +240,6 @@ export default function ModulosPage() {
         queryClient.invalidateQueries({
           queryKey: ['usuarios-resumen'],
         });
-
-
-        // setSelectedRolesID("");
-        // setSelectedEmpleadosID("");
-        // setPersonaNoSeleccionada(undefined);
-        // setEmpleadoNoSeleccionada(undefined);
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['permisos'],
-        //   exact: false
-        // });
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['roles'],
-        //   exact: false
-        // });
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['tipo-documentos-de-personas'],
-        //   exact: false
-        // });
     },
   });
 
@@ -316,8 +258,6 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         resetinitialValues()
 
-        // setTipoDePersonaCreacion(undefined);
-        // setTipoRemuneracionSelected(undefined);
         setActiveTab('list');
         queryClient.invalidateQueries({
           queryKey: ['usuarios'],
@@ -338,11 +278,11 @@ export default function ModulosPage() {
         setDataADesactivar(undefined);
         //desactivamos todas las queies
         queryClient.invalidateQueries({
-          queryKey: ['empleados'],
+          queryKey: ['usuarios'],
           exact: false
         });
         queryClient.invalidateQueries({
-          queryKey: ['empleados-resumen'],
+          queryKey: ['usuarios-resumen'],
         });
     },
   });
@@ -363,18 +303,6 @@ export default function ModulosPage() {
       roles: selectedRoles,
       activo: true
     }
-    
-    console.log('payload: ', payload);
-    
-    console.log('puesto: ', selectedEmpleadosID);
-    console.log('selectedRoles: ', selectedRoles);
-    //     {
-      //     "username": "",
-      //     "password": "",
-      //     "empleado": null,
-      //     "roles": [],
-      //     "activo": false
-      // }
 
     if(selectedRoles?.length){
         mutate(payload);
@@ -487,15 +415,6 @@ export default function ModulosPage() {
     }
   }, [activeTab]);
 
-  useEffect(() => {
-    if (tipoRemuneracionSelected?.nombre === 'Comision' || tipoRemuneracionSelected?.nombre === 'Comisión') {
-      setValue("salario", "");
-      clearErrors("salario");
-    }else if (tipoRemuneracionSelected?.nombre === 'Salario fijo') {
-      setValue("porcentaje_comision", "");
-      clearErrors("porcentaje_comision");
-    }
-  }, [tipoRemuneracionSelected, setValue, clearErrors]);
 
   const handleRolToggle = (rolId: number) => {
     setSelectedRoles((prev) =>
@@ -516,204 +435,73 @@ export default function ModulosPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                        {/* {dataDetalle?.persona.tipo === 'fisica' ? dataDetalle?.persona.nombre : (dataDetalle?.persona as PersonaJuridica)?.razon_social} */}
+                        {dataDetalle?.empleado_nombre}
                       </h2>
-                      <p className="text-gray-600">Detalles completos del empleado</p>
+                      <p className="text-gray-600">Detalles completos del usuario</p>
                     </div>
                   </div>
                 </div>
 
                 
-                 <div className="p-3 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">DATOS LABORALES</h3>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Puesto:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {/* {capitalizePrimeraLetra(dataDetalle?.puesto.nombre ?? '')} */}
-                              </Badge>
-                            </div>
-
-                            <div className="flex justify-between mt-1">
-                              <span className="text-gray-600">Tipo Remuneración:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {/* {capitalizePrimeraLetra(dataDetalle?.tipo_remuneracion.nombre ?? '')} */}
-                              </Badge>
-                            </div>
-
-                          <div className="space-y-3">
-                            {/* {dataDetalle?.persona.tipo === 'fisica' && */}
-                              <> 
-                                <div className="flex justify-between mt-1">
-                                  <span className="text-gray-600">Salario:</span>
-                                  <span className="font-medium">
-                                    {/* {formatearSeparadorMiles.format(dataDetalle?.salario ?? 0)} Gs. */}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Porcetanje de comisión:</span>
-                                  <span className="font-medium">
-                                    {/* {dataDetalle?.porcentaje_comision} % */}
-                                  </span>
-                                </div>
-
-                                 
-                              </>
-                            {/* } */}
-
-                            {/* {dataDetalle?.persona?.tipo === 'juridica' &&
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Razon social:</span>
-                                <span className="font-medium">
-                                  {(dataDetalle?.persona as PersonaJuridica).razon_social}
-                                </span>
-                              </div>
-                            } */}
-
-                           
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Tipo Documento:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {/* {dataDetalle?.persona?.tipo_documento.nombre} */}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Número:</span>
-                              {/* <span className="font-medium">{dataDetalle?.persona?.documento}</span> */}
-                            </div>
-                          </div>
+                   <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Estado</Label>
+                        <div className="mt-1">
+                          <Badge
+                            className={usuariosStatusColors[dataDetalle?.activo.toString() as keyof typeof usuariosStatusColors]}
+                          >
+                            {dataDetalle?.activo ? "Activo" : "Inactivo"}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">INFORMACIÓN PERSONAL</h3>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Tipo:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {/* {capitalizePrimeraLetra(dataDetalle?.persona.tipo ?? '')} */}
-                              </Badge>
-                            </div>
-
-                          <div className="space-y-3">
-                            {/* {dataDetalle?.persona.tipo === 'fisica' && */}
-                              <> 
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Nombre completo:</span>
-                                  <span className="font-medium">
-                                    {/* {dataDetalle?.persona.nombre} {dataDetalle?.persona.apellido} */}
-                                  </span>
-                                </div>
-
-                                 <div className="flex justify-between">
-                                  <span className="text-gray-600">Último Ingreso:</span>
-                                  {/* <span className="font-medium">{formatearFecha(dataDetalle?.persona?.fecha_nacimiento ?? '', false)}</span> */}
-                                </div>
-                                {/* <div className="flex justify-between">
-                                  <span className="text-gray-600">Edad:</span>
-                                  <span className="font-medium">{dataDetalle?.persona?.edad} años</span>
-                                </div> */}
-                                {/* <div className="flex justify-between">
-                                  <span className="text-gray-600">Género:</span>
-                                  <Badge className={`${genderColors[dataDetalle?.persona?.sexo ?? 'M']} border`}>
-                                    {dataDetalle?.persona?.sexo === 'F' ? 'Femenino': 'Masculino'}
-                                  </Badge>
-                                </div> */}
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Nacionalidad:</span>
-                                  {/* <span className="font-medium">{dataDetalle?.persona?.nacionalidad?.nombre}</span> */}
-                                </div>
-                              </>
-                            {/* } */}
-
-                            {/* {dataDetalle?.persona?.tipo === 'juridica' &&
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Razon social:</span>
-                                <span className="font-medium">
-                                  {(dataDetalle?.persona as PersonaJuridica).razon_social}
-                                </span>
-                              </div>
-                            } */}
-
-                           
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Tipo Documento:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {/* {dataDetalle?.persona?.tipo_documento.nombre} */}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Número:</span>
-                              {/* <span className="font-medium">{dataDetalle?.persona?.documento}</span> */}
-                            </div>
-                          </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Puesto</Label>
+                        <div className="mt-1">
+                          <Badge className={'bg-blue-100 text-blue-700 border-blue-200'}>
+                            {dataDetalle?.empleado_puesto}
+                          </Badge>
                         </div>
                       </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">CONTACTO</h3>
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Email:</span>
-                              {/* <span className="font-medium">{dataDetalle?.persona?.email}</span> */}
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Teléfono:</span>
-                              {/* <span className="font-medium">{dataDetalle?.persona?.telefono}</span> */}
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Dirección:</span>
-                              {/* <span className="font-medium text-right">{dataDetalle?.persona?.direccion}</span> */}
-                            </div>
-                          </div>
-                        </div>
-
-                      </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">ESTADO Y FECHAS</h3>
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Estado:</span>
-                              <Badge
-                                className={
-                                  dataDetalle?.activo
-                                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                    : "bg-gray-100 text-gray-700 border-gray-200"
-                                }
-                              >
-                                {dataDetalle?.activo ? "Activa" : "Inactiva"}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Fecha de ingreso:</span>
-                              {/* <span className="font-medium">{formatearFecha(dataDetalle?.fecha_ingreso ?? '')}</span> */}
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Fecha de registro:</span>
-                              {/* <span className="font-medium">{formatearFecha(dataDetalle?.fecha_creacion ?? '')}</span> */}
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Última modificación:</span>
-                              {/* <span className="font-medium">{formatearFecha(dataDetalle?.fecha_modificacion ?? '')}</span> */}
-                            </div>
-                          </div>
-                        </div>
                     </div>
-                  </div> 
+
+                    {/* <div>
+                      <Label className="text-sm font-medium text-gray-500">Descripción</Label>
+                      <p className="mt-1 text-gray-900">{dataDetalle?.descripcion}</p>
+                    </div> */}
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">
+                        Roles Asignados ({dataDetalle?.roles.length})
+                      </Label>
+                      <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                        {dataDetalle?.roles.map((per, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                            <Shield className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm">{per.nombre}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Fecha de Creación</Label>
+                        <p className="mt-1 text-gray-900">
+                          {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Última Modificación</Label>
+                        <p className="mt-1 text-gray-900">
+                          {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
+                        </p>
+                      </div>
+                    </div>
+
+                    
+                  </div>
 
 
                 {/* Footer */}
@@ -737,10 +525,9 @@ export default function ModulosPage() {
                </div>
               <h2 className='text-center'>Confirmacion de operación</h2>
              <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al empleado  
+               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al usuario  
                <b>
-                  {/* {' ' + capitalizePrimeraLetra((dataADesactivar?.persona as PersonaFisica)?.nombre ?? 
-                      ((dataADesactivar?.persona as PersonaJuridica)?.razon_social ?? ''))} */}
+                  {' ' + capitalizePrimeraLetra((dataADesactivar?.empleado_nombre?? ''))}
               </b>? 
              </p>
 
