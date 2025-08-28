@@ -23,14 +23,6 @@ const MainLayout = () => {
     // }
   }, [session,])
 
-
-  const handleCloseVerDetalles = () => {
-
-  }
-
-
-  
-
   return (
     <>
       <div className="flex h-screen bg-gray-50">
