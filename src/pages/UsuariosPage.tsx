@@ -111,7 +111,7 @@ export default function ModulosPage() {
   const [onGuardar, setOnGuardar] = useState(false)
   
   // DATOS DEL FORMULARIO 
-  const {handleSubmit, formState: reset} = 
+  const {handleSubmit, } = 
             useForm<any>({
               mode: "onBlur",
               
@@ -333,20 +333,20 @@ export default function ModulosPage() {
   /********************************
    * CORREGIR ESTA PARTE
    *******************************/
-  useEffect(() => {
-    if (dataAEditar) {
-      console.log('reset data para editar: ', dataAEditar)
-      reset({
-        ...dataAEditar,
-        // tipo_remuneracion: dataAEditar.tipo_remuneracion.id.toString(),
-        // persona: dataAEditar.persona.id.toString()
-      });
+  // useEffect(() => {
+  //   if (dataAEditar) {
+  //     console.log('reset data para editar: ', dataAEditar)
+  //     reset({
+  //       ...dataAEditar,
+  //       // tipo_remuneracion: dataAEditar.tipo_remuneracion.id.toString(),
+  //       // persona: dataAEditar.persona.id.toString()
+  //     });
 
-      // console.log('dataAEditar.persona.id: ', dataAEditar.persona.id)
-      // setSelectedRolesID(dataAEditar.persona.id);
-      handleDataNoSeleccionada(true);
-    }
-  }, [dataAEditar, reset]);
+  //     // console.log('dataAEditar.persona.id: ', dataAEditar.persona.id)
+  //     // setSelectedRolesID(dataAEditar.persona.id);
+  //     handleDataNoSeleccionada(true);
+  //   }
+  // }, [dataAEditar, reset]);
 
 
   const handleEditar = (data: Usuario) => {
