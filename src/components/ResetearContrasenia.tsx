@@ -1,9 +1,8 @@
 /* eslint-disable no-useless-escape */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { use, useState } from 'react';
 import Modal from './Modal';
-import { AlertCircle, CheckCircle, Eye, EyeOff, Lock, User, X } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Lock, X } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { resetearContrasenia } from './utils/httpUsuario';
 import { ToastContext } from '@/context/ToastContext';
@@ -32,6 +31,9 @@ const ResetearContrasenia = () => {
             handleShowToast('Se ha cambiado la contraseña satisfactoriamente', 'success');
             setDebeResetearContrasenia(false);
             setErrors([]);
+            if (success) {
+                setSuccess(false);
+            }
             // reset({
             //   salario: '',
             //   porcentaje_comision: '',
@@ -56,10 +58,6 @@ const ResetearContrasenia = () => {
         if (errors.length > 0) {
             setErrors([]);
         }
-        
-        // if (success) {
-            // setSuccess(false);
-        // }
     };
 
     const handleCloseVerDetalles = () => {
@@ -103,6 +101,7 @@ const ResetearContrasenia = () => {
       setFormData({ newPassword: '', confirmPassword: '' });
     
     } catch (error) {
+      console.log(error)
       setErrors(['Error al actualizar la contraseña. Intente nuevamente.']);
     }
   };
