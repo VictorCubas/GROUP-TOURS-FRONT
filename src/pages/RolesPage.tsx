@@ -212,6 +212,15 @@ export default function RolesPage() {
         queryClient.invalidateQueries({
           queryKey: ['roles-resumen'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
+        });
     },
   });
 
@@ -233,6 +242,15 @@ export default function RolesPage() {
         queryClient.invalidateQueries({
           queryKey: ['permisos'],
           exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
         });
     },
   });
@@ -621,7 +639,10 @@ export default function RolesPage() {
                           .map((permission: any) => (
                             <div
                               key={permission.id}
-                              className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                              className={`cursor-pointer duration-200 hover:shadow-sm flex 
+                                      items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                      border border-gray-200
+                                      ${selectedPermissions.includes(permission.id) ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200': ''}`}
                             >
                               <Checkbox
                                 id={`permission-${permission.id}`}

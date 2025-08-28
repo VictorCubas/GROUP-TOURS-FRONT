@@ -14,10 +14,11 @@ const NacionalidadesPage = lazy(() => import('@/pages/NacionalidadesPage'));
 const TipoDocumentosPage = lazy(() => import('@/pages/TipoDocumentosPage'));
 const PersonasPage = lazy(() => import('@/pages/PersonasPage'));
 const EmpleadosPage = lazy(() => import('@/pages/EmpleadosPage'));
+const UsuariosPage = lazy(() => import('@/pages/UsuariosPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const AppRouter = () => {
-  const {initializeSession} = useSessionStore();
+  const { initializeSession } = useSessionStore();
   
   useEffect(() => {
     initializeSession();
@@ -42,6 +43,7 @@ const AppRouter = () => {
                       <Route path="roles" element={<RolesPage />} />
                       <Route path="personas" element={<PersonasPage />} />
                       <Route path="empleados" element={<EmpleadosPage />} />
+                      <Route path="usuarios" element={<UsuariosPage />} />
                     </Route>
 
                     <Route path='/configuracion'>

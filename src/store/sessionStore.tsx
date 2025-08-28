@@ -3,7 +3,8 @@ import { create } from 'zustand'
 
 export interface SessionDataStore {
   token: string
-  usuario: string
+  usuario: string,
+  debeResetearContrasenia: boolean // <--- Nuevo campo
 }
 
 interface SessionStore {
@@ -13,6 +14,8 @@ interface SessionStore {
   logout: () => void
   getAccessToken: () => string | null
   initializeSession: () => void
+  setDebeResetearContrasenia: (value: boolean) => void
+  getDebeResetearContrasenia: () => void
 }
 
 export const useSessionStore = create<SessionStore>((set, get) => ({
@@ -21,7 +24,13 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   login: (data: SessionDataStore) => {
     localStorage.setItem('session', JSON.stringify(data))
-    set({ session: data, loading: false })
+    set({
+    session: {
+      ...data,
+      debeResetearContrasenia: data.debeResetearContrasenia
+    },
+    loading: false
+  })
   },
 
   logout: () => {
@@ -38,5 +47,21 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     const stored = localStorage.getItem('session')
     const parsed = stored ? JSON.parse(stored) : null
     set({ session: parsed, loading: false })
-  }
+  },
+
+  setDebeResetearContrasenia: (value: boolean) => {
+      const currentSession = get().session
+      if (!currentSession) return
+
+      const updatedSession = { ...currentSession, debeResetearContrasenia: value }
+      localStorage.setItem('session', JSON.stringify(updatedSession))
+      set({ session: updatedSession })
+    },
+
+    getDebeResetearContrasenia: () => {
+      const currentSession = get().session
+      if (!currentSession) return
+
+      return currentSession.debeResetearContrasenia;
+    }
 }))

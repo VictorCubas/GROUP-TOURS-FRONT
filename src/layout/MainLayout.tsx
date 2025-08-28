@@ -2,17 +2,34 @@
 // import CustomHeader from '@/components/CustomHeader'
 // import NavBar from '@/components/NavBar'
 import NavBar from '@/components/NavBar'
+import ResetearContrasenia from '@/components/ResetearContrasenia';
 import SideBar from '@/components/SideBar'
-import { Suspense, useState } from 'react';
+import { useSessionStore } from '@/store/sessionStore';
+import { Suspense, useEffect, useState } from 'react';
 // import PromocionesBar from '@/components/PromocionesBar'
 import { Outlet } from 'react-router-dom'
 
 const MainLayout = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { session, } = useSessionStore();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed)
   }
+
+  useEffect(() => {
+    // if(session?.debeResetearContrasenia){
+
+    // }
+  }, [session,])
+
+
+  const handleCloseVerDetalles = () => {
+
+  }
+
+
+  
 
   return (
     <>
@@ -40,6 +57,10 @@ const MainLayout = () => {
           </main>
         </div>
       </div>
+
+
+      {session?.debeResetearContrasenia && 
+        <ResetearContrasenia />}
     </>
   )
 }

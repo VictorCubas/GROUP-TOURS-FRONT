@@ -6,7 +6,7 @@ import axiosInstance from "@/service/axiosInterceptor";
 
 export const fetchData = async (page: number, page_size: number = 5, 
     filtros: any) => {
-    let url = `/empleados/?page=${page}&page_size=${page_size}`;
+    let url = `/usuarios/?page=${page}&page_size=${page_size}`;
 
     console.log('filtros: ', filtros)
 
@@ -20,8 +20,8 @@ export const fetchData = async (page: number, page_size: number = 5,
     }
 
     if(filtros.fecha_desde && filtros.fecha_hasta){
-      url = url + `&fecha_ingreso_desde=${filtros.fecha_desde}`;
-      url = url + `&fecha_ingreso_hasta=${filtros.fecha_hasta}`;
+      url = url + `&fecha_registro_desde=${filtros.fecha_desde}`;
+      url = url + `&fecha_registro_hasta=${filtros.fecha_hasta}`;
     }
 
     url = url + `&activo=${filtros.activo}`;
@@ -42,19 +42,19 @@ export const fetchData = async (page: number, page_size: number = 5,
 
 //tanstackquery ya maneja el error y en el interceptor tambien
 export async function nuevoDataFetch(data: any) {
-    await axiosInstance.post(`/empleados/`, data);    
+    await axiosInstance.post(`/usuarios/`, data);    
 }
 
 export async function guardarDataEditado(data: any) {
-  await axiosInstance.put(`/empleados/${data.id}/`, data);    
+  await axiosInstance.put(`/usuarios/${data.id}/`, data);    
 }
 
 export async function activarDesactivarData({ dataId, activo }: { dataId: number; activo: boolean }) {
-  await axiosInstance.patch(`/empleados/${dataId}/`, {activo,});    
+  await axiosInstance.patch(`/usuarios/${dataId}/`, {activo,});    
 }
 
 export async function fetchResumen() {
-  const resp = await axiosInstance.get(`/empleados/resumen/`);
+  const resp = await axiosInstance.get(`/usuarios/resumen/`);
   return resp?.data
 }
 
@@ -74,7 +74,14 @@ export async function fetchDataPuestosTodos() {
   return resp?.data
 }
 
-export async function fetchDataEmpleadosTodos() {
-  const resp = await axiosInstance.get(`/empleados/todos/`);
+
+export async function fetchDataRoles() {
+  const resp = await axiosInstance.get(`/roles/todos/`);
   return resp?.data
 }
+
+export async function resetearContrasenia(new_password: string) {
+  const resp = await axiosInstance.post(`/usuarios/resetear/`, {new_password});
+  return resp?.data
+}
+
