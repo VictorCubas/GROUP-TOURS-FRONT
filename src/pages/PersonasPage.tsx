@@ -278,6 +278,24 @@ export default function ModulosPage() {
           queryKey: ['personas-disponibles'],
         });
 
+        queryClient.invalidateQueries({
+          queryKey: ['empleados'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['empleados-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
+        });
+
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
         //   exact: false

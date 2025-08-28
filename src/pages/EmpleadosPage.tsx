@@ -281,6 +281,20 @@ export default function ModulosPage() {
           queryKey: ['empleados-resumen'],
         });
 
+        queryClient.invalidateQueries({
+          queryKey: ['empleados-disponibles'],
+        });
+
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
+        });
+
 
         // setSelectedPersonaID("");
         // setSelectedPuestosID("");
@@ -329,6 +343,20 @@ export default function ModulosPage() {
 
         queryClient.invalidateQueries({
           queryKey: ['empleados-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['empleados-disponibles'],
+        });
+
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
         });
 
         // queryClient.invalidateQueries({
@@ -395,11 +423,39 @@ export default function ModulosPage() {
     console.log('puesto: ', selectedPuestosID);
     console.log('persona: ', selectedPersonaID);
 
+    const tipoRemuneracion = dataTipoRemuneracionList.filter((doc: TipoRemuneracion) => doc.id.toString() === tipoRemuneracionSelected?.id.toString())
+    let salario: number = 0;
+    let porcentaje_comision: number = 0;
+
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Salario fijo')){
+      salario = dataForm?.salario;
+    }
+    
+
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Comisión' || tipoRemuneracion[0].nombre === 'Comision')){
+      porcentaje_comision = dataForm.porcentaje_comision;
+    }
+    
+    if(tipoRemuneracion && (tipoRemuneracion[0].nombre === 'Mixto')){
+        porcentaje_comision = dataForm.porcentaje_comision;
+    }
+
+
     const payload = {...dataForm, 
           puesto: selectedPuestosID,
           persona: selectedPersonaID,
-          activo: true
+          activo: true,
+          porcentaje_comision,
+          salario
         }
+
+    delete payload.numero
+
+    // const payload = {...dataForm, 
+    //       puesto: selectedPuestosID,
+    //       persona: selectedPersonaID,
+    //       activo: true
+    //     }
 
     console.log('payload: ', payload)
 //     {
@@ -1163,7 +1219,7 @@ export default function ModulosPage() {
                               </> : 
                               <>
                                 <Check className="h-4 w-4 mr-2" />
-                                Crear Modulo  
+                                Crear Empleado  
                               </>}
                         </Button>
                       }
