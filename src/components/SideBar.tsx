@@ -59,7 +59,7 @@ interface SiderBarProps{
 
 const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
   const [expandedItems, setExpandedItems] = useState<string[]>([])
-  const {logout} = useSessionStore();
+  const {logout, siTienePermiso} = useSessionStore();
   const navigate = useNavigate()
 
   const toggleExpanded = (label: string) => {
@@ -128,20 +128,24 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
                   {!isCollapsed && (
                     <CollapsibleContent className="ml-8 mt-2 space-y-1">
                       {item.submenu.map((subItem) => (
-                        <Tooltip key={subItem.label}>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <NavLink
-                                to={subItem.href}
-                               className={({isActive}) => isActive ? `${cssDefault}  bg-blue-600/20 text-blue-300 border-l-2 border-blue-400`
-                               : `${cssDefault} hover:bg-slate-800` } 
-                              >
-                                <div className={`w-2 h-2 rounded-full ${subItem.bgcolor}`}></div> 
-                                <span className="text-sm">{subItem.label}</span>
-                              </NavLink>
-                            </span>
-                          </TooltipTrigger>
-                        </Tooltip>
+                        <>
+                          {siTienePermiso(subItem.label.toLowerCase(), 'leer') &&     
+                          <Tooltip key={subItem.label}> 
+                            <TooltipTrigger asChild>
+                              <span>
+                                <NavLink
+                                  to={subItem.href}
+                                className={({isActive}) => isActive ? `${cssDefault}  bg-blue-600/20 text-blue-300 border-l-2 border-blue-400`
+                                : `${cssDefault} hover:bg-slate-800` } 
+                                >
+                                  <div className={`w-2 h-2 rounded-full ${subItem.bgcolor}`}></div> 
+                                  <span className="text-sm">{subItem.label}</span>
+                                </NavLink>
+                              </span>
+                            </TooltipTrigger>
+                          </Tooltip>
+                          }
+                        </>
                       ))}
                     </CollapsibleContent>
                   )}

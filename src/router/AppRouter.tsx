@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute';
 import { NavigationWatcher } from '@/components/NavigationWatcher';
+import PermissionRoute from './PermissionRoute';
 
 const MainLayout = lazy(() => import('@/layout/MainLayout'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -21,6 +22,7 @@ const AppRouter = () => {
   const { initializeSession } = useSessionStore();
   
   useEffect(() => {
+    console.log('inicializando session...')
     initializeSession();
   }, [initializeSession,])
   
@@ -36,23 +38,26 @@ const AppRouter = () => {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route element={<ProtectedRoute />}>
-                <Route element={<MainLayout />}>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path='/seguridad'>
-                      <Route path="permisos" element={<PermisosPage />} />
-                      <Route path="roles" element={<RolesPage />} />
-                      <Route path="personas" element={<PersonasPage />} />
-                      <Route path="empleados" element={<EmpleadosPage />} />
-                      <Route path="usuarios" element={<UsuariosPage />} />
-                    </Route>
+                  <Route element={<PermissionRoute />}>
+                    <Route element={<MainLayout />}>
+                      <Route path="/" element={<HomePage />} />
 
-                    <Route path='/configuracion'>
-                      <Route path="modulos" element={<ModuloPage />} />
-                      <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
-                      <Route path="nacionalidades" element={<NacionalidadesPage />} />
+                      <Route path="/seguridad">
+                        <Route path="permisos" element={<PermisosPage />} />
+                        <Route path="roles" element={<RolesPage />} />
+                        <Route path="personas" element={<PersonasPage />} />
+                        <Route path="empleados" element={<EmpleadosPage />} />
+                        <Route path="usuarios" element={<UsuariosPage />} />
+                      </Route>
+
+                      <Route path="/configuracion">
+                        <Route path="modulos" element={<ModuloPage />} />
+                        <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
+                        <Route path="nacionalidades" element={<NacionalidadesPage />} />
+                      </Route>
                     </Route>
+                  </Route>
                 </Route>
-              </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>

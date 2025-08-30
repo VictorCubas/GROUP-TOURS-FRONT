@@ -88,7 +88,7 @@ let dataList: Usuario[] = [];
 
 export default function ModulosPage() {
   // const [setSearchTerm] = useState("")
-  const {siTienePermiso, session} = useSessionStore();
+  const {siTienePermiso } = useSessionStore();
   const [selectedEmpleadosID, setSelectedEmpleadosID] = useState<number | "">("");
   const [empleadoNoSeleccionada, setEmpleadoNoSeleccionada] = useState<boolean | undefined>();
   const [newDataEmpleadoList, setNewDataEmpleadoList] = useState<any[]>();
@@ -119,8 +119,6 @@ export default function ModulosPage() {
               
             });
   // DATOS DEL FORMULARIO 
-
-  console.log('session roles: ', session)
 
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('list');
@@ -597,7 +595,7 @@ export default function ModulosPage() {
                   title={siTienePermiso("usuarios", "crear") ? 'Crear Usuario' : 'No tienes los permisos para crear'}
                   value="form" 
                   className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
-                Crear Usuario
+                {dataAEditar ?  'Editar Usuario' : 'Crear Usuario'}
               </TabsTrigger>
             </TabsList>
 
