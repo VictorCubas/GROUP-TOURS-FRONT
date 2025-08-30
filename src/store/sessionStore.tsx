@@ -19,6 +19,8 @@ export interface SessionDataStore {
   debeResetearContrasenia: boolean
   roles: string[]
   permisos: PermisosModulo[] // <--- Nuevo campo
+  esAdmin: boolean,
+  nombreUsuario: string,
 }
 
 interface SessionStore {
@@ -37,6 +39,8 @@ interface SessionStore {
 export const useSessionStore = create<SessionStore>((set, get) => ({
   session: null,
   loading: true,
+  esAdmin: false,
+  nombreUsuario: '',
 
   login: (data: SessionDataStore) => {
     localStorage.setItem('session', JSON.stringify(data))
@@ -46,6 +50,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         debeResetearContrasenia: data.debeResetearContrasenia,
         roles: data.roles,
         permisos: data.permisos,
+        esAdmin: data.esAdmin,
+        nombreUsuario: data.nombreUsuario,
       },
       loading: false
     })
@@ -90,6 +96,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   // ✅ Verificar si el usuario tiene un permiso específico en un módulo
   siTienePermiso: (modulo: string, tipo: keyof PermisosModulo["permisos"]) => {
     const currentSession = get().session
+
+
+    if(currentSession?.esAdmin)
+        return true;
 
     console.log(modulo)
     console.log(tipo)

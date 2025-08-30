@@ -52,6 +52,8 @@ export default function LoginPage() {
         debeResetearContrasenia: dataResp.data.debe_cambiar_contrasenia, // mapeo
         roles: dataResp.data.user.roles,
         permisos: dataResp.data.user.permisos,
+        esAdmin: dataResp.data.user.es_admin,
+        nombreUsuario: dataResp.data.user.nombre_persona,
       }
 
 

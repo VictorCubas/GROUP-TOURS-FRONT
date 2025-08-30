@@ -46,6 +46,9 @@ const PermissionRoute = () => {
     );
   }
 
+
+  console.log('session es admin: ', session?.esAdmin)
+
   // Si no hay sesión → al login
   if (!session) {
     return <Navigate to="/login" replace />;
