@@ -278,6 +278,24 @@ export default function ModulosPage() {
           queryKey: ['personas-disponibles'],
         });
 
+        queryClient.invalidateQueries({
+          queryKey: ['empleados'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['empleados-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
+        });
+
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
         //   exact: false
@@ -808,51 +826,53 @@ export default function ModulosPage() {
                             control={control}
                             rules={{ required: "Este campo es requerido" }}
                             render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                onValueChange={(value) => {
-                                          console.log(value)
-                                          field.onChange(value);
-                                          setTipoDePersonaCreacion(value)
+                              <div className="w-full min-w-0 select-container">
+                                <Select
+                                  value={field.value}
+                                  onValueChange={(value) => {
+                                            console.log(value)
+                                            field.onChange(value);
+                                            setTipoDePersonaCreacion(value)
 
-                                          if(value === 'juridica'){
-                                              const tipoRuc = dataTipoDocumentoList.filter((doc: TipoDocumento) => doc.nombre === 'RUC')
-                                              console.log('tipoRuc: ', tipoRuc)
-                                              setTipoDocumentoRuc(tipoRuc[0]);
-                                          }
-                                          else{
-                                            setTipoDocumentoRuc(undefined);
-                                          }
+                                            if(value === 'juridica'){
+                                                const tipoRuc = dataTipoDocumentoList.filter((doc: TipoDocumento) => doc.nombre === 'RUC')
+                                                console.log('tipoRuc: ', tipoRuc)
+                                                setTipoDocumentoRuc(tipoRuc[0]);
+                                            }
+                                            else{
+                                              setTipoDocumentoRuc(undefined);
+                                            }
 
-                                          if (value) {
-                                            clearErrors("tipo") // Limpia el error cuando selecciona un valor
-                                          }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}
-                              >
-                                <SelectTrigger 
-                                  className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                                  <SelectValue placeholder="Selecciona el tipo de persona" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="fisica">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                                        Persona Física
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="juridica">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                        Persona Jurídica
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
+                                            if (value) {
+                                              clearErrors("tipo") // Limpia el error cuando selecciona un valor
+                                            }
+                                          }}
+                                  onOpenChange={(open) => {
+                                      if (!open && !field.value) {
+                                        field.onBlur(); 
+                                      }
+                                    }}
+                                >
+                                  <SelectTrigger 
+                                    className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                                    <SelectValue placeholder="Selecciona el tipo de persona" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="fisica">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
+                                          Persona Física
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="juridica">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                          Persona Jurídica
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             )}
                           />
                           {errors.tipo && (
@@ -954,39 +974,41 @@ export default function ModulosPage() {
                             control={control}
                             rules={{ required: "Este campo es requerido" }}
                             render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                onValueChange={(value) => {
-                                          field.onChange(value)
-                                          if (value) {
-                                            clearErrors("sexo") // Limpia el error cuando selecciona un valor
-                                          }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}
-                              >
-                                <SelectTrigger 
-                                  className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                                  <SelectValue placeholder="Selecciona el tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="M">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                                      Masculino
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="F">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                      Femenino
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <div className="w-full min-w-0 select-container">
+                                <Select
+                                  value={field.value}
+                                  onValueChange={(value) => {
+                                            field.onChange(value)
+                                            if (value) {
+                                              clearErrors("sexo") // Limpia el error cuando selecciona un valor
+                                            }
+                                          }}
+                                  onOpenChange={(open) => {
+                                      if (!open && !field.value) {
+                                        field.onBlur(); 
+                                      }
+                                    }}
+                                >
+                                  <SelectTrigger 
+                                    className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                                    <SelectValue placeholder="Selecciona el tipo" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="M">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
+                                        Masculino
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="F">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                        Femenino
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             )}
                           />
                           {errors.sexo && (
@@ -1091,36 +1113,38 @@ export default function ModulosPage() {
                             control={control}
                             rules={{ required: "Este campo es requerido" }}
                             render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                disabled={tipoDePersonaCreacion === 'juridica'}
-                                onValueChange={(value) => {
-                                          field.onChange(value)
-                                          if (value) {
-                                            clearErrors("tipo_documento") // Limpia el error cuando selecciona un valor
-                                          }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}>
-                                
-                                <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-                                  <SelectValue placeholder="Selecciona el tipo de documento" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {dataTipoDocumentoList.map((tipo_documento: {id:number, nombre: string}) => 
-                                          <SelectItem key={tipo_documento.id} value={tipo_documento.id.toString()}>
-                                          <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                            {tipo_documento.nombre}
-                                          </div>
-                                        </SelectItem>)}
-                              
+                              <div className="w-full min-w-0 select-container">
+                                <Select
+                                  value={field.value}
+                                  disabled={tipoDePersonaCreacion === 'juridica'}
+                                  onValueChange={(value) => {
+                                            field.onChange(value)
+                                            if (value) {
+                                              clearErrors("tipo_documento") // Limpia el error cuando selecciona un valor
+                                            }
+                                          }}
+                                  onOpenChange={(open) => {
+                                      if (!open && !field.value) {
+                                        field.onBlur(); 
+                                      }
+                                    }}>
                                   
-                                </SelectContent>
-                              </Select>
+                                  <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                                    <SelectValue placeholder="Selecciona el tipo de documento" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {dataTipoDocumentoList.map((tipo_documento: {id:number, nombre: string}) => 
+                                            <SelectItem key={tipo_documento.id} value={tipo_documento.id.toString()}>
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                              {tipo_documento.nombre}
+                                            </div>
+                                          </SelectItem>)}
+                                
+                                    
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             )}
                         /> }
 
@@ -1264,31 +1288,32 @@ export default function ModulosPage() {
                           </Label>
                         </div>
                           
-                        <Select 
-                          value={filtros.tipo}
-                          onValueChange={(val) => setFiltros({ ...filtros, tipo: val })}>
-                          <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
-                            <SelectValue placeholder="Tipo Persona" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            <SelectItem value="fisica">Física</SelectItem>
-                            <SelectItem value="juridica">Jurídica</SelectItem>
-                          </SelectContent>
-                        </Select> 
-
-                        <Select 
-                          value={filtros.sexo}
-                          onValueChange={(val) => setFiltros({ ...filtros, sexo: val })}>
-                          <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
-                            <SelectValue placeholder="Sexo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            <SelectItem value="M">Masculino</SelectItem>
-                            <SelectItem value="F">Femenino</SelectItem>
-                          </SelectContent>
-                        </Select> 
+                            <Select 
+                              value={filtros.tipo}
+                              onValueChange={(val) => setFiltros({ ...filtros, tipo: val })}>
+                              <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
+                                <SelectValue placeholder="Tipo Persona" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Todos</SelectItem>
+                                <SelectItem value="fisica">Física</SelectItem>
+                                <SelectItem value="juridica">Jurídica</SelectItem>
+                              </SelectContent>
+                            </Select> 
+                          
+                              <Select 
+                                value={filtros.sexo}
+                                onValueChange={(val) => setFiltros({ ...filtros, sexo: val })}>
+                                <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
+                                  <SelectValue placeholder="Sexo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos</SelectItem>
+                                  <SelectItem value="M">Masculino</SelectItem>
+                                  <SelectItem value="F">Femenino</SelectItem>
+                                </SelectContent>
+                              </Select> 
+                            
 
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

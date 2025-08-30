@@ -4,12 +4,14 @@ import { Bell, Menu, User } from "lucide-react";
 import MobileSidebar from "./MobileSidebar";
 import { Button } from "./ui/button";
 import { Separator } from "@/components/ui/separator"
+import { useSessionStore } from "@/store/sessionStore";
 
 interface NavBarProps{
   onToggle: () => void
 }
 
 const NavBar: React.FC<NavBarProps> = ({onToggle}) => {
+  const { session, } = useSessionStore();
   return <>
        {/* Header */}
         <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -35,7 +37,7 @@ const NavBar: React.FC<NavBarProps> = ({onToggle}) => {
               </Button>
               <Separator orientation="vertical" className="h-6" />
               <div className="flex items-center gap-3 bg-blue-50 rounded-full px-4 py-2 border border-blue-200">
-                <span className="text-sm text-blue-700 font-medium">Bienvenido</span>
+                <span className="text-sm text-blue-700 font-medium">{session?.nombreUsuario}</span>
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                   <User className="h-4 w-4 text-white" />
                 </div>

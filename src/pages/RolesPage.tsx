@@ -212,6 +212,15 @@ export default function RolesPage() {
         queryClient.invalidateQueries({
           queryKey: ['roles-resumen'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
+        });
     },
   });
 
@@ -233,6 +242,15 @@ export default function RolesPage() {
         queryClient.invalidateQueries({
           queryKey: ['permisos'],
           exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
         });
     },
   });
@@ -610,57 +628,63 @@ export default function RolesPage() {
                         </div>}
 
                         {!isFetchingPermisos && dataPermisosList && dataPermisosList
-                          .filter(
-                            (permission: any) => 
+                            .filter((permission: any) => 
                               permission.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
                               permission.descripcion.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
                               permission.tipo.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
-                              permission.modulo.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
-                            
-                          )
-                          .map((permission: any) => (
-                            <div
-                              key={permission.id}
-                              className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                              <Checkbox
-                                id={`permission-${permission.id}`}
-                                checked={selectedPermissions.includes(permission.id)}
-                                onCheckedChange={() => handlePermissionToggle(permission.id)}
-                                className="mt-1"
-                              />
-                              <div className="flex-1">
-                                <Label
-                                  htmlFor={`permission-${permission.id}`}
-                                  className="text-sm font-medium text-gray-900 cursor-pointer"
-                                >
-                                  {permission.nombre}
-                                </Label>
-                                <p className="text-xs text-gray-500 mt-1">{permission.descripcion}</p>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <Badge
-                                    className={`text-xs ${
-                                      permission.tipo === "R"
-                                        ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                        : permission.tipo === "C"
-                                          ? "bg-blue-100 text-blue-700 border-blue-200"
-                                          : permission.tipo === "U"
-                                            ? "bg-amber-100 text-amber-700 border-amber-200"
-                                            : permission.tipo === "D"
-                                              ? "bg-red-100 text-red-700 border-red-200"
-                                              : "bg-purple-100 text-purple-700 border-purple-200"
-                                    }`}
-                                  >
-                                    {tiposPermisosList[`${permission.tipo as TipoPermiso}`]}
-                                  </Badge>
-                                  <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                    {permission.modulo.nombre}
-                                  </Badge>
+                              permission.modulo.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
+                            )
+                            .map((permission: any) => (
+                              <div
+                                key={permission.id}
+                                className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
+                                          items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                          border border-gray-200
+                                          ${selectedPermissions.includes(permission.id) 
+                                            ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
+                                            : ''}`}
+                              >
+                                <div className="flex items-start w-full">
+                                  <div className="flex-shrink-0 mr-3 mt-0.5">
+                                    <Checkbox
+                                      id={`permission-${permission.id}`}
+                                      checked={selectedPermissions.includes(permission.id)}
+                                      onCheckedChange={() => handlePermissionToggle(permission.id)}
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <Label
+                                      htmlFor={`permission-${permission.id}`}
+                                      className="text-sm font-medium text-gray-900 cursor-pointer block"
+                                    >
+                                      {permission.nombre}
+                                    </Label>
+                                    <p className="text-xs text-gray-500 mt-1">{permission.descripcion}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <Badge
+                                        className={`text-xs ${
+                                          permission.tipo === "R"
+                                            ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                            : permission.tipo === "C"
+                                              ? "bg-blue-100 text-blue-700 border-blue-200"
+                                              : permission.tipo === "U"
+                                                ? "bg-amber-100 text-amber-700 border-amber-200"
+                                                : permission.tipo === "D"
+                                                  ? "bg-red-100 text-red-700 border-red-200"
+                                                  : "bg-purple-100 text-purple-700 border-purple-200"
+                                        }`}
+                                      >
+                                        {tiposPermisosList[`${permission.tipo as TipoPermiso}`]}
+                                      </Badge>
+                                      <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                                        {permission.modulo.nombre}
+                                      </Badge>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        
+                            ))}
+                                                  
                         {dataPermisosList && dataPermisosList.filter(
                           (permission: any) =>
                             permission.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||

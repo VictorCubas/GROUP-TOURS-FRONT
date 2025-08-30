@@ -77,7 +77,7 @@ export function GenericSearchSelect<T extends Record<string, any>>({
     } else {
       setSelectedItem(null)
     }
-  }, [value, dataList, valueKey])
+  }, [value, dataList, valueKey, handleDataNoSeleccionada])
 
   useEffect(() => {
     if (primeraVezRef.current) {
@@ -146,7 +146,7 @@ export function GenericSearchSelect<T extends Record<string, any>>({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 ref={inputRef}
-                placeholder={`Buscar ${placeholder.toLowerCase()}`}
+                placeholder={`${placeholder.toLowerCase()}`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
