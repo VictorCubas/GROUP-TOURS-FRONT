@@ -589,57 +589,59 @@ export default function PermisosPage() {
                             control={control}
                             rules={{ required: "Este campo es requerido" }}
                             render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                onValueChange={(value) => {
-                                          field.onChange(value)
-                                          if (value) {
-                                            clearErrors("tipo") // Limpia el error cuando selecciona un valor
-                                          }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}
-                              >
-                                <SelectTrigger 
-                                  className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                                  <SelectValue placeholder="Selecciona el tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="R">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                                      Lectura
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="C">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                      Creación
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="U">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-amber-400 rounded-full"></div>
-                                      Modificación
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="D">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                                      Eliminación
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="E">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
-                                      Exportación
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <div className="w-full min-w-0 select-container">
+                                <Select
+                                  value={field.value}
+                                  onValueChange={(value) => {
+                                            field.onChange(value)
+                                            if (value) {
+                                              clearErrors("tipo") // Limpia el error cuando selecciona un valor
+                                            }
+                                          }}
+                                  onOpenChange={(open) => {
+                                      if (!open && !field.value) {
+                                        field.onBlur(); 
+                                      }
+                                    }}
+                                >
+                                  <SelectTrigger 
+                                    className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                                    <SelectValue placeholder="Selecciona el tipo" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="R">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
+                                        Lectura
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="C">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                        Creación
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="U">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-amber-400 rounded-full"></div>
+                                        Modificación
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="D">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                                        Eliminación
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="E">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                                        Exportación
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             )}
                           />
                           {errors.tipo && (
@@ -667,35 +669,37 @@ export default function PermisosPage() {
                             control={control}
                             rules={{ required: "Este campo es requerido" }}
                             render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                onValueChange={(value) => {
-                                          field.onChange(value)
-                                          if (value) {
-                                            clearErrors("modulo") // Limpia el error cuando selecciona un valor
-                                          }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}>
-                                
-                                <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-                                  <SelectValue placeholder="Selecciona el módulo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {dataModuloList.map((modulo: {id:number, nombre: string}) => 
-                                          <SelectItem key={modulo.id} value={modulo.id.toString()}>
-                                          <div className="flex items-center gap-2">
-                                            <Users className="h-4 w-4 text-emerald-500" />
-                                            {modulo.nombre}
-                                          </div>
-                                        </SelectItem>)}
-                              
+                              <div className="w-full min-w-0 select-container">
+                                <Select
+                                  value={field.value}
+                                  onValueChange={(value) => {
+                                            field.onChange(value)
+                                            if (value) {
+                                              clearErrors("modulo") // Limpia el error cuando selecciona un valor
+                                            }
+                                          }}
+                                  onOpenChange={(open) => {
+                                      if (!open && !field.value) {
+                                        field.onBlur(); 
+                                      }
+                                    }}>
                                   
-                                </SelectContent>
-                              </Select>
+                                  <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                                    <SelectValue placeholder="Selecciona el módulo" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {dataModuloList.map((modulo: {id:number, nombre: string}) => 
+                                            <SelectItem key={modulo.id} value={modulo.id.toString()}>
+                                            <div className="flex items-center gap-2">
+                                              <Users className="h-4 w-4 text-emerald-500" />
+                                              {modulo.nombre}
+                                            </div>
+                                          </SelectItem>)}
+                                
+                                    
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             )}
                         /> }
 

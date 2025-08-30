@@ -316,6 +316,23 @@ div:has(> table) {
     transform: translate(-50%, -50%);
 }
 
+/* styles.css */
+/* input[aria-hidden="true"] {
+  position: absolute !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+} */
+
+
+/* Mejora el layout de los componentes Select de shadcn/ui */
+/* styles.css */
 input[aria-hidden="true"] {
   position: absolute !important;
   overflow: hidden !important;
@@ -326,16 +343,28 @@ input[aria-hidden="true"] {
   margin: -1px !important;
   padding: 0 !important;
   border: 0 !important;
-  white-space: nowrap !important; /* evita ocupar línea */
+  white-space: nowrap !important;
 }
 
-.mi-select-wrapper input[aria-hidden="true"] {
-  position: absolute !important;
-  left: -9999px !important;
-  width: 0 !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  pointer-events: none !important;
+/* Mejora el layout de los componentes Select de shadcn/ui */
+[data-radix-select-trigger] {
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+[data-radix-select-content] {
+  width: var(--radix-select-trigger-width) !important;
+  max-height: var(--radix-select-content-available-height) !important;
+}
+
+[data-radix-select-item] {
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+
+.select-container select{
+    position: fixed !important;
 }

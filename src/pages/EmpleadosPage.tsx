@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -983,7 +984,102 @@ export default function ModulosPage() {
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    
+                       {/* LISTADO DE PERSONAS */}
+                          <div className="space-y-2 mi-select-wrapper">
+                            <Label htmlFor="persona" className="text-gray-700 font-medium">
+                              Persona *
+                            </Label>
+                            
+                              <div className="space-y-2">
+                                  <DinamicSearchSelect
+                                    disabled={!!dataAEditar}
+                                    dataList={newDataPersonaList || []}
+                                    value={selectedPersonaID}
+                                    onValueChange={setSelectedPersonaID}
+                                    handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                                    onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                    isFetchingPersonas={isFetchingPersonas}
+                                    placeholder="Buscar persona..."
+                                    valueKey="id"
+                                  />
+                              </div>
+
+                              {personaNoSeleccionada === false && (
+                                <p className="text-red-400 text-sm">Este campo es requerido</p>
+                              )}
+                          </div>
+
+                              {/* REMUNERACION */}
+                            <div className="space-y-2">
+                                <Label htmlFor="tipo_remuneracion" className="text-gray-700 font-medium">
+                                  Tipo de Remuneracion *
+                                </Label>
+
+                                {isFetchingTipoRemuneracion && (
+                                  <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
+                                    <Select>
+                                      <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
+                                      <div className="w-full flex items-center justify-center">
+                                        <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                                      </div>
+                                      </SelectTrigger>
+                                    </Select>
+                                  </div>
+                                )}
+
+                                {!isFetchingTipoRemuneracion && 
+                                  <Controller
+                                    name="tipo_remuneracion"
+                                    control={control}
+                                    rules={{ required: "Este campo es requerido" }}
+                                    render={({ field }) => (
+                                      <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
+                                        <Select
+                                          value={field.value}
+                                          onValueChange={(value) => {
+                                            field.onChange(value)
+                                            if (value) {
+                                              clearErrors("tipo_remuneracion")
+                                            }
+
+                                            console.log('value: ', value);
+                                            const tipoRemuneracion = dataTipoRemuneracionList.filter((doc: TipoRemuneracion) => doc.id.toString() === value)
+                                            console.log('tipoRemuneracion: ', tipoRemuneracion[0])
+                                            setTipoRemuneracionSelected(tipoRemuneracion[0]);
+                                          }}
+                                          onOpenChange={(open) => {
+                                            if (!open && !field.value) {
+                                              field.onBlur(); 
+                                            }
+                                          }}
+                                        >
+                                          <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
+                                            <SelectValue placeholder="Selecciona el tipo de pago" />
+                                          </SelectTrigger>
+                                          <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
+                                            {dataTipoRemuneracionList.map((tipo_documento: {id:number, nombre: string}) => 
+                                              <SelectItem 
+                                                key={tipo_documento.id} 
+                                                value={tipo_documento.id.toString()}
+                                                className="pl-2 pr-4"
+                                              >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                  <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
+                                                  <span className="truncate">{tipo_documento.nombre}</span>
+                                                </div>
+                                              </SelectItem>
+                                            )}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    )}
+                                  />
+                                }
+
+                                {errors.tipo_remuneracion && (
+                                  <p className="text-red-400 text-sm">{errors.tipo_remuneracion.message as string}</p>
+                                )}
+                            </div>
 
                       
                           {/* MONTO SALARIO */}
@@ -1072,7 +1168,7 @@ export default function ModulosPage() {
                           {/* LISTADO DE CARGOS */}
                           <div className="space-y-2 mi-select-wrapper">
                             <Label htmlFor="puesto" className="text-gray-700 font-medium">
-                              Puesto *
+                              Cargo / Función *
                             </Label>
 
                             {isFetchingPuestos &&
@@ -1104,103 +1200,6 @@ export default function ModulosPage() {
                                 <p className="text-red-400 text-sm">Este campo es requerido</p>
                               )}
                           </div>
-
-                          {/* LISTADO DE PERSONAS */}
-                          <div className="space-y-2 mi-select-wrapper">
-                            <Label htmlFor="persona" className="text-gray-700 font-medium">
-                              Persona *
-                            </Label>
-                            
-                              <div className="space-y-2">
-                                  <DinamicSearchSelect
-                                    disabled={!!dataAEditar}
-                                    dataList={newDataPersonaList || []}
-                                    value={selectedPersonaID}
-                                    onValueChange={setSelectedPersonaID}
-                                    handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
-                                    onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
-                                    isFetchingPersonas={isFetchingPersonas}
-                                    placeholder="Buscar persona..."
-                                    valueKey="id"
-                                  />
-                              </div>
-
-                              {personaNoSeleccionada === false && (
-                                <p className="text-red-400 text-sm">Este campo es requerido</p>
-                              )}
-                          </div>
-                      
-
-
-                      <div className="space-y-2 mi-select-wrapper">
-                        <Label htmlFor="tipo_remuneracion" className="text-gray-700 font-medium">
-                          Tipo Remuneracion *
-                        </Label>
-
-                        {isFetchingTipoRemuneracion &&
-                        <Select>
-                          <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
-                            <div className="w-full flex items-center justify-center">
-                              <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                            </div>
-                          </SelectTrigger>
-                        </Select>}
-
-                        {!isFetchingTipoRemuneracion && 
-                          <Controller
-                            name="tipo_remuneracion"
-                            control={control}
-                            rules={{ required: "Este campo es requerido" }}
-                            render={({ field }) => (
-                              <Select
-                                value={field.value}
-                                // disabled={tipoDePersonaCreacion === 'juridica'}
-                                onValueChange={(value) => {
-                                          field.onChange(value)
-                                          if (value) {
-                                            clearErrors("tipo_remuneracion") // Limpia el error cuando selecciona un valor
-                                          }
-
-                                          console.log('value: ', value);
-                                          // if(value === 'juridica'){
-                                          const tipoRemuneracion = dataTipoRemuneracionList.filter((doc: TipoRemuneracion) => doc.id.toString() === value)
-                                          console.log('tipoRemuneracion: ', tipoRemuneracion[0])
-                                          setTipoRemuneracionSelected(tipoRemuneracion[0]);
-
-                                          
-                                          // }
-                                          // else{
-                                            // setTipoRemuneracionSelected(undefined);
-                                          // }
-                                        }}
-                                onOpenChange={(open) => {
-                                    if (!open && !field.value) {
-                                      field.onBlur(); 
-                                    }
-                                  }}>
-                                
-                                <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-                                  <SelectValue placeholder="Selecciona el tipo de pago" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {dataTipoRemuneracionList.map((tipo_documento: {id:number, nombre: string}) => 
-                                          <SelectItem key={tipo_documento.id} value={tipo_documento.id.toString()}>
-                                          <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                                            {tipo_documento.nombre}
-                                          </div>
-                                        </SelectItem>)}
-                              
-                                  
-                                </SelectContent>
-                              </Select>
-                            )}
-                        /> }
-
-                          {errors.tipo_remuneracion && (
-                            <p className="text-red-400 text-sm">{errors.tipo_remuneracion.message as string}</p>
-                          )}
-                      </div>
                     </div>
 
                     <div className="flex gap-3">

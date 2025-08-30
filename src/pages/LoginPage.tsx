@@ -49,7 +49,9 @@ export default function LoginPage() {
       const session: SessionDataStore = {
         usuario: dataForm.username,
         token: dataResp.data.access,
-        debeResetearContrasenia: dataResp.data.debe_cambiar_contrasenia // mapeo
+        debeResetearContrasenia: dataResp.data.debe_cambiar_contrasenia, // mapeo
+        roles: dataResp.data.user.roles,
+        permisos: dataResp.data.user.permisos,
       }
 
 

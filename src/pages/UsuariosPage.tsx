@@ -75,6 +75,7 @@ import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
 import { fetchDataEmpleadosTodos } from "@/components/utils/httpEmpleado"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useSessionStore } from "@/store/sessionStore"
 
 
 const usuariosStatusColors = {
@@ -87,6 +88,7 @@ let dataList: Usuario[] = [];
 
 export default function ModulosPage() {
   // const [setSearchTerm] = useState("")
+  const {siTienePermiso, session} = useSessionStore();
   const [selectedEmpleadosID, setSelectedEmpleadosID] = useState<number | "">("");
   const [empleadoNoSeleccionada, setEmpleadoNoSeleccionada] = useState<boolean | undefined>();
   const [newDataEmpleadoList, setNewDataEmpleadoList] = useState<any[]>();
@@ -118,7 +120,7 @@ export default function ModulosPage() {
             });
   // DATOS DEL FORMULARIO 
 
-
+  console.log('session roles: ', session)
 
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('list');
@@ -158,6 +160,12 @@ export default function ModulosPage() {
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
   
+
+    // console.log('tengo mis permisos?: ', siTienePermiso("usuario", "crear"))
+    // console.log('tengo mis permisos?: ', siTienePermiso("usuario", "leer"))
+    console.log('tengo mis permisos?: ', siTienePermiso("usuarios", "modificar"))
+    // console.log('tengo mis permisos?: ', siTienePermiso("usuario", "eliminar"))
+    // console.log('tengo mis permisos?: ', siTienePermiso("usuario", "exportar"))
 
   // let filteredPermissions: Modulo[] = [];
   
@@ -556,18 +564,23 @@ export default function ModulosPage() {
               <p className="text-gray-600">Gestiona los datos de los usuarios del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
-              <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
-                onClick={() => setActiveTab('form')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Usuario
-              </Button>
+              {siTienePermiso("usuarios", "exportar") && 
+                  <Button
+                    variant="outline"
+                    className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+              }
+
+              {siTienePermiso("usuarios", "crear") && (
+                <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                  onClick={() => setActiveTab('form')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Usuario
+                </Button>
+              )}
             </div>
           </div>
 
@@ -580,7 +593,10 @@ export default function ModulosPage() {
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
                 Lista de Usuario
               </TabsTrigger>
-              <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
+              <TabsTrigger disabled={!siTienePermiso("usuarios", "crear")} 
+                  title={siTienePermiso("usuarios", "crear") ? 'Crear Usuario' : 'No tienes los permisos para crear'}
+                  value="form" 
+                  className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
                 Crear Usuario
               </TabsTrigger>
             </TabsList>
@@ -721,47 +737,50 @@ export default function ModulosPage() {
                                   <div
                                     key={rol.id}
                                     // className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                                    className={`cursor-pointer duration-200 hover:shadow-sm flex 
-                                      items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors
-                                      border border-gray-200
+                                    className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
+                                          items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                          border border-gray-200
                                       ${selectedRoles?.includes(rol.id) ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200': ''}`}
                                   >
-                                    <Checkbox
-                                      id={`rol-${rol.id}`}
-                                      checked={selectedRoles?.includes(rol.id)}
-                                      onCheckedChange={() => handleRolToggle(rol.id)}
-                                      className="mt-1"
-                                    />
-                                    <div className="flex-1">
-                                      <Label
-                                        htmlFor={`rol-${rol.id}`}
-                                        className="text-sm font-medium text-gray-900 cursor-pointer"
-                                      >
-                                        {rol.nombre}
-                                      </Label>
-                                      <p className="text-xs text-gray-500 mt-1">{rol.descripcion}</p>
-                                      <div className="flex items-center gap-2 mt-2">
-                                        {/* <Badge
-                                          className={`text-xs ${
-                                            rol?.tipo === "R"
-                                              ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                              : rol?.tipo === "C"
-                                                ? "bg-blue-100 text-blue-700 border-blue-200"
-                                                : rol?.tipo === "U"
-                                                  ? "bg-amber-100 text-amber-700 border-amber-200"
-                                                  : rol?.tipo === "D"
-                                                    ? "bg-red-100 text-red-700 border-red-200"
-                                                    : "bg-purple-100 text-purple-700 border-purple-200"
-                                          }`}
-                                        >
-                                          {tiposPermisosList[`${rol.tipo as TipoPermiso}`]}
-                                        </Badge> */}
-                                        {/* <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                          
-                                          asdasdasdsa
-                                        </Badge> */}
+                                     <div className="flex items-start w-full">
+                                      <div className="flex-shrink-0 mr-3 mt-0.5">
+                                        <Checkbox
+                                          id={`rol-${rol.id}`}
+                                          checked={selectedRoles?.includes(rol.id)}
+                                          onCheckedChange={() => handleRolToggle(rol.id)}
+                                        />
                                       </div>
-                                    </div>
+                                      <div className="flex-1 min-w-0">
+                                        <Label
+                                          htmlFor={`rol-${rol.id}`}
+                                          className="text-sm font-medium text-gray-900 cursor-pointer"
+                                        >
+                                          {rol.nombre}
+                                        </Label>
+                                        <p className="text-xs text-gray-500 mt-1">{rol.descripcion}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                          {/* <Badge
+                                            className={`text-xs ${
+                                              rol?.tipo === "R"
+                                                ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                                : rol?.tipo === "C"
+                                                  ? "bg-blue-100 text-blue-700 border-blue-200"
+                                                  : rol?.tipo === "U"
+                                                    ? "bg-amber-100 text-amber-700 border-amber-200"
+                                                    : rol?.tipo === "D"
+                                                      ? "bg-red-100 text-red-700 border-red-200"
+                                                      : "bg-purple-100 text-purple-700 border-purple-200"
+                                            }`}
+                                          >
+                                            {tiposPermisosList[`${rol.tipo as TipoPermiso}`]}
+                                          </Badge> */}
+                                          {/* <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                                            
+                                            asdasdasdsa
+                                          </Badge> */}
+                                        </div>
+                                      </div>
+                                     </div>
                                   </div>
                                 ))}
                               
@@ -878,7 +897,7 @@ export default function ModulosPage() {
                             </> : 
                             <>
                               <Check className="h-4 w-4 mr-2" />
-                              Guardar Modulo  
+                              Guardar Usuario  
                             </>}
                       </Button>}
 
@@ -1028,7 +1047,7 @@ export default function ModulosPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && dataList.map((data: Usuario) => (
+                      {!isFetching && dataList.length > 0 &&  siTienePermiso("usuarios", "leer") && dataList.map((data: Usuario) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -1133,22 +1152,28 @@ export default function ModulosPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="border-gray-200">
-                                <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
-                                  onClick={() => handleVerDetalles(data)}>
-                                  <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                                  Ver detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
-                                  <Edit className="h-4 w-4 mr-2 text-emerald-500" />
-                                  Editar
-                                </DropdownMenuItem>
+                                {siTienePermiso("usuarios", "leer") &&
+                                  <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
+                                    onClick={() => handleVerDetalles(data)}>
+                                    <Eye className="h-4 w-4 mr-2 text-blue-500" />
+                                    Ver detalles
+                                  </DropdownMenuItem>
+                                }
+                                {siTienePermiso("usuarios", "modificar") &&
+                                  <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
+                                    <Edit className="h-4 w-4 mr-2 text-emerald-500" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                }
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
-                                  onClick={() => toggleActivar(data)}>
-                                  
-                                  {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
-                                  {data.activo ? 'Desactivar' : 'Activar'}
-                                </DropdownMenuItem>
+                                {siTienePermiso("usuarios", "eliminar") &&
+                                  <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
+                                    onClick={() => toggleActivar(data)}>
+                                    
+                                    {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
+                                    {data.activo ? 'Desactivar' : 'Activar'}
+                                  </DropdownMenuItem>
+                                }
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
