@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from 'react';
 import { Building2, Percent, Phone, Mail, MapPin } from 'lucide-react';
 import { useFacturaFormStore } from '@/store/useFacturaFormStore';

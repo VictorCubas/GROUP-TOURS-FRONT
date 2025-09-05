@@ -91,51 +91,119 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
     }, [dataTipoImpuestoList, isSubmitting, selectedSubtipoId, tipoImpuestoSelected]);
     
   
+  const [formInicializado, setFormInicializado] = useState(false);
+
+  // 1️⃣ Inicialización al montar o cuando cambia la configuración inicial
   useEffect(() => {
-  if (!tipoImpuestoConfiguracion || !dataTipoImpuestoList?.length) return;
+    if (formInicializado) return;
+    if (!tipoImpuestoConfiguracion || !dataTipoImpuestoList?.length) return;
 
-  const payload = {
-    tipo_impuesto: tipoImpuestoConfiguracion.tipo_impuesto != null
-      ? String(tipoImpuestoConfiguracion.tipo_impuesto)
-      : '',
-    subtipo_impuesto: tipoImpuestoConfiguracion.subtipo_impuesto != null
-      ? String(tipoImpuestoConfiguracion.subtipo_impuesto)
-      : '',
-  };
+    const payload = {
+      tipo_impuesto:
+        tipoImpuestoConfiguracion.tipo_impuesto != null
+          ? String(tipoImpuestoConfiguracion.tipo_impuesto)
+          : '',
+      subtipo_impuesto:
+        tipoImpuestoConfiguracion.subtipo_impuesto != null
+          ? String(tipoImpuestoConfiguracion.subtipo_impuesto)
+          : '',
+    };
 
-  // Evitamos sobrescribir si el usuario ya hizo una selección
-  if (!tipoImpuestoSelected) {
+    console.log(tipoImpuestoConfiguracion) 
+
     const tipoSelected = dataTipoImpuestoList.find(
       (t: TipoImpuesto) => t.id === tipoImpuestoConfiguracion.tipo_impuesto
     );
+
+    console.log(tipoSelected)
+
     setTipoImpuestoSelected(tipoSelected || undefined);
-  }
+    // setSelectedSubtipoId(tipoSelected.subtipo_impuesto || null);
 
-  if (!selectedSubtipoId) {
-    setSelectedSubtipoId(payload.subtipo_impuesto || null);
-  }
+    requestAnimationFrame(() => {
+      reset(payload);
 
-  // deferir el reset solo cuando inicializa
-  requestAnimationFrame(() => {
-    reset(payload);
+      const subtipo = tipoSelected?.subtipos.find(
+        (t: any) => t.id.toString() === payload.subtipo_impuesto
+      );
+
+      console.log(subtipo);
+      setSelectedSubtipoId(subtipo.id.toString() || null)
+
+      updateFormData({
+        tipo_impuesto: tipoSelected || null,
+        subtipo_impuesto: subtipo || null,
+      });
+
+      setFormInicializado(true);
+    });
+  }, [dataTipoImpuestoList, tipoImpuestoConfiguracion, reset, updateFormData, formInicializado]);
+
+  // 2️⃣ Sincronización cada vez que el usuario cambie tipo o subtipo
+  useEffect(() => {
+    if (!formInicializado) return;
+    if (!tipoImpuestoSelected) return;
+
+    console.log(tipoImpuestoSelected)
+    console.log(selectedSubtipoId)
 
     const subtipo = tipoImpuestoSelected?.subtipos.find(
       (t: any) => t.id.toString() === selectedSubtipoId
     );
 
+
+    console.log('subtipo: ', subtipo);
+
     updateFormData({
-      tipo_impuesto: (tipoImpuestoSelected as TipoImpuesto) || null,
-      subtipo_impuesto: subtipo,
+      tipo_impuesto: tipoImpuestoSelected,
+      subtipo_impuesto: subtipo || undefined,
     });
-  });
-}, [
-  dataTipoImpuestoList,
-  tipoImpuestoConfiguracion,
-  reset,
-  updateFormData, // 🔹 ya no dependemos de tipoImpuestoSelected ni selectedSubtipoId
-]);
+  }, [tipoImpuestoSelected, selectedSubtipoId, updateFormData, formInicializado]);
 
 
+ // useEffect(() => {
+  //   if (!tipoImpuestoConfiguracion || !dataTipoImpuestoList?.length) return;
+
+  //   const payload = {
+  //     tipo_impuesto: tipoImpuestoConfiguracion.tipo_impuesto != null
+  //       ? String(tipoImpuestoConfiguracion.tipo_impuesto)
+  //       : '',
+  //     subtipo_impuesto: tipoImpuestoConfiguracion.subtipo_impuesto != null
+  //       ? String(tipoImpuestoConfiguracion.subtipo_impuesto)
+  //       : '',
+  //   };
+
+  //   // Evitamos sobrescribir si el usuario ya hizo una selección
+  //   if (!tipoImpuestoSelected) {
+  //     const tipoSelected = dataTipoImpuestoList.find(
+  //       (t: TipoImpuesto) => t.id === tipoImpuestoConfiguracion.tipo_impuesto
+  //     );
+  //     setTipoImpuestoSelected(tipoSelected || undefined);
+  //   }
+
+  //   if (!selectedSubtipoId) {
+  //     setSelectedSubtipoId(payload.subtipo_impuesto || null);
+  //   }
+
+  //   // deferir el reset solo cuando inicializa
+  //   requestAnimationFrame(() => {
+  //     reset(payload);
+
+  //     const subtipo = tipoImpuestoSelected?.subtipos.find(
+  //       (t: any) => t.id.toString() === selectedSubtipoId
+  //     );
+
+  //     updateFormData({
+  //       tipo_impuesto: (tipoImpuestoSelected as TipoImpuesto) || null,
+  //       subtipo_impuesto: subtipo,
+  //     });
+  //   });
+  // }, [
+  //   dataTipoImpuestoList,
+  //   tipoImpuestoConfiguracion,
+  //   reset,
+  //   updateFormData, // 🔹 ya no dependemos de tipoImpuestoSelected, selectedSubtipoId
+  // ]);
 
   useEffect(() => {
   if (
