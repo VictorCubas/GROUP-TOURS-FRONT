@@ -368,3 +368,7 @@ input[aria-hidden="true"] {
 .select-container select{
     position: fixed !important;
 }
+
+.select-trigger{
+  height: 3rem !important;
+}

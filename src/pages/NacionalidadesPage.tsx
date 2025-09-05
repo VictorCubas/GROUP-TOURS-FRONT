@@ -626,7 +626,7 @@ export default function ModulosPage() {
                               </> : 
                               <>
                                 <Check className="h-4 w-4 mr-2" />
-                                Crear Modulo  
+                                Crear Nacionalidad  
                               </>}
                         </Button>
                       }

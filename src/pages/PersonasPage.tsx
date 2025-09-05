@@ -1084,11 +1084,21 @@ export default function ModulosPage() {
                           {...register('email', {
                           required: true, 
                           validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 3})}
+                          minLength: 3,
+                          pattern: {
+                              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                              message: "Ingrese un correo válido",
+                          },
+                        })}
                         />
                         <div>
                           {(errors?.email?.type === 'required' || errors?.email?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
                           {errors?.email?.type === 'minLength' && <span className='text-red-400 text-sm'>El email debe tener minimo 3 caracteres</span>}
+                          {errors?.email?.type === "pattern" && (
+                              <span className="text-red-400 text-sm">
+                                {errors.email.message as string}
+                              </span>
+                            )}
                         </div>
                       </div>
 
@@ -1224,7 +1234,7 @@ export default function ModulosPage() {
                               </> : 
                               <>
                                 <Check className="h-4 w-4 mr-2" />
-                                Crear Modulo  
+                                Crear Persona  
                               </>}
                         </Button>
                       }
