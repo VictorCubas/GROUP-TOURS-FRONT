@@ -1,18 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
-import { Percent, Check, X, Loader2Icon } from 'lucide-react';
-import type { TaxConfig } from '@/types/invoice';
+import { Percent, Check, Loader2Icon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDataTiposImpuestosTodo } from './utils/httpFacturacion';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Controller, useForm } from 'react-hook-form';
 import type { SubtipoImpuesto, TipoImpuesto } from '@/types/facturacion';
+import { useFacturaFormStore } from '@/store/useFacturaFormStore';
 
 interface TaxConfigFormProps {
-  taxes: TaxConfig[];
-  onChange: (taxes: TaxConfig[]) => void;
   siEditando: boolean;
   setImpuesto: (data: {impuesto: string, subimpuesto: string | undefined}) => void
   register: ReturnType<typeof useForm>['register'];
@@ -26,25 +23,18 @@ interface TaxConfigFormProps {
 }
 
 export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({ 
-    taxes, 
-    onChange, 
     siEditando, 
     setImpuesto,
-    register, errors,
+     errors,
     control, reset,
     clearErrors, impuestoActual, isSubmitting,
     tipoImpuestoConfiguracion,
    }) => {
-  const [isAdding, setIsAdding] = useState(false);
+
+  const { updateFormData } = useFacturaFormStore();
   const [tipoImpuestoSelected, setTipoImpuestoSelected] = useState<TipoImpuesto>();
   const [selectedSubtipoId, setSelectedSubtipoId] = useState<string | null>(null); // Control de selección única
   const [noSeSeleccionoSubtimo, setNoSeSeleccionoSubtimo] = useState<boolean>(false);
-  const [newTax, setNewTax] = useState<Omit<TaxConfig, 'id'>>({
-    name: '',
-    percentage: 0,
-    isActive: true,
-    description: ''
-  });
 
 
 
@@ -97,39 +87,53 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
 
 
         console.log("El formulario se está enviando…");
-        // Aquí puedes hacer cualquier operación, por ejemplo:
-        // - Bloquear inputs
-        // - Mostrar un loader
-        // - Validaciones adicionales
       }
     }, [dataTipoImpuestoList, isSubmitting, selectedSubtipoId, tipoImpuestoSelected]);
     
   
   useEffect(() => {
-    if (!tipoImpuestoConfiguracion || !dataTipoImpuestoList?.length) return;
+  if (!tipoImpuestoConfiguracion || !dataTipoImpuestoList?.length) return;
 
-    const payload = {
-      tipo_impuesto: tipoImpuestoConfiguracion.tipo_impuesto != null
-        ? String(tipoImpuestoConfiguracion.tipo_impuesto)
-        : '',
-      subtipo_impuesto: tipoImpuestoConfiguracion.subtipo_impuesto != null
-        ? String(tipoImpuestoConfiguracion.subtipo_impuesto)
-        : '',
-    };
+  const payload = {
+    tipo_impuesto: tipoImpuestoConfiguracion.tipo_impuesto != null
+      ? String(tipoImpuestoConfiguracion.tipo_impuesto)
+      : '',
+    subtipo_impuesto: tipoImpuestoConfiguracion.subtipo_impuesto != null
+      ? String(tipoImpuestoConfiguracion.subtipo_impuesto)
+      : '',
+  };
 
-    // opcional: actualizar estados locales primero
+  // Evitamos sobrescribir si el usuario ya hizo una selección
+  if (!tipoImpuestoSelected) {
     const tipoSelected = dataTipoImpuestoList.find(
       (t: TipoImpuesto) => t.id === tipoImpuestoConfiguracion.tipo_impuesto
     );
     setTipoImpuestoSelected(tipoSelected || undefined);
-    setSelectedSubtipoId(payload.subtipo_impuesto || null);
+  }
 
-    // deferir el reset al siguiente frame
-    requestAnimationFrame(() => {
-      reset(payload);
-      // console.log('reset aplicado:', payload);
+  if (!selectedSubtipoId) {
+    setSelectedSubtipoId(payload.subtipo_impuesto || null);
+  }
+
+  // deferir el reset solo cuando inicializa
+  requestAnimationFrame(() => {
+    reset(payload);
+
+    const subtipo = tipoImpuestoSelected?.subtipos.find(
+      (t: any) => t.id.toString() === selectedSubtipoId
+    );
+
+    updateFormData({
+      tipo_impuesto: (tipoImpuestoSelected as TipoImpuesto) || null,
+      subtipo_impuesto: subtipo,
     });
-  }, [dataTipoImpuestoList, tipoImpuestoConfiguracion, reset]);
+  });
+}, [
+  dataTipoImpuestoList,
+  tipoImpuestoConfiguracion,
+  reset,
+  updateFormData, // 🔹 ya no dependemos de tipoImpuestoSelected ni selectedSubtipoId
+]);
 
 
 
@@ -149,18 +153,6 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
     }
   }
 }, [impuestoActual, dataTipoImpuestoList]);
-
-  const handleAddTax = () => {
-    if (newTax.name && newTax.percentage >= 0) {
-      const tax: TaxConfig = {
-        ...newTax,
-        id: Date.now().toString()
-      };
-      onChange([...taxes, tax]);
-      setNewTax({ name: '', percentage: 0, isActive: true, description: '' });
-      setIsAdding(false);
-    }
-  };
 
 
   console.log('tipoImpuestoSelected (1): ', tipoImpuestoSelected)

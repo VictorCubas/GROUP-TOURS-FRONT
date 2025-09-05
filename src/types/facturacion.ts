@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Timbrado {
   id: number,
   numero: string,
@@ -50,6 +51,12 @@ export interface Nacionalidad {
 export interface Puesto {
   id: number;
   nombre: string;
+}
+
+
+export interface DatosFacturaPreview {
+  informacionEmpresa?: any;
+  impuestoConfig?: any;
 }
 
 

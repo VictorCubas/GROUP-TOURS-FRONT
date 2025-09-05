@@ -1,21 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { use, useState } from 'react';
-import { FileText, Building2, Percent, Eye, Save, Download, CheckCircle, AlertCircle, Map, Plus, Check, Edit, X, Loader2, Loader2Icon } from 'lucide-react';
+import { use, useState } from 'react';
+import { FileText, Building2, Percent, Eye, Download, Check, Edit, X, Loader2Icon } from 'lucide-react';
 import { InformacionEmpresaForm } from '@/components/InformacionEmpresaForm';
 import { ImpuestoConfig } from '@/components/ImpuestoConfig';
 import { FacturaPreview } from '@/components/FacturaPreview';
-import { useInvoiceConfig } from '@/hooks/useInvoiceConfig';
 import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { queryClient } from '@/components/utils/http';
 import { ToastContext } from '@/context/ToastContext';
 import { fetchDataConfigFactura, nuevoDataFetch } from '@/components/utils/httpFacturacion';
-// import { CompanyConfigForm } from './components/CompanyConfigForm';
-// import { ImpuestoConfig } from './components/ImpuestoConfig';
-// import { FacturaPreview } from './components/FacturaPreview';
-// import { useInvoiceConfig } from './hooks/useInvoiceConfig';
 
 type TabType = 'company' | 'taxes' | 'preview';
 
@@ -23,20 +16,12 @@ function FactuacionConfigPage() {
   const [activeTab, setActiveTab] = useState<TabType>('company');
   const [siEditando, setSiEditando] = useState(false);
   const [tipoImpuestoConfiguracion, setTipoImpuestoConfiguracion] = useState<any>();
-  const [showNotification, setShowNotification] = useState(false);
   const {handleShowToast} = use(ToastContext);
   const [impuesto, setImpuesto] = useState<{impuesto: string, subimpuesto: string | undefined}>();
-  const { 
-    config, 
-    updateCompanyConfig, 
-    updateTaxConfig, 
-    saveConfig, 
-    exportConfig, 
-    validateConfig 
-  } = useInvoiceConfig();
 
+  console.log('impuesto despues de seleccionar otro: ', impuesto)
 
-  const {data: configFacturaData, isFetching: isFetchingConfigFacturaData,} = useQuery({
+  const {data: configFacturaData,} = useQuery({
       queryKey: ['config-factura',], //data cached
       queryFn: () => fetchDataConfigFactura(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
@@ -46,7 +31,7 @@ function FactuacionConfigPage() {
     console.log('configFacturaData: ', configFacturaData)
 
   // DATOS DEL FORMULARIO 
-    const {control, handleSubmit, setValue, register, formState: {errors, isSubmitting},
+    const {control, handleSubmit, register, formState: {errors, isSubmitting},
       clearErrors, reset, } = 
               useForm<any>({
                 mode: "onBlur",
@@ -58,40 +43,8 @@ function FactuacionConfigPage() {
     mutationFn: nuevoDataFetch,
     onSuccess: () => {
         handleShowToast('Se ha guardado la configuración satisfactoriamente', 'success');
-        // reset({
-        //   salario: '',
-        //   porcentaje_comision: '',
-        //   puesto: '',
-        //   persona: '',
-        //   tipo_remuneracion: '',
-        //   fecha_ingreso: ''
-        // });
-
         handleToggleEdit();
         setActiveTab('company')
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['empleados'],
-        //   exact: false
-        // });
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['empleados-resumen'],
-        // });
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['empleados-disponibles'],
-        // });
-
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['usuarios'],
-        //   exact: false
-        // });
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['usuarios-resumen'],
-        // });
     },
   });
 
@@ -118,26 +71,9 @@ function FactuacionConfigPage() {
 //     "subimpuesto": ""
 // }
     console.log(impuesto?.impuesto)
-
-    // setImpuestoTemp(impuesto)
-
-    // if(siEditando){
       console.log('guardar.... dataForm edit: ', dataForm)
       console.log('guardar.... siEditando: ', siEditando)
-    // }
 
-// DATA FORM
-//     {
-//     "nombreEmpresa": "Group Tours",
-//     "ruc": "4028760-2",
-//     "activadComercial": "Servicio de turismo y excursiones",
-//     "telefono": "0971991960",
-//     "email": "vhcubas91@gmail.com",
-//     "direccion": "Nuestra Señora de la Asunción 440, San Lorenzo, Paraguay",
-//     "establecimiento": "2",
-//     "timbrado": "1",
-//     "expedicion": "4"
-// }
 
     const payload: any = {
       empresa: {
@@ -225,32 +161,11 @@ function FactuacionConfigPage() {
     mutate(payload);
   }
 
-  const handleGuardarDataEditado = async (dataForm: any) => {
-
-  }
-
-  console.log(config.taxes)
-  const validation = validateConfig();
-
   const tabs = [
     { id: 'company', label: 'Datos de Empresa', icon: Building2 },
     { id: 'taxes', label: 'Tipos de IVA', icon: Percent },
     { id: 'preview', label: 'Vista Previa', icon: Eye }
   ];
-
-  const handleSave = () => {
-    if (validation.isValid) {
-      saveConfig();
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-    }
-  };
-
-  const handleExport = () => {
-    if (validation.isValid) {
-      exportConfig();
-    }
-  };
 
   const handleToggleEdit = () => {
     setSiEditando(siEditandoPrev => !siEditandoPrev)
@@ -322,12 +237,12 @@ function FactuacionConfigPage() {
       </div>
 
       {/* Notification */}
-      {showNotification && (
+      {/* {showNotification && (
         <div className="fixed top-4 right-4 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-pulse">
           <CheckCircle className="w-5 h-5" />
           <span>Configuración guardada exitosamente</span>
         </div>
-      )}
+      )} */}
 
       {/* <div className="max-w-6xl mx-auto px-4 py-6"> */}
       
@@ -363,17 +278,12 @@ function FactuacionConfigPage() {
         <div className="space-y-6">
           {activeTab === 'company' && (
             <InformacionEmpresaForm
-              config={config.company}
-              onChange={updateCompanyConfig}
               siEditando={siEditando}
               register={register} // <-- pasar register
               errors={errors}     // <-- pasar errores
               control={control}
               reset={reset}
               clearErrors={clearErrors} // <-- también lo pasamos si lo usas
-              handleGuardarNuevaData={handleGuardarNuevaData}
-              handleGuardarDataEditado={handleGuardarDataEditado}
-              handleToggleEdit={handleToggleEdit}
               configFacturaData={configFacturaData}
               setTipoImpuestoConfiguracion={setTipoImpuestoConfiguracion}
             />
@@ -381,8 +291,6 @@ function FactuacionConfigPage() {
           
           {activeTab === 'taxes' && (
             <ImpuestoConfig
-              taxes={config.taxes}
-              onChange={updateTaxConfig}
               siEditando={siEditando}
               setImpuesto={setImpuesto}
               register={register} // <-- pasar register
@@ -397,24 +305,10 @@ function FactuacionConfigPage() {
           )}
           
           {activeTab === 'preview' && (
-            <FacturaPreview config={config} />
+            <FacturaPreview/>
           )}
         </div>
 
-        {/* Validation Errors */}
-        {!validation.isValid && validation.errors.length > 0 && (
-          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <h4 className="text-red-800 font-medium">Errores de Validación</h4>
-            </div>
-            <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
-              {validation.errors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
         </div>
       </form>
     </div>

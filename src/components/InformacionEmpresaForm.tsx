@@ -1,24 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState } from 'react';
-import { Building2, Mail, Phone, MapPin, Hash, Calendar, FileText, Loader2Icon, Check, Edit } from 'lucide-react';
-import type { CompanyConfig } from '@/types/invoice';
+import { Building2, Mail, Phone, MapPin, Hash, Loader2Icon, } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useQuery } from '@tanstack/react-query';
 import { fetchDataEmpresaTodo, fetchDataEstablecimientosTodo, fetchDataPuntoExpedicionTodo, fetchDataTimbradosTodo } from './utils/httpFacturacion';
-import type { EstablecimientByPuntosExpedicion, Establecimiento, PuntoExpedicion, Timbrado } from '@/types/facturacion';
+import type { Establecimiento, PuntoExpedicion, Timbrado } from '@/types/facturacion';
 import { formatearFecha } from '@/helper/formatter';
-import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useFacturaFormStore } from '@/store/useFacturaFormStore';
 
 interface CompanyConfigFormProps {
-  config: CompanyConfig;
-  onChange: (config: CompanyConfig) => void;
-  handleGuardarNuevaData: (data: any) => void;
-  handleGuardarDataEditado: (data: any) => void;
-  handleToggleEdit: () => void;
   siEditando: boolean;
   register: ReturnType<typeof useForm>['register'];
   errors: any;
@@ -30,65 +23,28 @@ interface CompanyConfigFormProps {
 }
 
 export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> = 
-        ({ config, onChange, 
+        ({  
           siEditando, 
           register, errors,
           control, reset,
           clearErrors,
           configFacturaData,
-          handleGuardarNuevaData, 
-          handleGuardarDataEditado,
-          setTipoImpuestoConfiguracion,
-        handleToggleEdit }) => {
-
+          setTipoImpuestoConfiguracion,}) => {
+            
+  const { updateFormData } = useFacturaFormStore();
   const [establecimientoSelected, setEstablecimientoSelected] = useState<Establecimiento>();
   const [expedicionSelected, setPuntoExpedicionSelected] = useState<PuntoExpedicion>();
   const [timbradoSelected, setTimbradoSelected] = useState<PuntoExpedicion>();
 
-  // const {control, register, setValue, formState: {errors, },clearErrors, reset} = 
-  //             useForm<any>({
-  //               mode: "onBlur",
-                
-  //             });
+  console.log(establecimientoSelected)
+  console.log(expedicionSelected)
+  console.log(timbradoSelected)
 
-   const {data: empresaData, isFetching: isFetchingEmpresa,} = useQuery({
+   const {data: empresaData,} = useQuery({
       queryKey: ['empresa-todos',], //data cached
       queryFn: () => fetchDataEmpresaTodo(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
-
-    // const empresaData: any = null;
-    // if(dataEmpresaList && dataEmpresaList?.length > 0){
-    //     empresaData = dataEmpresaList[0];
-
-    //     if(empresaData){
-    //       console.log('empresaData 1: ', empresaData);
-    //       // reset({
-    //       //   nombreEmpresa: empresaData.nombre,
-    //       //   ruc: empresaData.ruc,
-    //       //   activadComercial: empresaData.actividades,
-    //       //   telefono: empresaData.telefono,
-    //       //   email: empresaData.correo,
-    //       //   direccion: empresaData.direccion,
-    //       // });
-
-    //     }
-
-    // }
-
-    // useEffect(() => {
-    //   if(configFacturaData){
-    //     // timbrado, establecimiento, expedicion
-    //     console.log('resenting... ', )
-    //     reset({
-    //       timbrado: configFacturaData.timbrado,
-    //       establecimiento: configFacturaData.establecimiento,
-    //       expedicion: configFacturaData.punto_expedicion,
-    //     }) 
-    //     console.log()
-    //   }
-    // }, [configFacturaData, reset])
-
 
     console.log('empresaData: ', empresaData)
 
@@ -119,53 +75,55 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
     //   asegurando que los IDs sean string para que coincidan con los <Select>.
     // - También actualiza el estado local de cada select para mostrar la selección actual.
     useEffect(() => {
-  if (
-    empresaData &&
-    configFacturaData &&
-    dataTimbradoList &&
-    dataEstablecimientoList &&
-    dataPuntoExpedicionList
-  ) {
-    // Guardamos los datos locales para selects
-    setTimbradoSelected(dataTimbradoList.find((t:any) => t.id === configFacturaData.timbrado));
-    setEstablecimientoSelected(dataEstablecimientoList.find((e: any) => e.id === configFacturaData.establecimiento));
-    setPuntoExpedicionSelected(dataPuntoExpedicionList.find((p: any) => p.id === configFacturaData.punto_expedicion));
+    if (
+      empresaData &&
+      configFacturaData &&
+      dataTimbradoList &&
+      dataEstablecimientoList &&
+      dataPuntoExpedicionList
+    ) {
+      // Guardamos los datos locales para selects
+      setTimbradoSelected(dataTimbradoList.find((t:any) => t.id === configFacturaData.timbrado));
+      setEstablecimientoSelected(dataEstablecimientoList.find((e: any) => e.id === configFacturaData.establecimiento));
+      setPuntoExpedicionSelected(dataPuntoExpedicionList.find((p: any) => p.id === configFacturaData.punto_expedicion));
 
-    setTipoImpuestoConfiguracion({
-      tipo_impuesto: configFacturaData?.tipo_impuesto,
-      subtipo_impuesto: configFacturaData?.subtipo_impuesto
-    });
-
-    // Deferimos el reset para evitar condición de carrera
-    requestAnimationFrame(() => {
-      reset({
-        id: empresaData.id,
-        nombreEmpresa: empresaData.nombre,
-        ruc: empresaData.ruc,
-        activadComercial: empresaData.actividades,
-        telefono: empresaData.telefono,
-        email: empresaData.correo,
-        direccion: empresaData.direccion,
-        timbrado: String(configFacturaData.timbrado),
-        establecimiento: String(configFacturaData.establecimiento),
-        expedicion: String(configFacturaData.punto_expedicion),
+      setTipoImpuestoConfiguracion({
+        tipo_impuesto: configFacturaData?.tipo_impuesto,
+        subtipo_impuesto: configFacturaData?.subtipo_impuesto
       });
-    });
-  }
-}, [
-  configFacturaData,
-  empresaData,
-  reset,
-  dataPuntoExpedicionList,
-  dataEstablecimientoList,
-  dataTimbradoList,
-  setTipoImpuestoConfiguracion
-]);
 
-              
-  const handleChange = (field: keyof CompanyConfig, value: string) => {
-    onChange({ ...config, [field]: value });
-  };
+
+      // Deferimos el reset para evitar condición de carrera
+      requestAnimationFrame(() => {
+        const formularioData = {
+          id: empresaData.id,
+          nombreEmpresa: empresaData.nombre,
+          ruc: empresaData.ruc,
+          activadComercial: empresaData.actividades,
+          telefono: empresaData.telefono,
+          email: empresaData.correo,
+          direccion: empresaData.direccion,
+          timbrado: configFacturaData.timbrado,
+          establecimiento: configFacturaData.establecimiento,
+          expedicion: configFacturaData.punto_expedicion,
+        };
+
+        reset(formularioData);
+
+      //   setEstablecimientoSelected(dataEstablecimientoList.find((e: any) => e.id === configFacturaData.establecimiento));
+      // setPuntoExpedicionSelected(dataPuntoExpedicionList.find((p: any) => p.id === configFacturaData.punto_expedicion));
+        formularioData.timbrado = dataTimbradoList.find((t:any) => t.id === configFacturaData.timbrado);
+        formularioData.establecimiento = dataEstablecimientoList.find((e: any) => e.id === configFacturaData.establecimiento);
+        formularioData.expedicion = dataPuntoExpedicionList.find((p: any) => p.id === configFacturaData.punto_expedicion)
+        console.log('guardando.... ', formularioData )
+        updateFormData(formularioData)
+      });
+
+    }
+  }, [configFacturaData, 
+      empresaData, reset, dataPuntoExpedicionList,
+      dataEstablecimientoList, dataTimbradoList, 
+      setTipoImpuestoConfiguracion, updateFormData]);
 
    const getStatusColor = (fecha_fin?: string) => {
     if(!fecha_fin){
@@ -181,16 +139,6 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
     }
     
     return 'Vencido'
-    // switch (fecha_fin) {
-    //   case "vigente":
-    //     return "text-green-600"
-    //   case "vencido":
-    //     return "text-red-600"
-    //   // case "pendiente":
-    //   //   return "text-yellow-600"
-    //   default:
-    //     return ""
-    // }
   }
 
   return (
