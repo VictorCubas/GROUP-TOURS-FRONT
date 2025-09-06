@@ -26,6 +26,7 @@ import {
   // Activity,
   // Tag,
   Boxes,
+  Package,
 } from "lucide-react"
 
 // import {
@@ -348,7 +349,7 @@ export default function TipoPaquetePage() {
                 <div className="mb-6 border-b pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                      <IoDocumentSharp className="h-5 w-5 text-white" />
+                      <Package className="h-5 w-5 text-white" />
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
@@ -489,7 +490,7 @@ export default function TipoPaquetePage() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                   <IoDocumentSharp className="h-5 w-5 text-white" />
+                   <Package className="h-5 w-5 text-white" />
                 </div>
                 <h1 className="text-3xl font-semibold text-gray-900">Tipo Paquete</h1>
               </div>
@@ -641,7 +642,7 @@ export default function TipoPaquetePage() {
                   <div className="flex items-center justify-between ">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                        <Shield className="h-5 w-5 text-white" />
+                        <Package className="h-5 w-5 text-white" />
                       </div>
                       <div>
                         <CardTitle className="text-blue-900">Lista de Tipo Paquete</CardTitle>
