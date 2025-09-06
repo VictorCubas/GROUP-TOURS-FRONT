@@ -13,6 +13,7 @@ const RolesPage = lazy(() => import('@/pages/RolesPage'));
 const ModuloPage = lazy(() => import('@/pages/ModulosPage'));
 const NacionalidadesPage = lazy(() => import('@/pages/NacionalidadesPage'));
 const TipoDocumentosPage = lazy(() => import('@/pages/TipoDocumentosPage'));
+const TipoPaquetesPage = lazy(() => import('@/pages/TipoPaquetesPage'));
 const PersonasPage = lazy(() => import('@/pages/PersonasPage'));
 const EmpleadosPage = lazy(() => import('@/pages/EmpleadosPage'));
 const FacturacionConfig = lazy(() => import('@/pages/FactuacionConfigPage'));
@@ -56,6 +57,7 @@ const AppRouter = () => {
                         <Route path="modulos" element={<ModuloPage />} />
                         <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
                         <Route path="nacionalidades" element={<NacionalidadesPage />} />
+                        <Route path="tipo_paquetes" element={<TipoPaquetesPage />} />
                       </Route>
                     </Route>
                   </Route>

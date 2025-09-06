@@ -44,6 +44,7 @@ const sidebarItems = [
       { label: "Modulos", href: "/configuracion/modulos", color: "text-orange-400", bgcolor: "bg-orange-400" },
       { label: "Tipo Documentos", href: "/configuracion/tipo_documentos", color: "text-pink-400", bgcolor: "bg-pink-400" },
       { label: "Nacionalidades", href: "/configuracion/nacionalidades", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      { label: "Tipo Paquetes", href: "/configuracion/tipo_paquetes", color: "text-blue-400", bgcolor: "bg-blue-400" },
       // { label: "Personas", href: "/personas", color: "text-pink-400", bgcolor: "bg-pink-400" },
       // { label: "Roles", href: "/seguridad/roles", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
       // { label: "Permisos", href: "/seguridad/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
