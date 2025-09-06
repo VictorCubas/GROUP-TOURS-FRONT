@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import { Percent, Check, Loader2Icon } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchDataTiposImpuestosTodo } from './utils/httpFacturacion';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Controller, useForm } from 'react-hook-form';
@@ -19,7 +17,9 @@ interface TaxConfigFormProps {
   clearErrors: (name?: string | string[]) => void;
   impuestoActual?: { impuesto: string; subimpuesto?: string }; // Nuevo prop
   isSubmitting?: boolean;
-  tipoImpuestoConfiguracion: any
+  tipoImpuestoConfiguracionActual: any,
+  dataTipoImpuestoList: TipoImpuesto[],
+  isFetchingTiposImpuestos: boolean
 }
 
 export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({ 
@@ -28,7 +28,9 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
      errors,
     control, reset,
     clearErrors, impuestoActual, isSubmitting,
-    tipoImpuestoConfiguracion,
+    tipoImpuestoConfiguracionActual,
+    dataTipoImpuestoList,
+    isFetchingTiposImpuestos
    }) => {
 
   const { updateFormData } = useFacturaFormStore();
@@ -46,11 +48,11 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
     
     // console.log('TipoImpuestoSelected: ', tipoImpuestoSelected)
     
-    const { data: dataTipoImpuestoList = [], isFetching: isFetchingTiposImpuestos } = useQuery({
-      queryKey: ['tipos-impuestos-todos'],
-      queryFn: () => fetchDataTiposImpuestosTodo(),
-      staleTime: 5 * 60 * 1000
-    });
+    // const { data: dataTipoImpuestoList = [], isFetching: isFetchingTiposImpuestos } = useQuery({
+    //   queryKey: ['tipos-impuestos-todos'],
+    //   queryFn: () => fetchDataTiposImpuestosTodo(),
+    //   staleTime: 5 * 60 * 1000
+    // });
     
     useEffect(() => {
   
@@ -96,23 +98,23 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
   // 1️⃣ Inicialización al montar o cuando cambia la configuración inicial
   useEffect(() => {
     if (formInicializado) return;
-    if (!tipoImpuestoConfiguracion || !dataTipoImpuestoList?.length) return;
+    if (!tipoImpuestoConfiguracionActual || !dataTipoImpuestoList?.length) return;
 
     const payload = {
       tipo_impuesto:
-        tipoImpuestoConfiguracion.tipo_impuesto != null
-          ? String(tipoImpuestoConfiguracion.tipo_impuesto)
+        tipoImpuestoConfiguracionActual.tipo_impuesto != null
+          ? String(tipoImpuestoConfiguracionActual.tipo_impuesto)
           : '',
       subtipo_impuesto:
-        tipoImpuestoConfiguracion.subtipo_impuesto != null
-          ? String(tipoImpuestoConfiguracion.subtipo_impuesto)
+        tipoImpuestoConfiguracionActual.subtipo_impuesto != null
+          ? String(tipoImpuestoConfiguracionActual.subtipo_impuesto)
           : '',
     };
 
-    console.log(tipoImpuestoConfiguracion) 
+    console.log(tipoImpuestoConfiguracionActual) 
 
     const tipoSelected = dataTipoImpuestoList.find(
-      (t: TipoImpuesto) => t.id === tipoImpuestoConfiguracion.tipo_impuesto
+      (t: TipoImpuesto) => t.id === tipoImpuestoConfiguracionActual.tipo_impuesto
     );
 
     console.log(tipoSelected)
@@ -128,16 +130,16 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
       );
 
       console.log(subtipo);
-      setSelectedSubtipoId(subtipo.id.toString() || null)
+      setSelectedSubtipoId(subtipo?.id.toString() || null)
 
       updateFormData({
-        tipo_impuesto: tipoSelected || null,
-        subtipo_impuesto: subtipo || null,
+        tipo_impuesto: tipoSelected || undefined,
+        subtipo_impuesto: subtipo || undefined,
       });
 
       setFormInicializado(true);
     });
-  }, [dataTipoImpuestoList, tipoImpuestoConfiguracion, reset, updateFormData, formInicializado]);
+  }, [dataTipoImpuestoList, tipoImpuestoConfiguracionActual, reset, updateFormData, formInicializado]);
 
   // 2️⃣ Sincronización cada vez que el usuario cambie tipo o subtipo
   useEffect(() => {
@@ -161,49 +163,7 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
   }, [tipoImpuestoSelected, selectedSubtipoId, updateFormData, formInicializado]);
 
 
- // useEffect(() => {
-  //   if (!tipoImpuestoConfiguracion || !dataTipoImpuestoList?.length) return;
 
-  //   const payload = {
-  //     tipo_impuesto: tipoImpuestoConfiguracion.tipo_impuesto != null
-  //       ? String(tipoImpuestoConfiguracion.tipo_impuesto)
-  //       : '',
-  //     subtipo_impuesto: tipoImpuestoConfiguracion.subtipo_impuesto != null
-  //       ? String(tipoImpuestoConfiguracion.subtipo_impuesto)
-  //       : '',
-  //   };
-
-  //   // Evitamos sobrescribir si el usuario ya hizo una selección
-  //   if (!tipoImpuestoSelected) {
-  //     const tipoSelected = dataTipoImpuestoList.find(
-  //       (t: TipoImpuesto) => t.id === tipoImpuestoConfiguracion.tipo_impuesto
-  //     );
-  //     setTipoImpuestoSelected(tipoSelected || undefined);
-  //   }
-
-  //   if (!selectedSubtipoId) {
-  //     setSelectedSubtipoId(payload.subtipo_impuesto || null);
-  //   }
-
-  //   // deferir el reset solo cuando inicializa
-  //   requestAnimationFrame(() => {
-  //     reset(payload);
-
-  //     const subtipo = tipoImpuestoSelected?.subtipos.find(
-  //       (t: any) => t.id.toString() === selectedSubtipoId
-  //     );
-
-  //     updateFormData({
-  //       tipo_impuesto: (tipoImpuestoSelected as TipoImpuesto) || null,
-  //       subtipo_impuesto: subtipo,
-  //     });
-  //   });
-  // }, [
-  //   dataTipoImpuestoList,
-  //   tipoImpuestoConfiguracion,
-  //   reset,
-  //   updateFormData, // 🔹 ya no dependemos de tipoImpuestoSelected, selectedSubtipoId
-  // ]);
 
   useEffect(() => {
   if (
@@ -297,10 +257,10 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
                       setSelectedSubtipoId(null);
 
                       // Avisar al padre con subtipo vacío
-                      setImpuesto({
-                        impuesto: tipo_impuesto ? tipo_impuesto.id.toString() : '',
-                        subimpuesto: tipo_impuesto?.subtipos?.length > 0 ? '' : undefined,
-                      });
+                      // setImpuesto({
+                      //   impuesto: tipo_impuesto ? tipo_impuesto.id.toString() : '',
+                      //   subimpuesto: tipo_impuesto?.subtipos?.length > 0 ? '' : undefined,
+                      // });
                     }}
                   onOpenChange={(open) => {
                     if (!open && !field.value) {
