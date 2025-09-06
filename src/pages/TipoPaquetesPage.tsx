@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
 import { startTransition, use, useEffect, useState } from "react"
@@ -11,7 +10,6 @@ import {
   MoreHorizontal,
   Check,
   // X,
-  Shield,
   // Users,
   // Package,
   // User,
@@ -67,7 +65,7 @@ import {useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
-import { IoCheckmarkCircleOutline, IoDocumentSharp, IoWarningOutline } from "react-icons/io5";
+import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCards from "@/components/ResumenCards"
 import type { aEditarDataForm, RespuestaPaginada, TipoDocumento } from "@/types/tipoPaquetes"
 
