@@ -78,6 +78,7 @@ const tiposPermisosList: Record<TipoPermiso, string> = {
 
 export default function RolesPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [esAdmin, setEsAdmin] = useState(false)
   const [nombreABuscar, setNombreABuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Rol>();
@@ -288,12 +289,12 @@ export default function RolesPage() {
     console.log('dataForm: ', dataForm);
     console.log('selectedPermissions: ', selectedPermissions)
     if(selectedPermissions.length){
-      mutate({...dataForm, activo: true, en_uso: false, permisos_id: selectedPermissions});
+      mutate({...dataForm, activo: true, en_uso: false, permisos_id: selectedPermissions, es_admin: esAdmin});
     }
   }
 
   const handleGuardarDataEditado = async (dataForm: any) => {
-    const dataEditado = {...dataAEditar, ...dataForm};
+    const dataEditado = {...dataAEditar, ...dataForm, es_admin: esAdmin};
     delete dataEditado.numero;
     delete dataEditado.permisos;
     delete dataEditado.fecha_creacion;
@@ -351,11 +352,26 @@ export default function RolesPage() {
     setDataDetalle(undefined);
   }
 
+  // const handlePermissionToggle = (permissionId: number) => {
+  //   setSelectedPermissions((prev) =>
+  //     prev.includes(permissionId) ? prev.filter((p) => p !== permissionId) : [...prev, permissionId],
+  //   )
+  // }
   const handlePermissionToggle = (permissionId: number) => {
-    setSelectedPermissions((prev) =>
-      prev.includes(permissionId) ? prev.filter((p) => p !== permissionId) : [...prev, permissionId],
-    )
-  }
+    setSelectedPermissions((prev) => {
+      const updated =
+        prev.includes(permissionId)
+          ? prev.filter((p) => p !== permissionId) // quitar
+          : [...prev, permissionId];              // agregar
+
+      // acá puedes verificar si se seleccionaron todos
+      const todosSeleccionados = updated.length === dataPermisosList.length;
+
+      setEsAdmin(todosSeleccionados);
+
+      return updated;
+    });
+  };
 
   return (
     <>
@@ -721,6 +737,8 @@ export default function RolesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            setEsAdmin(prevEsAdmin => !prevEsAdmin)
+
                             const filteredPermissions = dataPermisosList.filter(
                               (permission: any) =>
                                 permission.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
@@ -731,6 +749,8 @@ export default function RolesPage() {
                             const allFilteredSelected = filteredPermissions.every((p: any) =>
                               selectedPermissions.includes(p.id),
                             )
+
+                            console.log('allFilteredSelected: ', allFilteredSelected )
 
                             if (allFilteredSelected) {
                               setSelectedPermissions((prev) =>
@@ -755,9 +775,9 @@ export default function RolesPage() {
                                 permission.modulo.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()),
                             )
                             .every((p: any) => selectedPermissions.includes(p.id))
-                            ? "Deseleccionar"
-                            : "Seleccionar"}{" "}
-                          todos
+                            ? "Desmarcar administrador"
+                            : "Marcar como administrador"}{" "}
+                          
                         </Button>
                       </div>
                     </div>

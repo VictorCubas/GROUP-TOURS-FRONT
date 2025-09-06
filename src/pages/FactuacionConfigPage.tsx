@@ -9,10 +9,12 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ToastContext } from '@/context/ToastContext';
 import { fetchDataConfigFactura, nuevoDataFetch } from '@/components/utils/httpFacturacion';
+import { useSessionStore } from '@/store/sessionStore';
 
 type TabType = 'company' | 'taxes' | 'preview';
 
 function FactuacionConfigPage() {
+  const {siTienePermiso} = useSessionStore();
   const [activeTab, setActiveTab] = useState<TabType>('company');
   const [siEditando, setSiEditando] = useState(false);
   const [tipoImpuestoConfiguracion, setTipoImpuestoConfiguracion] = useState<any>();
@@ -161,6 +163,7 @@ function FactuacionConfigPage() {
     mutate(payload);
   }
 
+  console.log('siTienePermiso("facturacion", "modificar"): ', siTienePermiso("facturacion", "modificar"))
   const tabs = [
     { id: 'company', label: 'Datos de Empresa', icon: Building2 },
     { id: 'taxes', label: 'Tipos de IVA', icon: Percent },
@@ -188,16 +191,18 @@ function FactuacionConfigPage() {
               <p className="text-gray-600">Gestiona todos los campos correspondiente a una factura.</p>
             </div>
             <div className="flex gap-3">
-              <Button
-                type='button'
-                variant="outline"
-                className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
+              {siTienePermiso("facturacion", "exportar") &&
+                <Button
+                  type='button'
+                  variant="outline"
+                  className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              }
 
-              {!siEditando && 
+              {siTienePermiso("facturacion", "modificar") && !siEditando && 
                 <Button 
                   onClick={handleToggleEdit}
                   type='button'
@@ -211,7 +216,7 @@ function FactuacionConfigPage() {
                 </Button>
               }
 
-              {siEditando && 
+              {siTienePermiso("facturacion", "modificar") && siEditando && 
                 <>
                   <Button 
                         disabled={isPendingMutation}
