@@ -495,7 +495,7 @@ export default function ModulosPage() {
     setTipoDePersonaCreacion(data.tipo);
 
     if(data.tipo === 'fisica'){
-      setSelectedNacionalidadid(data!.nacionalidad!.id)
+      setSelectedNacionalidadid(data!.nacionalidad!.id);
     }
   }
 
