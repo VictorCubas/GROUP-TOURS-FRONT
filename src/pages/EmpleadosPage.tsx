@@ -193,8 +193,6 @@ export default function ModulosPage() {
     if(data?.results){
       dataList = data.results.map((per: Empleado, index: number) => ({...per, numero: index + 1}));
     }
-    // else
-      // dataList = [];
   }
 
 

@@ -19,7 +19,6 @@ interface CompanyConfigFormProps {
   control: any; // puedes tiparlo mejor con Control<FieldValues>
   clearErrors: (name?: string | string[]) => void;
   configFacturaData: any;
-  setTipoImpuestoConfiguracion: (data: any) => void;
 }
 
 export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> = 
@@ -28,8 +27,7 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
           register, errors,
           control, reset,
           clearErrors,
-          configFacturaData,
-          setTipoImpuestoConfiguracion,}) => {
+          configFacturaData,}) => {
             
   const { updateFormData } = useFacturaFormStore();
   const [establecimientoSelected, setEstablecimientoSelected] = useState<Establecimiento>();
@@ -87,11 +85,7 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
       setEstablecimientoSelected(dataEstablecimientoList.find((e: any) => e.id === configFacturaData.establecimiento));
       setPuntoExpedicionSelected(dataPuntoExpedicionList.find((p: any) => p.id === configFacturaData.punto_expedicion));
 
-      setTipoImpuestoConfiguracion({
-        tipo_impuesto: configFacturaData?.tipo_impuesto,
-        subtipo_impuesto: configFacturaData?.subtipo_impuesto
-      });
-
+      
 
       // Deferimos el reset para evitar condición de carrera
       requestAnimationFrame(() => {
@@ -122,8 +116,7 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
     }
   }, [configFacturaData, 
       empresaData, reset, dataPuntoExpedicionList,
-      dataEstablecimientoList, dataTimbradoList, 
-      setTipoImpuestoConfiguracion, updateFormData]);
+      dataEstablecimientoList, dataTimbradoList, updateFormData]);
 
    const getStatusColor = (fecha_fin?: string) => {
     if(!fecha_fin){

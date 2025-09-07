@@ -20,6 +20,8 @@ const ResumenCardsDinamico: React.FC<ResumenCardsProps> =
 
   let stats: StatItem[] = [];
 
+  console.log('resumen: ', resumen)
+
   if(!isFetchingResumen && resumen && resumen.length > 0){
     stats = [
       { title: resumen[0].texto, value: parseInt(resumen[0].valor), icon: Shield, color: "border-blue-200 bg-blue-50", iconColor: "text-blue-500" },

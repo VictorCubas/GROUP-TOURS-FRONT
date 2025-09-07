@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { FileText, Building2, Percent, Eye, Download, Check, Edit, X, Loader2Icon } from 'lucide-react';
 import { InformacionEmpresaForm } from '@/components/InformacionEmpresaForm';
 import { ImpuestoConfig } from '@/components/ImpuestoConfig';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ToastContext } from '@/context/ToastContext';
-import { fetchDataConfigFactura, nuevoDataFetch } from '@/components/utils/httpFacturacion';
+import { fetchDataConfigFactura, fetchDataTiposImpuestosTodo, nuevoDataFetch } from '@/components/utils/httpFacturacion';
 import { useSessionStore } from '@/store/sessionStore';
 
 type TabType = 'company' | 'taxes' | 'preview';
@@ -17,16 +17,26 @@ function FactuacionConfigPage() {
   const {siTienePermiso} = useSessionStore();
   const [activeTab, setActiveTab] = useState<TabType>('company');
   const [siEditando, setSiEditando] = useState(false);
-  const [tipoImpuestoConfiguracion, setTipoImpuestoConfiguracion] = useState<any>();
+  const [tipoImpuestoConfiguracionActual, setTipoImpuestoConfiguracionActual] = useState<any>();
   const {handleShowToast} = use(ToastContext);
   const [impuesto, setImpuesto] = useState<{impuesto: string, subimpuesto: string | undefined}>();
 
   console.log('impuesto despues de seleccionar otro: ', impuesto)
 
+  // CONFIGURACION ACTUAL
   const {data: configFacturaData,} = useQuery({
       queryKey: ['config-factura',], //data cached
       queryFn: () => fetchDataConfigFactura(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
+
+
+  // RECUPERA LOS TIPOS DE IMPUESTOS
+  const { data: dataTipoImpuestoList = [], isFetching: isFetchingTiposImpuestos } = useQuery({
+      queryKey: ['tipos-impuestos-todos'],
+      queryFn: () => fetchDataTiposImpuestosTodo(),
+      staleTime: 5 * 60 * 1000
     });
 
 
@@ -174,6 +184,23 @@ function FactuacionConfigPage() {
     setSiEditando(siEditandoPrev => !siEditandoPrev)
   }
 
+
+   useEffect(() => {
+      if(configFacturaData){
+
+
+        console.log({
+            tipo_impuesto: configFacturaData?.tipo_impuesto,
+            subtipo_impuesto: configFacturaData?.subtipo_impuesto
+          })
+            setTipoImpuestoConfiguracionActual({
+            tipo_impuesto: configFacturaData?.tipo_impuesto,
+            subtipo_impuesto: configFacturaData?.subtipo_impuesto
+          });
+      }
+      
+   }, [configFacturaData])
+
   return (
     <div className="min-h-scree">
 
@@ -290,7 +317,6 @@ function FactuacionConfigPage() {
               reset={reset}
               clearErrors={clearErrors} // <-- también lo pasamos si lo usas
               configFacturaData={configFacturaData}
-              setTipoImpuestoConfiguracion={setTipoImpuestoConfiguracion}
             />
           )}
           
@@ -305,7 +331,9 @@ function FactuacionConfigPage() {
               clearErrors={clearErrors} // <-- también lo pasamos si lo usas
               impuestoActual={impuesto}
               isSubmitting={isSubmitting}
-              tipoImpuestoConfiguracion={tipoImpuestoConfiguracion}
+              tipoImpuestoConfiguracionActual={tipoImpuestoConfiguracionActual}
+              dataTipoImpuestoList={dataTipoImpuestoList}
+              isFetchingTiposImpuestos={isFetchingTiposImpuestos}
             />
           )}
           
