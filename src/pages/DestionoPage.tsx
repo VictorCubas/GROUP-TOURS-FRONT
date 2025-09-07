@@ -1,6 +1,5 @@
 /* eslint-disable no-constant-condition */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
 import { useState, useEffect, use, startTransition } from "react"
@@ -12,12 +11,9 @@ import {
   MoreHorizontal,
   Check,
   X,
-  Users,
   Download,
-  RefreshCw,
   Eye,
   Calendar,
-  UserCheck,
   Loader2Icon,
   CheckIcon,
   Boxes,
@@ -47,7 +43,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { FaAngleDoubleLeft, FaAngleDoubleRight, FaAngleLeft, FaAngleRight } from "react-icons/fa"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { activarDesactivarData, fetchData, fetchDataHoteles, fetchResumen, guardarDataEditado, nuevoRolFetch } from "@/components/utils/httpDestino"
-import ResumenCards from "@/components/ResumenCards"
 import type { Destino, DestinoPaginatedResponse } from "@/types/destino"
 import { ToastContext } from "@/context/ToastContext"
 import { useForm } from "react-hook-form"
@@ -55,14 +50,10 @@ import { capitalizePrimeraLetra, formatearFecha } from "@/helper/formatter"
 import { queryClient } from "@/components/utils/http"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
-import { BiWorld } from "react-icons/bi";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { fetchDataNacionalidadTodos } from "@/components/utils/httpNacionalidades"
 import { CountrySearchSelect } from "@/components/CountrySearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
-
-
-type TipoPermiso = 'C' | 'R' | 'U' | 'D' | 'E'; 
 
 
 const roleStatusColors = {
@@ -79,7 +70,6 @@ const enUsoColors = {
 let dataList: Destino[] = [];
 
 export default function RolesPage() {
-  const [searchTerm, setSearchTerm] = useState("");
   const {siTienePermiso } = useSessionStore();
   const [selectedNacionalidadID, setSelectedNacionalidadid] = useState<number | "">("");
   const [nacionalidadNoSeleccionada, setNacionalidadNoSeleccionada] = useState<boolean | undefined>();
@@ -197,7 +187,6 @@ export default function RolesPage() {
 
   const handleReset = () => {
     startTransition(() => {
-        setSearchTerm("");
         setShowActiveOnly(true);
         setNombreABuscar("")
       });
@@ -300,11 +289,11 @@ useEffect(() => {
         setDataADesactivar(undefined);
         //desactivamos todas las queies
         queryClient.invalidateQueries({
-          queryKey: ['destino'],
+          queryKey: ['destinos'],
           exact: false
         });
         queryClient.invalidateQueries({
-          queryKey: ['destino-resumen'],
+          queryKey: ['destinos-resumen'],
         });
     },
   });
@@ -572,19 +561,24 @@ useEffect(() => {
             <p className="text-gray-600">Gestiona los destinos del sistema de manera eficiente</p>
           </div>
           <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 bg-transparent"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
-            <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
-              onClick={() => setActiveTab('form')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Destino
-            </Button>
-          </div>
+              {siTienePermiso("destinos", "exportar") && 
+                  <Button
+                    variant="outline"
+                    className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+              }
+
+              {siTienePermiso("destinos", "crear") && (
+                <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                  onClick={() => setActiveTab('form')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Usuario
+                </Button>
+              )}
+            </div>
         </div>
 
         {/* Stats Cards */}
@@ -595,10 +589,11 @@ useEffect(() => {
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 lg:w-80 bg-gray-100">
-            <TabsTrigger value="list" className="cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+            <TabsTrigger  value="list" className="cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white">
               Lista de Destinos
             </TabsTrigger>
-            <TabsTrigger value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+             <TabsTrigger disabled={!siTienePermiso("destinos", "crear")} 
+              value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
               Crear Destino
             </TabsTrigger>
           </TabsList>
@@ -1039,7 +1034,7 @@ useEffect(() => {
                                       </TableCell>
                                     </TableRow>}
                     
-                      {!isFetching && dataList.length > 0 && siTienePermiso("usuarios", "leer") && dataList.map((data: Destino) => (
+                      {!isFetching && dataList.length > 0 && siTienePermiso("destinos", "leer") && dataList.map((data: Destino) => (
                           <TableRow
                               key={data.id}
                               className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -1115,23 +1110,29 @@ useEffect(() => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="border-gray-200">
-                                    <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
-                                      onClick={() => handleVerDetalles(data)}>
-                                      <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                                      Ver detalles
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
-                                      <Edit className="h-4 w-4 mr-2 text-emerald-500" />
-                                      Editar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
-                                      onClick={() => toggleActivar(data)}>
-                                      
-                                      {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
-                                      {data.activo ? 'Desactivar' : 'Activar'}
+                                {siTienePermiso("destinos", "leer") &&
+                                  <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
+                                    onClick={() => handleVerDetalles(data)}>
+                                    <Eye className="h-4 w-4 mr-2 text-blue-500" />
+                                    Ver detalles
                                   </DropdownMenuItem>
-                                  </DropdownMenuContent>
+                                }
+                                {siTienePermiso("destinos", "modificar") &&
+                                  <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
+                                    <Edit className="h-4 w-4 mr-2 text-emerald-500" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                }
+                                <DropdownMenuSeparator />
+                                {siTienePermiso("destinos", "eliminar") &&
+                                  <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
+                                    onClick={() => toggleActivar(data)}>
+                                    
+                                    {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
+                                    {data.activo ? 'Desactivar' : 'Activar'}
+                                  </DropdownMenuItem>
+                                }
+                              </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
                             </TableRow>

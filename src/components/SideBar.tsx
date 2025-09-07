@@ -21,6 +21,7 @@ const sidebarItems = [
       { label: "Paquetes", href: "/paquetes_viajes/paquetes", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-orange-400", bgcolor: "bg-orange-400" },
       // { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      { label: "Destinos", href: "/paquetes_viajes/destinos", color: "text-pink-400", bgcolor: "bg-pink-400" },
     ],
   },
   {
@@ -45,7 +46,6 @@ const sidebarItems = [
       { label: "Tipo Documentos", href: "/configuracion/tipo_documentos", color: "text-pink-400", bgcolor: "bg-pink-400" },
       { label: "Nacionalidades", href: "/configuracion/nacionalidades", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
       { label: "Tipo Paquetes", href: "/configuracion/tipo_paquetes", color: "text-blue-400", bgcolor: "bg-blue-400" },
-      { label: "Destino", href: "/configuracion/destino", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       // { label: "Personas", href: "/personas", color: "text-pink-400", bgcolor: "bg-pink-400" },
       // { label: "Roles", href: "/seguridad/roles", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
       // { label: "Permisos", href: "/seguridad/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
