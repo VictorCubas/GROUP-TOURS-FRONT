@@ -85,9 +85,9 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
             subtipo_impuesto: subimpuesto
           })
 
-          const subtipo = tipoImpuestoSelected?.subtipos.find(
-            (t: any) => t.id.toString() === selectedSubtipoId
-          );
+          // const subtipo = tipoImpuestoSelected?.subtipos.find(
+          //   (t: any) => t.id.toString() === selectedSubtipoId
+          // );
 
           // setImpuesto({
           //   impuesto: tipoImpuestoSelected ? tipoImpuestoSelected.id.toString() : '',

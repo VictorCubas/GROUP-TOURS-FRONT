@@ -47,10 +47,10 @@ function FactuacionConfigPage() {
     console.log('dataTipoImpuestoList: ', dataTipoImpuestoList)
     console.log('impuesto: ', impuesto)
 
-    if(configFacturaData && dataTipoImpuestoList){
-      const tipoImpuestoActual = configFacturaData?.tipo_impuesto;
-      const subtipoImpuestoActual = configFacturaData?.subtipo_impuesto;
-    }
+    // if(configFacturaData && dataTipoImpuestoList){
+    //   const tipoImpuestoActual = configFacturaData?.tipo_impuesto;
+    //   const subtipoImpuestoActual = configFacturaData?.subtipo_impuesto;
+    // }
 
   // DATOS DEL FORMULARIO 
     const {control, handleSubmit, register, formState: {errors, isSubmitting},

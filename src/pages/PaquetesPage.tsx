@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { startTransition, use, useEffect, useRef, useState } from "react"
+import { startTransition, use, useEffect, useState } from "react"
 import {
   Search,
   Plus,
@@ -26,16 +26,13 @@ import {
   // Activity,
   // Tag,
   // Boxes,
-  User,
-  Building,
+  // User,
+  // Building,
   X,
   Bus,
   Plane,
-  BusIcon,
   Croissant,
   Car,
-  PersonStanding,
-  User2,
   Upload,
   Heart,
   Share2,
@@ -68,22 +65,22 @@ import { FaAngleDoubleLeft, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { FaAngleDoubleRight } from "react-icons/fa";
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { TbBus } from "react-icons/tb";
-import { FaUserGroup } from "react-icons/fa6";
+// import { FaUserGroup } from "react-icons/fa6";
 import { RiGroupLine } from "react-icons/ri";
 
 
 
 import "flatpickr/dist/themes/material_green.css";
-import Flatpickr, { type DateTimePickerHandle } from "react-flatpickr"; 
-import { Spanish } from "flatpickr/dist/l10n/es.js"; // Importa el idioma español
+import Flatpickr from "react-flatpickr"; 
+// import { Spanish } from "flatpickr/dist/l10n/es.js"; // Importa el idioma español
 
 // import { Spanish } from "flatpickr/dist/l10n/es";
 
-const options = {
-    minDate: "2020-01",
-    dateFormat: "d/m/Y",
-    locale: Spanish,
-}
+// const options = {
+//     minDate: "2020-01",
+//     dateFormat: "d/m/Y",
+//     locale: Spanish,
+// }
 
 import {
   DropdownMenu,
@@ -94,9 +91,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Distribuidora, Moneda, Paquete, Persona, PersonaFisica, PersonaJuridica, RespuestaPaginada, TipoPaquete, TipoRemuneracion, } from "@/types/paquetes"
-import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, getNombreCompleto, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTodo, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
+import type { Distribuidora, Moneda, Paquete, RespuestaPaginada, TipoPaquete, } from "@/types/paquetes"
+import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
@@ -104,8 +101,6 @@ import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
-import { fetchDataPersonasTodos } from "@/components/utils/httpPersona"
-import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
 import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
@@ -124,10 +119,10 @@ import { Separator } from "@/components/ui/separator"
 //   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
 // }
 
-const tipoPersonaColores = {
-  fisica: "bg-blue-100 text-blue-700 border-blue-200",
-  juridica: "bg-purple-100 text-purple-700 border-purple-200",
-}
+// const tipoPersonaColores = {
+//   fisica: "bg-blue-100 text-blue-700 border-blue-200",
+//   juridica: "bg-purple-100 text-purple-700 border-purple-200",
+// }
 
 
 // const tipoRemuneracionColores = {
@@ -145,7 +140,6 @@ export default function ModulosPage() {
   const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
   const [selectedDestinoID, setSelectedDestinoID] = useState<number | "">("");
   const [destinoNoSeleccionada, setDestinoNoSeleccionada] = useState<boolean | undefined>();
-  const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Paquete>();
@@ -158,8 +152,6 @@ export default function ModulosPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [dataDetalle, setDataDetalle] = useState<Paquete>();
   const {handleShowToast} = use(ToastContext);
-  const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
-  const flatpickrRef = useRef<DateTimePickerHandle>(null);
   const [onGuardar, setOnGuardar] = useState(false);
   
   const [filtros, setFiltros] = useState({
@@ -198,7 +190,8 @@ export default function ModulosPage() {
                                                       totalPages: 5,
                                                       pageSize: 10
                                               });
-                                              
+   
+    console.log(distribuidoraSelected)
 
   const {data: dataDestinoList, isFetching: isFetchingDestino,} = useQuery({
       queryKey: ['destinos-disponibles',], //data cached
@@ -206,11 +199,11 @@ export default function ModulosPage() {
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
-  const {data: dataPersonaList, isFetching: isFetchingPersonas,} = useQuery({
-      queryKey: ['personas-disponibles', personaBusqueda], //data cached
-      queryFn: () => fetchDataPersonasTodos(personaBusqueda),
-      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-    });
+  // const {data: dataPersonaList, isFetching: isFetchingPersonas,} = useQuery({
+  //     queryKey: ['personas-disponibles', personaBusqueda], //data cached
+  //     queryFn: () => fetchDataPersonasTodos(personaBusqueda),
+  //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  //   });
 
   const {data: dataTipoPaqueteList, isFetching: isFetchingTipoPaquetes,} = useQuery({
       queryKey: ['tipos-paquetes-disponibles',], //data cached
@@ -265,22 +258,22 @@ export default function ModulosPage() {
   }
 
 
-  if(!isFetchingPersonas){
-    console.log('dataListPersonas: ', dataPersonaList)
-  }
+  // if(!isFetchingPersonas){
+  //   console.log('dataListPersonas: ', dataPersonaList)
+  // }
 
 
-  useEffect(() => {  
-    if(dataPersonaList){
-      if(dataAEditar){
-        //COMENTADO TEMPORALMENTE
-        // setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
-      }
-      else{
-        setNewDataPersonaList([...dataPersonaList])
-      }
-    }
-  }, [dataAEditar, dataPersonaList]);
+  // useEffect(() => {  
+  //   if(dataPersonaList){
+  //     if(dataAEditar){
+  //       //COMENTADO TEMPORALMENTE
+  //       // setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
+  //     }
+  //     else{
+  //       setNewDataPersonaList([...dataPersonaList])
+  //     }
+  //   }
+  // }, [dataAEditar, dataPersonaList]);
 
 
     useEffect(() => {
@@ -471,7 +464,7 @@ export default function ModulosPage() {
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
         handleDestinoNoSeleccionada(undefined)
-        setNewDataPersonaList([...dataPersonaList])
+        // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
         reset({
             nombre: '',
@@ -557,7 +550,7 @@ export default function ModulosPage() {
       console.log("FormData listo:", [...formData.entries()]);
 
       // Llamada al mutate enviando formData
-      // mutate(formData);
+      mutate(formData);
     };
 
 
