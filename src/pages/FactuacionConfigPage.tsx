@@ -10,6 +10,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { ToastContext } from '@/context/ToastContext';
 import { fetchDataConfigFactura, fetchDataTiposImpuestosTodo, nuevoDataFetch } from '@/components/utils/httpFacturacion';
 import { useSessionStore } from '@/store/sessionStore';
+import { useFacturaFormStore } from '@/store/useFacturaFormStore';
+import { queryClient } from '@/components/utils/http';
 
 type TabType = 'company' | 'taxes' | 'preview';
 
@@ -22,6 +24,7 @@ function FactuacionConfigPage() {
   const [impuesto, setImpuesto] = useState<{impuesto: string, subimpuesto: string | undefined}>();
 
   console.log('impuesto despues de seleccionar otro: ', impuesto)
+  const { formData } = useFacturaFormStore();
 
   // CONFIGURACION ACTUAL
   const {data: configFacturaData,} = useQuery({
@@ -41,6 +44,13 @@ function FactuacionConfigPage() {
 
 
     console.log('configFacturaData: ', configFacturaData)
+    console.log('dataTipoImpuestoList: ', dataTipoImpuestoList)
+    console.log('impuesto: ', impuesto)
+
+    if(configFacturaData && dataTipoImpuestoList){
+      const tipoImpuestoActual = configFacturaData?.tipo_impuesto;
+      const subtipoImpuestoActual = configFacturaData?.subtipo_impuesto;
+    }
 
   // DATOS DEL FORMULARIO 
     const {control, handleSubmit, register, formState: {errors, isSubmitting},
@@ -56,11 +66,19 @@ function FactuacionConfigPage() {
     onSuccess: () => {
         handleShowToast('Se ha guardado la configuración satisfactoriamente', 'success');
         handleToggleEdit();
-        setActiveTab('company')
+        setActiveTab('company');
+
+        queryClient.invalidateQueries({
+                  queryKey: ['config-factura'],
+                  exact: false
+                });
     },
   });
 
     // console.log(impuesto?.impuesto)
+
+    console.log(formData) 
+    console.log(impuesto?.impuesto)
 
   const handleGuardarNuevaData = async (dataForm: any) => {
       /**
@@ -72,21 +90,14 @@ function FactuacionConfigPage() {
     console.log('guardar.... siEditando antes: ', siEditando)
     console.log('guardar.... impuesto: ', impuesto)
 
-
-  if(!impuesto || impuesto?.subimpuesto === ''){
-    console.error('seleccione el subtipo de impuesto')
-    return;
-  }
-    //impuesto
-//     {
-//     "impuesto": "1",
-//     "subimpuesto": ""
-// }
-    console.log(impuesto?.impuesto)
       console.log('guardar.... dataForm edit: ', dataForm)
       console.log('guardar.... siEditando: ', siEditando)
 
 
+    const tipo_impuesto = dataForm?.tipo_impuesto?.id || formData?.tipo_impuesto?.id;
+    const subtipo_impuesto = dataForm?.subtipo_impuesto?.id ?? undefined;
+    console.log(tipo_impuesto);
+    console.log(subtipo_impuesto)
     const payload: any = {
       empresa: {
         nombre: dataForm.nombreEmpresa,
@@ -100,8 +111,8 @@ function FactuacionConfigPage() {
         establecimiento: dataForm.establecimiento,
         punto_expedicion: dataForm.expedicion,
         timbrado: dataForm.timbrado,
-        tipo_impuesto: impuesto?.impuesto,
-        subtipo_impuesto: impuesto?.subimpuesto
+        tipo_impuesto,
+        subtipo_impuesto
       }
     }
 
@@ -110,65 +121,9 @@ function FactuacionConfigPage() {
       payload.empresa.id = dataForm?.id;
     }
 
+ 
+    console.log('payload: ', payload)    
 
-    console.log('payload: ', payload)
-
-// {
-//     "empresa": {
-//         "nombre": "Group Tours",
-//         "ruc": "4028760-2",
-//         "direccion": "Nuestra Señora de la Asunción 440, San Lorenzo, Paraguay",
-//         "telefono": "0971991960",
-//         "correo": "vhcubas91@gmail.com",
-//         "actividades": "Servicio de turismo y excursiones"
-//     },
-//     "factura": {
-//         "establecimiento": "1",
-//         "punto_expedicion": "3",
-//         "timbrado": "1",
-//         "tipo_impuesto": "2"
-//     }
-// }
-    
-       //impuesto
-//     {
-//     "impuesto": "1",
-//     "subimpuesto": ""
-// }
-
-    // DATO NUEVO
-// {
-//   "empresa": {
-//     "ruc": "80012345-6",
-//     "nombre": "Mi Empresa SRL",
-//     "direccion": "Av. Siempre Viva 123",
-//     "telefono": "021-123456",
-//     "correo": "info@miempresa.com",
-//     "actividades": "Venta de productos electrónicos"
-//   },
-//   "factura": {
-//     "establecimiento": 1,
-//     "punto_expedicion": 1,
-//     "timbrado": 1,
-//     "tipo_impuesto": 1,
-//     "subtipo_impuesto": 2
-//   }
-// }
-
-// EDICION EN LOS DATOS
-// {
-//   "empresa": {
-//     "id": 5,
-//     "telefono": "021-765432"  // Solo actualizamos teléfono
-//   },
-//   "factura": {
-//     "establecimiento": 3,
-//     "punto_expedicion": 5,
-//     "timbrado": 2,
-//     "tipo_impuesto": 1,
-//     "subtipo_impuesto": null
-//   }
-// }
 
     mutate(payload);
   }

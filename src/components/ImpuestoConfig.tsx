@@ -68,7 +68,7 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
           console.log('tipo: ', tipo)
           const tieneSubTipo = tipo[0].subtipos.length > 0;
   
-          let subimpuesto: any = '';
+          let subimpuesto: any;
           if(tieneSubTipo)
               subimpuesto = selectedSubtipoId || '';
           else
@@ -77,7 +77,22 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
           console.log('isSubmitting...', {
             impuesto: tipoImpuestoSelected ? tipoImpuestoSelected.id.toString() : '',
             subimpuesto: subimpuesto
+          }) 
+
+
+          updateFormData({
+            tipo_impuesto: tipoImpuestoSelected,
+            subtipo_impuesto: subimpuesto
           })
+
+          const subtipo = tipoImpuestoSelected?.subtipos.find(
+            (t: any) => t.id.toString() === selectedSubtipoId
+          );
+
+          // setImpuesto({
+          //   impuesto: tipoImpuestoSelected ? tipoImpuestoSelected.id.toString() : '',
+          //   subimpuesto: subtipo ? subtipo?.id.toString() : ''
+          // });
 
 
           if(subimpuesto === ''){
@@ -138,6 +153,9 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
       });
 
       setFormInicializado(true);
+
+
+      console.log('setting 3')
     });
   }, [dataTipoImpuestoList, tipoImpuestoConfiguracionActual, reset, updateFormData, formInicializado]);
 
@@ -156,10 +174,17 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
 
     console.log('subtipo: ', subtipo);
 
-    updateFormData({
+    console.log('cambiando subtipo... ',{
       tipo_impuesto: tipoImpuestoSelected,
       subtipo_impuesto: subtipo || undefined,
+    })
+
+    updateFormData({ 
+      tipo_impuesto: tipoImpuestoSelected,
+      subtipo_impuesto: subtipo || undefined, 
     });
+
+    console.log('setting 2')
   }, [tipoImpuestoSelected, selectedSubtipoId, updateFormData, formInicializado]);
 
 
@@ -179,6 +204,12 @@ export const ImpuestoConfig: React.FC<TaxConfigFormProps> = ({
     if (impuestoActual.subimpuesto) {
       setSelectedSubtipoId(impuestoActual.subimpuesto);
     }
+
+    console.log('setting 1')
+    // setImpuesto({
+    //   impuesto: tipoImpuestoSelected ? tipoImpuestoSelected.id.toString() : '',
+    //   subimpuesto: newSubtipoId || ''
+    // });
   }
 }, [impuestoActual, dataTipoImpuestoList]);
 
