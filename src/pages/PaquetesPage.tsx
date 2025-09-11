@@ -42,16 +42,9 @@ import {
   Star,
   Hotel,
   Building2,
+  Table2,
+  Grid3X3,
 } from "lucide-react"
-
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,15 +65,7 @@ import { RiGroupLine } from "react-icons/ri";
 
 import "flatpickr/dist/themes/material_green.css";
 import Flatpickr from "react-flatpickr"; 
-// import { Spanish } from "flatpickr/dist/l10n/es.js"; // Importa el idioma español
 
-// import { Spanish } from "flatpickr/dist/l10n/es";
-
-// const options = {
-//     minDate: "2020-01",
-//     dateFormat: "d/m/Y",
-//     locale: Spanish,
-// }
 
 import {
   DropdownMenu,
@@ -112,7 +97,7 @@ import { Separator } from "@/components/ui/separator"
 
 // const moduleColors = {
 //   Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
-//   Paquetes: "bg-purple-50 text-purple-600 border-purple-200",
+//   Paquetes: "bg-emerald-50 text-emerald-600 border-emerald-200",
 //   Paquetes: "bg-orange-50 text-orange-600 border-orange-200",
 //   Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
 //   Reservas: "bg-pink-50 text-pink-600 border-pink-200",
@@ -121,14 +106,14 @@ import { Separator } from "@/components/ui/separator"
 
 // const tipoPersonaColores = {
 //   fisica: "bg-blue-100 text-blue-700 border-blue-200",
-//   juridica: "bg-purple-100 text-purple-700 border-purple-200",
+//   juridica: "bg-emerald-100 text-emerald-700 border-emerald-200",
 // }
 
 
 // const tipoRemuneracionColores = {
 //   salario: "bg-blue-100 text-blue-700 border-blue-200",
 //   comision: "bg-blue-100 text-blue-700 border-blue-200",
-//   mixto: "bg-purple-100 text-purple-700 border-purple-200",
+//   mixto: "bg-emerald-100 text-emerald-700 border-emerald-200",
 // }
 
 let dataList: Paquete[] = [];
@@ -151,6 +136,7 @@ export default function ModulosPage() {
   const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [dataDetalle, setDataDetalle] = useState<Paquete>();
+   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
   
@@ -961,11 +947,11 @@ export default function ModulosPage() {
                   }
 
                   {dataDetalle?.fecha_inicio &&
-                    <div className="bg-purple-50 p-6 rounded-xl">
+                    <div className="bg-emerald-50 p-6 rounded-xl">
                       <div className="flex items-center justify-between mb-3">
-                        <Calendar className="w-8 h-8 text-purple-600" />
+                        <Calendar className="w-8 h-8 text-emerald-600" />
                         <div className="text-right">
-                          <div className="text-lg font-bold text-purple-600">
+                          <div className="text-lg font-bold text-emerald-600">
                             {new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { day: 'numeric', month: 'short' })}
                           </div>
                         </div>
@@ -976,12 +962,12 @@ export default function ModulosPage() {
                   }
 
                   {!dataDetalle?.fecha_inicio &&
-                    <div className="bg-purple-50 p-6 rounded-xl">
+                    <div className="bg-emerald-50 p-6 rounded-xl">
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-right flex items-center justify-center w-full">
                           <div className="font-semibold flex items-center justify-center ">
                             {/* {new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { day: 'numeric', month: 'short' })} */}
-                        <Calendar className="w-8 h-8 text-purple-600" />
+                        <Calendar className="w-8 h-8 text-emerald-600" />
                             {/* Flexible */}
                           </div>
                         </div>
@@ -2017,6 +2003,27 @@ export default function ModulosPage() {
                       </div>
 
                       <div className="flex flex-wrap items-center justify-between gap-4 w-4/6">
+                      <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                          <Button
+                            variant={viewMode === "table" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setViewMode("table")}
+                            className={`${viewMode === "table" ? "bg-emerald-500 text-white" : "text-gray-600"} font-sans`}
+                          >
+                            <Table2 className="h-4 w-4 mr-1" />
+                            Tabla
+                          </Button>
+                          <Button
+                            variant={viewMode === "cards" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setViewMode("cards")}
+                            className={`${viewMode === "cards" ? "bg-emerald-500 text-white" : "text-gray-600"} font-sans`}
+                          >
+                            <Grid3X3 className="h-4 w-4 mr-1" />
+                            Cards
+                          </Button>
+                        </div>
+
                         <div className="flex items-center gap-2 bg-emerald-50 rounded-full px-3 py-2 border border-emerald-200">
                           <Switch
                             checked={showActiveOnly}
@@ -2069,37 +2076,10 @@ export default function ModulosPage() {
                             className="pl-10 w-full border-gray-300 focus:border-blue-500"
                           />
                         </div>
-
-                        {/* <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input
-                            placeholder="Buscar por razon social..."
-                            value={razonSocialABuscar}
-                            onChange={(e) => setRazonSocialABuscar(e.target.value)}
-                            className="pl-10 w-72 border-gray-300 focus:border-blue-500"
-                          />
-                        </div> */}
-
-                        {/* <Button
-                          onClick={handleBuscarPorNombre}
-                          variant="outline"
-                          size="icon"
-                          className="border-gray-300 hover:bg-gray-50 bg-transparent cursor-pointer"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button> */}
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-blue-200 w-full flex-wrap">
-                      {/* <div className="space-y-2">
-                            <Flatpickr className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-3
-                                    focus:border-gray-500 focus:outline focus:outline-gray-500" data-input ref={flatpickrRef}
-                                    name="fechaVencimiento"
-                                    id="fechaVencimiento" 
-                            options={options}>
-                        </Flatpickr>
-                            </div> */}
 
                       <div className="flex items-center gap-2">
                         <Label className="text-sm text-gray-600 font-medium">Fecha Registro desde:</Label>
@@ -2145,252 +2125,369 @@ export default function ModulosPage() {
                 </CardHeader>
 
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50 hover:bg-gray-50">
-                        <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Información</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Destino</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Precio</TableHead>
-                        {/* <TableHead className="font-semibold text-gray-700">Tipo</TableHead> */}
-                        <TableHead className="font-semibold text-gray-700">Fechas</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Propiedad</TableHead>
-                        {/* <TableHead className="font-semibold text-gray-700">Genero</TableHead> */}
-                        <TableHead className="font-semibold text-gray-700">Estado</TableHead>
-                        {/* <TableHead className="font-semibold text-gray-700">Uso</TableHead> */}
-                        {/* <TableHead className="font-semibold text-gray-700">Prioridad</TableHead> */}
-                        <TableHead className="font-semibold text-gray-700">Pasajeros</TableHead>
-                        {/* <TableHead className="font-semibold text-gray-700">Fecha Modificación</TableHead> */}
-                        <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody className="w-full">
-                      {isFetching && <TableRow className="w-full">
-                                    <TableCell className="w-full absolute top-5/12">
-                                      <div className="w-full flex items-center justify-center">
-                                        <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>}
-                      {!isFetching && dataList.length > 0 && siTienePermiso("paquetes", "leer") && dataList.map((data: Paquete) => (
-                        <TableRow
-                          key={data.id}
-                          className={`hover:bg-blue-50 transition-colors cursor-pointer`}
-                        >
-                          <TableCell>
-                            <div>
-                              <div className="font-medium text-gray-900 pl-2">{data?.numero}</div>
-                            </div>
-                          </TableCell>
-
-                          <TableCell>
-                            {/* <div className="flex items-center gap-3"> */}
-                            <div className="flex items-center gap-3 font-medium text-gray-900 max-w-6xl">
-                              <img
-                                  src={data.imagen || placeholderViaje}
-                                  alt={data.nombre || "Imagen de paquete de viaje"}
-                                  className="w-12 h-12 rounded-lg object-cover"
-                              />
+                  {viewMode === "table" ? 
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 hover:bg-gray-50">
+                          <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Información</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Destino</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Precio</TableHead>
+                          {/* <TableHead className="font-semibold text-gray-700">Tipo</TableHead> */}
+                          <TableHead className="font-semibold text-gray-700">Fechas</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Propiedad</TableHead>
+                          {/* <TableHead className="font-semibold text-gray-700">Genero</TableHead> */}
+                          <TableHead className="font-semibold text-gray-700">Estado</TableHead>
+                          {/* <TableHead className="font-semibold text-gray-700">Uso</TableHead> */}
+                          {/* <TableHead className="font-semibold text-gray-700">Prioridad</TableHead> */}
+                          <TableHead className="font-semibold text-gray-700">Pasajeros</TableHead>
+                          {/* <TableHead className="font-semibold text-gray-700">Fecha Modificación</TableHead> */}
+                          <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="w-full">
+                        {isFetching && <TableRow className="w-full">
+                                      <TableCell className="w-full absolute top-5/12">
+                                        <div className="w-full flex items-center justify-center">
+                                          <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>}
+                        {!isFetching && dataList.length > 0 && siTienePermiso("paquetes", "leer") && dataList.map((data: Paquete) => (
+                          <TableRow
+                            key={data.id}
+                            className={`hover:bg-blue-50 transition-colors cursor-pointer`}
+                          >
+                            <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900 font-sans">{data.nombre}</div>
-                                <div className="text-sm text-gray-500 font-sans">
-                                  {data.personalizado ? "Personalizado" : "Fechas fijas"}
+                                <div className="font-medium text-gray-900 pl-2">{data?.numero}</div>
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              {/* <div className="flex items-center gap-3"> */}
+                              <div className="flex items-center gap-3 font-medium text-gray-900 max-w-6xl">
+                                <img
+                                    src={data.imagen || placeholderViaje}
+                                    alt={data.nombre || "Imagen de paquete de viaje"}
+                                    className="w-12 h-12 rounded-lg object-cover"
+                                />
+                                <div>
+                                  <div className="font-medium text-gray-900 font-sans">{data.nombre}</div>
+                                  <div className="text-sm text-gray-500 font-sans">
+                                    {data.personalizado ? "Personalizado" : "Fechas fijas"}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </TableCell>
+                            </TableCell>
 
-                          <TableCell>
-                            {/* <Badge
-                              className={tipoPersonaColores[`${data?.persona?.tipo}`]}
-                            > */}
-                             <Badge
-                                className={`${
-                                  data.tipo_paquete.nombre.toLocaleLowerCase() === "terrestre"
-                                    ? "bg-green-100 text-green-700 border-green-200"
-                                    : quitarAcentos(data.tipo_paquete.nombre.toLocaleLowerCase()) === "aereo"
-                                      ? "bg-blue-100 text-blue-700 border-blue-200"
-                                      : "bg-cyan-100 text-cyan-700 border-cyan-200"
-                                } border font-sans`}
-                              >
-                                <>
-                                  {data.tipo_paquete.nombre.toLocaleLowerCase() === "terrestre"
-                                        ? <TbBus  className="h-5 w-5 text-gray-500" />
-                                        : quitarAcentos(data.tipo_paquete.nombre.toLocaleLowerCase()) === "aereo"
-                                          ? <Plane className="h-5 w-5 text-gray-500" />
-                                          : <Croissant className="h-5 w-5 text-gray-500" />
-                                    }
-                                  
-                                  <span>{data.tipo_paquete.nombre}</span>
-                                </>
-                              </Badge>
-                          </TableCell>
+                            <TableCell>
+                              {/* <Badge
+                                className={tipoPersonaColores[`${data?.persona?.tipo}`]}
+                              > */}
+                              <Badge
+                                  className={`${
+                                    data.tipo_paquete.nombre.toLocaleLowerCase() === "terrestre"
+                                      ? "bg-green-100 text-green-700 border-green-200"
+                                      : quitarAcentos(data.tipo_paquete.nombre.toLocaleLowerCase()) === "aereo"
+                                        ? "bg-blue-100 text-blue-700 border-blue-200"
+                                        : "bg-cyan-100 text-cyan-700 border-cyan-200"
+                                  } border font-sans`}
+                                >
+                                  <>
+                                    {data.tipo_paquete.nombre.toLocaleLowerCase() === "terrestre"
+                                          ? <TbBus  className="h-5 w-5 text-gray-500" />
+                                          : quitarAcentos(data.tipo_paquete.nombre.toLocaleLowerCase()) === "aereo"
+                                            ? <Plane className="h-5 w-5 text-gray-500" />
+                                            : <Croissant className="h-5 w-5 text-gray-500" />
+                                      }
+                                    
+                                    <span>{data.tipo_paquete.nombre}</span>
+                                  </>
+                                </Badge>
+                            </TableCell>
 
-                          <TableCell>
-                            <div>
-                              <div className="font-medium text-gray-900 truncate max-w-xs">{data.destino.nombre}</div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">{data.destino.pais.nombre}</div>
-                            </div>
-                          </TableCell>
-
-                          <TableCell>
-                            <div>
-                              <div className="font-medium text-green-600 truncate max-w-xs">{data.moneda.simbolo} {formatearSeparadorMiles.format(data.precio)}</div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.sena)}</div>
-                            </div>
-                          </TableCell>
-                          
-
-                          <TableCell>
+                            <TableCell>
                               <div>
-                                 {data.personalizado && !data?.fecha_inicio ?
-                                  <Badge className='bg-purple-100 text-purple-700 border-purple-200'>
-                                      Personalizado
-                                  </Badge>
-                                  : <>
-                                    <div className="font-medium text-gray-900 truncate max-w-xs">{formatearFecha(data?.fecha_inicio ?? '', false)}</div>
-                                    <div className="text-sm text-gray-500 truncate max-w-xs">{formatearFecha(data?.fecha_fin ?? '', false)}</div>
-                                  </>}
+                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.destino.nombre}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">{data.destino.pais.nombre}</div>
                               </div>
-                          </TableCell>
+                            </TableCell>
 
-                          <TableCell>
-                            <div>
-                              <Badge className={`border font-sans ${data.propio ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-orange-100 text-orange-700 border-orange-200'} truncate max-w-xs`}>
-                                {data.propio ? 'Propio' : 'Distruidor'}
-                              </Badge>
-                              {!data.propio &&  <div className="text-xs text-gray-500 mt-1 font-sans">{data?.distribuidora?.nombre}</div>}
-                            </div>
-                          </TableCell>
-
-                         
-                          {/*<TableCell>
-                             <div>
-                              <Badge className={`${data?.tipo_remuneracion?.nombre === 'Comisión' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                                          (data?.tipo_remuneracion?.nombre === 'Mixto' ? 'bg-purple-100 text-purple-700 border-purple-200': 'bg-green-100 text-green-700 border-green-200')
-                              }`}>
-                                  {data?.tipo_remuneracion?.nombre}
-                              </Badge>
-                              <div className="text-sm font-medium text-gray-500 truncate max-w-xs">
-                                {data?.tipo_remuneracion?.nombre === 'Comisión' ?  '% ' + formatearSeparadorMiles.format(data?.porcentaje_comision) : 
-                                (data?.tipo_remuneracion?.nombre === 'Mixto' ? 
-                                  <>
-                                   <p className="font-medium"> 
-                                    {'Gs. ' + formatearSeparadorMiles.format(data?.salario)}</p>
-                                   <p className="font-medium"> 
-                                    {'% ' + formatearSeparadorMiles.format(data?.porcentaje_comision)}
-                                   </p>
-                                  </>
-                                  : <p className="font-medium"> 
-                                      {'Gs. ' + formatearSeparadorMiles.format(data?.salario)}
-                                  </p>
-                                  )}
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-green-600 truncate max-w-xs">{data.moneda.simbolo} {formatearSeparadorMiles.format(data.precio)}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.sena)}</div>
                               </div>
-                            </div> 
-                          </TableCell>
-                            */}
-
-                          {/* <TableCell>
-                            {data?.persona?.tipo === 'fisica' ? 
-                             <div>
-                              <Badge className={`${genderColors[`${data?.persona?.sexo ?? 'M'}`]}`}>{data.persona?.sexo === 'F'? 'Femenino': 'Masculino'}</Badge>
-                            </div>: '-'}
+                            </TableCell>
                             
-                          </TableCell> */}
 
-                          <TableCell>
-                            <Badge
-                              className={
-                                data.activo
-                                  ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                  : "bg-gray-100 text-gray-700 border-gray-200"
-                              }
-                            >
-                              {data.activo ? "Activo" : "Inactivo"}
-                            </Badge>
-                          </TableCell>
-    
-                          
-                          <TableCell>
-                            <div className="text-sm text-gray-500">
-                              <div className="flex items-center gap-1">
-                                {data.propio ? 
-                                <>
-                                  <RiGroupLine className="h-4 w-4 text-gray-400" />
-                                  <span>10/{data.cantidad_pasajeros}</span>
-                                </>: 
-                                  <Badge
-                                    className="bg-gray-100 text-gray-700 border-gray-200">
-                                    Sujeto a disponibilidad
-                                  </Badge>}
-                                {/* {formatearFecha(data.fecha_creacion)} */}
+                            <TableCell>
+                                <div>
+                                  {data.personalizado && !data?.fecha_inicio ?
+                                    <Badge className='bg-emerald-100 text-emerald-700 border-emerald-200'>
+                                        Personalizado
+                                    </Badge>
+                                    : <>
+                                      <div className="font-medium text-gray-900 truncate max-w-xs">{formatearFecha(data?.fecha_inicio ?? '', false)}</div>
+                                      <div className="text-sm text-gray-500 truncate max-w-xs">{formatearFecha(data?.fecha_fin ?? '', false)}</div>
+                                    </>}
+                                </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <div>
+                                <Badge className={`border font-sans ${data.propio ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-orange-100 text-orange-700 border-orange-200'} truncate max-w-xs`}>
+                                  {data.propio ? 'Propio' : 'Distruidor'}
+                                </Badge>
+                                {!data.propio &&  <div className="text-xs text-gray-500 mt-1 font-sans">{data?.distribuidora?.nombre}</div>}
                               </div>
-                            </div>
-                          </TableCell>
-                          
-                          
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="border-gray-200">
-                                {siTienePermiso("paquetes", "leer") &&
-                                  <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
-                                    onClick={() => handleVerDetalles(data)}>
-                                    <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                                    Ver detalles
-                                  </DropdownMenuItem>
-                                }
-                                {siTienePermiso("paquetes", "modificar") &&
-                                <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
-                                  <Edit className="h-4 w-4 mr-2 text-emerald-500" />
-                                  Editar
-                                </DropdownMenuItem>
-                                }
+                            </TableCell>
 
-                                {siTienePermiso("paquetes", "modificar") && 
-                                  <>
-                                      <DropdownMenuSeparator />
-                                    <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
-                                      onClick={() => toggleActivar(data)}>
-                                      
-                                      {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
-                                      {data.activo ? 'Desactivar' : 'Activar'}
-                                    </DropdownMenuItem>
-                                  </>
-                                }
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                          
+                            {/*<TableCell>
+                              <div>
+                                <Badge className={`${data?.tipo_remuneracion?.nombre === 'Comisión' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                            (data?.tipo_remuneracion?.nombre === 'Mixto' ? 'bg-emerald-100 text-emerald-700 border-emerald-200': 'bg-green-100 text-green-700 border-green-200')
+                                }`}>
+                                    {data?.tipo_remuneracion?.nombre}
+                                </Badge>
+                                <div className="text-sm font-medium text-gray-500 truncate max-w-xs">
+                                  {data?.tipo_remuneracion?.nombre === 'Comisión' ?  '% ' + formatearSeparadorMiles.format(data?.porcentaje_comision) : 
+                                  (data?.tipo_remuneracion?.nombre === 'Mixto' ? 
+                                    <>
+                                    <p className="font-medium"> 
+                                      {'Gs. ' + formatearSeparadorMiles.format(data?.salario)}</p>
+                                    <p className="font-medium"> 
+                                      {'% ' + formatearSeparadorMiles.format(data?.porcentaje_comision)}
+                                    </p>
+                                    </>
+                                    : <p className="font-medium"> 
+                                        {'Gs. ' + formatearSeparadorMiles.format(data?.salario)}
+                                    </p>
+                                    )}
+                                </div>
+                              </div> 
+                            </TableCell>
+                              */}
 
-                      {!isFetching && dataList.length === 0 && (
-                        <TableRow className="">
-                          <TableCell className="w-full flex items-center justify-center">
-                            <div className="text-center py-12  absolute-center">
-                              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <Search className="h-8 w-8 text-gray-400" />
-                              </div>
-                              <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron modulos</h3>
-                              <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
-                              <Button
-                                onClick={handleReset}
-                                className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                            {/* <TableCell>
+                              {data?.persona?.tipo === 'fisica' ? 
+                              <div>
+                                <Badge className={`${genderColors[`${data?.persona?.sexo ?? 'M'}`]}`}>{data.persona?.sexo === 'F'? 'Femenino': 'Masculino'}</Badge>
+                              </div>: '-'}
+                              
+                            </TableCell> */}
+
+                            <TableCell>
+                              <Badge
+                                className={
+                                  data.activo
+                                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                    : "bg-gray-100 text-gray-700 border-gray-200"
+                                }
                               >
-                                Limpiar filtros
-                              </Button>
-                            </div>
-                          </TableCell>
+                                {data.activo ? "Activo" : "Inactivo"}
+                              </Badge>
+                            </TableCell>
+      
+                            
+                            <TableCell>
+                              <div className="text-sm text-gray-500">
+                                <div className="flex items-center gap-1">
+                                  {data.propio ? 
+                                  <>
+                                    <RiGroupLine className="h-4 w-4 text-gray-400" />
+                                    <span>10/{data.cantidad_pasajeros}</span>
+                                  </>: 
+                                    <Badge
+                                      className="bg-gray-100 text-gray-700 border-gray-200">
+                                      Sujeto a disponibilidad
+                                    </Badge>}
+                                  {/* {formatearFecha(data.fecha_creacion)} */}
+                                </div>
+                              </div>
+                            </TableCell>
+                            
+                            
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="hover:bg-gray-100">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="border-gray-200">
+                                  {siTienePermiso("paquetes", "leer") &&
+                                    <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
+                                      onClick={() => handleVerDetalles(data)}>
+                                      <Eye className="h-4 w-4 mr-2 text-blue-500" />
+                                      Ver detalles
+                                    </DropdownMenuItem>
+                                  }
+                                  {siTienePermiso("paquetes", "modificar") &&
+                                  <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
+                                    <Edit className="h-4 w-4 mr-2 text-emerald-500" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  }
 
-                        </TableRow>
-                        )}
-                    </TableBody>
-                  </Table>
+                                  {siTienePermiso("paquetes", "modificar") && 
+                                    <>
+                                        <DropdownMenuSeparator />
+                                      <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
+                                        onClick={() => toggleActivar(data)}>
+                                        
+                                        {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
+                                        {data.activo ? 'Desactivar' : 'Activar'}
+                                      </DropdownMenuItem>
+                                    </>
+                                  }
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {!isFetching && dataList.length === 0 && (
+                          <TableRow className="">
+                            <TableCell className="w-full flex items-center justify-center">
+                              <div className="text-center py-12  absolute-center">
+                                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                  <Search className="h-8 w-8 text-gray-400" />
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron modulos</h3>
+                                <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
+                                <Button
+                                  onClick={handleReset}
+                                  className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                                >
+                                  Limpiar filtros
+                                </Button>
+                              </div>
+                            </TableCell>
+
+                          </TableRow>
+                          )}
+                      </TableBody>
+                    </Table>
+                  
+                  : 
+                          (
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {dataList.map((pkg) => (
+                          <Card
+                            key={pkg.id}
+                            className={`hover:shadow-lg transition-shadow cursor-pointer `}
+                          >
+                            <div className="relative">
+                              <img
+                                src={pkg.imagen || placeholderViaje}
+                                alt={pkg.nombre}
+                                className="w-full h-48 object-cover rounded-t-lg"
+                              />
+                              <div className="absolute top-3 left-3">
+                                <Badge
+                                  className={`${
+                                    pkg.tipo_paquete.nombre === "Terrestre"
+                                      ? "bg-green-100 text-green-700 border-green-200"
+                                      : pkg.tipo_paquete.nombre === "Aéreo"
+                                        ? "bg-blue-100 text-blue-700 border-blue-200"
+                                        : "bg-cyan-100 text-cyan-700 border-cyan-200"
+                                  } border font-sans`}
+                                >
+                                  {pkg.tipo_paquete.nombre}
+                                </Badge>
+                              </div>
+                              <div className="absolute top-3 right-3">
+                                <Checkbox
+                                  // checked={selectedPackages.includes(pkg.id)}
+                                  // onCheckedChange={() => handleSelectPackage(pkg.id)}
+                                  className="bg-white"
+                                />
+                              </div>
+                              <div className="absolute bottom-3 right-3">
+                                <Badge
+                                  className={
+                                    pkg.activo
+                                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                      : "bg-gray-100 text-gray-700 border-gray-200"
+                                  }
+                                >
+                                  {pkg.activo ? "Activo" : "Inactivo"}
+                                </Badge>
+                              </div>
+                            </div>
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <h3 className="font-semibold text-gray-900 text-lg font-sans">{pkg.nombre}</h3>
+                                  <p className="text-gray-600 text-sm font-sans">{pkg.destino.nombre}</p>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-semibold text-emerald-600 text-lg font-sans">
+                                      {formatearSeparadorMiles.format(pkg?.precio ?? 0)}
+                                    </div>
+                                    {pkg.sena > 0 && (
+                                      <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.sena ?? 0)}</div>
+                                    )}
+                                  </div>
+                                  <Badge
+                                    className={`${
+                                      pkg.propio
+                                        ? "bg-blue-100 text-blue-700 border-blue-200"
+                                        : "bg-orange-100 text-orange-700 border-orange-200"
+                                    } border font-sans`}
+                                  >
+                                    {pkg.propio ? "Propio" : "Distribuidor"}
+                                  </Badge>
+                                </div>
+
+                                {!pkg.personalizado && (
+                                  <div className="text-sm text-gray-500 font-sans">
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {formatearFecha(pkg.fecha_inicio ?? '', false)} - {formatearFecha(pkg.fecha_fin ?? '', false)}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {pkg.cantidad_pasajeros && (
+                                  <div className="text-sm text-gray-500 font-sans">
+                                    <div className="flex items-center gap-1">
+                                      <Users className="h-3 w-3" />
+                                      {pkg.cantidad_pasajeros} pasajeros
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="flex gap-2 pt-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 font-sans bg-transparent"
+                                    onClick={() => handleVerDetalles(pkg)}
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    Ver
+                                  </Button>
+                                  <Button size="sm" className="flex-1 bg-emerald-500 hover:bg-emerald-600 font-sans">
+                                    <Edit className="h-3 w-3 mr-1" />
+                                    Editar
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                  }
 
                   {/* Controles de Paginación */}
                 
