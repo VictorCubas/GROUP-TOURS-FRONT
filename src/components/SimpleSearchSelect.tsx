@@ -18,6 +18,8 @@ interface GenericSearchSelectProps<T> {
   labelKey: keyof T
   valueKey: keyof T
   secondaryLabelKey?: keyof T // opcional, por si quieres mostrar un código o algo extra
+  thirdLabelKey?: keyof T // 🔹 Nuevo campo opcional
+
 }
 
 export function GenericSearchSelect<T extends Record<string, any>>({
@@ -29,7 +31,8 @@ export function GenericSearchSelect<T extends Record<string, any>>({
   dataList = [],
   labelKey,
   valueKey,
-  secondaryLabelKey
+  secondaryLabelKey,
+  thirdLabelKey
 }: GenericSearchSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -39,9 +42,10 @@ export function GenericSearchSelect<T extends Record<string, any>>({
   const primeraVezRef = useRef(true)
 
   const filteredItems = dataList.filter((item) =>
-    String(item[labelKey]).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (secondaryLabelKey && String(item[secondaryLabelKey]).toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  String(item[labelKey]).toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (secondaryLabelKey && String(item[secondaryLabelKey]).toLowerCase().includes(searchTerm.toLowerCase())) ||
+  (thirdLabelKey && String(item[thirdLabelKey]).toLowerCase().includes(searchTerm.toLowerCase())) // 🔹 agregado
+)
 
   const handleSelect = (item: T) => {
     setSelectedItem(item)
@@ -115,6 +119,11 @@ export function GenericSearchSelect<T extends Record<string, any>>({
                   {String(selectedItem[secondaryLabelKey])}
                 </Badge>
               )}
+              {thirdLabelKey && (
+                <Badge variant="secondary" className="text-xs">
+                  {String(selectedItem[thirdLabelKey])}
+                </Badge>
+              )}
             </>
           ) : (
             <span className="text-gray-500">{placeholder}</span>
@@ -171,8 +180,13 @@ export function GenericSearchSelect<T extends Record<string, any>>({
                     <div className="flex items-center gap-2 cursor-pointer">
                       <span className="font-medium">{String(item[labelKey])}</span>
                       {secondaryLabelKey && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 hover:bg-blue-50">
                           {String(item[secondaryLabelKey])}
+                        </Badge>
+                      )}
+                      {thirdLabelKey && (
+                        <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50">
+                          {String(item[thirdLabelKey])}
                         </Badge>
                       )}
                     </div>

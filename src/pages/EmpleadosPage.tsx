@@ -192,6 +192,12 @@ export default function ModulosPage() {
     console.log('dataListPersonas: ', dataPersonaList)
   }
 
+   useEffect(() => {
+    if(isFetchingPersonas){
+      setNewDataPersonaList([])
+    }
+  }, [isFetchingPersonas]);
+
 
   useEffect(() => {  
     if(dataPersonaList){

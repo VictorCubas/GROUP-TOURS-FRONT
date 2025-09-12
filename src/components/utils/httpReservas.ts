@@ -73,11 +73,6 @@ export async function fetchDataTodo() {
   return resp?.data
 }
 
-export async function fetchDataTiposPaquetesTodos() {
-  const resp = await axiosInstance.get(`/tipo_paquete/todos/`);
-  return resp?.data
-}
-
 export async function fetchDataMonedaTodos() {
   const resp = await axiosInstance.get(`/moneda/todos/`);
   return resp?.data

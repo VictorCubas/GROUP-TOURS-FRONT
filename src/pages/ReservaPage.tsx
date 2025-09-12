@@ -45,6 +45,8 @@ import {
   Building2,
   Table2,
   Grid3X3,
+  Crown,
+  User,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -79,7 +81,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Distribuidora, type Moneda, type Paquete, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpReservas"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpReservas"
+import { fetchData as fetchDataPersona } from "@/components/utils/httpPersona"
+
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
@@ -92,6 +96,10 @@ import placeholderViaje from "@/assets/paquete_default.png";
 import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
+import { fetchDataPaqueteTodos, fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
+import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
+import type { Persona } from "@/types/empleados"
+import { fetchDataPersonasTodos } from "@/components/utils/httpPersona"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -123,9 +131,8 @@ let tipoReservaFilterList: any[] = [];
 export default function ModulosPage() {
   const {siTienePermiso} = useSessionStore();
   // const [setSearchTerm] = useState("")
-  const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
-  const [selectedDestinoID, setSelectedDestinoID] = useState<number | "">("");
-  const [destinoNoSeleccionada, setDestinoNoSeleccionada] = useState<boolean | undefined>();
+  const [selectedPaqueteID, setSelectedPaqueteID] = useState<number | "">("");
+  const [paqueteNoSeleccionada, setPaqueteNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Reserva>();
@@ -140,6 +147,10 @@ export default function ModulosPage() {
    const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
+  const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
+  const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
+  const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
+  const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
   
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
@@ -155,10 +166,6 @@ export default function ModulosPage() {
               mode: "onBlur",
               defaultValues: {
                 distribuidora_id: '',
-                propio: true,
-                personalizado: false,
-                fecha_salida: null, // Valor inicial explícitamente null
-                fecha_regreso: null
               }
             });
   // DATOS DEL FORMULARIO 
@@ -177,20 +184,28 @@ export default function ModulosPage() {
    
     console.log(distribuidoraSelected)
 
-  const {data: dataDestinoList, isFetching: isFetchingDestino,} = useQuery({
-      queryKey: ['destinos-disponibles',], //data cached
-      queryFn: () => fetchDataDestinosTodos(),
+  const {data: dataPaquetesList, isFetching: isFetchingPaquete,} = useQuery({
+      queryKey: ['paquetes-disponibles',], //data cached
+      queryFn: () => fetchDataPaqueteTodos(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
   // const {data: dataPersonaList, isFetching: isFetchingPersonas,} = useQuery({
   //     queryKey: ['personas-disponibles', personaBusqueda], //data cached
-  //     queryFn: () => fetchDataPersonasTodos(personaBusqueda),
+  //     queryFn: () => fetchDataPersona(personaBusqueda, 1, 10),
   //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   //   });
 
+   const {data: dataPersonaList, isFetching: isFetchingPersonas} = useQuery({
+    queryKey: ['personas-disponibles', 1, 10, {activo: true, tipo: 'fisica', sexo: 'all', nombre: personaBusqueda}], //data cached 
+    queryFn: () => fetchDataPersona(1, 10, {activo: true, tipo: 'fisica', sexo: 'all', nombre: personaBusqueda}),
+    staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
+    enabled: !((filtros.fecha_desde && !filtros.fecha_hasta) || (!filtros.fecha_desde && filtros.fecha_hasta))
+  ,
+  });
+
   const {data: dataTipoPaqueteList, isFetching: isFetchingTipoPaquetes,} = useQuery({
-      queryKey: ['tipos-reservas-disponibles',], //data cached
+      queryKey: ['tipos-paquetes-disponibles',], //data cached
       queryFn: () => fetchDataTiposPaquetesTodos(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
@@ -229,6 +244,8 @@ export default function ModulosPage() {
 
   // let filteredPermissions: Modulo[] = [];
 
+  console.log(dataPersonaList)
+
 
   if(dataTipoPaqueteList && dataTipoPaqueteList.length){
     tipoReservaFilterList = [...dataTipoPaqueteList];
@@ -245,19 +262,24 @@ export default function ModulosPage() {
   // if(!isFetchingPersonas){
   //   console.log('dataListPersonas: ', dataPersonaList)
   // }
+   useEffect(() => {
+      if(isFetchingPersonas){
+        setNewDataPersonaList([])
+      }
+    }, [isFetchingPersonas]);
 
 
-  // useEffect(() => {  
-  //   if(dataPersonaList){
-  //     if(dataAEditar){
-  //       //COMENTADO TEMPORALMENTE
-  //       // setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
-  //     }
-  //     else{
-  //       setNewDataPersonaList([...dataPersonaList])
-  //     }
-  //   }
-  // }, [dataAEditar, dataPersonaList]);
+   useEffect(() => {  
+    if(dataPersonaList){
+      if(dataAEditar){
+        setNewDataPersonaList([...dataPersonaList, dataAEditar.titular]);
+      }
+      else{
+        console.log('dataPersonaList: ', dataPersonaList)
+        setNewDataPersonaList([...dataPersonaList.results])
+      }
+    }
+  }, [dataAEditar, dataPersonaList]);
 
 
     useEffect(() => {
@@ -266,9 +288,9 @@ export default function ModulosPage() {
       const tipo = quitarAcentos(tipoPaqueteSelected.nombre ?? "").toLowerCase();
 
       if (tipo === "aereo") {
-        setValue("propio", false); // Desmarcar si es aereo
+        setValue("titularComoPasajero", false); // Desmarcar si es aereo
       } else {
-        setValue("propio", true); // Marcar si es terrestre u otro
+        setValue("titularComoPasajero", true); // Marcar si es terrestre u otro
       }
     }, [tipoPaqueteSelected, setValue]);
   
@@ -323,27 +345,18 @@ export default function ModulosPage() {
         handleShowToast('Se ha creado un nuevo reserva satisfactoriamente', 'success');
         reset({
           nombre: '',
-          tipo_paquete: '',
-          fecha_salida: '',
-          fecha_regreso: '',
           distribuidora_id: '',
-          destino: '',
-          cantidad_pasajeros: '',
-          moneda: '',
-          personalizado: false,
-          propio: true,
-          imagen: '',
+          paquete: '',
         });
 
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
-        setImagePreview(placeholderViaje);
         setSelectedPermissions([])
-        setSelectedDestinoID("");
+        setSelectedPaqueteID("");
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
-        handleDestinoNoSeleccionada(undefined)
+        handlePaqueteNoSeleccionada(undefined)
         
         setActiveTab('list');
         queryClient.invalidateQueries({
@@ -371,9 +384,9 @@ export default function ModulosPage() {
 
 
         // setSelectedPersonaID("");
-        // setSelectedDestinoID("");
+        // setSelectedPaqueteID("");
         // setPersonaNoSeleccionada(undefined);
-        // setDestinoNoSeleccionada(undefined);
+        // setPaqueteNoSeleccionada(undefined);
 
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
@@ -399,14 +412,9 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         reset({
             tipo_paquete: '',
-            fecha_salida: '',
-            fecha_regreso: '',
             distribuidora_id: '',
-           imagen: '',
           });
 
-
-          setImagePreview(placeholderViaje);
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
@@ -437,21 +445,28 @@ export default function ModulosPage() {
   });
 
 
+  const handleDataNoSeleccionada = (value: boolean | undefined) => {
+  }
+
+  const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
+    setPersonaNoSeleccionada(value);
+  }
+
+
   const handleCancel = () => {
         setDataAEditar(undefined);
         setOnGuardar(false)
-        setSelectedDestinoID("");
+        setSelectedPaqueteID("");
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
-        handleDestinoNoSeleccionada(undefined)
-        // setNewDataPersonaList([...dataPersonaList])
-        setImagePreview(placeholderViaje);
+        handlePaqueteNoSeleccionada(undefined)
+        setSelectedPersonaID("");
+        handleDataNoSeleccionada(undefined)
+        handleDataNoPersonaSeleccionada(undefined)
+        setNewDataPersonaList([...dataPersonaList])
         reset({
             nombre: '',
-            fecha_salida: '',
-            fecha_regreso: '',
             distribuidora_id: '',
-            imagen: '',
         });
 
 
@@ -464,8 +479,10 @@ export default function ModulosPage() {
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
-      if (destinoNoSeleccionada === undefined) {
-        setDestinoNoSeleccionada(true);
+      console.log('persona: ', selectedPersonaID);
+
+      if (paqueteNoSeleccionada === undefined) {
+        setPaqueteNoSeleccionada(true);
       }
 
       console.log(dataForm)
@@ -474,12 +491,10 @@ export default function ModulosPage() {
 
       const payload = {
         ...dataForm,
-        destino_id: selectedDestinoID,
+        destino_id: selectedPaqueteID,
         tipo_paquete_id: dataForm.tipo_paquete,
         servicios_ids: selectedPermissions, // Array de IDs
-        moneda_id: dataForm.moneda,
-        fecha_inicio: dataForm.fecha_salida,
-        fecha_fin: dataForm.fecha_regreso,
+        persona: selectedPersonaID,
         activo: true,
       };
 
@@ -491,10 +506,8 @@ export default function ModulosPage() {
       delete payload.destino;
       delete payload.distribuidora;
       delete payload.moneda;
-      delete payload.fecha_salida;
-      delete payload.fecha_regreso;
 
-      if (watch("propio")) {
+      if (watch("titularComoPasajero")) {
         delete payload.distribuidora;
         delete payload.distribuidora_id;
       } else {
@@ -503,98 +516,40 @@ export default function ModulosPage() {
 
 
       console.log(payload);
-
-      const formData = new FormData();
-
-      // Imagen: agregar solo si existe y es archivo
-      if (dataForm.imagen && dataForm.imagen.length > 0) {
-        formData.append("imagen", dataForm.imagen[0]); // Primer archivo
-      }
-
-      // Agregar el resto de campos
-      Object.keys(payload).forEach((key) => {
-        const value = payload[key];
-        if (value !== undefined && value !== null) {
-          if (Array.isArray(value)) {
-            // Enviar cada elemento del array como entrada separada
-            value.forEach((v) => formData.append(key, v));
-          } else {
-            formData.append(key, value);
-          }
-        }
-      });
-
-      console.log("FormData listo:", [...formData.entries()]);
-
       // Llamada al mutate enviando formData
-      mutate(formData);
+      // mutate(formData);
     };
 
 
   const handleGuardarDataEditado = async (dataForm: any) => {
-    const fecha_inicio = dataForm.fecha_salida ? formatearFechaDDMMYY(dataForm.fecha_salida) : null;
-    const fecha_fin = dataForm.fecha_regreso ? formatearFechaDDMMYY(dataForm.fecha_regreso) : null;
 
     const payload = {
       ...dataForm,
-      destino_id: selectedDestinoID,
+      destino_id: selectedPaqueteID,
       tipo_paquete_id: tipoPaqueteSelected?.id,
       servicios_ids: selectedPermissions,
-      moneda_id: dataForm.moneda,
-      fecha_inicio,
-      fecha_fin,
+      persona: selectedPersonaID,
     };
 
     // Limpiar campos que no deben enviarse
     delete payload.numero;
     delete payload.tipo_paquete;
-    delete payload.destino;
-    delete payload.moneda;
+    delete payload.paquete;
     delete payload.servicios;
-    delete payload.fecha_regreso;
-    delete payload.fecha_salida;
     delete payload.distribuidora;
 
-    if (watch("propio")) {
+    if (watch("titularComoPasajero")) {
       delete payload.distribuidora_id;
     } else {
       delete payload.cantidad_pasajeros;
     }
 
-    const formData = new FormData();
+   
 
-    // ✅ Agregar imagen solo si es nueva (File)
-    if (
-      dataForm.imagen &&
-      dataForm.imagen.length > 0 &&
-      dataForm.imagen[0] instanceof File
-    ) {
-      formData.append("imagen", dataForm.imagen[0]);
-    }
-
-    // Agregar el resto de campos
-    Object.entries(payload).forEach(([key, value]) => {
-      if (key === 'imagen' || key === 'imagen_url') {
-        if (value instanceof File) {
-          formData.append(key, value);
-        }
-      } else if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(key, v));
-      } else if (value !== undefined && value !== null) {
-        formData.append(key, value as any);
-      }
-    });
-
-    console.log("FormData listo:", [...formData.entries()]);
-    // Debug para ver lo que se envía
-    for (const pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
-    }
-
-    mutateGuardarEditado({
-        data: formData,
-        paqueteId: payload.id
-      });
+    // mutateGuardarEditado({
+    //     data: formData,
+    //     paqueteId: payload.id
+    //   });
   };
 
 
@@ -613,43 +568,18 @@ export default function ModulosPage() {
     // Si no cumple el formato esperado, devuelve la misma fecha
     return fecha;
   }
-  /********************************
-   * CORREGIR ESTA PARTE
-   *******************************/
-  /********************************
-   * CORREGIR ESTA PARTE
-   *******************************/
+  
+  
   useEffect(() => {
     if (dataAEditar) {
       console.log('reset data para editar: ', dataAEditar)
-
-      // fecha_creacion: '2025-09-09T10:49:05+0000',
-      // fecha_modificacion: '2025-09-09T10:49:05+0000',
-
-      //COMENTADO TEMPORALMENTE
-      // console.log(dataAEditar.moneda.id);
-      // console.log(dataAEditar.tipo_paquete.id);
       reset({
         ...dataAEditar,
-        //COMENTADO TEMPORALMENTE
-        // tipo_paquete: dataAEditar.tipo_paquete.id.toString(),
-        // moneda: dataAEditar.moneda.id.toString(),
-        // distribuidora_id: dataAEditar?.distribuidora?.id?.toString(),
-        // fecha_salida: dataAEditar?.fecha_inicio ? formatearFecha(dataAEditar?.fecha_inicio ?? '', false) : '',
-        // fecha_regreso: dataAEditar?.fecha_fin ? formatearFecha(dataAEditar?.fecha_fin ?? '', false) : '',
-        //COMENTADO TEMPORALMENTE
+        persona: dataAEditar.titular.id.toString()
       });
 
-      //COMENTADO TEMPORALMENTE
-      // if (dataAEditar?.imagen_url) {
-      //   setImagePreview(dataAEditar?.imagen_url); // Mostrar la imagen que viene del backend
-      // }
-
-
-      //COMENTADO TEMPORALMENTE
-      // console.log('dataAEditar.persona.id: ', dataAEditar.persona.id)
-      // setSelectedPersonaID(dataAEditar.persona.id);
-      handleDestinoNoSeleccionada(true);
+      setSelectedPersonaID(dataAEditar.titular.id);
+      handleDataNoSeleccionada(true);
     }
   }, [dataAEditar, reset]);
 
@@ -674,7 +604,7 @@ export default function ModulosPage() {
   //   fecha_fin: null,
   //   personalizado: true,
   //   cantidad_pasajeros: null,
-  //   propio: false,
+  //   titularComoPasajero: false,
   //   activo: true,
   //   imagen: null,
   //   imagen_url: null,
@@ -687,10 +617,12 @@ export default function ModulosPage() {
     console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
+
+     setSelectedPersonaID(data!.titular.id)
     
 
     //COMENTADO TEMPORALMENTE
-      // setSelectedDestinoID(data!.destino.id)
+      // setSelectedPaqueteID(data!.destino.id)
       // setTipoPaqueteSelected(data!.tipo_paquete)
       // setDistribuidoraSelected(data!.distribuidora);
       // setSelectedPermissions(servicios_ids)
@@ -732,8 +664,8 @@ export default function ModulosPage() {
     }
   }, [nombreABuscar]);
 
-  const handleDestinoNoSeleccionada = (value: boolean | undefined) => {
-    setDestinoNoSeleccionada(value);
+  const handlePaqueteNoSeleccionada = (value: boolean | undefined) => {
+    setPaqueteNoSeleccionada(value);
   }
 
 
@@ -773,14 +705,6 @@ export default function ModulosPage() {
     });
   };
 
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setImagePreview(url); // Mostrar preview de la nueva imagen
-    }
-  };
 
   return (
     <>
@@ -1162,107 +1086,15 @@ export default function ModulosPage() {
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* NOMBRE DE LA PERSONA */}
-                        <div className="space-y-2">
-                          <Label htmlFor="nombre" className="text-gray-700 font-medium">
-                            Nombre *
-                          </Label>
-                          <Input
-                            id="nombre"
-                            autoComplete="nombre"
-                            placeholder="Nombre"
-                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                            {...register('nombre', {
-                            required: true, 
-                            validate: {blankSpace: (value) => !!value.trim()},
-                            minLength: 3})}
-                          />
-                          <div>
-                            {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                            {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El nombre debe tener minimo 3 caracteres</span>}
-                          </div>
-                        </div>
-
-                          {/* TIPO PAQUETE */}
-                          <div className="space-y-2">
-                            <Label htmlFor="tipo_paquete" className="text-gray-700 font-medium">
-                              Tipo de Reserva *
-                            </Label>
-
-                            {isFetchingTipoPaquetes && (
-                              <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
-                                <Select>
-                                  <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
-                                  <div className="w-full flex items-center justify-center">
-                                    <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                                  </div>
-                                  </SelectTrigger>
-                                </Select>
-                              </div>
-                            )}
-
-                            {!isFetchingTipoPaquetes && 
-                              <Controller
-                                name="tipo_paquete"
-                                control={control}
-                                rules={{ required: "Este campo es requerido" }}
-                                render={({ field }) => (
-                                  <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
-                                    <Select
-                                      value={field.value}
-                                      onValueChange={(value) => {
-                                        field.onChange(value)
-                                        if (value) {
-                                          clearErrors("tipo_paquete")
-                                        }
-
-                                        console.log('value: ', value);
-                                        const tipoPaquete = dataTipoPaqueteList.filter((doc: TipoPaquete) => doc.id.toString() === value)
-                                        console.log('tipo_paquete 1: ', tipoPaquete[0])
-                                        setTipoPaqueteSelected(tipoPaquete[0]);
-                                      }}
-                                      onOpenChange={(open) => {
-                                        if (!open && !field.value) {
-                                          field.onBlur(); 
-                                        }
-                                      }}
-                                    >
-                                      <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                                        <SelectValue placeholder="Selecciona el tipo de reserva" />
-                                      </SelectTrigger>
-                                      <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
-                                        {dataTipoPaqueteList.map((data: TipoPaquete) => 
-                                          <SelectItem 
-                                            key={data.id} 
-                                            value={data.id.toString()}
-                                            className="pl-2 pr-4"
-                                          >
-                                            <div className="flex items-center gap-2 min-w-0">
-                                              <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
-                                              <span className="truncate">{data.nombre}</span>
-                                            </div>
-                                          </SelectItem>
-                                        )}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                )}
-                              />
-                            }
-
-                            {errors.tipo_paquete && (
-                              <p className="text-red-400 text-sm">{errors.tipo_paquete.message as string}</p>
-                            )}
-                        </div>
 
 
                         {/* DESTINO */}
                           <div className="space-y-2 mi-select-wrapper">
-                            <Label htmlFor="destino" className="text-gray-700 font-medium">
-                              Destino *
+                            <Label htmlFor="paquete" className="text-gray-700 font-medium">
+                              Paquete *
                             </Label>
 
-                            {isFetchingDestino &&
+                            {isFetchingPaquete &&
                             <Select>
                               <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
                                 <div className="w-full flex items-center justify-center">
@@ -1271,85 +1103,81 @@ export default function ModulosPage() {
                               </SelectTrigger>
                             </Select>
                             }
-                            {!isFetchingDestino && 
+                            {!isFetchingPaquete && 
                               <>
                                 <div className="space-y-2">
                                   <GenericSearchSelect
-                                    dataList={dataDestinoList}
-                                    value={selectedDestinoID}
-                                    onValueChange={setSelectedDestinoID}
-                                    handleDataNoSeleccionada={handleDestinoNoSeleccionada}
-                                    placeholder="Selecciona el destino..."
+                                    dataList={dataPaquetesList}
+                                    value={selectedPaqueteID}
+                                    onValueChange={setSelectedPaqueteID}
+                                    handleDataNoSeleccionada={handlePaqueteNoSeleccionada}
+                                    placeholder="Selecciona el paquete..."
                                     labelKey="nombre"
-                                    secondaryLabelKey="pais_nombre"
+                                    secondaryLabelKey="destino"
+                                    thirdLabelKey="pais"
                                     valueKey="id"
                                   />
                               </div>
                               </>
                             }
 
-                              {destinoNoSeleccionada === false && (
+                              {paqueteNoSeleccionada === false && (
                                 <p className="text-red-400 text-sm">Este campo es requerido</p>
                               )}
                           </div>
 
+
+                          <div className="space-y-2 mi-select-wrapper">
+                              <Label htmlFor="persona" className="text-gray-700 font-medium">
+                                Titular *
+                              </Label>
+                              
+                                <div className="space-y-2">
+                                    <DinamicSearchSelect
+                                      disabled={!!dataAEditar}
+                                      dataList={newDataPersonaList || []}
+                                      value={selectedPersonaID}
+                                      onValueChange={setSelectedPersonaID}
+                                      handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                                      onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                      isFetchingPersonas={isFetchingPersonas}
+                                      placeholder="Buscar titular..."
+                                      valueKey="id"
+                                    />
+                                </div>
+  
+                                {personaNoSeleccionada === false && (
+                                  <p className="text-red-400 text-sm">Este campo es requerido</p>
+                                )}
+                            </div>
+
                           <div className="space-y-2 flex items-center justify-center gap-20">
                             <Controller
-                                name="propio"
-                                control={control}
-                                defaultValue={false}
-                                render={({ field }) => {
-                                  const isDisabled =
-                                    quitarAcentos(tipoPaqueteSelected?.nombre.toLowerCase() ?? "") ===
-                                    "aereo";
-
-                                  return (
-                                    <div className="flex items-center gap-3 cursor-pointer m-0">
-                                      <Checkbox
-                                        id="propio"
-                                        checked={field.value}
-                                        disabled={isDisabled} // 🔹 Desactiva visualmente y funcionalmente
-                                        onCheckedChange={(checked) => {
-                                          if (!isDisabled) {
-                                            field.onChange(!!checked);
-                                          }
-                                        }}
-                                        className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
-                                      />
-                                      <Label
-                                        htmlFor="propio"
-                                        className={`cursor-pointer ${isDisabled ? "opacity-50" : ""}`}
-                                      >
-                                        Reserva Propio
-                                      </Label>
-                                    </div>
-                                  );
-                                }}
-                              />
-
-
-                            {/* PERSONALIZADO */}
-                            <Controller
-                              name="personalizado"
+                              name="titularComoPasajero"
                               control={control}
                               defaultValue={false}
                               render={({ field }) => (
                                 <div className="flex items-center gap-3 cursor-pointer m-0">
                                   <Checkbox
-                                    id="personalizado"
+                                    id="titularComoPasajero"
                                     checked={field.value}
                                     onCheckedChange={(checked) => field.onChange(!!checked)}
                                     className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
                                   />
-                                  <Label htmlFor="personalizado" className="cursor-pointer">Personalizado</Label>
+                                  <Label
+                                    htmlFor="titularComoPasajero"
+                                    className="cursor-pointer"
+                                  >
+                                    El titular también viaja (incluir como pasajero)
+                                  </Label>
                                 </div>
                               )}
                             />
                           </div>
 
 
-                          {/* MONTO PRECIO */}
-                          {watch("propio")  && 
+
+                          {/* CANTIDAD DE PASAJEROS */}
                             <div className="space-y-2">
                               <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
                                 Cantidad de pasajeros *
@@ -1374,300 +1202,108 @@ export default function ModulosPage() {
                                 )}
                               </div>
                             </div>
-                          }
-
-
-                          {/* LISTADO DE DISTRIBUIDORA */}
-                          { !watch("propio") && 
-                            <div className="space-y-2">
-                              <Label htmlFor="distribuidora_id" className="text-gray-700 font-medium">
-                                Distribuidora *
-                              </Label>
-
-                              {isFetchingDistribuidora && (
-                                <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
-                                  <Select>
-                                    <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
-                                    <div className="w-full flex items-center justify-center">
-                                      <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                                    </div>
-                                    </SelectTrigger>
-                                  </Select>
-                                </div>
-                              )}
-
-                              {!isFetchingDistribuidora && 
-                                <Controller
-                                  name="distribuidora_id"
-                                  control={control}
-                                  rules={{ required: "Este campo es requerido" }}
-                                  render={({ field }) => (
-                                    <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
-                                      <Select
-                                        value={field.value}
-                                        onValueChange={(value) => {
-                                          field.onChange(value)
-                                          if (value) {
-                                            clearErrors("distribuidora_id")
-                                          }
-
-                                          console.log('value: ', value);
-                                          const distribuidora = dataDistribuidoraList.filter((doc: Distribuidora) => doc.id.toString() === value)
-                                          console.log('distribuidora: ', distribuidora[0])
-                                          setDistribuidoraSelected(distribuidora[0]);
-                                        }}
-                                        onOpenChange={(open) => {
-                                          if (!open && !field.value) {
-                                            field.onBlur(); 
-                                          }
-                                        }}
-                                      >
-                                        <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                                          <SelectValue placeholder="Selecciona la distribuidora" />
-                                        </SelectTrigger>
-                                        <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
-                                          {dataDistribuidoraList.map((data: Distribuidora) => 
-                                            <SelectItem 
-                                              key={data.id} 
-                                              value={data.id.toString()}
-                                              className="pl-2 pr-4"
-                                            >
-                                              <div className="flex items-center gap-2 min-w-0">
-                                                <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
-                                                <span className="truncate">{data.nombre}</span>
-                                              </div>
-                                            </SelectItem>
-                                          )}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  )}
-                                />
-                              }
-
-                              {errors.distribuidora_id && (
-                                <p className="text-red-400 text-sm">{errors.distribuidora_id.message as string}</p>
-                              )}
-                          </div>
-                          }
-
-
-                                                    {/* TIPO PAQUETE */}
-                          <div className="space-y-2">
-                            <Label htmlFor="moneda" className="text-gray-700 font-medium">
-                              Moneda *
-                            </Label>
-
-                            {isFetchingTipoPaquetes && (
-                              <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
-                                <Select>
-                                  <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
-                                  <div className="w-full flex items-center justify-center">
-                                    <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                                  </div>
-                                  </SelectTrigger>
-                                </Select>
-                              </div>
-                            )}
-
-                            {!isFetchingMoneda && 
-                              <Controller
-                                name="moneda"
-                                control={control}
-                                rules={{ required: "Este campo es requerido" }}
-                                render={({ field }) => (
-                                  <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
-                                    <Select
-                                      value={field.value}
-                                      onValueChange={(value) => {
-                                        field.onChange(value)
-                                        if (value) {
-                                          clearErrors("moneda")
-                                        }
-
-                                        console.log('value: ', value);
-                                        // const tipoPaquete = dataTipoPaqueteList.filter((doc: TipoPaquete) => doc.id.toString() === value)
-                                        // console.log('moneda: ', tipoPaquete[0])
-                                        // setMone(tipoPaquete[0]);
-                                      }}
-                                      onOpenChange={(open) => {
-                                        if (!open && !field.value) {
-                                          field.onBlur(); 
-                                        }
-                                      }}
-                                    >
-                                      <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                                        <SelectValue placeholder="Selecciona el tipo de reserva" />
-                                      </SelectTrigger>
-                                      <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
-                                        {dataMonedaList.map((data: Moneda) => 
-                                          <SelectItem 
-                                            key={data.id} 
-                                            value={data.id.toString()}
-                                            className="pl-2 pr-4"
-                                          >
-                                            <div className="flex items-center gap-2 min-w-0">
-                                              <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
-                                              <span className="truncate">{data.nombre}</span>
-                                              <Badge className="bg-gray-100 text-gray-700 border-gray-200">
-                                                {data.codigo}
-                                              </Badge>
-                                            </div>
-                                          </SelectItem>
-                                        )}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                )}
-                              />
-                            }
-
-                            {errors.moneda && (
-                              <p className="text-red-400 text-sm">{errors.moneda.message as string}</p>
-                            )}
-                        </div>
-                
-                            <div className="space-y-2">
-                              <Label htmlFor="fecha_salida" className="text-gray-700 font-medium">
-                                Fecha de Salida *
-                              </Label>
-
-                              <Controller
-                                name="fecha_salida"
-                                control={control}
-                                rules={{
-                                required: !watch('personalizado') ? "Este campo es requerido" : false,
-                              }}
-                                render={({ field }) => (
-                                  <Flatpickr
-                                    value={field.value}
-                                    onChange={(date) => {
-                                        if (date[0]) {
-                                          const fecha = date[0];
-                                          const año = fecha.getFullYear();
-                                          const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-                                          const dia = String(fecha.getDate()).padStart(2, "0");
-                                          field.onChange(`${año}-${mes}-${dia}`); // YYYY/MM/DD
-                                        } else {
-                                          field.onChange(null);
-                                        }
-                                        trigger("fecha_salida"); // Forzar revalidación
-                                      }}
-                                    onClose={() => {
-                                      trigger("fecha_salida"); // Forzar revalidación al cerrar el calendario
-                                    }}
-                                    className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-2
-                                      focus:border-gray-500 focus:outline focus:outline-gray-500"
-                                    placeholder="DD/MM/YYYY"
-                                  />
-                                )}
-                              />
-
-                              {errors.fecha_salida?.message && (
-                                <span className="text-red-400 text-sm">
-                                  {errors.fecha_salida.message as string}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="fecha_regreso" className="text-gray-700 font-medium">
-                                Fecha de Regreso *
-                              </Label>
-
-                              <Controller
-                                name="fecha_regreso"
-                                control={control}
-                                rules={{
-                                  required: !watch('personalizado') ? "Este campo es requerido" : false,
-                                }}
-                                render={({ field }) => (
-                                  <Flatpickr
-                                    value={field.value}
-                                    onChange={(date) => {
-                                        if (date[0]) {
-                                          const fecha = date[0];
-                                          const año = fecha.getFullYear();
-                                          const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-                                          const dia = String(fecha.getDate()).padStart(2, "0");
-                                          field.onChange(`${año}-${mes}-${dia}`); // YYYY/MM/DD
-                                        } else {
-                                          field.onChange(null);
-                                        }
-                                        trigger("fecha_regreso"); // Forzar revalidación
-                                      }}
-                                    onClose={() => {
-                                      trigger("fecha_regreso"); // Forzar revalidación al cerrar el calendario
-                                    }}
-                                    className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-2
-                                      focus:border-gray-500 focus:outline focus:outline-gray-500"
-                                    placeholder="DD/MM/YYYY"
-                                  />
-                                )}
-                              />
-
-                              {errors.fecha_regreso?.message && (
-                                <span className="text-red-400 text-sm">
-                                  {errors.fecha_regreso.message as string}
-                                </span>
-                              )}
-                            </div>
-
-                           <div className="space-y-2 md:col-span-2">
-                              <div className="space-y-2 md:col-span-2">
-                                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Imagen del Reserva
-                                  </label>
-                                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-gray-400 transition-colors">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      {...register("imagen")} // 📌 Registro del campo en useForm
-                                      onChange={(e) => {
-                                        register("imagen").onChange(e); // Mantener registro
-                                        handleImageChange(e); // Manejar preview
-                                      }}
-                                      className="hidden"
-                                      id="imagen-upload"
-                                    />
-                                    <label
-                                      htmlFor="imagen-upload"
-                                      className="cursor-pointer flex flex-col items-center space-y-2"
-                                    >
-                                      {imagePreview ? (
-                                        <div className="relative">
-                                          <img
-                                            src={imagePreview}
-                                            alt="Preview"
-                                            className="w-32 h-32 object-cover rounded-lg"
-                                          />
-                                          <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center opacity-0 hover:opacity-40 transition-opacity">
-                                            <Upload className="text-white" size={24} />
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          <Upload className="text-gray-400" size={48} />
-                                          <div className="text-center">
-                                            <p className="text-gray-600">Haz clic para subir una imagen</p>
-                                            <p className="text-sm text-gray-400">PNG, JPG hasta 10MB</p>
-                                          </div>
-                                        </>
-                                      )}
-                                    </label>
-                                  </div>
-                              </div>
-                          </div>
 
 
                             <div className="space-y-2 md:col-span-2">
-                                <Label className="text-gray-700 font-medium">Seleccione los servicios *</Label>
+
+                               {/* Mostrar titular como pasajero si está marcado */}
+                                    {watch('titularComoPasajero') && (
+                                      <div className="mb-6">
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
+                                        <div className="p-4 bg-blue-50 rounded-lg">
+                                          <div className="flex items-center space-x-4">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                              <Crown className="w-5 h-5 text-blue-600" />
+                                            </div>
+                                            <div>
+                                              <p className="font-medium text-gray-900">
+                                                Victor Cubas
+                                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
+                                              </p>
+                                              <p className="text-sm text-gray-500">
+                                                {/* {DOCUMENT_TYPES[formData.persona.tipo_documento || 'cedula']}: {formData.persona.numero_documento} */}
+                                                asdasdasdsa
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                            </div>
+
+                              <div className="space-y-2 md:col-span-2">
+                                  <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                                  Pasajeros ({0 + (watch('titularComoPasajero') ? 1 : selectedPermissions.length)})
+                                </h2>
+
+                                  {selectedPermissions && selectedPermissions.length > 0 && (
+                                      <div className="mb-6">
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Pasajeros Agregados</h3>
+                                        <div className="space-y-3">
+                                          {selectedPermissions.map((pasajero: any) => (
+                                            <div key={pasajero.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                              <div className="flex items-center space-x-4">
+                                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                  ADASDASDAS
+                                                </div>
+                                                <div>
+                                                  <p className="font-medium text-gray-900">
+                                                    EQWEQWQWQW
+                                                  </p>
+                                                  <p className="text-sm text-gray-500">
+                                                    WDGERHERTHERTHER
+                                                  </p>
+                                                </div>
+                                              </div>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handlePermissionToggle(pasajero.id)}
+                                                  className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                                                >
+                                                  <X className="w-4 h-4" />
+                                                </button>
+                                              {/* )} */}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                     {/* Mostrar titular como pasajero si está marcado */}
+                                    {watch('titularComoPasajero') && (
+                                      <div className="mb-6">
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
+                                        <div className="p-4 bg-blue-50 rounded-lg">
+                                          <div className="flex items-center space-x-4">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                              <Crown className="w-5 h-5 text-blue-600" />
+                                            </div>
+                                            <div>
+                                              <p className="font-medium text-gray-900">
+                                                {/* {formData.persona.nombre} {formData.persona.apellido} */}
+                                                Victor Cubas
+                                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
+                                              </p>
+                                              <p className="text-sm text-gray-500">
+                                                {/* {DOCUMENT_TYPES[formData.persona.tipo_documento || 'cedula']}: {formData.persona.numero_documento} */}
+                                                4023123
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                              </div>
+
+                            <div className="space-y-2 md:col-span-2">
+                                <Label className="text-gray-700 font-medium">Seleccione los pasajeros *</Label>
 
                                 
                                 <div className="relative mb-4">
                                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                   <Input
-                                    placeholder="Buscar servicios..."
+                                    placeholder="Buscar pasajeros..."
                                     value={permissionSearchTerm}
                                     onChange={(e) => setPermissionSearchTerm(e.target.value)}
                                     className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -1824,12 +1460,12 @@ export default function ModulosPage() {
                       {!dataAEditar &&
                         <Button 
                             onClick={() => {
-                              console.log('destinoNoSeleccionada 1: ', destinoNoSeleccionada);
+                              console.log('paqueteNoSeleccionada 1: ', paqueteNoSeleccionada);
                               setOnGuardar(true)
                               
-                              if(destinoNoSeleccionada === undefined){
-                                  console.log('destinoNoSeleccionada 2: ', destinoNoSeleccionada);
-                                  setDestinoNoSeleccionada(false);
+                              if(paqueteNoSeleccionada === undefined){
+                                  console.log('paqueteNoSeleccionada 2: ', paqueteNoSeleccionada);
+                                  setPaqueteNoSeleccionada(false);
                                 }
                             }}
                             disabled={isPendingMutation}
