@@ -46,7 +46,7 @@ export const fetchData = async (page: number, page_size: number = 5,
 
 //tanstackquery ya maneja el error y en el interceptor tambien
 export async function nuevoDataFetch(data: any) {
-    await axiosInstance.post(`/paquete/`, data);    
+    await axiosInstance.post(`/reservas/`, data);    
 }
 
 export async function guardarDataEditado({ data, paqueteId }: { data: any; paqueteId: number | string }) {
