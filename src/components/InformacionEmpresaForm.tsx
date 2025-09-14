@@ -459,10 +459,6 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label className="font-medium text-sm text-gray-700">
-              Establecimiento seleccionado:{" "}
-              <span className="text-gray-900">{establecimientoSelected?.nombre}</span>
-            </Label>
 
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -522,7 +518,7 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
                             </Badge>
 
                             <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                              {punto.establecimiento.nombre} - {punto.establecimiento.id}
+                              {punto.establecimiento.nombre}
                             </Badge>
                           </div>
                         </div>
