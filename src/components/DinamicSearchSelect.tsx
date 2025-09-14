@@ -12,6 +12,7 @@ interface GenericSearchSelectProps<T> {
   value: number | "";
   onValueChange?: (value: number | "") => void;
   handleDataNoSeleccionada?: (value: boolean | undefined) => void;
+  setSelectedTitularData?: (value: any) => void;
   onSearchChange?: (search: string) => void; // 🔹 Nuevo para notificar búsqueda
   placeholder?: string;
   disabled?: boolean;
@@ -26,6 +27,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   value,
   onValueChange,
   handleDataNoSeleccionada,
+  setSelectedTitularData,
   onSearchChange,
   placeholder = "Seleccionar...",
   disabled = false,
@@ -80,6 +82,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   const handleSelect = (item: T) => {
     setSelectedItem(item);
     onValueChange?.(item[valueKey]);
+    setSelectedTitularData?.(item);
     setIsOpen(false);
     setSearchTerm("");
   };
@@ -87,6 +90,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   const handleClear = () => {
     setSelectedItem(null);
     onValueChange?.("");
+    setSelectedTitularData?.(undefined);
     setSearchTerm("");
   };
 
