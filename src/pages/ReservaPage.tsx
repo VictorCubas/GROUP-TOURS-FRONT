@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
@@ -31,18 +30,7 @@ import {
   // Building,
   X,
   Bus,
-  Plane,
-  Croissant,
-  Car,
-  Upload,
-  Heart,
-  Share2,
-  MapPin,
-  Clock,
   Users,
-  Star,
-  Hotel,
-  Building2,
   Table2,
   Grid3X3,
   Crown,
@@ -60,14 +48,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FaAngleDoubleLeft, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { FaAngleDoubleRight } from "react-icons/fa";
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { TbBus } from "react-icons/tb";
 // import { FaUserGroup } from "react-icons/fa6";
 import { RiGroupLine } from "react-icons/ri";
 
 
 
 import "flatpickr/dist/themes/material_green.css";
-import Flatpickr from "react-flatpickr"; 
 
 
 import {
@@ -79,8 +65,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Distribuidora, type Moneda, type Paquete, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
-import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
+import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Distribuidora, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
+import {formatearFecha, formatearSeparadorMiles, quitarAcentos } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpReservas"
 import { fetchData as fetchDataPersona } from "@/components/utils/httpPersona"
 
@@ -93,13 +79,10 @@ import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
-import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
 import { fetchDataPaqueteTodos, fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
-import { fetchDataPersonasTodos } from "@/components/utils/httpPersona"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -127,6 +110,7 @@ import { fetchDataPersonasTodos } from "@/components/utils/httpPersona"
 
 let dataList: Reserva[] = [];
 let tipoReservaFilterList: any[] = [];
+console.log(tipoReservaFilterList);
 
 export default function ModulosPage() {
   const {siTienePermiso} = useSessionStore();
@@ -143,6 +127,7 @@ export default function ModulosPage() {
   const [distribuidoraSelected, setDistribuidoraSelected] = useState<Distribuidora>();
   const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  const [selectedPasajerosData, setSelectedPasajerosData] = useState<any[]>([])
   const [dataDetalle, setDataDetalle] = useState<Reserva>();
    const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
@@ -150,6 +135,7 @@ export default function ModulosPage() {
   const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
   const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
   const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
+  const [selectedTitularData, setSelectedTitularData] = useState<any | undefined>();
   const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
   
   const [filtros, setFiltros] = useState({
@@ -161,7 +147,7 @@ export default function ModulosPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
+  const {control,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -169,7 +155,7 @@ export default function ModulosPage() {
               }
             });
   // DATOS DEL FORMULARIO 
-
+  // console.log(tipoReservaFilterList)
 
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -181,6 +167,9 @@ export default function ModulosPage() {
                                                       totalPages: 5,
                                                       pageSize: 10
                                               });
+
+  console.log(onVerDetalles)
+  console.log(dataDetalle);
    
     console.log(distribuidoraSelected)
 
@@ -209,6 +198,7 @@ export default function ModulosPage() {
       queryFn: () => fetchDataTiposPaquetesTodos(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
+    
 
   const {data: dataMonedaList, isFetching: isFetchingMoneda,} = useQuery({
       queryKey: ['monedas-disponibles',], //data cached
@@ -227,6 +217,14 @@ export default function ModulosPage() {
       queryFn: () => fetchDataDistribuidoraTodos(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
+
+
+  console.log(isFetchingTipoPaquetes);
+  console.log(dataMonedaList, isFetchingServicios);
+  console.log( isFetchingMoneda);
+  console.log(dataDistribuidoraList, isFetchingDistribuidora);
+  // console.log(dataMonedaList, isFetchingServicios);
+
 
   const {data, isFetching, isError} = useQuery({
     queryKey: ['reservas', currentPage, paginacion.pageSize, filtros], //data cached
@@ -267,6 +265,11 @@ export default function ModulosPage() {
         setNewDataPersonaList([])
       }
     }, [isFetchingPersonas]);
+
+
+    console.log(selectedPersonaID);
+    console.log(selectedTitularData); 
+    console.log(watch('titularComoPasajero')); ;
 
 
    useEffect(() => {  
@@ -356,7 +359,8 @@ export default function ModulosPage() {
         setSelectedPaqueteID("");
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
-        handlePaqueteNoSeleccionada(undefined)
+        handlePaqueteNoSeleccionada(undefined);
+        selectedTitularData(undefined)
         
         setActiveTab('list');
         queryClient.invalidateQueries({
@@ -381,6 +385,9 @@ export default function ModulosPage() {
         queryClient.invalidateQueries({
           queryKey: ['usuarios-resumen'],
         });
+
+
+        handleCancel();
 
 
         // setSelectedPersonaID("");
@@ -446,6 +453,7 @@ export default function ModulosPage() {
 
 
   const handleDataNoSeleccionada = (value: boolean | undefined) => {
+    console.log(value)
   }
 
   const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
@@ -456,6 +464,7 @@ export default function ModulosPage() {
   const handleCancel = () => {
         setDataAEditar(undefined);
         setOnGuardar(false)
+        setSelectedTitularData(undefined)
         setSelectedPaqueteID("");
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
@@ -463,7 +472,7 @@ export default function ModulosPage() {
         setSelectedPersonaID("");
         handleDataNoSeleccionada(undefined)
         handleDataNoPersonaSeleccionada(undefined)
-        setNewDataPersonaList([...dataPersonaList])
+        setNewDataPersonaList([...dataPersonaList.results])
         reset({
             nombre: '',
             distribuidora_id: '',
@@ -485,20 +494,35 @@ export default function ModulosPage() {
         setPaqueteNoSeleccionada(true);
       }
 
+
+      const pasajerosIds = selectedPasajerosData.map(p => p.id)
+      console.log(pasajerosIds)
+      console.log(selectedTitularData);
+      console.log(selectedPasajerosData);
+      console.log(selectedPaqueteID);
       console.log(dataForm)
 
       console.log(tipoPaqueteSelected)
 
       const payload = {
         ...dataForm,
-        destino_id: selectedPaqueteID,
-        tipo_paquete_id: dataForm.tipo_paquete,
-        servicios_ids: selectedPermissions, // Array de IDs
+        titular_id: selectedTitularData?.id,
+        paquete_id: selectedPaqueteID,
+        pasajeros: pasajerosIds, // Array de IDs
         persona: selectedPersonaID,
+        canditidad_pasajeros: dataForm.canditidad_pasajeros,
+        estado: dataForm.estado,
         activo: true,
       };
 
-
+//       {
+//   "titular_id": 1,
+//   "paquete_id": 2,
+//   "cantidad_pasajeros": 2,
+//   "monto_pagado": 0,
+//   "estado": "cancelada"
+// "pasajeros": [3, 4] 
+// }
 
       // Eliminar campos que no se envían
       delete payload.numero;
@@ -506,18 +530,20 @@ export default function ModulosPage() {
       delete payload.destino;
       delete payload.distribuidora;
       delete payload.moneda;
+      delete payload.persona;
+      delete payload.titularComoPasajero;
 
-      if (watch("titularComoPasajero")) {
-        delete payload.distribuidora;
-        delete payload.distribuidora_id;
-      } else {
-        delete payload.cantidad_pasajeros;
-      }
+      // if (watch("titularComoPasajero")) {
+      //   delete payload.distribuidora;
+      //   delete payload.distribuidora_id;
+      // } else {
+      //   delete payload.cantidad_pasajeros;
+      // }
 
 
       console.log(payload);
       // Llamada al mutate enviando formData
-      // mutate(formData);
+      mutate(payload);
     };
 
 
@@ -546,28 +572,28 @@ export default function ModulosPage() {
 
    
 
-    // mutateGuardarEditado({
-    //     data: formData,
-    //     paqueteId: payload.id
-    //   });
+    mutateGuardarEditado({
+        data: payload,
+        paqueteId: payload.id
+      });
   };
 
 
 
 
-  function formatearFechaDDMMYY(fecha: string): string {
-    // Verifica si la fecha contiene "/" y coincide con el patrón DD/MM/YYYY
-    const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+  // function formatearFechaDDMMYY(fecha: string): string {
+  //   // Verifica si la fecha contiene "/" y coincide con el patrón DD/MM/YYYY
+  //   const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 
-    if (regex.test(fecha)) {
-      const [dia, mes, anio] = fecha.split("/");
-      // Retorna en formato YYYY-MM-D (quitando ceros a la izquierda del día)
-      return `${anio}-${mes}-${parseInt(dia, 10)}`;
-    }
+  //   if (regex.test(fecha)) {
+  //     const [dia, mes, anio] = fecha.split("/");
+  //     // Retorna en formato YYYY-MM-D (quitando ceros a la izquierda del día)
+  //     return `${anio}-${mes}-${parseInt(dia, 10)}`;
+  //   }
 
-    // Si no cumple el formato esperado, devuelve la misma fecha
-    return fecha;
-  }
+  //   // Si no cumple el formato esperado, devuelve la misma fecha
+  //   return fecha;
+  // }
   
   
   useEffect(() => {
@@ -648,10 +674,10 @@ export default function ModulosPage() {
     setOnVerDetalles(true);
   }
 
-  const handleCloseVerDetalles = () => {
-    setOnVerDetalles(false);
-    setDataDetalle(undefined);
-  }
+  // const handleCloseVerDetalles = () => {
+  //   setOnVerDetalles(false);
+  //   setDataDetalle(undefined);
+  // }
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -668,6 +694,8 @@ export default function ModulosPage() {
     setPaqueteNoSeleccionada(value);
   }
 
+
+  console.log('selectedPasajerosData: ', selectedPasajerosData)
 
   useEffect(() => {
     if(activeTab === 'list'){
@@ -694,16 +722,36 @@ export default function ModulosPage() {
   }, [tipoPaqueteSelected, setValue, clearErrors]);
 
 
-  const handlePermissionToggle = (permissionId: number) => {
+  const handlePermissionToggle = (permissionId: number, pasajero: any) => {
+    // 🔹 Primero actualizamos los ids seleccionados
     setSelectedPermissions((prev) => {
-      const updated =
-        prev.includes(permissionId)
-          ? prev.filter((p) => p !== permissionId) // quitar
-          : [...prev, permissionId];              // agregar
+      let updated;
+
+      if (prev.includes(permissionId)) {
+        updated = prev.filter((p) => p !== permissionId); // quitar
+      } else {
+        updated = [...prev, permissionId]; // agregar
+      }
+
+      return updated;
+    });
+
+    // 🔹 Luego actualizamos los pasajeros seleccionados
+    setSelectedPasajerosData((prev) => {
+      let updated;
+
+      const exists = prev.some((p: any) => p.id === permissionId);
+
+      if (exists) {
+        updated = prev.filter((p: any) => p.id !== permissionId); // quitar pasajero
+      } else {
+        updated = [...prev, pasajero]; // agregar pasajero
+      }
 
       return updated;
     });
   };
+
 
 
   return (
@@ -1138,6 +1186,7 @@ export default function ModulosPage() {
                                       dataList={newDataPersonaList || []}
                                       value={selectedPersonaID}
                                       onValueChange={setSelectedPersonaID}
+                                      setSelectedTitularData={setSelectedTitularData}
                                       handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
                                       onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
                                       isFetchingPersonas={isFetchingPersonas}
@@ -1146,7 +1195,7 @@ export default function ModulosPage() {
                                     />
                                 </div>
   
-                                {personaNoSeleccionada === false && (
+                                {personaNoSeleccionada === false || (onGuardar === true && personaNoSeleccionada === undefined) &&(
                                   <p className="text-red-400 text-sm">Este campo es requerido</p>
                                 )}
                             </div>
@@ -1207,9 +1256,9 @@ export default function ModulosPage() {
                             <div className="space-y-2 md:col-span-2">
 
                                {/* Mostrar titular como pasajero si está marcado */}
-                                    {watch('titularComoPasajero') && (
+                                    {watch('titularComoPasajero') && selectedTitularData && (
                                       <div className="mb-6">
-                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular 1 (incluido como pasajero)</h3>
                                         <div className="p-4 bg-blue-50 rounded-lg">
                                           <div className="flex items-center space-x-4">
                                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -1217,7 +1266,7 @@ export default function ModulosPage() {
                                             </div>
                                             <div>
                                               <p className="font-medium text-gray-900">
-                                                Victor Cubas
+                                                {selectedTitularData.nombre}
                                                 <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
                                               </p>
                                               <p className="text-sm text-gray-500">
@@ -1237,28 +1286,29 @@ export default function ModulosPage() {
                                   Pasajeros ({0 + (watch('titularComoPasajero') ? 1 : selectedPermissions.length)})
                                 </h2>
 
-                                  {selectedPermissions && selectedPermissions.length > 0 && (
+                                  {selectedPasajerosData && selectedPasajerosData.length > 0 && (
                                       <div className="mb-6">
                                         <h3 className="text-lg font-medium text-gray-900 mb-4">Pasajeros Agregados</h3>
                                         <div className="space-y-3">
-                                          {selectedPermissions.map((pasajero: any) => (
+                                          {selectedPasajerosData.map((pasajero: any) => (
                                             <div key={pasajero.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                               <div className="flex items-center space-x-4">
                                                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                  ADASDASDAS
+                                                  <User className="w-5 h-5 text-blue-600" />
                                                 </div>
                                                 <div>
                                                   <p className="font-medium text-gray-900">
-                                                    EQWEQWQWQW
+                                                    {/* {getPrimerNombreApellido(pasajero.nombre, pasajero.apellido)} */}
+                                                    {pasajero.nombre} {pasajero.apellido}
                                                   </p>
                                                   <p className="text-sm text-gray-500">
-                                                    WDGERHERTHERTHER
+                                                    {pasajero.tipo_documento.nombre}: {pasajero.documento}
                                                   </p>
                                                 </div>
                                               </div>
                                                 <button
                                                   type="button"
-                                                  onClick={() => handlePermissionToggle(pasajero.id)}
+                                                  onClick={() => handlePermissionToggle(pasajero.id, pasajero)}
                                                   className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
                                                 >
                                                   <X className="w-4 h-4" />
@@ -1271,9 +1321,9 @@ export default function ModulosPage() {
                                     )}
 
                                      {/* Mostrar titular como pasajero si está marcado */}
-                                    {watch('titularComoPasajero') && (
+                                    {watch('titularComoPasajero') && selectedTitularData && (
                                       <div className="mb-6">
-                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular 2 (incluido como pasajero)</h3>
                                         <div className="p-4 bg-blue-50 rounded-lg">
                                           <div className="flex items-center space-x-4">
                                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -1331,47 +1381,48 @@ export default function ModulosPage() {
 
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
-                                  {isFetchingServicios && <div className="w-full flex items-center justify-center">
+                                  {isFetchingPersonas && <div className="w-full flex items-center justify-center">
                                     <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
                                   </div>}
 
-                                  {!isFetchingServicios && dataServiciosList && dataServiciosList
-                                      .filter((servicio: any) => 
+                                  {!isFetchingPaquete && dataPersonaList?.results && dataPersonaList.results
+                                      .filter((persona: any) => 
                                         
-                                        servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
+                                        persona.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
                                       
                                       )
-                                      .map((servicio: any) => (
+                                      .map((persona: any) => (
                                         <div
-                                          key={servicio.id}
+                                          key={persona.id}
                                           className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
                                                     items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
                                                     border border-gray-200
-                                                    ${selectedPermissions.includes(servicio.id) 
+                                                    ${selectedPermissions.includes(persona.id) 
                                                       ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
                                                       : ''}`}
                                         >
                                           <div className="flex items-start w-full">
                                             <div className="flex-shrink-0 mr-3 mt-0.5">
                                               <Checkbox
-                                                id={`servicio-${servicio.id}`}
-                                                checked={selectedPermissions.includes(servicio.id)}
-                                                onCheckedChange={() => handlePermissionToggle(servicio.id)}
+                                                id={`servicio-${persona.id}`}
+                                                checked={selectedPermissions.includes(persona.id)}
+                                                onCheckedChange={() => handlePermissionToggle(persona.id, persona)}
                                               />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                               <Label
-                                                htmlFor={`servicio-${servicio.id}`}
+                                                htmlFor={`servicio-${persona.id}`}
                                                 className="text-sm font-medium text-gray-900 cursor-pointer block"
                                               >
-                                                {servicio.nombre}
+                                                {persona.nombre} {persona.apellido}
                                               </Label>
-                                              <p className="text-xs text-gray-500 mt-1">{servicio.descripcion}</p>
+                                              <p className="text-xs text-gray-500 mt-1">{persona.descripcion}</p>
                                               <div className="flex items-center gap-2 mt-2">
-                                                {/* <Badge
+                                                <Badge
                                                   className='bg-blue-100 text-blue-700 border-blue-200'
                                                 >
-                                                </Badge> */}
+                                                    {persona.documento}
+                                                </Badge>
                                                 {/* <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
                                                   {servicio?.moneda?.codigo}{servicio?.precio_habitacion} <span className="text-gray-500 font-normal">/ noche</span>
                                                 </Badge> */}
@@ -1390,7 +1441,7 @@ export default function ModulosPage() {
                                         <Search className="h-6 w-6 text-gray-400" />
                                       </div>
                                       <p className="text-gray-500 text-sm">
-                                        No se encontraron servicios que coincidan con "{permissionSearchTerm}"
+                                        No se encontraron pasajeros que coincidan con "{permissionSearchTerm}"
                                       </p>
                                       <Button
                                         type="button"
@@ -1406,9 +1457,9 @@ export default function ModulosPage() {
 
                                 </div>
 
-                                {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
+                                {/* {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un pasajero</span>} */}
                                 
-                                <div className="flex items-center gap-2 pt-2">
+                                {/* <div className="flex items-center gap-2 pt-2">
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -1449,8 +1500,103 @@ export default function ModulosPage() {
                                       : "Seleccionar todos"}{" "}
                                     
                                   </Button>
-                                </div>
+                                </div> */}
                               </div>
+
+                               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Estado de la Reserva</h2>
+          
+          <div>
+            {/* <label className="block text-sm font-medium text-gray-700 mb-2">
+              Estado *
+            </label>
+            <select
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+
+            >
+              <option value="pendiente">Pendiente</option>
+              <option value="confirmada">Confirmada</option>
+              <option value="incompleta">Incompleta</option>
+              <option value="finalizada">Finalizada</option>
+              <option value="cancelada">Cancelada</option>
+            </select> */}
+            <Label htmlFor="estado" className="text-gray-700 font-medium">
+              Estado *
+            </Label>
+            <Controller
+                name="estado"
+                control={control}
+                rules={{ required: "Este campo es requerido" }}
+                render={({ field }) => (
+                  <div className="w-full min-w-0 select-container">
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                                field.onChange(value)
+                                if (value) {
+                                  clearErrors("estado") // Limpia el error cuando selecciona un valor
+                                }
+                              }}
+                      onOpenChange={(open) => {
+                          if (!open && !field.value) {
+                            field.onBlur(); 
+                          }
+                        }}
+                    >
+                      <SelectTrigger 
+                        className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                        <SelectValue placeholder="Selecciona el tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendiente">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
+                            Pendiente
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="confirmada">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                            Confirmada
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="incompleta">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                            Incompleta
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="finalizada">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                            Finalizada
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="cancelada">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                            Cancelada
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              />
+              {errors.estado && (
+                <p className="text-red-400 text-sm">{errors.estado.message as string}</p>
+              )}
+
+            <p className="text-sm text-gray-500 mt-2">
+              <strong>Estados:</strong><br/>
+              • <strong>Pendiente:</strong> Reserva creada, sin pago<br/>
+              • <strong>Confirmada:</strong> Pago realizado, cupo asegurado<br/>
+              • <strong>Incompleta:</strong> Confirmada pero faltan datos de pasajeros<br/>
+              • <strong>Finalizada:</strong> Todo completo: pasajeros + pago<br/>
+              • <strong>Cancelada:</strong> Reserva cancelada
+            </p>
+          </div>
+        </div>
                     </div>
 
                     <div className="flex gap-3">
