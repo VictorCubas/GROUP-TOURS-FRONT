@@ -459,9 +459,11 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
           </div>
 
           <div className="space-y-2 md:col-span-2">
-              <Label>{JSON.stringify(establecimientoSelected)}</Label>
-              {/* <Label>{JSON.stringify(establecimientoSelected)}</Label> */}
-            
+            <Label className="font-medium text-sm text-gray-700">
+              Establecimiento seleccionado:{" "}
+              <span className="text-gray-900">{establecimientoSelected?.nombre}</span>
+            </Label>
+
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -472,18 +474,31 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
               />
             </div>
 
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
-              {isFetchingPuntoExpedicion && <div className="w-full flex items-center justify-center">
-                <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
-              </div>}
+              {isFetchingPuntoExpedicion && (
+                <div className="w-full flex items-center justify-center">
+                  <Loader2Icon className="animate-spin w-10 h-10 text-gray-300" />
+                </div>
+              )}
 
-              {!isFetchingPuntoExpedicion && dataPuntoExpedicionList && dataPuntoExpedicionList
-                  .filter((punto: any) =>   
-                    punto.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) || 
-                    punto.codigo.includes(permissionSearchTerm.toLowerCase()) ||
-                    punto.establecimiento.id.toString() === establecimientoSelected?.id?.toString()
-                  
+              {!isFetchingPuntoExpedicion &&
+                dataPuntoExpedicionList &&
+                dataPuntoExpedicionList
+                  // 🔹 1. Filtrar siempre por establecimiento seleccionado
+                  .filter(
+                    (punto: any) =>
+                      punto.establecimiento.id.toString() ===
+                      establecimientoSelected?.id?.toString()
+                  )
+                  // 🔹 2. Aplicar búsqueda dentro del establecimiento
+                  .filter(
+                    (punto: any) =>
+                      punto.nombre
+                        .toLowerCase()
+                        .includes(permissionSearchTerm.toLowerCase()) ||
+                      punto.codigo
+                        .toLowerCase()
+                        .includes(permissionSearchTerm.toLowerCase())
                   )
                   .map((punto: any) => (
                     <div
@@ -502,8 +517,8 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
                           </Label>
                           <p className="text-xs text-gray-500 mt-1">{punto.descripcion}</p>
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge className='bg-blue-100 text-blue-700 border-blue-200'>
-                                {punto.codigo}
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                              {punto.codigo}
                             </Badge>
 
                             <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
@@ -514,33 +529,42 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
                       </div>
                     </div>
                   ))}
-                                        
-              {dataPuntoExpedicionList && dataPuntoExpedicionList.filter(
-                (punto: any) =>
-                  punto.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
-              ).length === 0 && (
-                <div className="col-span-2 text-center py-8">
-                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <Search className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 text-sm">
-                    No se encontraron servicios que coincidan con "{permissionSearchTerm}"
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPermissionSearchTerm("")}
-                    className="mt-2"
-                  >
-                    Limpiar búsqueda
-                  </Button>
-                </div>
-              )}
 
+              {/* 🔹 Mensaje cuando no hay coincidencias */}
+              {dataPuntoExpedicionList &&
+                dataPuntoExpedicionList.filter(
+                  (punto: any) =>
+                    punto.establecimiento.id.toString() ===
+                      establecimientoSelected?.id?.toString() &&
+                    (punto.nombre
+                      .toLowerCase()
+                      .includes(permissionSearchTerm.toLowerCase()) ||
+                      punto.codigo
+                        .toLowerCase()
+                        .includes(permissionSearchTerm.toLowerCase()))
+                ).length === 0 && (
+                  <div className="col-span-2 text-center py-8">
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <Search className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 text-sm">
+                      No se encontraron puntos de expedición que coincidan con "
+                      {permissionSearchTerm}"
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPermissionSearchTerm("")}
+                      className="mt-2"
+                    >
+                      Limpiar búsqueda
+                    </Button>
+                  </div>
+                )}
             </div>
-            
           </div>
+
         </div>
       </div>
     </div>
