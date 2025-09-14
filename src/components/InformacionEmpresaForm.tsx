@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
-import { Building2, Mail, Phone, MapPin, Hash, Loader2Icon, Search, X, Check, } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Hash, Loader2Icon, Search, } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -12,7 +12,6 @@ import { Input } from './ui/input';
 import { useFacturaFormStore } from '@/store/useFacturaFormStore';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Checkbox } from './ui/checkbox';
 
 interface CompanyConfigFormProps {
   siEditando: boolean;
