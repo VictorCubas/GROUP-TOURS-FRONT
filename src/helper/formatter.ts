@@ -53,6 +53,14 @@ export function getNombreCompleto(nombre?: string, apellido?: string): string{
   return `${nombre} ${apellido}`
 }
 
+
+export function getPrimerNombreApellido(nombre: string, apellido: string): string {
+  const primerNombre = nombre.trim().split(" ")[0] || "";
+  const primerApellido = apellido.trim().split(" ")[0] || "";
+  return `${primerNombre} ${primerApellido}`;
+}
+
+
 /**
  * Función que retorna la fecha correspondiente al 01 de enero 
  * de hace 20 años a partir del año actual.
