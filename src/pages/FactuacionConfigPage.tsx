@@ -131,7 +131,7 @@ function FactuacionConfigPage() {
   console.log('siTienePermiso("facturacion", "modificar"): ', siTienePermiso("facturacion", "modificar"))
   const tabs = [
     { id: 'company', label: 'Datos de Empresa', icon: Building2 },
-    { id: 'taxes', label: 'Tipos de IVA', icon: Percent },
+    { id: 'taxes', label: 'Tipos de Impuestos', icon: Percent },
     { id: 'preview', label: 'Vista Previa', icon: Eye }
   ];
 
