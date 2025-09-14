@@ -109,7 +109,7 @@ function FactuacionConfigPage() {
       },
       factura: {
         establecimiento: dataForm.establecimiento,
-        punto_expedicion: dataForm.expedicion,
+        // punto_expedicion: dataForm.expedicion,
         timbrado: dataForm.timbrado,
         tipo_impuesto,
         subtipo_impuesto
