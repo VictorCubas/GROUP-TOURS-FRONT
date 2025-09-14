@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
-import { Building2, Mail, Phone, MapPin, Hash, Loader2Icon, } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Hash, Loader2Icon, Search, X, Check, } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,6 +10,9 @@ import type { Establecimiento, PuntoExpedicion, Timbrado } from '@/types/factura
 import { formatearFecha } from '@/helper/formatter';
 import { Input } from './ui/input';
 import { useFacturaFormStore } from '@/store/useFacturaFormStore';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
 
 interface CompanyConfigFormProps {
   siEditando: boolean;
@@ -33,6 +36,7 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
   const [establecimientoSelected, setEstablecimientoSelected] = useState<Establecimiento>();
   const [expedicionSelected, setPuntoExpedicionSelected] = useState<PuntoExpedicion>();
   const [timbradoSelected, setTimbradoSelected] = useState<PuntoExpedicion>();
+  const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
 
   console.log(establecimientoSelected)
   console.log(expedicionSelected)
@@ -133,6 +137,7 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
     
     return 'Vencido'
   }
+
 
   return (
     <div className="space-y-6" >
@@ -453,78 +458,88 @@ export const InformacionEmpresaForm: React.FC<CompanyConfigFormProps> =
               )}
           </div>
 
-            {/* PUNTOS DE EXPEDICION */}
-          <div className="space-y-2">
-              <Label htmlFor="tipo_remuneracion" className="text-gray-700 font-medium">
-                Puntos de expedición *
-              </Label>
+          <div className="space-y-2 md:col-span-2">
+              <Label>{JSON.stringify(establecimientoSelected)}</Label>
+              {/* <Label>{JSON.stringify(establecimientoSelected)}</Label> */}
+            
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar puntos de expedición..."
+                value={permissionSearchTerm}
+                onChange={(e) => setPermissionSearchTerm(e.target.value)}
+                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
 
-              {isFetchingPuntoExpedicion && (
-                <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
-                  <Select>
-                    <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
-                    <div className="w-full flex items-center justify-center">
-                      <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
+              {isFetchingPuntoExpedicion && <div className="w-full flex items-center justify-center">
+                <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+              </div>}
+
+              {!isFetchingPuntoExpedicion && dataPuntoExpedicionList && dataPuntoExpedicionList
+                  .filter((punto: any) =>   
+                    punto.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase()) || 
+                    punto.codigo.includes(permissionSearchTerm.toLowerCase()) ||
+                    punto.establecimiento.id.toString() === establecimientoSelected?.id?.toString()
+                  
+                  )
+                  .map((punto: any) => (
+                    <div
+                      key={punto.id}
+                      className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
+                                items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                border border-gray-200`}
+                    >
+                      <div className="flex items-start w-full">
+                        <div className="flex-1 min-w-0">
+                          <Label
+                            htmlFor={`servicio-${punto.id}`}
+                            className="text-sm font-medium text-gray-900 cursor-pointer block"
+                          >
+                            {punto.nombre}
+                          </Label>
+                          <p className="text-xs text-gray-500 mt-1">{punto.descripcion}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge className='bg-blue-100 text-blue-700 border-blue-200'>
+                                {punto.codigo}
+                            </Badge>
+
+                            <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                              {punto.establecimiento.nombre} - {punto.establecimiento.id}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    </SelectTrigger>
-                  </Select>
+                  ))}
+                                        
+              {dataPuntoExpedicionList && dataPuntoExpedicionList.filter(
+                (punto: any) =>
+                  punto.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
+              ).length === 0 && (
+                <div className="col-span-2 text-center py-8">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <Search className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 text-sm">
+                    No se encontraron servicios que coincidan con "{permissionSearchTerm}"
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPermissionSearchTerm("")}
+                    className="mt-2"
+                  >
+                    Limpiar búsqueda
+                  </Button>
                 </div>
               )}
 
-              {!isFetchingPuntoExpedicion && 
-                <Controller
-                  name="expedicion"
-                  control={control}
-                  rules={{ required: "Este campo es requerido" }}
-                  render={({ field }) => (
-                    <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value)
-                          if (value) {
-                            clearErrors("expedicion")
-                          }
-
-                          console.log('value: ', value);
-                          const puntoExpedicion = dataPuntoExpedicionList.filter((doc: PuntoExpedicion) => doc.id.toString() === value)
-                          // console.log('tipoRemuneracion: ', puntoExpedicion[0])
-                          setPuntoExpedicionSelected(puntoExpedicion[0]);
-                        }}
-                        onOpenChange={(open) => {
-                          if (!open && !field.value) {
-                            field.onBlur(); 
-                          }
-                        }}
-                      >
-                        <SelectTrigger 
-                          disabled={!siEditando}
-                          className="select-trigger w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                          <SelectValue placeholder="Selecciona el punto de expedición" />
-                        </SelectTrigger>
-                        <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
-                          {dataPuntoExpedicionList.map((punto: PuntoExpedicion) => 
-                            <SelectItem 
-                              key={punto.id} 
-                              value={punto.id.toString()}
-                              className="pl-2 pr-4"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
-                                <span className="truncate">{punto.codigo} - {punto.establecimiento.nombre}</span>
-                              </div>
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                />
-              }
-
-              {errors.expedicion && (
-                <p className="text-red-400 text-sm">{errors.expedicion.message as string}</p>
-              )}
+            </div>
+            
           </div>
         </div>
       </div>
