@@ -244,6 +244,7 @@ export default function ModulosPage() {
   }
 
 
+
   const {mutate, isPending: isPendingMutation} = useMutation({
     mutationFn: nuevoDataFetch,
     onSuccess: () => {
@@ -256,8 +257,8 @@ export default function ModulosPage() {
           telefono: '',
           nacionalidad: '',
           fecha_nacimiento: getFechaPorDefecto(),
-          tipo: '',
-          tipo_documento: '',
+          tipo: 'fisica',
+          tipo_documento: '1',
           sexo: '',
           razon_social: '',
         });
@@ -327,7 +328,7 @@ export default function ModulosPage() {
             nacionalidad: '',
             fecha_nacimiento: getFechaPorDefecto(),
             tipo: '',
-            tipo_documento: '',
+            tipo_documento: '1',
             sexo: '',
             razon_social: '',
             email: '',
@@ -385,6 +386,22 @@ export default function ModulosPage() {
   });
 
 
+  
+
+  useEffect(() => {
+
+    if(dataTipoDocumentoList && dataTipoDocumentoList?.length){
+    // dataTipoDocumentoList
+
+    setTipoDePersonaCreacion('fisica');
+    reset({
+      tipo: 'fisica',
+      tipo_documento: '1'
+    })
+  }
+  }, [dataTipoDocumentoList, reset]);
+
+
   const handleCancel = () => {
         setDataAEditar(undefined);
         setSelectedNacionalidadid("");
@@ -397,8 +414,8 @@ export default function ModulosPage() {
           telefono: '',
           nacionalidad: '',
           fecha_nacimiento: getFechaPorDefecto(),
-          tipo: '',
-          tipo_documento: '',
+          tipo: 'fisica',
+          tipo_documento: '1',
           sexo: '',
           razon_social: '',
           email: '',
@@ -436,7 +453,7 @@ export default function ModulosPage() {
           nacionalidad: '',
           fecha_nacimiento: getFechaPorDefecto(),
           tipo: '',
-          tipo_documento: '',
+          tipo_documento: '1',
           sexo: '',
           razon_social: '',
           email: '',

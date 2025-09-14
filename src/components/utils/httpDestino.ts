@@ -65,3 +65,8 @@ export async function fetchDataHoteles() {
   const resp = await axiosInstance.get(`/hotel/todos/`);
   return resp?.data
 }
+
+export async function fetchDataDestinosTodos() {
+  const resp = await axiosInstance.get(`/destino/todos/`);
+  return resp?.data
+}

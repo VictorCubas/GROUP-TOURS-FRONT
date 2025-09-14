@@ -7,20 +7,20 @@ import { useNavigationStore } from '@/store/navigationStore';
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json', // default
   },
 });
 
-// Interceptor para adjuntar token
+// -------------------- INTERCEPTOR DE REQUEST --------------------
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Normalizar URL: asegurar que termine con /
-    if (config.url && !config.url.includes('?') && !config.url.endsWith("/")) {
+    // Normalizar URL: asegurar que termine con "/"
+    if (config.url && !config.url.includes('?') && !config.url.endsWith('/')) {
       config.url = `${config.url}/`;
     }
 
-    // No agregar token si es login
-    const isLoginRequest = config.url?.includes("login/");
+    // Adjuntar token si no es login
+    const isLoginRequest = config.url?.includes('login/');
     if (!isLoginRequest) {
       const sessionStorage = localStorage.getItem('session');
       if (sessionStorage) {
@@ -30,53 +30,66 @@ axiosInstance.interceptors.request.use(
       }
     }
 
+    // --- Ajustar Content-Type solo para el endpoint exacto ---
+    console.log(config.url)
+    const isPaqueteViajesEndpoint = config.url?.includes('paquete');
+    console.log('isPaqueteViajesEndpoint: ', isPaqueteViajesEndpoint)
+    if (
+      isPaqueteViajesEndpoint &&
+      (config.method?.toLowerCase() === 'post'  ||
+        config.method?.toLowerCase() === 'put' ||
+        config.method?.toLowerCase() === 'patch')
+    ) {
+      console.log('isPaqueteViajesEndpoint: ', isPaqueteViajesEndpoint) 
+      if (config.data instanceof FormData) {
+        // Axios detecta FormData y establece multipart/form-data automáticamente
+
+        console.log('isPaqueteViajesEndpoint: ', isPaqueteViajesEndpoint)
+        delete config.headers['Content-Type'];
+      }
+    } else {
+      // Default para JSON
+
+      console.log('isPaqueteViajesEndpoint: ', isPaqueteViajesEndpoint)
+      config.headers['Content-Type'] = 'application/json'; 
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// const navigate = useNavigate();
-// Interceptor para errores (como 401)
+// -------------------- INTERCEPTOR DE RESPONSE --------------------
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('error interceptor: ', error);
+    console.error('Error interceptor: ', error);
 
     if (error.response?.status === 401) {
-       const { logout } = useSessionStore.getState();
-       const { setRedirect } = useNavigationStore.getState();
+      const { logout } = useSessionStore.getState();
+      const { setRedirect } = useNavigationStore.getState();
       logout();
 
       showToastOutsider('Sesión expirada. Inicia sesión nuevamente.', 'error');
       setTimeout(() => {
         setRedirect('/login');
       }, 2500);
-    }
-    else{
+    } else {
       if (error.response) {
-        // Accedemos a lo que devuelve el backend
         const backendErrors = error.response.data;
-        console.log('backendErrors: ', backendErrors);
+        console.log('Backend Errors: ', backendErrors);
 
         if (typeof backendErrors === 'string') {
-          // Si es solo un string, lo mostramos directo
           showToastOutsider(backendErrors, 'error');
         } else if (typeof backendErrors === 'object') {
-          // Si es un objeto con campos y mensajes
-          console.log('mostrando errores....')
-
           const messages = Object.values(backendErrors)
-            .flat() // aplanar en caso de arrays
-            .join('\n'); // unir con saltos de línea
-
-            console.log(messages)
+            .flat(Infinity)
+            .join('\n');
           showToastOutsider(messages, 'error');
         }
       } else {
-        // Si no hay respuesta del servidor
         showToastOutsider(error?.message ?? 'Ocurrió algo inesperado', 'error');
       }
-      // showToastOutsider(error?.message ?? 'Ocurrió algo inesperado', 'error');
     }
     return Promise.reject(error);
   }

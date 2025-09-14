@@ -31,14 +31,6 @@ import {
   X,
 } from "lucide-react"
 
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -199,6 +191,12 @@ export default function ModulosPage() {
   if(!isFetchingPersonas){
     console.log('dataListPersonas: ', dataPersonaList)
   }
+
+   useEffect(() => {
+    if(isFetchingPersonas){
+      setNewDataPersonaList([])
+    }
+  }, [isFetchingPersonas]);
 
 
   useEffect(() => {  

@@ -81,7 +81,7 @@ export default function RolesPage() {
   const [onVerData, setOnVerData] = useState(false);
   const [dataDetalle, setDataDetalle] = useState<Destino>();
   const {handleShowToast} = use(ToastContext);
-  const [permissionSearchTerm, setPermissionSearchTerm] = useState("")
+  const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [onGuardar, setOnGuardar] = useState(false);
   const [filtros, setFiltros] = useState({
@@ -233,6 +233,11 @@ useEffect(() => {
           exact: false
         });
 
+         queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
+          exact: false
+        });
+
         queryClient.invalidateQueries({
           queryKey: ['destinos-resumen'],
         });
@@ -265,6 +270,11 @@ useEffect(() => {
           exact: false
         });
 
+         queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
+          exact: false
+        });
+
         queryClient.invalidateQueries({
           queryKey: ['hoteles'],
           exact: false
@@ -290,6 +300,10 @@ useEffect(() => {
         //desactivamos todas las queies
         queryClient.invalidateQueries({
           queryKey: ['destinos'],
+          exact: false
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
           exact: false
         });
         queryClient.invalidateQueries({
@@ -470,7 +484,7 @@ useEffect(() => {
                               <span className="text-sm">{hotel.nombre}</span>
 
                                <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                  {hotel?.moneda_codigo}{hotel?.precio_habitacion} <span className="text-gray-500 font-normal">/ noche</span>
+                                  {hotel?.moneda_codigo}{hotel?.precio_habitacion} <span className="text-gray-500 font-normal"> / noche</span>
                                 </Badge>
                             </div>
 
@@ -770,7 +784,7 @@ useEffect(() => {
                                       >
                                       </Badge> */}
                                       <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                        {hotel?.moneda?.codigo}{hotel?.precio_habitacion} <span className="text-gray-500 font-normal">/ noche</span>
+                                        {hotel?.moneda?.simbolo}{hotel?.precio_habitacion} <span className="text-gray-500 font-normal">/ noche</span>
                                       </Badge>
                                     </div>
                                   </div>
