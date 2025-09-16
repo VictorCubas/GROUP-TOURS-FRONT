@@ -51,9 +51,10 @@ import { queryClient } from "@/components/utils/http"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { fetchDataNacionalidadTodos } from "@/components/utils/httpNacionalidades"
+import { fetchDataCiudadesTodos, fetchDataNacionalidadTodos } from "@/components/utils/httpNacionalidades"
 import { CountrySearchSelect } from "@/components/CountrySearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
+import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 
 
 const roleStatusColors = {
@@ -69,8 +70,12 @@ const enUsoColors = {
 
 let dataList: Destino[] = [];
 
-export default function RolesPage() {
+export default function DestinoPage() {
   const {siTienePermiso } = useSessionStore();
+  const [newDataCiudadList, setNewDataCiudadList] = useState<Destino[]>();
+  const [selectedCiudadID, setSelectedCiudadID] = useState<number | "">("");
+  const [ciudadBusqueda, setCiudadBusqueda] = useState<string>("");
+  const [ciudadNoSeleccionada, setCiudadNoSeleccionada] = useState<boolean | undefined>();
   const [selectedNacionalidadID, setSelectedNacionalidadid] = useState<number | "">("");
   const [nacionalidadNoSeleccionada, setNacionalidadNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("")
@@ -143,6 +148,18 @@ export default function RolesPage() {
       });
 
 
+  console.log(ciudadBusqueda)
+
+  const {data: dataCiudadList, isFetching: isFetchingCiudad,} = useQuery({
+        queryKey: ['ciudades-disponibles', ciudadBusqueda], //data cached
+        queryFn: () => fetchDataCiudadesTodos(ciudadBusqueda),
+        staleTime: 0 //despues de 5min los datos se consideran obsoletos
+      });
+
+  
+    console.log('dataCiudadList: ', dataCiudadList)
+
+
   if(!isFetching && !isError){
     if(data?.results){
       dataList = data.results.map((per: Destino, index: number) => ({...per, numero: index + 1}));
@@ -150,7 +167,26 @@ export default function RolesPage() {
   }
 
 
-  
+  useEffect(() => {
+      if(isFetchingCiudad){
+        setNewDataCiudadList([])
+      }
+    }, [isFetchingCiudad]);
+
+
+  useEffect(() => {  
+    if(dataCiudadList){
+      if(dataAEditar){
+        setNewDataCiudadList([...dataCiudadList, dataAEditar.ciudad]);
+      }
+      else{
+        setNewDataCiudadList([...dataCiudadList])
+      }
+    }
+  }, [dataAEditar, dataCiudadList]);
+
+
+    console.log(newDataCiudadList); 
 
 
   // Cálculos de paginación
@@ -192,19 +228,6 @@ export default function RolesPage() {
       });
   }
 
-useEffect(() => {
-  const handler = setTimeout(() => {
-    console.log("⏱ Cambiando nombre a:", nombreABuscar);
-    setFiltros((prev) => ({
-      ...prev,
-      nombre: nombreABuscar.trim() // elimino espacios extra
-    }));
-  }, 750); 
-
-  return () => {
-    clearTimeout(handler); // limpia si el usuario sigue escribiendo
-  };
-}, [nombreABuscar]);
 
   
   const handleActiveOnly = () => {
@@ -316,6 +339,9 @@ useEffect(() => {
   const handleCancel = () => {
         setOnGuardar(false);
         setDataAEditar(undefined);
+        setNewDataCiudadList([...dataCiudadList]);
+        setSelectedCiudadID("");
+        handleDataNoCiudadSeleccionada(undefined);
         reset({
             nombre: "",
             descripcion: "",
@@ -327,10 +353,13 @@ useEffect(() => {
   const handleGuardarNuevaData = async (dataForm: any) => {
     console.log('dataForm: ', dataForm);
     console.log('selectedPermissions: ', selectedPermissions)
+
+    
     if(selectedPermissions.length){
       mutate({...dataForm, 
         activo: true, 
         en_uso: false, 
+        // selectedCiudadID
         pais_id: selectedNacionalidadID,
         hoteles_ids: selectedPermissions});
     }
@@ -352,7 +381,8 @@ useEffect(() => {
       const payLoad = {
                 ...dataEditado, 
                 hoteles_ids: selectedPermissions,
-                pais_id: selectedNacionalidadID
+                pais_id: selectedNacionalidadID,
+                // ciuidad: selectedCiudadID
       };
       console.log('payload guardado: ', payLoad) 
       mutateGuardarEditado(payLoad);
@@ -362,13 +392,21 @@ useEffect(() => {
 
 
   useEffect(() => {
-    if (dataAEditar) {
-      reset({
-        nombre: dataAEditar.nombre,
-        descripcion: dataAEditar.descripcion,
-      });
-    }
-  }, [dataAEditar, reset]);
+      if (dataAEditar) {
+        console.log('reset data para editar: ', dataAEditar)
+        reset({
+          ...dataAEditar,
+          // tipo_remuneracion: dataAEditar.tipo_remuneracion.id.toString(),
+          ciudad: dataAEditar.ciudad.id.toString()
+        });
+  
+        // const item = dataPersonaList.find((c: any) => c[valueKey] === value);
+        console.log('dataAEditar.persona.id: ', dataAEditar.ciudad.id)
+        setSelectedCiudadID(dataAEditar.ciudad.id);
+        // setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
+        // handleDataNoSeleccionada(true);
+      }
+    }, [dataAEditar, reset]);
 
 
   const handleEditar = (data: Destino) => {
@@ -377,8 +415,9 @@ useEffect(() => {
     const hoteles = data.hoteles;
     const hotelesIds = hoteles.map(destino => destino.id)
     console.log(data)
+    setSelectedCiudadID(data!.ciudad.id);
     setSelectedPermissions(hotelesIds);
-    setSelectedNacionalidadid(data!.pais!.id);
+    // setSelectedNacionalidadid(data!.pais!.id);
   }
 
   const toggleActivar = (modulo: Destino) => {
@@ -423,7 +462,13 @@ useEffect(() => {
 
   const handleNacionalidadNoSeleccionada = (value: boolean | undefined) => {
     setNacionalidadNoSeleccionada(value);
+  };
+
+  const handleDataNoCiudadSeleccionada = (value: boolean | undefined) => {
+    setCiudadNoSeleccionada(value);
   }
+
+  console.log('dataList 1: ', dataList)
 
   return (
     <>
@@ -437,7 +482,7 @@ useEffect(() => {
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                        {dataDetalle?.nombre}
+                        {dataDetalle?.ciudad?.nombre}
                       </h2>
                       <p className="text-gray-600">Detalles completos del destino</p>
                     </div>
@@ -548,7 +593,7 @@ useEffect(() => {
                 </div>
                 <h2 className='text-center'>Confirmacion de operación</h2>
               <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-                ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} el destino de <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
+                ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} el destino de <b>{capitalizePrimeraLetra(dataADesactivar?.ciudad?.nombre ?? '')}</b>? 
               </p>
 
               <div className='modal-actions'>
@@ -681,6 +726,46 @@ useEffect(() => {
                         }
 
                           {nacionalidadNoSeleccionada === false && (
+                            <p className="text-red-400 text-sm">Este campo es requerido</p>
+                          )}
+
+                          {onGuardar && nacionalidadNoSeleccionada === undefined && <p className="text-red-400 text-sm">Este campo es requerido</p>}
+                      </div>
+
+                     <div className="space-y-2 mi-select-wrapper">
+                        <Label htmlFor="ciudad" className="text-gray-700 font-medium">
+                          Ciudad *
+                        </Label>
+
+                        {isFetchingCiudad &&
+                        <Select>
+                          <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
+                            <div className="w-full flex items-center justify-center">
+                              <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                            </div>
+                          </SelectTrigger>
+                        </Select>
+                        }
+                        {!isFetchingCiudad && 
+                          <>
+                            <div className="space-y-2">
+                            <DinamicSearchSelect
+                                disabled={!!dataAEditar}
+                                dataList={newDataCiudadList || []}
+                                value={selectedCiudadID}
+                                onValueChange={setSelectedCiudadID}
+                                handleDataNoSeleccionada={handleDataNoCiudadSeleccionada}
+                                onSearchChange={setCiudadBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                isFetchingPersonas={isFetchingCiudad}
+                                placeholder="Buscar ciudad..."
+                                labelKey="nombre"
+                                valueKey="id"
+                              />
+                          </div>
+                          </>
+                        }
+
+                          {ciudadNoSeleccionada === false && (
                             <p className="text-red-400 text-sm">Este campo es requerido</p>
                           )}
 
@@ -1060,7 +1145,7 @@ useEffect(() => {
                               </TableCell>
                               <TableCell>
                                 <div>
-                                  <div className="font-medium text-gray-900">{data.nombre}</div>
+                                  <div className="font-medium text-gray-900">{data?.ciudad.nombre}</div>
                                   <div className="text-sm text-gray-500 truncate max-w-xs">{data.descripcion}</div>
                                 </div>
                               </TableCell>
@@ -1068,7 +1153,7 @@ useEffect(() => {
                                 <Badge
                                   className='text-xs bg-blue-100 text-blue-700 border-blue-200"'
                                 >
-                                  {data.pais.nombre}
+                                  {data?.ciudad?.pais_nombre}
                                 </Badge>
                               </TableCell>
                               <TableCell>
