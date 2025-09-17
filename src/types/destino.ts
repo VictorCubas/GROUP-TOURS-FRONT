@@ -11,9 +11,11 @@ export interface Hotel {
   fecha_modificacion: string;
 }
 
-export interface Pais{
+export interface Ciudad{
   id: number,
-  nombre: string
+  nombre: string,
+  pais_nombre: string;
+  pais_id: number;
 }
 
 export interface Destino {
@@ -21,7 +23,7 @@ export interface Destino {
   numero?: number;
   nombre: string;
   descripcion: string;
-  pais: Pais;
+  ciudad: Ciudad;
   hoteles: Hotel[];
   activo: boolean;
   en_uso: boolean;

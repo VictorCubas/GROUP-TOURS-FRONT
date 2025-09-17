@@ -73,12 +73,13 @@ let dataList: Destino[] = [];
 export default function DestinoPage() {
   const {siTienePermiso } = useSessionStore();
   const [newDataCiudadList, setNewDataCiudadList] = useState<Destino[]>();
+  const [paisDataSelected, setPaisDataSelected] = useState<any>();
   const [selectedCiudadID, setSelectedCiudadID] = useState<number | "">("");
   const [ciudadBusqueda, setCiudadBusqueda] = useState<string>("");
   const [ciudadNoSeleccionada, setCiudadNoSeleccionada] = useState<boolean | undefined>();
   const [selectedNacionalidadID, setSelectedNacionalidadid] = useState<number | "">("");
   const [nacionalidadNoSeleccionada, setNacionalidadNoSeleccionada] = useState<boolean | undefined>();
-  const [nombreABuscar, setNombreABuscar] = useState("")
+  const [busquedaPorFiltro, setBusquedaPorFiltro] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Destino>();
   const [dataADesactivar, setDataADesactivar] = useState<Destino>();
@@ -97,7 +98,7 @@ export default function DestinoPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {register, handleSubmit, formState: {errors, }, reset} = 
+  const {register, handleSubmit, formState: {errors, }, setValue, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -147,13 +148,10 @@ export default function DestinoPage() {
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
-
-  console.log(ciudadBusqueda)
-
   const {data: dataCiudadList, isFetching: isFetchingCiudad,} = useQuery({
-        queryKey: ['ciudades-disponibles', ciudadBusqueda], //data cached
-        queryFn: () => fetchDataCiudadesTodos(ciudadBusqueda),
-        staleTime: 0 //despues de 5min los datos se consideran obsoletos
+        queryKey: ['ciudades-disponibles', ciudadBusqueda, paisDataSelected?.id], //data cached
+        queryFn: () => fetchDataCiudadesTodos(ciudadBusqueda, paisDataSelected?.id),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
   
@@ -173,6 +171,33 @@ export default function DestinoPage() {
       }
     }, [isFetchingCiudad]);
 
+  useEffect(() => {
+      if(selectedCiudadID){
+        const selectedCiudad = dataCiudadList.filter((ciudad: any) => ciudad.id.toString() === selectedCiudadID.toString());
+
+        if(selectedCiudad.length){
+          setValue('nombre', selectedCiudad[0].nombre);
+        }
+      }
+    }, [selectedCiudadID]);
+
+  useEffect(() => {
+      if(selectedNacionalidadID){
+        const selectedPais = dataNacionalidadList.filter((pais: any) => pais.id.toString() === selectedNacionalidadID.toString());
+
+        if(selectedPais.length){
+          const pais = selectedPais[0];
+          console.log('pais: ', pais);
+          // const selectedCiudad = dataNacionalidadList.filter((ciudad: any) => ciudad.id.toString() === selectedNacionalidadID.toString());
+          setPaisDataSelected(pais);
+          if(!dataAEditar){
+            setSelectedCiudadID("");
+            setCiudadBusqueda("");
+          }
+        }
+      }
+    }, [selectedNacionalidadID]);
+
 
   useEffect(() => {  
     if(dataCiudadList){
@@ -184,9 +209,6 @@ export default function DestinoPage() {
       }
     }
   }, [dataAEditar, dataCiudadList]);
-
-
-    console.log(newDataCiudadList); 
 
 
   // Cálculos de paginación
@@ -224,7 +246,7 @@ export default function DestinoPage() {
   const handleReset = () => {
     startTransition(() => {
         setShowActiveOnly(true);
-        setNombreABuscar("")
+        setBusquedaPorFiltro("")
       });
   }
 
@@ -236,6 +258,17 @@ export default function DestinoPage() {
     setCurrentPage(1);
   }
 
+  useEffect(() => {
+      const handler = setTimeout(() => {
+        console.log('cambiando nombre')
+        setFiltros(filtroAnterior => ({...filtroAnterior, nombre: busquedaPorFiltro}))
+      }, 750) // ⏱️ medio segundo de espera
+  
+      return () => {
+        clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+      }
+    }, [busquedaPorFiltro]);
+  
 
   const {mutate, isPending: isPendingMutation} = useMutation({
     mutationFn: nuevoRolFetch,
@@ -283,6 +316,8 @@ export default function DestinoPage() {
         setDataAEditar(undefined);
         setSelectedNacionalidadid("");
         setOnGuardar(false);
+        setSelectedCiudadID("");
+        setPaisDataSelected(undefined);
         reset({
             nombre: "",
             descripcion: "",
@@ -341,6 +376,8 @@ export default function DestinoPage() {
         setDataAEditar(undefined);
         setNewDataCiudadList([...dataCiudadList]);
         setSelectedCiudadID("");
+        setSelectedNacionalidadid("");
+        setPaisDataSelected(undefined);
         handleDataNoCiudadSeleccionada(undefined);
         reset({
             nombre: "",
@@ -359,8 +396,7 @@ export default function DestinoPage() {
       mutate({...dataForm, 
         activo: true, 
         en_uso: false, 
-        // selectedCiudadID
-        pais_id: selectedNacionalidadID,
+        ciudad_id: selectedCiudadID,
         hoteles_ids: selectedPermissions});
     }
   }
@@ -380,6 +416,7 @@ export default function DestinoPage() {
       
       const payLoad = {
                 ...dataEditado, 
+                ciudad_id: selectedCiudadID,
                 hoteles_ids: selectedPermissions,
                 pais_id: selectedNacionalidadID,
                 // ciuidad: selectedCiudadID
@@ -396,13 +433,14 @@ export default function DestinoPage() {
         console.log('reset data para editar: ', dataAEditar)
         reset({
           ...dataAEditar,
+          nombre: dataAEditar.ciudad.nombre,
+          // nacionalidad: dataAEditar.ciudad.pais_nombre,
           // tipo_remuneracion: dataAEditar.tipo_remuneracion.id.toString(),
-          ciudad: dataAEditar.ciudad.id.toString()
+          ciudad: dataAEditar.ciudad.id.toString(),
+          nacionalidad: dataAEditar.ciudad.pais_id.toString(),
         });
   
         // const item = dataPersonaList.find((c: any) => c[valueKey] === value);
-        console.log('dataAEditar.persona.id: ', dataAEditar.ciudad.id)
-        setSelectedCiudadID(dataAEditar.ciudad.id);
         // setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
         // handleDataNoSeleccionada(true);
       }
@@ -415,9 +453,10 @@ export default function DestinoPage() {
     const hoteles = data.hoteles;
     const hotelesIds = hoteles.map(destino => destino.id)
     console.log(data)
-    setSelectedCiudadID(data!.ciudad.id);
+    console.log('dataAEditar.persona.id: ', data.ciudad)
+    setSelectedNacionalidadid(Number(data.ciudad.pais_id));
+    setSelectedCiudadID(data.ciudad.id); 
     setSelectedPermissions(hotelesIds);
-    // setSelectedNacionalidadid(data!.pais!.id);
   }
 
   const toggleActivar = (modulo: Destino) => {
@@ -468,7 +507,7 @@ export default function DestinoPage() {
     setCiudadNoSeleccionada(value);
   }
 
-  console.log('dataList 1: ', dataList)
+  // console.log('dataList 1: ', dataList)
 
   return (
     <>
@@ -683,6 +722,7 @@ export default function DestinoPage() {
                       </Label>
                     <Input
                         id="nombre"
+                        disabled
                         autoComplete="nombre"
                         placeholder="Nombre del destino"
                         className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -737,39 +777,27 @@ export default function DestinoPage() {
                           Ciudad *
                         </Label>
 
-                        {isFetchingCiudad &&
-                        <Select>
-                          <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
-                            <div className="w-full flex items-center justify-center">
-                              <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                            </div>
-                          </SelectTrigger>
-                        </Select>
-                        }
-                        {!isFetchingCiudad && 
-                          <>
-                            <div className="space-y-2">
-                            <DinamicSearchSelect
-                                disabled={!!dataAEditar}
-                                dataList={newDataCiudadList || []}
-                                value={selectedCiudadID}
-                                onValueChange={setSelectedCiudadID}
-                                handleDataNoSeleccionada={handleDataNoCiudadSeleccionada}
-                                onSearchChange={setCiudadBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
-                                isFetchingPersonas={isFetchingCiudad}
-                                placeholder="Buscar ciudad..."
-                                labelKey="nombre"
-                                valueKey="id"
-                              />
-                          </div>
-                          </>
-                        }
+                        <div className="space-y-2">
+                          <DinamicSearchSelect
+                            // disabled={!dataAEditar}
+                            dataList={newDataCiudadList || []}
+                            value={selectedCiudadID}
+                            onValueChange={setSelectedCiudadID}
+                            handleDataNoSeleccionada={handleDataNoCiudadSeleccionada}
+                            onSearchChange={setCiudadBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                            isFetchingPersonas={isFetchingCiudad}
+                            placeholder="Buscar ciudad..."
+                            labelKey="nombre"
+                            valueKey="id"
+                          />
+                        </div>
+                          
 
                           {ciudadNoSeleccionada === false && (
                             <p className="text-red-400 text-sm">Este campo es requerido</p>
                           )}
 
-                          {onGuardar && nacionalidadNoSeleccionada === undefined && <p className="text-red-400 text-sm">Este campo es requerido</p>}
+                          {/* {onGuardar && nacionalidadNoSeleccionada === undefined && <p className="text-red-400 text-sm">Este campo es requerido</p>} */}
                       </div>
 
                     <div className="space-y-2 md:col-span-2">
@@ -1040,8 +1068,8 @@ export default function DestinoPage() {
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
                             placeholder="Buscar por nombre de destino o nombre de país..."
-                            value={nombreABuscar}
-                            onChange={(e) => setNombreABuscar(e.target.value)}
+                            value={busquedaPorFiltro}
+                            onChange={(e) => setBusquedaPorFiltro(e.target.value)}
                             className="pl-10 w-full border-gray-300 focus:border-blue-500"
                           />
                         </div>
@@ -1098,7 +1126,7 @@ export default function DestinoPage() {
                             fecha_hasta: "",
                             nombre: ""
                           });
-                          setNombreABuscar(""); 
+                          setBusquedaPorFiltro(""); 
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
