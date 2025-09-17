@@ -85,7 +85,7 @@ import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
+import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
 import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
