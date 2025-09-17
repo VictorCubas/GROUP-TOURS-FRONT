@@ -10,8 +10,9 @@ export interface Servicio{
 
 export interface Destino{
   id: number;
-  nombre: string;
-  pais: Pais
+  ciudad: string;
+  // pais: Pais
+  pais: string
 }
 
 export interface Pais{

@@ -92,30 +92,6 @@ import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 
-// type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Paquetes" | "Roles" | "Reservas" | "Reportes"
-
-
-// const moduleColors = {
-//   Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
-//   Paquetes: "bg-emerald-50 text-emerald-600 border-emerald-200",
-//   Paquetes: "bg-orange-50 text-orange-600 border-orange-200",
-//   Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
-//   Reservas: "bg-pink-50 text-pink-600 border-pink-200",
-//   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
-// }
-
-// const tipoPersonaColores = {
-//   fisica: "bg-blue-100 text-blue-700 border-blue-200",
-//   juridica: "bg-emerald-100 text-emerald-700 border-emerald-200",
-// }
-
-
-// const tipoRemuneracionColores = {
-//   salario: "bg-blue-100 text-blue-700 border-blue-200",
-//   comision: "bg-blue-100 text-blue-700 border-blue-200",
-//   mixto: "bg-emerald-100 text-emerald-700 border-emerald-200",
-// }
-
 let dataList: Paquete[] = [];
 let tipoPaqueteFilterList: any[] = [];
 
@@ -348,6 +324,7 @@ export default function ModulosPage() {
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
         handleDestinoNoSeleccionada(undefined)
+        handleCancel();
         
         setActiveTab('list');
         queryClient.invalidateQueries({
@@ -473,9 +450,6 @@ export default function ModulosPage() {
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
-  if (destinoNoSeleccionada === undefined) {
-    setDestinoNoSeleccionada(true);
-  }
 
   const payload = {
     ...dataForm,
@@ -487,6 +461,15 @@ export default function ModulosPage() {
     fecha_fin: dataForm.fecha_regreso,
     activo: true,
   };
+
+
+  console.log(payload)
+
+  if (destinoNoSeleccionada === undefined || !payload.destino_id) {
+    console.log('destino no seleccionado...')
+    setDestinoNoSeleccionada(true);
+    return;
+  }
 
   // Eliminar campos que no se envían
   delete payload.numero;
@@ -846,7 +829,7 @@ export default function ModulosPage() {
                       <h1 className="text-4xl font-bold text-white mb-2">{dataDetalle?.nombre}</h1>
                       <div className="flex items-center text-white/90 text-lg">
                         <MapPin className="w-5 h-5 mr-2" />
-                        <span>{dataDetalle?.destino.nombre}</span>
+                        <span>{dataDetalle?.destino.ciudad}</span>
                       </div>
                     </div>
                     <div className="text-right">
@@ -1322,7 +1305,7 @@ export default function ModulosPage() {
                                     onValueChange={setSelectedDestinoID}
                                     handleDataNoSeleccionada={handleDestinoNoSeleccionada}
                                     placeholder="Selecciona el destino..."
-                                    labelKey="nombre"
+                                    labelKey="ciudad_nombre"
                                     secondaryLabelKey="pais_nombre"
                                     valueKey="id"
                                   />
@@ -1333,6 +1316,9 @@ export default function ModulosPage() {
                               {destinoNoSeleccionada === false && (
                                 <p className="text-red-400 text-sm">Este campo es requerido</p>
                               )}
+
+                              {onGuardar && destinoNoSeleccionada && 
+                                  <p className="text-red-400 text-sm">Este campo es requerido</p>}
                           </div>
 
                           <div className="space-y-2 flex items-center justify-center gap-20">
@@ -2200,8 +2186,8 @@ export default function ModulosPage() {
 
                             <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.destino.nombre}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">{data.destino.pais.nombre}</div>
+                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.destino.ciudad}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">{data.destino.pais}</div>
                               </div>
                             </TableCell>
 
@@ -2414,7 +2400,7 @@ export default function ModulosPage() {
                               <div className="space-y-3">
                                 <div>
                                   <h3 className="font-semibold text-gray-900 text-lg font-sans">{pkg.nombre}</h3>
-                                  <p className="text-gray-600 text-sm font-sans">{pkg.destino.nombre}</p>
+                                  <p className="text-gray-600 text-sm font-sans">{pkg.destino.ciudad}</p>
                                 </div>
 
                                 <div className="flex items-center justify-between">
