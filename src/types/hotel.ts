@@ -9,6 +9,7 @@ export interface Habitacion {
   precio_noche: number;           // número con decimales
   moneda: number;
   moneda_nombre: string;
+  moneda_simbolo: string;
   servicios: number[];            // array de IDs de servicios
   activo: boolean;
   fecha_creacion: string;         // ISO datetime en string
@@ -25,6 +26,7 @@ export interface Hotel {
   direccion: string | null;
   ciudad: number;
   ciudad_nombre: string;
+  pais_id: number;
   pais_nombre: string;
   cadena: number;
   cadena_nombre: string;

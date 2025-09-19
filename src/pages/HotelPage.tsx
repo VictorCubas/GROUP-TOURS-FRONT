@@ -22,6 +22,8 @@ import {
   MapPin,
   HotelIcon,
   Star,
+  Building2,
+  BedIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -335,13 +337,12 @@ export default function HotelPage() {
           exact: false
         });
 
-         queryClient.invalidateQueries({
-          queryKey: ['hoteles-disponibles'],
-          exact: false
+        queryClient.invalidateQueries({
+          queryKey: ['hoteles-resumen'],
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['hoteles-resumen'],
+          queryKey: ['todos-hoteles'],
         });
 
           queryClient.invalidateQueries({
@@ -372,8 +373,11 @@ export default function HotelPage() {
         });
 
          queryClient.invalidateQueries({
-          queryKey: ['hoteles-disponibles'],
-          exact: false
+          queryKey: ['hoteles-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['todos-hoteles'],
         });
 
         queryClient.invalidateQueries({
@@ -404,11 +408,11 @@ export default function HotelPage() {
           exact: false
         });
         queryClient.invalidateQueries({
-          queryKey: ['hoteles-disponibles'],
-          exact: false
-        });
-        queryClient.invalidateQueries({
           queryKey: ['hoteles-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['todos-hoteles'],
         });
     },
   });
@@ -487,20 +491,39 @@ export default function HotelPage() {
     delete dataEditado.fecha_creacion;
     delete dataEditado.fecha_modificacion;
 
+    if (cadenaNoSeleccionada === undefined) {
+        setCadenaNoSeleccionada(true);
+        return;
+      }
 
-    console.log('selectedNacionalidadID: ', selectedNacionalidadID)
 
-    if(selectedPermissions.length){
+    console.log(rooms)
+    const habitaciones = rooms.map(room => ({
+      numero: room.number,
+      tipo: room.type,
+      capacidad: room.capacity,
+      precio_noche: room.price,
+      moneda: room.currency,
+      activo: true,
+      servicios: []
+    }))
+    
+    const payload = {...dataForm, 
+        // activo: true, 
+        // en_uso: false, 
+        ciudad: selectedCiudadID,
+        cadena: selectedCadenaID,
+        servicios: selectedPermissions,
+        habitaciones: [...habitaciones]
+      }
+
       
-      const payLoad = {
-                ...dataEditado, 
-                ciudad_id: selectedCiudadID,
-                hoteles_ids: selectedPermissions,
-                pais_id: selectedNacionalidadID,
-                destino_id: selectedCadenaID,
-      };
-      console.log('payload guardado: ', payLoad) 
-      mutateGuardarEditado(payLoad);
+      
+      delete payload.moneda;
+      console.log(payload)
+    
+    if(selectedPermissions.length){
+      mutateGuardarEditado(payload);
     }
   }
 
@@ -524,14 +547,56 @@ export default function HotelPage() {
     setActiveTab('form');
     setDataAEditar(data);
     console.log(data)
+
+    // ciudad_id: selectedCiudadID,
+    //             hoteles_ids: selectedPermissions,
+    //             pais_id: selectedNacionalidadID,
+    //             destino_id: selectedCadenaID,
     // const hoteles = data.hoteles;
     // const hotelesIds = hoteles.map(hotel => hotel.id)
     // console.log(data)
     // console.log('dataAEditar.persona.id: ', data.ciudad)
     // setSelectedNacionalidadid(Number(data.ciudad.pais_id));
     // setSelectedCiudadID(data.ciudad.id); 
-    // setSelectedPermissions(hotelesIds);
+    setSelectedCadenaID(data.cadena)
+    // setSelectedNacionalidadid(data.cadena);
+    setSelectedCiudadID(data.ciudad);
+    setSelectedNacionalidadid(data.pais_id)
+    setSelectedPermissions(data.servicios);
+
+    // number: "",
+    // type: "",
+    // capacity: 1,
+    // price: 0,
+    // currency: "",
+    const habitaciones = data.habitaciones.map(room => ({
+      number: room.numero,
+      type: room.tipo,
+      capacity: room.capacidad,
+      price: room.precio_noche,
+      currency: room.moneda,
+    }))
+
+    //  habitaciones: [
+    //   {
+    //     id: 6,
+    //     hotel: 23,
+    //     numero: '100',
+    //     tipo: 'doble',
+    //     capacidad: 2,
+    //     precio_noche: 260000,
+    //     moneda: 1,
+    //     moneda_nombre: 'Guaraní',
+    //     servicios: [],
+    //     activo: true,
+    //     fecha_creacion: '2025-09-19T16:32:29+0000',
+    //     fecha_modificacion: '2025-09-19T16:32:29+0000'
+    //   }
+    // ],
+    setRooms([...habitaciones]);
   }
+
+  console.log(rooms)
 
   const toggleActivar = (modulo: Hotel) => {
     setOnDesactivarData(true);
@@ -608,7 +673,10 @@ export default function HotelPage() {
         ...newRoom,
         currency: watch('moneda'), // o newRoom.currency
       };
-      setRooms((prev) => [...prev, room]);
+      setRooms((prev) => {
+        console.log(prev)
+        return [...prev, room]
+      });
     }
 
     // Resetear formulario
@@ -627,12 +695,17 @@ export default function HotelPage() {
       price: 0,
       currency: "",
     })
-    setIsAddRoomOpen(false)
-    setIsEditMode(false)
-    setEditingRoomId(null)
+    setIsAddRoomOpen(false);
+    setIsEditMode(false);
+    setEditingRoomId(null);
   }
 
   const handleEditRoom = (room: any) => {
+    // ciudad_id: selectedCiudadID,
+    //             hoteles_ids: selectedPermissions,
+    //             pais_id: selectedNacionalidadID,
+    //             destino_id: selectedCadenaID,
+
     console.log(room) 
       setNewRoom({
         number: room.number,
@@ -679,7 +752,7 @@ export default function HotelPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                        {/* {dataDetalle?.ciudad?.nombre} */}adasdsad
+                        {dataDetalle?.nombre}
                       </h2>
                       <p className="text-gray-600">Detalles completos del hotel</p>
                     </div>
@@ -700,49 +773,101 @@ export default function HotelPage() {
                         </div>
                       </div>
                       <div>
-                        <Label className="text-sm font-medium text-gray-500">En uso</Label>
-                        <div className="mt-1">
-                          {/* <Badge className={enUsoColors[dataDetalle?.en_uso.toString() as keyof typeof enUsoColors]}> */}
-                            {/* {dataDetalle?.en_uso ? "Asigando" : "Sin asignar"} */}
-                            asdasdas
-                          {/* </Badge> */}
+                        <Label className="text-sm font-medium text-gray-500">Clasificación por Estrellas</Label>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              className="p-1"
+                            >
+                              <Star
+                                className={`h-6 w-6 cursor-pointer ${
+                                  star <= dataDetalle!.estrellas ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                }`}
+                              />
+                            </button>
+                          ))}
                         </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Descripción</Label>
+                        <p className="mt-1 text-gray-900">{dataDetalle?.descripcion}</p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Cadena Hotelera</Label>
+                        <Badge
+                          className={dataDetalle?.cadena_nombre ? `text-xs bg-blue-100 text-blue-700 border-blue-200` :
+                                "bg-gray-100 text-gray-700 border-gray-200"
+                          }
+                        >
+                          {dataDetalle?.cadena_nombre ?? 'Independiente'}
+                        </Badge>
                       </div>
                     </div>
 
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Descripción</Label>
-                      <p className="mt-1 text-gray-900">{dataDetalle?.descripcion}</p>
-                    </div>
 
                     <div>
-                      {/* <Label className="text-sm font-medium text-gray-500">
-                        Hoteles asociados ({dataDetalle?.hoteles.length})
+                      <Label className="text-sm font-medium text-gray-500">
+                        Habitaciones ({dataDetalle?.habitaciones.length})
                       </Label>
                       <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
-                        {dataDetalle?.hoteles.map((hotel, index) => (
+                        {dataDetalle?.habitaciones.map((habitacion, index) => (
                           <>
                             <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                              <HotelIcon className="h-4 w-4 text-blue-500" />
-                              <span className="text-sm">{hotel.nombre}</span>
+                              <BedIcon className="h-4 w-4 text-blue-500" />
+                              <span className="text-sm">{habitacion.tipo}</span>
 
                                <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                  {hotel?.moneda_codigo}{hotel?.precio_habitacion} <span className="text-gray-500 font-normal"> / noche</span>
+                                  {habitacion?.moneda_simbolo}{habitacion?.precio_noche} <span className="text-gray-500 font-normal"> / noche</span>
                                 </Badge>
                             </div>
 
                          
                           </>
                         ))}
-                      </div> */}
+                      </div>
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Última Modificación</Label>
-                      <p className="mt-1 text-gray-900">
-                        {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
-                      </p>
+                      <Label className="text-sm font-medium text-gray-500">
+                        Servicios ({dataDetalle?.servicios_detalle.length})
+                      </Label>
+                      <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                        {dataDetalle?.servicios_detalle.map((servicio, index) => (
+                          <>
+                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                              <BedIcon className="h-4 w-4 text-blue-500" />
+                              <span className="text-sm">{servicio.nombre}</span>
+
+                               {/* <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                                  {servicio?.moneda_simbolo}{servicio?.precio_noche} <span className="text-gray-500 font-normal"> / noche</span>
+                                </Badge> */}
+                            </div>
+
+                         
+                          </>
+                        ))}
+                      </div>
                     </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Última Creación</Label>
+                          <p className="mt-1 text-gray-900">
+                            {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium text-gray-500">Última Modificación</Label>
+                          <p className="mt-1 text-gray-900">
+                            {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
+                          </p>
+                        </div>
+                      </div>
                   </div>
 
 
@@ -794,8 +919,8 @@ export default function HotelPage() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-white" />
+              <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-white" />
               </div>
               <h1 className="text-3xl font-semibold text-gray-900">Hotel</h1>
             </div>

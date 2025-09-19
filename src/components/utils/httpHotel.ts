@@ -49,11 +49,11 @@ export async function nuevoDataFetch(data: any) {
 }
 
 export async function guardarDataEditado(data: any) {
-  await axiosInstance.put(`/destino/${data.id}/`, data);    
+  await axiosInstance.put(`/hotel/${data.id}/`, data);    
 }
 
 export async function activarDesactivarData({ dataId, activo }: { dataId: number; activo: boolean }) {
-  await axiosInstance.patch(`/destino/${dataId}/`, {activo});    
+  await axiosInstance.patch(`/hotel/${dataId}/`, {activo});    
 }
 
 export async function fetchResumen() {
@@ -75,9 +75,4 @@ export async function fetchDataHoteles() {
 export async function fetchDataServiciosTodos() {
   const resp = await axiosInstance.get(`/servicio/?tipo=hotel`);
   return resp?.data?.results;
-}
-
-export async function fetchDataDestinosTodos() {
-  const resp = await axiosInstance.get(`/destino/todos/`);
-  return resp?.data
 }
