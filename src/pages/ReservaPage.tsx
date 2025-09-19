@@ -492,6 +492,7 @@ export default function ModulosPage() {
 
       if (paqueteNoSeleccionada === undefined) {
         setPaqueteNoSeleccionada(true);
+        return;
       }
 
 
@@ -1136,7 +1137,7 @@ export default function ModulosPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
 
-                        {/* DESTINO */}
+                        {/* PAQUETE */}
                           <div className="space-y-2 mi-select-wrapper">
                             <Label htmlFor="paquete" className="text-gray-700 font-medium">
                               Paquete *
