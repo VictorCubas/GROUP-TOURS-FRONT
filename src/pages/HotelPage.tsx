@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-constant-condition */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
@@ -19,8 +18,6 @@ import {
   CheckIcon,
   Boxes,
   Shield,
-  MapPin,
-  HotelIcon,
   Star,
   Building2,
   BedIcon,
@@ -69,12 +66,6 @@ const roleStatusColors = {
   true: "bg-emerald-100 text-emerald-700 border-emerald-200",
   false: "bg-gray-100 text-gray-700 border-gray-200",
 }
-
-const enUsoColors = {
-  false: "bg-red-100 text-red-700 border-red-200",
-  true: "bg-green-100 text-green-700 border-green-200",
-}
-
 
 let dataList: Hotel[] = [];
 
@@ -169,6 +160,8 @@ export default function HotelPage() {
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
+  console.log(isFetchingHoteles)
+
   const {data: dataCadenaList, isFetching: isFetchingCadenas,} = useQuery({
       queryKey: ['todos-cadenas',], //data cached
       queryFn: () => fetchDataCadenas(),
@@ -201,6 +194,7 @@ export default function HotelPage() {
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
+      console.log(isFetchingMoneda)
 
   if(!isFetching && !isError){
     if(data?.results){
@@ -214,16 +208,7 @@ export default function HotelPage() {
         setNewDataCiudadList([])
       }
     }, [isFetchingCiudad]);
-
-  useEffect(() => {
-      if(selectedCiudadID){
-        const selectedCiudad = dataCiudadList.filter((ciudad: any) => ciudad.id.toString() === selectedCiudadID.toString());
-
-        // if(selectedCiudad.length){
-          // setValue('nombre', selectedCiudad[0].nombre);
-        // }
-      }
-    }, [selectedCiudadID]);
+    
 
   useEffect(() => {
       if(selectedNacionalidadID){
