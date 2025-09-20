@@ -47,7 +47,7 @@ import { activarDesactivarData, fetchData, fetchDataCadenas, fetchDataHoteles, f
 import type { Hotel, HotelPaginatedResponse } from "@/types/hotel"
 import { ToastContext } from "@/context/ToastContext"
 import { Controller, useForm } from "react-hook-form"
-import { capitalizePrimeraLetra, formatearFecha } from "@/helper/formatter"
+import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles } from "@/helper/formatter"
 import { queryClient } from "@/components/utils/http"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
@@ -105,7 +105,8 @@ export default function HotelPage() {
               defaultValues: {
                 nombre: "",
                 descripcion: "",
-                estrellas: 4
+                estrellas: 4,
+                moneda: '2'
               }
             });
   // DATOS DEL FORMULARIO 
@@ -119,7 +120,7 @@ export default function HotelPage() {
     type: "",
     capacity: 1,
     price: 0,
-    currency: "",
+    currency: "2",
   })
 
   const [isEditMode, setIsEditMode] = useState(false)
@@ -555,6 +556,7 @@ export default function HotelPage() {
     // price: 0,
     // currency: "",
     const habitaciones = data.habitaciones.map(room => ({
+      id: room.id,
       number: room.numero,
       type: room.tipo,
       capacity: room.capacidad,
@@ -639,6 +641,9 @@ export default function HotelPage() {
       return; // Validación básica
     }
 
+    console.log(isEditMode);
+    console.log(editingRoomId);
+
     if (isEditMode && editingRoomId) {
       // 🔹 Editando habitación existente
       // console.log(newRoom)
@@ -678,7 +683,7 @@ export default function HotelPage() {
       type: "",
       capacity: 1,
       price: 0,
-      currency: "",
+      currency: "2",
     })
     setIsAddRoomOpen(false);
     setIsEditMode(false);
@@ -840,7 +845,7 @@ export default function HotelPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <Label className="text-sm font-medium text-gray-500">Última Creación</Label>
+                          <Label className="text-sm font-medium text-gray-500">Fecha Creación</Label>
                           <p className="mt-1 text-gray-900">
                             {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
                           </p>
@@ -1443,14 +1448,14 @@ export default function HotelPage() {
                                       <TableCell>{room.type}</TableCell>
                                       <TableCell>{room.capacity} personas</TableCell>
                                       <TableCell>
-                                        {room.price} {dataMonedaList.filter((moneda: Moneda) => moneda.id == room.currency)[0].simbolo } {dataMonedaList.filter((moneda: Moneda) => moneda.id == room.currency)[0].codigo}
+                                        {formatearSeparadorMiles.format(room.price)} {dataMonedaList.filter((moneda: Moneda) => moneda.id == room.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == room.currency)[0].codigo })
                                       </TableCell>
                                       <TableCell>
                                         {/* {getStatusBadge(room.status)} */}
                                         </TableCell>
                                       <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                          <Button variant="ghost" size="sm" onClick={() => handleEditRoom(room)}>
+                                          <Button type="button" variant="ghost" size="sm" onClick={() => handleEditRoom(room)}>
                                             <Edit className="h-4 w-4" />
                                           </Button>
                                           <Button
