@@ -1,15 +1,17 @@
-export interface Hotel {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  activo: boolean;
-  precio_habitacion: number;
-  moneda: number;
-  moneda_nombre: string;
-  moneda_codigo: string;
-  fecha_creacion: string; // formato ISO con zona horaria
-  fecha_modificacion: string;
-}
+// export interface Hotel {
+//   id: number;
+//   nombre: string;
+//   descripcion: string;
+//   activo: boolean;
+//   precio_habitacion: number;
+//   moneda: number;
+//   moneda_nombre: string;
+//   moneda_codigo: string;
+//   fecha_creacion: string; // formato ISO con zona horaria
+//   fecha_modificacion: string;
+// }
+
+import type { Hotel } from "./hotel";
 
 export interface Ciudad{
   id: number,

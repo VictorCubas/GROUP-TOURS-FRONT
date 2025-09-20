@@ -95,7 +95,8 @@ export default function HotelPage() {
                   activo: true,   // null = todos, true = solo activos
                   fecha_desde: "",
                   fecha_hasta: "",
-                  nombre: ""
+                  nombre: "",
+                  estrellas: "",
                 });
   
   // DATOS DEL FORMULARIO 
@@ -106,6 +107,7 @@ export default function HotelPage() {
                 nombre: "",
                 descripcion: "",
                 estrellas: 4,
+                estrellas_filtros: 0,
                 moneda: '2'
               }
             });
@@ -291,13 +293,15 @@ export default function HotelPage() {
   useEffect(() => {
       const handler = setTimeout(() => {
         console.log('cambiando nombre')
-        setFiltros(filtroAnterior => ({...filtroAnterior, nombre: busquedaPorFiltro}))
+        setFiltros(filtroAnterior => ({
+          ...filtroAnterior, nombre: busquedaPorFiltro,
+        }))
       }, 750) // ⏱️ medio segundo de espera
   
       return () => {
         clearTimeout(handler) // limpia el timeout si se sigue escribiendo
       }
-    }, [busquedaPorFiltro]);
+    }, [busquedaPorFiltro,]);
   
 
   const {mutate, isPending: isPendingMutation} = useMutation({
@@ -462,6 +466,7 @@ export default function HotelPage() {
 
       
       
+      delete payload.estrellas_filtros;
       delete payload.moneda;
       console.log(payload)
     
@@ -476,6 +481,7 @@ export default function HotelPage() {
     delete dataEditado.hoteles;
     delete dataEditado.fecha_creacion;
     delete dataEditado.fecha_modificacion;
+    delete dataEditado.estrellas_filtros;
 
     if (cadenaNoSeleccionada === undefined) {
         setCadenaNoSeleccionada(true);
@@ -1670,6 +1676,38 @@ export default function HotelPage() {
                         />
                       </div>
 
+                     <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium text-gray-700">Estrellas:</Label>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => {
+                                setValue('estrellas_filtros', star);
+                                setFiltros({...filtros, estrellas: star.toString()})
+                              }}
+                              className="p-1 rounded transition-colors hover:bg-gray-200"
+                            >
+                              <Star
+                                className={`h-6 w-6 cursor-pointer ${
+                                  star <= watch('estrellas_filtros') ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                }`}
+                              />
+                            </button>
+                          ))}
+
+                          <Button onClick={() => {
+                              setValue('estrellas_filtros', 0);
+                              setFiltros({...filtros, estrellas: ""})
+                            }} variant="outline" className="hover:bg-yellow-200 rounded-full cursor-pointer">
+                            <X className="h-3 w-3" />
+                          </Button>
+                      </div>
+                        
+                        
+                    </div>
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -1678,9 +1716,11 @@ export default function HotelPage() {
                             activo: true,   // null = todos, true = solo activos
                             fecha_desde: "",
                             fecha_hasta: "",
-                            nombre: ""
+                            nombre: "",
+                            estrellas: ""
                           });
                           setBusquedaPorFiltro(""); 
+                          setValue('estrellas_filtros', 0)
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >

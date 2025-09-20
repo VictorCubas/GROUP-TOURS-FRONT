@@ -15,6 +15,11 @@ export const fetchData = async (page: number, page_size: number = 5,
       url = url + `&busqueda=${filtros.nombre}`;
     }
 
+    url = url + `&estrellas=`;
+    if(filtros.estrellas){
+      url = url + `${filtros.estrellas}`;
+    }
+
     if(filtros.telefono){
       url = url + `&telefono=${filtros.telefono}`;
     }
