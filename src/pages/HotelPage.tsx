@@ -1690,7 +1690,7 @@ export default function HotelPage() {
                               className="p-1 rounded transition-colors hover:bg-gray-200"
                             >
                               <Star
-                                className={`h-6 w-6 cursor-pointer ${
+                                className={`h-4 w-4 cursor-pointer ${
                                   star <= watch('estrellas_filtros') ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
                                 }`}
                               />
@@ -1700,8 +1700,8 @@ export default function HotelPage() {
                           <Button onClick={() => {
                               setValue('estrellas_filtros', 0);
                               setFiltros({...filtros, estrellas: ""})
-                            }} variant="outline" className="hover:bg-yellow-200 rounded-full cursor-pointer">
-                            <X className="h-3 w-3" />
+                            }} variant="outline" className="p-3 m-0 h-6 w-6 hover:bg-yellow-200 rounded-full cursor-pointer">
+                            <X className="h-1 w-1" />
                           </Button>
                       </div>
                         
