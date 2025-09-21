@@ -1004,7 +1004,7 @@ export default function HotelPage() {
 
                       {/* ESTRELLAS */}
                       <div className="space-y-2">
-                        <Label>Clasificación por Estrellas</Label>
+                        <Label>Clasificación por Estrellas *</Label>
                         <div className="flex items-center gap-1">
                           {[1, 2, 3, 4, 5].map((star) => (
                             <button
@@ -1025,7 +1025,7 @@ export default function HotelPage() {
 
                     <div className="space-y-2">
                         <Label htmlFor="name" className="text-gray-700 font-medium">
-                          Dirección
+                          Dirección *
                         </Label>
 
                         <Input
@@ -1034,11 +1034,13 @@ export default function HotelPage() {
                             placeholder="Escribe la dirección completa del hotel"
                             className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                             {...register('direccion', {
-                            validate: {blankSpace: (value) => !!value.trim()},
-                            minLength: 10})}
+                              required: true, 
+                              validate: {blankSpace: (value) => !!value.trim()},
+                              minLength: 10})}
                           />
 
                       <div>
+                          {(errors?.direccion?.type === 'required' || errors?.direccion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
                           {errors?.direccion?.type === 'minLength' && <span className='text-red-400 text-sm'>Este campo debe tener minimo 10 caracteres</span>}
                         </div>
                     </div>
@@ -1743,7 +1745,6 @@ export default function HotelPage() {
                       <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                       <TableHead className="font-semibold text-gray-700">Servicios</TableHead>
                       <TableHead className="font-semibold text-gray-700">Fecha Creación</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Última Modificación</TableHead>
                       <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1838,14 +1839,6 @@ export default function HotelPage() {
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
                                     {formatearFecha(data.fecha_creacion)}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm text-gray-500">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {formatearFecha(data.fecha_modificacion)}
                                   </div>
                                 </div>
                               </TableCell>

@@ -2356,7 +2356,7 @@ export default function ModulosPage() {
                     {dataList.map((pkg) => (
                           <Card
                             key={pkg.id}
-                            className={`hover:shadow-lg transition-shadow cursor-pointer `}
+                            className={`hover:shadow-lg transition-shadow cursor-pointer mt-0 pt-0 `}
                           >
                             <div className="relative">
                               <img
@@ -2377,13 +2377,7 @@ export default function ModulosPage() {
                                   {pkg.tipo_paquete.nombre}
                                 </Badge>
                               </div>
-                              <div className="absolute top-3 right-3">
-                                <Checkbox
-                                  // checked={selectedPackages.includes(pkg.id)}
-                                  // onCheckedChange={() => handleSelectPackage(pkg.id)}
-                                  className="bg-white"
-                                />
-                              </div>
+                              
                               <div className="absolute bottom-3 right-3">
                                 <Badge
                                   className={
