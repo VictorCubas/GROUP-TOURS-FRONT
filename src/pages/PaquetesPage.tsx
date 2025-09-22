@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
@@ -91,6 +92,7 @@ import placeholderViaje from "@/assets/paquete_default.png";
 import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 let dataList: Paquete[] = [];
 let tipoPaqueteFilterList: any[] = [];
@@ -152,6 +154,20 @@ export default function ModulosPage() {
                                                       totalPages: 5,
                                                       pageSize: 10
                                               });
+
+  // DATOS DE SALIDOS
+  const [nuevaSalida, setNuevaSalida] = useState({
+      fecha_salida_v2: "",
+      fecha_regreso_v2: "",
+      precio: '',
+      cupo: "",
+    })
+
+    const [salidas, setSalidas] = useState<any[]>([])
+    const [isEditMode, setIsEditMode] = useState(false)
+    const [editingSalidaId, setEditingSalidaId] = useState<string | null>(null);
+    const [isAddRoomOpen, setIsAddSalidaOpen] = useState(false);
+    // DATOS DE SALIDOS
    
     console.log(distribuidoraSelected)
 
@@ -429,6 +445,7 @@ export default function ModulosPage() {
         handleDestinoNoSeleccionada(undefined)
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
+        setSalidas([]);
         reset({
             nombre: '',
             tipo_paquete: '',
@@ -450,6 +467,14 @@ export default function ModulosPage() {
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
+    const salidasTemp = salidas.map((salida: any) => ({
+      fecha_salida: salida.fecha_salida_v2,
+      // fecha_regreso: salida.fecha_regreso_v2,
+      precio_actual: salida.precio,
+      cupo: parseInt(salida.cupo, 10), // Entero
+      moneda_id: dataForm.moneda,
+      temporada_id: salida?.temporada_id || null, // Opcional
+    }))
 
   const payload = {
     ...dataForm,
@@ -459,6 +484,7 @@ export default function ModulosPage() {
     moneda_id: dataForm.moneda,
     fecha_inicio: dataForm.fecha_salida,
     fecha_fin: dataForm.fecha_regreso,
+    salidas: salidasTemp,
     activo: true,
   };
 
@@ -499,7 +525,11 @@ export default function ModulosPage() {
   Object.keys(payload).forEach((key) => {
     const value = payload[key];
     if (value !== undefined && value !== null) {
-      if (Array.isArray(value)) {
+      if (key === "salidas") {
+        // 👇 Serializamos el array de objetos
+        console.log(JSON.stringify(value))
+        formData.append(key ,JSON.stringify(value));
+      }else if (Array.isArray(value)) {
         value.forEach((v) => formData.append(key, v));
       } else {
         formData.append(key, value);
@@ -757,6 +787,7 @@ export default function ModulosPage() {
   };
 
 
+  // FUNCIONES DE SALIDAS
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -764,6 +795,85 @@ export default function ModulosPage() {
       setImagePreview(url); // Mostrar preview de la nueva imagen
     }
   };
+
+
+  const handleAddRoom = () => { 
+    console.log(nuevaSalida);
+    if (!nuevaSalida.precio || !nuevaSalida.fecha_salida_v2 || !nuevaSalida.fecha_regreso_v2) {
+      return; // Validación básica
+    }
+
+    console.log(isEditMode);
+    console.log(editingSalidaId);
+
+    if (isEditMode && editingSalidaId) {
+      // 🔹 Editando habitación existente
+      // console.log(nuevaSalida)
+      const salidaEdited = {...nuevaSalida, currency: watch('moneda')};
+      console.log(salidaEdited)
+      setSalidas((prev) =>
+        prev.map((salida) =>
+          salida.id === editingSalidaId
+            ? { ...salida, ...salidaEdited } // Reemplazamos los valores con los del formulario
+            : salida
+        )
+      );
+    } else {
+      // 🔹 Agregando nueva habitación
+      const salida: any = {
+        id: Date.now().toString(), // ID temporal
+        ...nuevaSalida,
+        currency: watch('moneda'), // o nuevaSalida.currency
+      };
+      setSalidas((prev) => {
+        console.log(prev)
+        return [...prev, salida]
+      });
+    }
+
+    // Resetear formulario
+    resetSalidaForm();
+  };
+
+  const handleDeleteRoom = (roomId: string) => {
+    setSalidas((prev) => prev.filter((salida) => salida.id !== roomId))
+  }
+
+  const resetSalidaForm = () => {
+    setNuevaSalida({
+      fecha_salida_v2: "",
+      fecha_regreso_v2: "",
+      precio: '',
+      cupo: "",
+    })
+    setIsAddSalidaOpen(false);
+    setIsEditMode(false);
+    setEditingSalidaId(null);
+  }
+
+  const handleEditSalida = (salida: any) => {
+    // ciudad_id: selectedCiudadID,
+    //             hoteles_ids: selectedPermissions,
+    //             pais_id: selectedNacionalidadID,
+    //             destino_id: selectedCadenaID,
+
+    console.log(salida) 
+      setNuevaSalida({
+        fecha_salida_v2: salida.fecha_salida_v2,
+        fecha_regreso_v2: salida.fecha_regreso_v2,
+        precio: salida.precio,
+        cupo: salida.cupo,
+      });
+
+      setEditingSalidaId(salida.id);
+      setIsEditMode(true);
+      setIsAddSalidaOpen(true);
+
+      // 🔹 Seteamos el value del Controller también
+      setValue('moneda', salida.currency.toString()); 
+    };
+
+    // FUNCIONES DE SALIDAS
 
   return (
     <>
@@ -1317,7 +1427,7 @@ export default function ModulosPage() {
                                 <p className="text-red-400 text-sm">Este campo es requerido</p>
                               )}
 
-                              {onGuardar && destinoNoSeleccionada && 
+                              {onGuardar && !destinoNoSeleccionada && 
                                   <p className="text-red-400 text-sm">Este campo es requerido</p>}
                           </div>
 
@@ -1376,7 +1486,7 @@ export default function ModulosPage() {
                           </div>
 
 
-                          {/* MONTO PRECIO */}
+                          {/* CANTIDAD PASAJEROS */}
                           {watch("propio")  && 
                             <div className="space-y-2">
                               <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
@@ -1848,12 +1958,10 @@ export default function ModulosPage() {
                                       </Button>
                                     </div>
                                   )}
-
+ 
                                 </div>
 
-                                {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
-                                
-                                <div className="flex items-center gap-2 pt-2">
+                                  <div className="flex items-center gap-2 pt-2">
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -1895,6 +2003,168 @@ export default function ModulosPage() {
                                     
                                   </Button>
                                 </div>
+                                
+                                <Card className="mt-8">
+                                    <CardHeader>
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <CardTitle>Gestión de Salidas</CardTitle>
+                                          <CardDescription>Administre las salidas y sus tarifas</CardDescription>
+                                        </div>
+                                        <Dialog 
+                                        open={isAddRoomOpen}
+                                          onOpenChange={(open) => {
+                                            if (!open) resetSalidaForm()
+                                            setIsAddSalidaOpen(open)
+                                          }}
+                                        >
+                                          <DialogTrigger asChild className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
+                                            <Button type="button">
+                                              <Plus className="h-4 w-4 mr-2" />
+                                              Agregar Salidas
+                                            </Button>
+                                          </DialogTrigger>
+                                          <DialogContent className="sm:max-w-[650px]">
+                                            <DialogHeader>
+                                              <DialogTitle>Agregar Nueva Salida</DialogTitle>
+                                              <DialogDescription>
+                                                Complete los datos de la nueva salida para agregarla al al paquete.
+                                              </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="grid gap-4 py-4">
+                                              <div className="grid grid-cols-2 items-center gap-4">
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
+                                                      <Input
+                                                        type="date"
+                                                        id="fecha_salida_v2"
+                                                        onChange={(e) => setNuevaSalida((prev) => ({ ...prev, fecha_salida_v2: e.target.value }))}
+                                                        className="w-40 border-blue-200 focus:border-blue-500"
+                                                      />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
+                                                      <Input
+                                                        type="date"
+                                                        id="fecha_regreso_v2"
+                                                        onChange={(e) => setNuevaSalida((prev) => ({ ...prev, fecha_regreso_v2: e.target.value }))}
+                                                        className="w-40 border-blue-200 focus:border-blue-500"
+                                                      />
+                                                </div>
+                                              </div>
+
+                                              <div className="grid grid-cols-2 items-center gap-4">
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="precio" className="text-right">
+                                                      Precio * 
+                                                    </Label>
+                                                    <div className="col-span-3 flex gap-2">
+                                                        <Input
+                                                          id="precio"
+                                                          type="text"
+                                                          value={nuevaSalida.precio}
+                                                            onChange={(e) =>
+                                                              setNuevaSalida((prev) => ({
+                                                                ...prev,
+                                                                precio: e.target.value, // <-- sin Number.parseFloat
+                                                              }))
+                                                            }
+                                                          placeholder="150"
+                                                          className="flex-1"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="cupo" className="text-right">
+                                                      Cupo * 
+                                                    </Label>
+                                                    <div className="col-span-3 flex gap-2">
+                                                        <Input
+                                                          id="cupo"
+                                                          type="text"
+                                                          value={nuevaSalida.cupo}
+                                                          onChange={(e) =>
+                                                            setNuevaSalida((prev) => ({
+                                                                ...prev,
+                                                                cupo: e.target.value, // <-- sin Number.parseFloat
+                                                              }))
+                                                          }
+                                                          placeholder="46"
+                                                          className="flex-1"
+                                                        />
+                                                    </div>
+                                                </div>
+                                              </div>
+                                            
+                                            </div>
+                                            <DialogFooter>
+                                              <Button type="button" variant="outline" className="cursor-pointer" 
+                                                  onClick={resetSalidaForm}
+                                                  >
+                                                Cancelar
+                                              </Button>
+                                              <Button type="button" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                   onClick={handleAddRoom}
+                                                   >
+                                                    Agregar Salida
+                                              </Button>
+                                            </DialogFooter>
+                                          </DialogContent>
+                                        </Dialog>
+                                      </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="rounded-md border">
+                                        <Table>
+                                          <TableHeader>
+                                            <TableRow>
+                                              <TableHead>Fecha Salida</TableHead>
+                                              <TableHead>Fecha Regreso</TableHead>
+                                              <TableHead>Precio</TableHead>
+                                              <TableHead>Cupo</TableHead>
+                                              <TableHead className="text-right">Acciones</TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {salidas.map((salida: any) => (
+                                              <TableRow key={salida.id}>
+                                                <TableCell className="font-medium">{salida.fecha_salida_v2}</TableCell>
+                                                <TableCell>{salida.fecha_regreso_v2}</TableCell>
+                                                <TableCell>{formatearSeparadorMiles.format(salida.precio)}</TableCell>
+                                                <TableCell>
+                                                  {salida.cupo}
+                                                  {/* {dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].codigo }) */}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {/* {getStatusBadge(salida.status)} */}
+                                                  </TableCell>
+                                                <TableCell className="text-right">
+                                                  <div className="flex items-center justify-end gap-2">
+                                                    <Button type="button" variant="ghost" size="sm" 
+                                                          onClick={() => handleEditSalida(salida)}
+                                                          > 
+                                                      <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      className="text-destructive hover:text-destructive"
+                                                      onClick={() => handleDeleteRoom(salida.id)}
+                                                    >
+                                                      <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                  </div>
+                                                </TableCell>
+                                              </TableRow>
+                                            ))}
+                                          </TableBody>
+                                        </Table>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+
+                                {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
+                                
                               </div>
                     </div>
 
