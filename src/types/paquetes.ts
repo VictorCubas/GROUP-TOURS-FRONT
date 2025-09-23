@@ -35,9 +35,11 @@ export interface Moneda{
 export interface SalidaPaquete {
   id: number;
   fecha_salida: string;      // ISO date en formato 'YYYY-MM-DD'
+  fecha_regreso: string;      // ISO date en formato 'YYYY-MM-DD'
   moneda: Moneda;            // Objeto con id y nombre
   temporada: string | null;  // Puede ser null
   precio_actual: number;     // Precio numérico
+  senia: number;     // Precio numérico
   cupo: number;              // Cupo numérico
   activo: boolean;           // Estado booleano
 }
@@ -50,7 +52,7 @@ export interface Paquete {
   destino: Destino;
   distribuidora?: Distribuidora;
   precio: number;
-  sena: number;
+  senia: number;
   moneda: Moneda;
   fecha_inicio: string | null; // formato YYYY-MM-DD
   fecha_fin: string | null; // formato YYYY-MM-DD

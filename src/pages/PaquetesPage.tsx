@@ -132,16 +132,31 @@ export default function ModulosPage() {
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
-                precio: '',
-                sena: '',
                 distribuidora_id: '',
                 propio: true,
                 personalizado: false,
-                fecha_salida: null, // Valor inicial explícitamente null
-                fecha_regreso: null
               }
             });
   // DATOS DEL FORMULARIO 
+
+  // DATOS DEL FORMULARIO DE SALIDAS
+  // const {
+  //   control: controlSalida,
+  //   register: registerSalida,
+  //   handleSubmit: handleSubmitSalida,
+  //   setValue: setValueSalida,
+  //   formState: { errors: errorsSalida },
+  //   reset: resetSalida,
+  // } = useForm({
+  //   mode: "onBlur",
+  //   defaultValues: {
+  //     senia: "",
+      
+  //   },
+  // });
+
+  // DATOS DEL FORMULARIO DE SALIDAS
+
 
 
 
@@ -160,6 +175,7 @@ export default function ModulosPage() {
       fecha_salida_v2: "",
       fecha_regreso_v2: "",
       precio: '',
+      senia: '',
       cupo: "",
     })
 
@@ -319,7 +335,7 @@ export default function ModulosPage() {
           nombre: '',
           tipo_paquete: '',
           precio: '',
-          sena: '',
+          senia: '',
           fecha_salida: '',
           fecha_regreso: '',
           distribuidora_id: '',
@@ -396,7 +412,7 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         reset({
             precio: '',
-            sena: '',
+            senia: '',
             tipo_paquete: '',
             fecha_salida: '',
             fecha_regreso: '',
@@ -451,7 +467,7 @@ export default function ModulosPage() {
             nombre: '',
             tipo_paquete: '',
             precio: '',
-            sena: '',
+            senia: '',
             fecha_salida: '',
             fecha_regreso: '',
             distribuidora_id: '',
@@ -471,7 +487,8 @@ export default function ModulosPage() {
   const handleGuardarNuevaData = async (dataForm: any) => {
     const salidasTemp = salidas.map((salida: any) => ({
       fecha_salida: salida.fecha_salida_v2,
-      // fecha_regreso: salida.fecha_regreso_v2,
+      fecha_regreso: salida.fecha_regreso_v2,
+      senia: salida.senia,
       precio_actual: salida.precio,
       cupo: parseInt(salida.cupo, 10), // Entero
       moneda_id: dataForm.moneda,
@@ -549,14 +566,20 @@ export default function ModulosPage() {
     const fecha_inicio = dataForm.fecha_salida ? formatearFechaDDMMYY(dataForm.fecha_salida) : null;
     const fecha_fin = dataForm.fecha_regreso ? formatearFechaDDMMYY(dataForm.fecha_regreso) : null;
 
+    console.log(salidas)
+
     const salidasTemp = salidas.map((salida: any) => ({
       fecha_salida: salida.fecha_salida_v2,
-      // fecha_regreso: salida.fecha_regreso_v2,
+      fecha_regreso: salida.fecha_regreso_v2,
       precio_actual: salida.precio,
+      senia: salida.senia,
       cupo: parseInt(salida.cupo, 10), // Entero
       moneda_id: dataForm.moneda,
       temporada_id: salida?.temporada_id || null, // Opcional
     }))
+
+
+    console.log(salidasTemp)
 
     const payload = {
       ...dataForm,
@@ -699,7 +722,7 @@ export default function ModulosPage() {
   //     { id: 8, nombre: 'Seguro de Viaje' }
   //   ],
   //   precio: 2000,
-  //   sena: 0,
+  //   senia: 0,
   //   fecha_inicio: null,
   //   fecha_fin: null,
   //   personalizado: true,
@@ -729,8 +752,10 @@ export default function ModulosPage() {
     const salidas = data.salidas.map((salida: SalidaPaquete) => ({
       id: salida.id,
       fecha_salida_v2: salida.fecha_salida,
+      fecha_regreso_v2: salida.fecha_regreso,
       moneda: salida.moneda.id,
       precio: salida.precio_actual,
+      senia: salida.senia,
       cupo: salida.cupo,
     }))
 
@@ -824,7 +849,9 @@ export default function ModulosPage() {
   };
 
 
-  const handleAddRoom = () => { 
+  console.log(salidas)
+
+  const handleAddSalida = () => { 
     console.log(nuevaSalida);
     // if (!nuevaSalida.precio || !nuevaSalida.fecha_salida_v2 || !nuevaSalida.fecha_regreso_v2) {
     //   return; // Validación básica
@@ -841,7 +868,7 @@ export default function ModulosPage() {
       setSalidas((prev) =>
         prev.map((salida) =>
           salida.id === editingSalidaId
-            ? { ...salida, ...salidaEdited } // Reemplazamos los valores con los del formulario
+            ? { ...salida, ...salidaEdited, senia: salidaEdited.senia } // Reemplazamos los valores con los del formulario
             : salida
         )
       );
@@ -871,6 +898,7 @@ export default function ModulosPage() {
       fecha_salida_v2: "",
       fecha_regreso_v2: "",
       precio: '',
+      senia: '',
       cupo: "",
     })
     setIsAddSalidaOpen(false);
@@ -887,6 +915,7 @@ export default function ModulosPage() {
   // }
 
   const handleEditSalida = (salida: any) => {
+    console.log(salida);
     // Cargamos los valores en el state que controla los <Input />
     setNuevaSalida({
       fecha_salida_v2: salida.fecha_salida_v2,
@@ -894,6 +923,7 @@ export default function ModulosPage() {
       fecha_regreso_v2: salida.fecha_regreso_v2 ?? '',
       precio: salida.precio,
       cupo: salida.cupo,
+      senia: salida?.senia ?? '',
       // moneda: salida.moneda,
     });
 
@@ -1705,92 +1735,54 @@ export default function ModulosPage() {
                             <Input
                               id="precio"
                               autoComplete="precio"
+                              disabled
                               placeholder="Precio del paquete"
                               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                               {...register('precio', {
-                                required: {
-                                  value: true,
-                                  message: 'Este campo es requerido'
-                                }
+                               
                               })}
                             />
-                            <div>
-                              {errors.precio && (
-                                <span className="text-red-400 text-sm">
-                                  {errors.precio.message as string}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-
-                           {/* MONTO SEÑA */}
-                          <div className="space-y-2">
-                            <Label htmlFor="sena" className="text-gray-700 font-medium">
-                              Seña *
-                            </Label>
-                            <Input
-                              id="sena"
-                              autoComplete="sena"
-                              placeholder="Valor de seña"
-                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                              {...register('sena', {
-                                required: {
-                                  value: true,
-                                  message: 'Este campo es requerido'
-                                }
-                              })}
-                            />
-                            <div>
-                              {errors.sena && (
-                                <span className="text-red-400 text-sm">
-                                  {errors.sena.message as string}
-                                </span>
-                              )}
-                            </div>
-                          </div>            
+                            
+                          </div>          
                 
                             <div className="space-y-2">
-                              <Label htmlFor="fecha_salida" className="text-gray-700 font-medium">
-                                Fecha de Salida *
-                              </Label>
+                                <Label htmlFor="fecha_salida" className="text-gray-700 font-medium">
+                                  Fecha de Salida *
+                                </Label>
 
-                              <Controller
-                                name="fecha_salida"
-                                control={control}
-                                rules={{
-                                required: !watch('personalizado') ? "Este campo es requerido" : false,
-                              }}
-                                render={({ field }) => (
-                                  <Flatpickr
-                                    value={field.value}
-                                    onChange={(date) => {
+                                <Controller
+                                  name="fecha_salida"
+                                  control={control}
+                                  rules={{}} // Sin validación required
+                                  render={({ field }) => (
+                                    <Flatpickr
+                                      value={field.value}
+                                      onChange={(date) => {
                                         if (date[0]) {
                                           const fecha = date[0];
                                           const año = fecha.getFullYear();
                                           const mes = String(fecha.getMonth() + 1).padStart(2, "0");
                                           const dia = String(fecha.getDate()).padStart(2, "0");
-                                          field.onChange(`${año}-${mes}-${dia}`); // YYYY/MM/DD
+                                          field.onChange(`${año}-${mes}-${dia}`);
                                         } else {
                                           field.onChange(null);
                                         }
-                                        trigger("fecha_salida"); // Forzar revalidación
+                                        trigger("fecha_salida");
                                       }}
-                                    onClose={() => {
-                                      trigger("fecha_salida"); // Forzar revalidación al cerrar el calendario
-                                    }}
-                                    className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-2
-                                      focus:border-gray-500 focus:outline focus:outline-gray-500"
-                                    placeholder="DD/MM/YYYY"
-                                  />
-                                )}
-                              />
+                                      onClose={() => trigger("fecha_salida")}
+                                      className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-2
+                                        focus:border-gray-500 focus:outline focus:outline-gray-500"
+                                      placeholder="DD/MM/YYYY"
+                                      disabled
+                                    />
+                                  )}
+                                />
 
-                              {errors.fecha_salida?.message && (
-                                <span className="text-red-400 text-sm">
-                                  {errors.fecha_salida.message as string}
-                                </span>
-                              )}
+                                {errors.fecha_salida?.message && (
+                                  <span className="text-red-400 text-sm">
+                                    {errors.fecha_salida.message as string}
+                                  </span>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -1801,30 +1793,27 @@ export default function ModulosPage() {
                               <Controller
                                 name="fecha_regreso"
                                 control={control}
-                                rules={{
-                                  required: !watch('personalizado') ? "Este campo es requerido" : false,
-                                }}
+                                rules={{}} // Sin validación required
                                 render={({ field }) => (
                                   <Flatpickr
                                     value={field.value}
                                     onChange={(date) => {
-                                        if (date[0]) {
-                                          const fecha = date[0];
-                                          const año = fecha.getFullYear();
-                                          const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-                                          const dia = String(fecha.getDate()).padStart(2, "0");
-                                          field.onChange(`${año}-${mes}-${dia}`); // YYYY/MM/DD
-                                        } else {
-                                          field.onChange(null);
-                                        }
-                                        trigger("fecha_regreso"); // Forzar revalidación
-                                      }}
-                                    onClose={() => {
-                                      trigger("fecha_regreso"); // Forzar revalidación al cerrar el calendario
+                                      if (date[0]) {
+                                        const fecha = date[0];
+                                        const año = fecha.getFullYear();
+                                        const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+                                        const dia = String(fecha.getDate()).padStart(2, "0");
+                                        field.onChange(`${año}-${mes}-${dia}`);
+                                      } else {
+                                        field.onChange(null);
+                                      }
+                                      trigger("fecha_regreso");
                                     }}
+                                    onClose={() => trigger("fecha_regreso")}
                                     className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-2
                                       focus:border-gray-500 focus:outline focus:outline-gray-500"
                                     placeholder="DD/MM/YYYY"
+                                    disabled
                                   />
                                 )}
                               />
@@ -1835,6 +1824,7 @@ export default function ModulosPage() {
                                 </span>
                               )}
                             </div>
+
 
                            <div className="space-y-2 md:col-span-2">
                               <div className="space-y-2 md:col-span-2">
@@ -2107,6 +2097,30 @@ export default function ModulosPage() {
                                                         />
                                                     </div>
                                                 </div>
+
+                                                {/* MONTO SEÑA */}
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                  <Label htmlFor="senia" className="text-gray-700 font-medium">
+                                                    Seña *
+                                                  </Label>
+                                                  <div className="col-span-3 flex gap-2">
+                                                    <Input
+                                                          id="senia"
+                                                          type="text"
+                                                          value={nuevaSalida.senia}
+                                                            onChange={(e) =>
+                                                              setNuevaSalida((prev) => ({
+                                                                ...prev,
+                                                                senia: e.target.value, // <-- sin Number.parseFloat
+                                                              }))
+                                                            }
+                                                          placeholder="150"
+                                                          className="flex-1"
+                                                        />
+                                                  </div>
+                                                  
+                                                </div>  
+
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="cupo" className="text-right">
                                                       Cupo * 
@@ -2137,7 +2151,7 @@ export default function ModulosPage() {
                                                 Cancelar
                                               </Button>
                                               <Button type="button" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                                                   onClick={handleAddRoom}
+                                                   onClick={handleAddSalida}
                                                    >
                                                     Agregar Salida
                                               </Button>
@@ -2154,6 +2168,7 @@ export default function ModulosPage() {
                                               <TableHead>Fecha Salida</TableHead>
                                               <TableHead>Fecha Regreso</TableHead>
                                               <TableHead>Precio</TableHead>
+                                              <TableHead>Seña</TableHead>
                                               <TableHead>Cupo</TableHead>
                                               <TableHead className="text-right">Acciones</TableHead>
                                             </TableRow>
@@ -2161,17 +2176,15 @@ export default function ModulosPage() {
                                           <TableBody>
                                             {salidas.map((salida: any) => (
                                               <TableRow key={salida.id}>
-                                                {/* <TableCell className="font-medium">{JSON.stringify(salida)}</TableCell> */}
                                                 <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
                                                 <TableCell>{salida.fecha_regreso_v2}</TableCell>
                                                 <TableCell>{formatearSeparadorMiles.format(salida.precio)}</TableCell>
+                                                <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
                                                 <TableCell>
                                                   {salida.cupo}
                                                   {/* {dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].codigo }) */}
                                                 </TableCell>
-                                                <TableCell>
-                                                  {/* {getStatusBadge(salida.status)} */}
-                                                  </TableCell>
+                                                
                                                 <TableCell className="text-right">
                                                   <div className="flex items-center justify-end gap-2">
                                                     <Button type="button" variant="ghost" size="sm" 
@@ -2498,7 +2511,7 @@ export default function ModulosPage() {
                             <TableCell>
                               <div>
                                 <div className="font-medium text-green-600 truncate max-w-xs">{data.moneda.simbolo} {formatearSeparadorMiles.format(data.precio)}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.sena)}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.senia)}</div>
                               </div>
                             </TableCell>
                             
@@ -2706,8 +2719,8 @@ export default function ModulosPage() {
                                     <div className="font-semibold text-emerald-600 text-lg font-sans">
                                       {formatearSeparadorMiles.format(pkg?.precio ?? 0)}
                                     </div>
-                                    {pkg.sena > 0 && (
-                                      <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.sena ?? 0)}</div>
+                                    {pkg.senia > 0 && (
+                                      <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.senia ?? 0)}</div>
                                     )}
                                   </div>
                                   <Badge
