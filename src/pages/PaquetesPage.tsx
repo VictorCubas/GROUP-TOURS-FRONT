@@ -140,25 +140,6 @@ export default function ModulosPage() {
             });
   // DATOS DEL FORMULARIO 
 
-  // DATOS DEL FORMULARIO DE SALIDAS
-  // const {
-  //   control: controlSalida,
-  //   register: registerSalida,
-  //   handleSubmit: handleSubmitSalida,
-  //   setValue: setValueSalida,
-  //   formState: { errors: errorsSalida },
-  //   reset: resetSalida,
-  // } = useForm({
-  //   mode: "onBlur",
-  //   defaultValues: {
-  //     senia: "",
-      
-  //   },
-  // });
-
-  // DATOS DEL FORMULARIO DE SALIDAS
-
-
 
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -172,6 +153,26 @@ export default function ModulosPage() {
                                               });
 
   // DATOS DE SALIDOS
+
+
+  const {
+    control: controlSalida,
+    register: registerSalida,
+    handleSubmit: handleSubmitSalida,
+    setValue: setValueSalida,
+    formState: { errors: errorsSalida },
+    reset: resetSalida,
+  } = useForm({
+    mode: "onBlur",
+    defaultValues: {
+      precio: '',
+      senia: '',
+      fecha_salida_v2: '',
+      fecha_regreso_v2: '',
+      cupo: '',
+    },
+  });
+
   const [nuevaSalida, setNuevaSalida] = useState({
       fecha_salida_v2: "",
       fecha_regreso_v2: "",
@@ -501,6 +502,12 @@ export default function ModulosPage() {
       formData.append("imagen", dataForm.imagen[0]);
     }
 
+
+    if(salidas.length === 0){
+      handleShowToast('Debes agregar al menos una salida', 'error');
+      return;
+    }
+
     // Agregar el resto de campos
     Object.keys(prePayload).forEach((key) => {
       const value = prePayload[key];
@@ -568,6 +575,13 @@ export default function ModulosPage() {
     } else {
       delete payload.cantidad_pasajeros;
     }
+
+
+    if(salidas.length === 0){
+      handleShowToast('Debes agregar al menos una salida', 'error');
+      return;
+    }
+
 
     const formData = new FormData();
 
@@ -812,19 +826,19 @@ export default function ModulosPage() {
 
   console.log(salidas)
 
-  const handleAddSalida = () => { 
+  const handleAddSalida = async (dataForm: any) => {
+
+    console.log(dataForm);
     console.log(nuevaSalida);
-    // if (!nuevaSalida.precio || !nuevaSalida.fecha_salida_v2 || !nuevaSalida.fecha_regreso_v2) {
-    //   return; // Validación básica
-    // }
+
+  
 
     console.log(isEditMode);
     console.log(editingSalidaId);
 
     if (isEditMode && editingSalidaId) {
       // 🔹 Editando habitación existente
-      // console.log(nuevaSalida)
-      const salidaEdited = {...nuevaSalida, currency: watch('moneda')};
+      const salidaEdited = {...dataForm, currency: watch('moneda')};
       console.log(salidaEdited)
       setSalidas((prev) =>
         prev.map((salida) =>
@@ -835,11 +849,24 @@ export default function ModulosPage() {
       );
     } else {
       // 🔹 Agregando nueva habitación
+
+  //   {
+  //   precio: '2000',
+  //   senia: '250',
+  //   fecha_salida_v2: '2025-09-23',
+  //   fecha_regreso_v2: '2025-09-27',
+  //   cupo: '34'
+  // }
+    
+      console.log(nuevaSalida);
+      console.log(dataForm)
       const salida: any = {
         id: Date.now().toString(), // ID temporal
-        ...nuevaSalida,
+        ...dataForm,
         currency: watch('moneda'), // o nuevaSalida.currency
       };
+
+      console.log(salida)
       setSalidas((prev) => {
         console.log(prev)
         return [...prev, salida]
@@ -862,6 +889,14 @@ export default function ModulosPage() {
       senia: '',
       cupo: "",
     })
+
+    resetSalida({
+      precio: '',
+      senia: '',
+      fecha_salida_v2: '',
+      fecha_regreso_v2: '',
+      cupo: '',
+    });
     setIsAddSalidaOpen(false);
     setIsEditMode(false);
     setEditingSalidaId(null);
@@ -887,6 +922,10 @@ export default function ModulosPage() {
       senia: salida?.senia ?? '',
       // moneda: salida.moneda,
     });
+
+    resetSalida({
+      ...salida
+    })
 
     setEditingSalidaId(salida.id);
     setIsEditMode(true);
@@ -1303,7 +1342,7 @@ export default function ModulosPage() {
 
             {/* Registration Form Tab */}
             <TabsContent value="form">
-              <form onSubmit={handleSubmit(!dataAEditar ? handleGuardarNuevaData: handleGuardarDataEditado)}>
+              <form id="mainForm" onSubmit={handleSubmit(!dataAEditar ? handleGuardarNuevaData: handleGuardarDataEditado)}>
                 <Card className="border-emerald-200 pt-0">
                   <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
                     <div className="flex items-center gap-3">
@@ -1905,15 +1944,6 @@ export default function ModulosPage() {
                                                 {servicio.nombre}
                                               </Label>
                                               <p className="text-xs text-gray-500 mt-1">{servicio.descripcion}</p>
-                                              <div className="flex items-center gap-2 mt-2">
-                                                {/* <Badge
-                                                  className='bg-blue-100 text-blue-700 border-blue-200'
-                                                >
-                                                </Badge> */}
-                                                {/* <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                                  {servicio?.moneda?.codigo}{servicio?.precio_habitacion} <span className="text-gray-500 font-normal">/ noche</span>
-                                                </Badge> */}
-                                              </div>
                                             </div>
                                           </div>
                                         </div>
@@ -1993,6 +2023,9 @@ export default function ModulosPage() {
                                         <div>
                                           <CardTitle>Gestión de Salidas</CardTitle>
                                           <CardDescription>Administre las salidas y sus tarifas</CardDescription>
+                                          {onGuardar && salidas.length === 0 &&
+                                            <p className="text-red-400">Debes agregar al menos una salida</p>
+                                          }
                                         </div>
                                         <Dialog 
                                         open={isAddRoomOpen}
@@ -2008,116 +2041,115 @@ export default function ModulosPage() {
                                             </Button>
                                           </DialogTrigger>
                                           <DialogContent className="sm:max-w-[650px]">
-                                            <DialogHeader>
-                                              <DialogTitle>Agregar Nueva Salida</DialogTitle>
-                                              <DialogDescription>
-                                                Complete los datos de la nueva salida para agregarla al al paquete.
-                                              </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="grid gap-4 py-4">
-                                              <div className="grid grid-cols-2 items-center gap-4">
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
-                                                      <Input
-                                                        type="date"
-                                                        id="fecha_salida_v2"
-                                                        value={nuevaSalida.fecha_salida_v2} 
-                                                        onChange={(e) => setNuevaSalida((prev) => ({ ...prev, fecha_salida_v2: e.target.value }))}
-                                                        className="w-40 border-blue-200 focus:border-blue-500"
-                                                      />
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
-                                                      <Input
-                                                        type="date"
-                                                        id="fecha_regreso_v2"
-                                                        onChange={(e) => setNuevaSalida((prev) => ({ ...prev, fecha_regreso_v2: e.target.value }))}
-                                                        className="w-40 border-blue-200 focus:border-blue-500"
-                                                      />
-                                                </div>
-                                              </div>
-
-                                              <div className="grid grid-cols-2 items-center gap-4">
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="precio" className="text-right">
-                                                      Precio * 
-                                                    </Label>
-                                                    <div className="col-span-3 flex gap-2">
+                                            <form id="salidaForm" 
+                                             onSubmit={(e) => {
+                                                  e.stopPropagation(); // evita que el submit burbujee al form padre
+                                                  handleSubmitSalida(handleAddSalida)(e);
+                                                }}>
+                                              <DialogHeader>
+                                                <DialogTitle>Agregar Nueva Salida</DialogTitle>
+                                                <DialogDescription>
+                                                  Complete los datos de la nueva salida para agregarla al al paquete.
+                                                </DialogDescription>
+                                              </DialogHeader>
+                                              <div className="grid gap-4 py-4">
+                                                <div className="grid grid-cols-2 items-center gap-4">
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
                                                         <Input
-                                                          id="precio"
-                                                          type="text"
-                                                          value={nuevaSalida.precio}
-                                                            onChange={(e) =>
-                                                              setNuevaSalida((prev) => ({
-                                                                ...prev,
-                                                                precio: e.target.value, // <-- sin Number.parseFloat
-                                                              }))
-                                                            }
-                                                          placeholder="150"
-                                                          className="flex-1"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* MONTO SEÑA */}
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                  <Label htmlFor="senia" className="text-gray-700 font-medium">
-                                                    Seña *
-                                                  </Label>
-                                                  <div className="col-span-3 flex gap-2">
-                                                    <Input
-                                                          id="senia"
-                                                          type="text"
-                                                          value={nuevaSalida.senia}
-                                                            onChange={(e) =>
-                                                              setNuevaSalida((prev) => ({
-                                                                ...prev,
-                                                                senia: e.target.value, // <-- sin Number.parseFloat
-                                                              }))
-                                                            }
-                                                          placeholder="150"
-                                                          className="flex-1"
+                                                          type="date"
+                                                          id="fecha_salida_v2"
+                                                          {...registerSalida('fecha_salida_v2', { required: true })}
+                                                          className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
+                                                              'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
                                                         />
                                                   </div>
-                                                  
-                                                </div>  
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
+                                                        <Input
+                                                          type="date"
+                                                          id="fecha_regreso_v2"
+                                                          {...registerSalida('fecha_regreso_v2', {
+                                                            required: true, 
+                                                          })
+                                                          }
+                                                          className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
+                                                              'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                        />
+                                                  </div>
+                                                </div>
 
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="cupo" className="text-right">
-                                                      Cupo * 
+                                                <div className="grid grid-cols-2 items-center gap-4">
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label htmlFor="precio" className="text-right">
+                                                        Precio * 
+                                                      </Label>
+                                                      <div className="col-span-3 flex gap-2">
+                                                          <Input
+                                                            id="precio"
+                                                            type="text"
+                                                            {...registerSalida('precio', {
+                                                              required: true, 
+                                                              })
+                                                            }
+                                                            placeholder="2000"
+                                                            className={`flex-1 ${errorsSalida?.precio?.type === 'required' ? 
+                                                                'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                          />
+                                                      </div>
+                                                  </div>
+
+                                                  {/* MONTO SEÑA */}
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="senia" className="text-gray-700 font-medium">
+                                                      Seña *
                                                     </Label>
                                                     <div className="col-span-3 flex gap-2">
-                                                        <Input
-                                                          id="cupo"
-                                                          type="text"
-                                                          value={nuevaSalida.cupo}
-                                                          onChange={(e) =>
-                                                            setNuevaSalida((prev) => ({
-                                                                ...prev,
-                                                                cupo: e.target.value, // <-- sin Number.parseFloat
-                                                              }))
+                                                      <Input
+                                                        id="senia"
+                                                        type="text"
+                                                        {...registerSalida('senia', {
+                                                            required: true, })
                                                           }
-                                                          placeholder="46"
-                                                          className="flex-1"
-                                                        />
+                                                          placeholder="150"
+                                                          className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 'border-2 border-red-200 focus:border-red-500':
+                                                              'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                      />
                                                     </div>
+                                                    
+                                                  </div>  
+
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label htmlFor="cupo" className="text-right">
+                                                        Cupo * 
+                                                      </Label>
+                                                      <div className="col-span-3 flex gap-2">
+                                                          <Input
+                                                            id="cupo"
+                                                            type="text"
+                                                            {...registerSalida('cupo', { required: true })}
+                                                            placeholder="46"
+                                                            className={`flex-1 ${errorsSalida?.cupo?.type === 'required' ? 'border-2 border-red-200 focus:border-red-500': 
+                                                              'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                          />
+                                                      </div>
+                                                  </div>
                                                 </div>
+                                              
                                               </div>
-                                            
-                                            </div>
-                                            <DialogFooter>
-                                              <Button type="button" variant="outline" className="cursor-pointer" 
-                                                  onClick={resetSalidaForm}
-                                                  >
-                                                Cancelar
-                                              </Button>
-                                              <Button type="button" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                                                   onClick={handleAddSalida}
-                                                   >
-                                                    Agregar Salida
-                                              </Button>
-                                            </DialogFooter>
-                                          </DialogContent>
+                                              <DialogFooter>
+                                                <Button type="button" variant="outline" className="cursor-pointer" 
+                                                    onClick={resetSalidaForm}
+                                                    >
+                                                  Cancelar
+                                                </Button>
+                                                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                    >
+                                                      Agregar Salida
+                                                </Button>
+                                              </DialogFooter>
+                                              </form>
+                                            </DialogContent>
                                         </Dialog>
                                       </div>
                                     </CardHeader>
