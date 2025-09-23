@@ -77,7 +77,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Distribuidora, Moneda, Paquete, RespuestaPaginada, TipoPaquete, } from "@/types/paquetes"
+import type { Distribuidora, Moneda, Paquete, RespuestaPaginada, SalidaPaquete, TipoPaquete, } from "@/types/paquetes"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
 import {Controller, useForm } from "react-hook-form"
@@ -405,6 +405,7 @@ export default function ModulosPage() {
           });
 
 
+          handleCancel();
           setImagePreview(placeholderViaje);
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
@@ -455,6 +456,7 @@ export default function ModulosPage() {
             fecha_regreso: '',
             distribuidora_id: '',
             imagen: '',
+            moneda: ''
         });
 
 
@@ -547,6 +549,15 @@ export default function ModulosPage() {
     const fecha_inicio = dataForm.fecha_salida ? formatearFechaDDMMYY(dataForm.fecha_salida) : null;
     const fecha_fin = dataForm.fecha_regreso ? formatearFechaDDMMYY(dataForm.fecha_regreso) : null;
 
+    const salidasTemp = salidas.map((salida: any) => ({
+      fecha_salida: salida.fecha_salida_v2,
+      // fecha_regreso: salida.fecha_regreso_v2,
+      precio_actual: salida.precio,
+      cupo: parseInt(salida.cupo, 10), // Entero
+      moneda_id: dataForm.moneda,
+      temporada_id: salida?.temporada_id || null, // Opcional
+    }))
+
     const payload = {
       ...dataForm,
       destino_id: selectedDestinoID,
@@ -555,6 +566,7 @@ export default function ModulosPage() {
       moneda_id: dataForm.moneda,
       fecha_inicio,
       fecha_fin,
+      salidas: salidasTemp
     };
 
     // Limpiar campos que no deben enviarse
@@ -590,7 +602,13 @@ export default function ModulosPage() {
         if (value instanceof File) {
           formData.append(key, value);
         }
-      } else if (Array.isArray(value)) {
+      } 
+      else if (key === "salidas") {
+        // 👇 Serializamos el array de objetos
+        console.log(JSON.stringify(value))
+        formData.append(key ,JSON.stringify(value));
+      }
+      else if (Array.isArray(value)) {
         value.forEach((v) => formData.append(key, v));
       } else if (value !== undefined && value !== null) {
         formData.append(key, value as any);
@@ -695,7 +713,7 @@ export default function ModulosPage() {
   //   numero: 1
   // }
 
-  const servicios_ids = data.servicios.map(servicio => servicio.id)
+  const servicios_ids = data.servicios.map(servicio => servicio.id);
     console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
@@ -706,8 +724,17 @@ export default function ModulosPage() {
       // setSelectedPersonaID(data!.persona.id)
       setTipoPaqueteSelected(data!.tipo_paquete)
       setDistribuidoraSelected(data!.distribuidora);
-      setSelectedPermissions(servicios_ids)
-    
+      setSelectedPermissions(servicios_ids);
+
+    const salidas = data.salidas.map((salida: SalidaPaquete) => ({
+      id: salida.id,
+      fecha_salida_v2: salida.fecha_salida,
+      moneda: salida.moneda.id,
+      precio: salida.precio_actual,
+      cupo: salida.cupo,
+    }))
+
+    setSalidas(salidas);
   }
 
   const toggleActivar = (modulo: Paquete) => {
@@ -799,9 +826,9 @@ export default function ModulosPage() {
 
   const handleAddRoom = () => { 
     console.log(nuevaSalida);
-    if (!nuevaSalida.precio || !nuevaSalida.fecha_salida_v2 || !nuevaSalida.fecha_regreso_v2) {
-      return; // Validación básica
-    }
+    // if (!nuevaSalida.precio || !nuevaSalida.fecha_salida_v2 || !nuevaSalida.fecha_regreso_v2) {
+    //   return; // Validación básica
+    // }
 
     console.log(isEditMode);
     console.log(editingSalidaId);
@@ -850,28 +877,33 @@ export default function ModulosPage() {
     setIsEditMode(false);
     setEditingSalidaId(null);
   }
+  
+    //   {
+  //   id: 2,
+  //   fecha_salida_v2: '2025-09-21',
+  //   moneda: 2,
+  //   precio: 2000,
+  //   cupo: 45
+  // }
 
   const handleEditSalida = (salida: any) => {
-    // ciudad_id: selectedCiudadID,
-    //             hoteles_ids: selectedPermissions,
-    //             pais_id: selectedNacionalidadID,
-    //             destino_id: selectedCadenaID,
+    // Cargamos los valores en el state que controla los <Input />
+    setNuevaSalida({
+      fecha_salida_v2: salida.fecha_salida_v2,
+      // si no tienes fecha_regreso aún, usa cadena vacía para <input type="date" />
+      fecha_regreso_v2: salida.fecha_regreso_v2 ?? '',
+      precio: salida.precio,
+      cupo: salida.cupo,
+      // moneda: salida.moneda,
+    });
 
-    console.log(salida) 
-      setNuevaSalida({
-        fecha_salida_v2: salida.fecha_salida_v2,
-        fecha_regreso_v2: salida.fecha_regreso_v2,
-        precio: salida.precio,
-        cupo: salida.cupo,
-      });
+    setEditingSalidaId(salida.id);
+    setIsEditMode(true);
+    setIsAddSalidaOpen(true);
 
-      setEditingSalidaId(salida.id);
-      setIsEditMode(true);
-      setIsAddSalidaOpen(true);
-
-      // 🔹 Seteamos el value del Controller también
-      setValue('moneda', salida.currency.toString()); 
-    };
+    // Si usas react-hook-form u otro Controller, setea también el value del select/Controller
+    setValue('moneda', salida.moneda.toString());
+  };
 
     // FUNCIONES DE SALIDAS
 
@@ -2038,6 +2070,7 @@ export default function ModulosPage() {
                                                       <Input
                                                         type="date"
                                                         id="fecha_salida_v2"
+                                                        value={nuevaSalida.fecha_salida_v2} 
                                                         onChange={(e) => setNuevaSalida((prev) => ({ ...prev, fecha_salida_v2: e.target.value }))}
                                                         className="w-40 border-blue-200 focus:border-blue-500"
                                                       />
@@ -2128,7 +2161,8 @@ export default function ModulosPage() {
                                           <TableBody>
                                             {salidas.map((salida: any) => (
                                               <TableRow key={salida.id}>
-                                                <TableCell className="font-medium">{salida.fecha_salida_v2}</TableCell>
+                                                {/* <TableCell className="font-medium">{JSON.stringify(salida)}</TableCell> */}
+                                                <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
                                                 <TableCell>{salida.fecha_regreso_v2}</TableCell>
                                                 <TableCell>{formatearSeparadorMiles.format(salida.precio)}</TableCell>
                                                 <TableCell>

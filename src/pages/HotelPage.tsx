@@ -116,7 +116,7 @@ export default function HotelPage() {
   //DATOS DE HABITACION
   const [rooms, setRooms] = useState<any[]>([])
 
-  const [isAddRoomOpen, setIsAddRoomOpen] = useState(false)
+  const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [newRoom, setNewRoom] = useState({
     number: "",
     type: "",

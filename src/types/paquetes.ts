@@ -32,6 +32,16 @@ export interface Moneda{
   codigo: string;
 }
 
+export interface SalidaPaquete {
+  id: number;
+  fecha_salida: string;      // ISO date en formato 'YYYY-MM-DD'
+  moneda: Moneda;            // Objeto con id y nombre
+  temporada: string | null;  // Puede ser null
+  precio_actual: number;     // Precio numérico
+  cupo: number;              // Cupo numérico
+  activo: boolean;           // Estado booleano
+}
+
 export interface Paquete {
   id: number;
   numero?: number
@@ -48,6 +58,7 @@ export interface Paquete {
   cantidad_pasajeros: number | null;
   servicios: Servicio[] ;
   propio: boolean;
+  salidas: SalidaPaquete[]
   activo: boolean;
   imagen: string | null;
   imagen_url: string | null;
