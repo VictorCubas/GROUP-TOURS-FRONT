@@ -93,6 +93,7 @@ import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { getPayload } from "@/helper/paquete"
 
 let dataList: Paquete[] = [];
 let tipoPaqueteFilterList: any[] = [];
@@ -485,80 +486,40 @@ export default function ModulosPage() {
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
-    const salidasTemp = salidas.map((salida: any) => ({
-      fecha_salida: salida.fecha_salida_v2,
-      fecha_regreso: salida.fecha_regreso_v2,
-      senia: salida.senia,
-      precio_actual: salida.precio,
-      cupo: parseInt(salida.cupo, 10), // Entero
-      moneda_id: dataForm.moneda,
-      temporada_id: salida?.temporada_id || null, // Opcional
-    }))
+    const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, selectedPermissions)
 
-  const payload = {
-    ...dataForm,
-    destino_id: selectedDestinoID,
-    tipo_paquete_id: dataForm.tipo_paquete,
-    servicios_ids: selectedPermissions, 
-    moneda_id: dataForm.moneda,
-    fecha_inicio: dataForm.fecha_salida,
-    fecha_fin: dataForm.fecha_regreso,
-    salidas: salidasTemp,
-    activo: true,
-  };
-
-
-  console.log(payload)
-
-  if (destinoNoSeleccionada === undefined || !payload.destino_id) {
-    console.log('destino no seleccionado...')
-    setDestinoNoSeleccionada(true);
-    return;
-  }
-
-  // Eliminar campos que no se envían
-  delete payload.numero;
-  delete payload.tipo_paquete;
-  delete payload.destino;
-  delete payload.distribuidora;
-  delete payload.moneda;
-  delete payload.fecha_salida;
-  delete payload.fecha_regreso;
-  delete payload.imagen; // 🔹 MUY IMPORTANTE
-
-  if (watch("propio")) {
-    delete payload.distribuidora;
-    delete payload.distribuidora_id;
-  } else {
-    delete payload.cantidad_pasajeros;
-  }
-
-  const formData = new FormData();
-
-  // 🔹 Imagen opcional
-  if (dataForm.imagen && dataForm.imagen[0] instanceof File) {
-    formData.append("imagen", dataForm.imagen[0]);
-  }
-
-  // Agregar el resto de campos
-  Object.keys(payload).forEach((key) => {
-    const value = payload[key];
-    if (value !== undefined && value !== null) {
-      if (key === "salidas") {
-        // 👇 Serializamos el array de objetos
-        console.log(JSON.stringify(value))
-        formData.append(key ,JSON.stringify(value));
-      }else if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(key, v));
-      } else {
-        formData.append(key, value);
-      }
+    if (destinoNoSeleccionada === undefined || !prePayload.destino_id) {
+      console.log('destino no seleccionado...')
+      setDestinoNoSeleccionada(true);
+      return;
     }
-  });
 
-  console.log("FormData listo:", [...formData.entries()]);
-  mutate(formData);
-};
+    const formData = new FormData();
+
+    // 🔹 Imagen opcional
+    if (dataForm.imagen && dataForm.imagen[0] instanceof File) {
+      formData.append("imagen", dataForm.imagen[0]);
+    }
+
+    // Agregar el resto de campos
+    Object.keys(prePayload).forEach((key) => {
+      const value = prePayload[key];
+      if (value !== undefined && value !== null) {
+        if (key === "salidas") {
+          // 👇 Serializamos el array de objetos
+          console.log(JSON.stringify(value))
+          formData.append(key ,JSON.stringify(value));
+        }else if (Array.isArray(value)) {
+          value.forEach((v) => formData.append(key, v));
+        } else {
+          formData.append(key, value);
+        }
+      }
+    });
+
+    console.log("FormData listo:", [...formData.entries()]);
+    mutate(formData);
+  };
 
 
 
