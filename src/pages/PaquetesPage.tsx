@@ -1162,7 +1162,7 @@ export default function ModulosPage() {
                   {(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() === 'terrestre' && dataDetalle?.fecha_inicio)
                       &&
                         <>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-4">Fechas del Viaje</h3>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-4">Salida más próxima</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="flex items-center space-x-4">
                               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -1174,7 +1174,8 @@ export default function ModulosPage() {
                                   weekday: 'long', 
                                   year: 'numeric', 
                                   month: 'long', 
-                                  day: 'numeric' 
+                                  day: 'numeric' ,
+                                  timeZone: 'UTC', 
                                 })}</p>
                               </div>
                             </div>
@@ -1188,7 +1189,8 @@ export default function ModulosPage() {
                                   weekday: 'long', 
                                   year: 'numeric', 
                                   month: 'long', 
-                                  day: 'numeric' 
+                                  day: 'numeric' ,
+                                  timeZone: 'UTC', 
                                 })}</p>
                               </div>
                             </div>
@@ -1219,6 +1221,58 @@ export default function ModulosPage() {
 
                 {/* Servicios incluidos y excluidos */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
+                      Salidas
+                    </h3>
+                    <div className="space-y-4 max-h-60 overflow-y-auto">
+                      
+                      {[...dataDetalle!.salidas].map((item, index) => (
+                        <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
+
+                          <div className="flex items-center gap-3">
+                              <div className="bg-gradient-to-br from-green-100 to-emerald-100 p-2 rounded-xl">
+                                <Plane className="text-green-600 transform rotate-45" size={16} /> 
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">Salida</p>
+                                <p className="font-semibold text-slate-800">
+                                  {formatearFecha(item?.fecha_salida, false)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="bg-gradient-to-br from-orange-100 to-red-100 p-2 rounded-xl">
+                                <Plane className="text-orange-600 transform -rotate-45" size={16} />
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">Regreso</p>
+                                <p className="font-semibold text-slate-800">
+                                  {formatearFecha(item?.fecha_regreso, false)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="bg-gradient-to-br from-blue-100 to-blue-100 p-2 rounded-xl text-blue-600">
+                                {/* <DollarSignIcon className="text-blue-600" size={16} /> */}
+                                {dataDetalle?.moneda?.simbolo}
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">Precio</p>
+                                <p className="font-semibold text-slate-800">
+                                  {formatearSeparadorMiles.format(item?.precio_actual)}
+                                </p>
+                              </div>
+                            </div>
+                            {/* <p className="font-medium text-green-900">{dataDetalle?.moneda.simbolo}{item.precio_actual}</p> */}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
                       <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
