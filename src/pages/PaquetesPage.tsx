@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -65,7 +63,7 @@ import { RiGroupLine } from "react-icons/ri";
 
 
 import "flatpickr/dist/themes/material_green.css";
-import Flatpickr from "react-flatpickr"; 
+// import Flatpickr from "react-flatpickr"; 
 
 
 import {
@@ -92,7 +90,7 @@ import placeholderViaje from "@/assets/paquete_default.png";
 import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getPayload } from "@/helper/paquete"
 
 let dataList: Paquete[] = [];
@@ -138,6 +136,8 @@ export default function ModulosPage() {
                 personalizado: false,
               }
             });
+
+    console.log(trigger);
   // DATOS DEL FORMULARIO 
 
 
@@ -157,10 +157,10 @@ export default function ModulosPage() {
 
   // const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
   const {
-    control: controlSalida,
+    // control: controlSalida,
     register: registerSalida,
     handleSubmit: handleSubmitSalida,
-    setValue: setValueSalida,
+    // setValue: setValueSalida,
     formState: { errors: errorsSalida },
     reset: resetSalida,
   } = useForm({
