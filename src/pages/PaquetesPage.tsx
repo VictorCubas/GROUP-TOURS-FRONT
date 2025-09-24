@@ -155,6 +155,7 @@ export default function ModulosPage() {
   // DATOS DE SALIDOS
 
 
+  // const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
   const {
     control: controlSalida,
     register: registerSalida,
@@ -487,11 +488,18 @@ export default function ModulosPage() {
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
+    console.log(selectedPermissions)
     const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, selectedPermissions)
 
     if (destinoNoSeleccionada === undefined || !prePayload.destino_id) {
       console.log('destino no seleccionado...')
       setDestinoNoSeleccionada(true);
+      return;
+    }
+
+
+    if(selectedPermissions.length === 0){
+      handleShowToast('Debes agregar al menos un servicio', 'error');
       return;
     }
 
@@ -503,7 +511,8 @@ export default function ModulosPage() {
     }
 
 
-    if(salidas.length === 0){
+    if(salidas.length === 0 && !watch('personalizado') 
+      && quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLocaleLowerCase() === 'terrestre'){
       handleShowToast('Debes agregar al menos una salida', 'error');
       return;
     }
@@ -815,6 +824,16 @@ export default function ModulosPage() {
 
 
   // FUNCIONES DE SALIDAS
+
+   const handleOpenModal = () => {
+    const monedaValue = watch('moneda');
+    if (!monedaValue) {
+      handleShowToast('Debes seleccionar primero la moneda', 'error');
+      return;
+    }
+    setIsAddSalidaOpen(true);
+  };
+  
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1697,7 +1716,7 @@ export default function ModulosPage() {
                                       }}
                                     >
                                       <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                                        <SelectValue placeholder="Selecciona el tipo de paquete" />
+                                        <SelectValue placeholder="Selecciona el tipo de moneda" />
                                       </SelectTrigger>
                                       <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
                                         {dataMonedaList.map((data: Moneda) => 
@@ -1728,7 +1747,7 @@ export default function ModulosPage() {
                         </div>
                       
                           {/* MONTO PRECIO */}
-                          <div className="space-y-2">
+                          {/* <div className="space-y-2">
                             <Label htmlFor="precio" className="text-gray-700 font-medium">
                               Precio *
                             </Label>
@@ -1743,9 +1762,9 @@ export default function ModulosPage() {
                               })}
                             />
                             
-                          </div>          
+                          </div>           */}
                 
-                            <div className="space-y-2">
+                            {/* <div className="space-y-2">
                                 <Label htmlFor="fecha_salida" className="text-gray-700 font-medium">
                                   Fecha de Salida *
                                 </Label>
@@ -1823,7 +1842,7 @@ export default function ModulosPage() {
                                   {errors.fecha_regreso.message as string}
                                 </span>
                               )}
-                            </div>
+                            </div> */}
 
 
                            <div className="space-y-2 md:col-span-2">
@@ -2015,15 +2034,22 @@ export default function ModulosPage() {
                                       : "Seleccionar todos"}{" "}
                                     
                                   </Button>
+
+                                  {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
                                 </div>
-                                
-                                <Card className="mt-8">
+
+                                {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && 
+                                   <Card className="mt-8">
                                     <CardHeader>
                                       <div className="flex items-center justify-between">
                                         <div>
                                           <CardTitle>Gestión de Salidas</CardTitle>
                                           <CardDescription>Administre las salidas y sus tarifas</CardDescription>
-                                          {onGuardar && salidas.length === 0 &&
+                                          {onGuardar && 
+                                            quitarAcentos(tipoPaqueteSelected?.nombre ?? '').toLowerCase() === 'terrestre' &&
+                                            !watch('personalizado')
+                                            && 
+                                            salidas.length === 0 &&
                                             <p className="text-red-400">Debes agregar al menos una salida</p>
                                           }
                                         </div>
@@ -2034,12 +2060,16 @@ export default function ModulosPage() {
                                             setIsAddSalidaOpen(open)
                                           }}
                                         >
-                                          <DialogTrigger asChild className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
-                                            <Button type="button">
-                                              <Plus className="h-4 w-4 mr-2" />
-                                              Agregar Salidas
-                                            </Button>
-                                          </DialogTrigger>
+                                           {/* <DialogTrigger asChild> */}
+                                                <Button
+                                                  type="button"
+                                                  className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                  onClick={handleOpenModal} // 👈 validación antes de abrir
+                                                >
+                                                  <Plus className="h-4 w-4 mr-2" />
+                                                  Agregar Salidas
+                                                </Button>
+                                            {/* </DialogTrigger> */}
                                           <DialogContent className="sm:max-w-[650px]">
                                             <form id="salidaForm" 
                                              onSubmit={(e) => {
@@ -2202,8 +2232,7 @@ export default function ModulosPage() {
                                       </div>
                                     </CardContent>
                                   </Card>
-
-                                {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
+                                }
                                 
                               </div>
                     </div>
