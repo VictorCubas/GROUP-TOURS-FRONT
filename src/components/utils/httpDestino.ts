@@ -61,7 +61,7 @@ export async function fetchResumen() {
   return resp?.data
 }
 
-export async function fetchDataHoteles(nombre_ciudad: string, pais: string) {
+export async function fetchDataHoteles(nombre_ciudad: string, pais: string = "") {
   console.log(pais);
   const resp = await axiosInstance.get(`/hotel/?page=${1}&page_size=${10}&${nombre_ciudad ? '&ciudad=' + nombre_ciudad: ''}${pais ? '&pais=' + pais: ''}`);
   // const resp = await axiosInstance.get(`/hotel/todos/page=1&page_size=10&pais_nombre=&pais=19`);

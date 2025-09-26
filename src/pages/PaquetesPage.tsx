@@ -43,6 +43,11 @@ import {
   Building2,
   Table2,
   Grid3X3,
+  DollarSign,
+  User,
+  UserCheck,
+  Users2,
+  Bed,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -87,14 +92,43 @@ import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
-import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
+import { fetchDataDestinosTodos, fetchDataHoteles } from "@/components/utils/httpDestino"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { getPayload } from "@/helper/paquete"
+import { calcularRangoPrecio, getPayload } from "@/helper/paquete"
 
 let dataList: Paquete[] = [];
 let tipoPaqueteFilterList: any[] = [];
+let habitacionesList: any[] = [];
+
+
+
+const getRoomIcon = (roomType: string) => {
+  switch (roomType) {
+    case "single":
+      return <User className="w-4 h-4" />
+    case "doble":
+      return <UserCheck className="w-4 h-4" />
+    case "triple":
+      return <Users2 className="w-4 h-4" />
+    default:
+      return <Bed className="w-4 h-4" />
+  }
+}
+
+const getRoomTypeLabel = (roomType: string) => {
+  switch (roomType) {
+    case "single":
+      return "Individual"
+    case "doble":
+      return "Doble"
+    case "triple":
+      return "Triple"
+    default:
+      return roomType
+  }
+}
 
 export default function ModulosPage() {
   const {siTienePermiso} = useSessionStore();
@@ -116,6 +150,12 @@ export default function ModulosPage() {
    const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
+
+  const [rangoPrecio, setRangoPrecio] = useState<{ precioMin: number; precioMax: number; dias: number; noches: number }>();
+  const [ciudadDataSelected, setCiudadDataSelected] = useState<any>();
+  const [ciudadDataCompleto, setCiudadDataCompleto] = useState<any>();
+  const [selectedHotels, setSelectedHotels] = useState<Set<string>>(new Set());
+  const [hotelPrices, setHotelPrices] = useState<Record<string, { single: number; doble: number; triple: number }>>({});
   
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
@@ -125,6 +165,7 @@ export default function ModulosPage() {
                   tipo_paquete: "all",                      // fisica | juridica | all
                   tipo_propiedad: "all",  
                 });
+
   
   // DATOS DEL FORMULARIO 
   const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
@@ -160,13 +201,15 @@ export default function ModulosPage() {
     // control: controlSalida,
     register: registerSalida,
     handleSubmit: handleSubmitSalida,
-    // setValue: setValueSalida,
+    watch: watchSalida,
+    setValue: setValueSalida,
     formState: { errors: errorsSalida },
     reset: resetSalida,
   } = useForm({
     mode: "onBlur",
     defaultValues: {
-      precio: '',
+      precio_desde: '',
+      precio_hasta: '',
       senia: '',
       fecha_salida_v2: '',
       fecha_regreso_v2: '',
@@ -240,8 +283,28 @@ export default function ModulosPage() {
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
+
+  console.log(ciudadDataSelected)
+
+  const {data: dataHotelesList, isFetching: isFetchingHoteles,} = useQuery({
+        queryKey: ['todos-hoteles-paquetes', ciudadDataSelected], //data cached
+        queryFn: () => fetchDataHoteles(ciudadDataSelected),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
   // let filteredPermissions: Modulo[] = [];
 
+    console.log(dataHotelesList); 
+    console.log(isFetchingHoteles)
+
+    if(ciudadDataSelected && dataHotelesList){
+      console.log(ciudadDataSelected)
+      console.log(ciudadDataCompleto)
+
+      habitacionesList = [...dataHotelesList]; 
+      console.log(habitacionesList)
+    }
+    
 
   if(dataTipoPaqueteList && dataTipoPaqueteList.length){
     tipoPaqueteFilterList = [...dataTipoPaqueteList];
@@ -463,6 +526,7 @@ export default function ModulosPage() {
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
         handleDestinoNoSeleccionada(undefined)
+        setCiudadDataSelected(undefined);
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
         setSalidas([]);
@@ -650,6 +714,23 @@ export default function ModulosPage() {
     // Si no cumple el formato esperado, devuelve la misma fecha
     return fecha;
   }
+
+
+  useEffect(() => {
+    console.log(selectedDestinoID);
+    
+    if(selectedDestinoID){
+      const selectedDestino = dataDestinoList.filter((destino: any) => destino.id.toString() === selectedDestinoID.toString());
+      console.log(selectedDestino)
+
+      if(selectedDestino.length){
+        // setValue('nombre', selectedDestino[0].ciudad_nombre);
+        setCiudadDataSelected(selectedDestino[0].ciudad_nombre)
+        setCiudadDataCompleto(selectedDestino[0])
+      }
+    }
+  }, [selectedDestinoID]);
+
   /********************************
    * CORREGIR ESTA PARTE
    *******************************/
@@ -846,6 +927,7 @@ export default function ModulosPage() {
   console.log(salidas)
 
   const handleAddSalida = async (dataForm: any) => {
+    console.log(selectedHotels)
 
     console.log(dataForm);
     console.log(nuevaSalida);
@@ -901,6 +983,8 @@ export default function ModulosPage() {
   }
 
   const resetSalidaForm = () => {
+    setSelectedHotels(new Set());
+
     setNuevaSalida({
       fecha_salida_v2: "",
       fecha_regreso_v2: "",
@@ -910,7 +994,8 @@ export default function ModulosPage() {
     })
 
     resetSalida({
-      precio: '',
+      precio_desde: '',
+      precio_hasta: '',
       senia: '',
       fecha_salida_v2: '',
       fecha_regreso_v2: '',
@@ -955,6 +1040,74 @@ export default function ModulosPage() {
   };
 
     // FUNCIONES DE SALIDAS
+
+
+    const fechaSalida = watchSalida('fecha_salida_v2');
+    const fechaRegreso = watchSalida('fecha_regreso_v2');
+    console.log(fechaSalida, fechaRegreso) 
+
+    console.log(rangoPrecio);
+
+    useEffect(() => {
+      console.log(dataHotelesList)
+      console.log(selectedHotels);
+
+      // const idsSeleccionados = Array.from(selectedHotels).map(id => Number(id));
+
+      if (selectedHotels && fechaSalida && fechaRegreso && dataHotelesList) {
+
+        const hotelesFiltrados = dataHotelesList?.filter((hotel: any) =>
+          selectedHotels.has(hotel.id) // o idsSeleccionados.includes(hotel.id)
+        );
+
+        console.log(hotelesFiltrados);
+        console.log(fechaSalida, fechaRegreso)
+          // { min: 1680, max: 1760, dias: 8, noches: 8 }                  
+        console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso))
+        const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
+        setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
+        setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
+        setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+      }
+      // 👇 dependencias simples, sin llamadas complejas
+    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList]);
+
+    //FUCNIONES DE HOTELES DE LAS SALIDAS
+    const handleHotelToggle = (hotelId: string) => {
+      const newSelected = new Set(selectedHotels)
+      if (newSelected.has(hotelId)) {
+        newSelected.delete(hotelId)
+        const newPrices = { ...hotelPrices }
+        delete newPrices[hotelId]
+        setHotelPrices(newPrices)
+      } else {
+        newSelected.add(hotelId)
+        setHotelPrices({
+          ...hotelPrices,
+          [hotelId]: { single: 0, doble: 0, triple: 0 },
+        })
+      }
+      setSelectedHotels(newSelected)
+    }
+
+    //FUCNIONES DE HOTELES DE LAS SALIDAS
+
+
+    const renderStars = (rating: number) => {
+      return (
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Star
+              key={index}
+              className={`h-3 w-3 ${
+                index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+              }`}
+            />
+          ))}
+          <span className="ml-1 text-sm text-gray-600">({rating})</span>
+        </div>
+      );
+    };
 
   return (
     <>
@@ -2124,7 +2277,7 @@ export default function ModulosPage() {
                                                   Agregar Salidas
                                                 </Button>
                                             {/* </DialogTrigger> */}
-                                          <DialogContent className="sm:max-w-[650px]">
+                                          <DialogContent className="sm:max-w-[850px] max-h-[90vh]">
                                             <form id="salidaForm" 
                                              onSubmit={(e) => {
                                                   e.stopPropagation(); // evita que el submit burbujee al form padre
@@ -2165,20 +2318,43 @@ export default function ModulosPage() {
 
                                                 <div className="grid grid-cols-2 items-center gap-4">
                                                   <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label htmlFor="precio" className="text-right">
-                                                        Precio * 
+                                                      <Label htmlFor="precio_desde" className="text-right">
+                                                        Precio Desde * 
                                                       </Label>
                                                       <div className="col-span-3 flex gap-2">
                                                           <Input
-                                                            id="precio"
+                                                            id="precio_desde"
                                                             type="text"
-                                                            {...registerSalida('precio', {
+                                                            disabled
+                                                            {...registerSalida('precio_desde', {
                                                               required: true, 
                                                               })
                                                             }
                                                             placeholder="2000"
-                                                            className={`flex-1 ${errorsSalida?.precio?.type === 'required' ? 
-                                                                'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                            className={`flex-1 ${errorsSalida?.precio_desde?.type === 'required' ? 
+                                                                'border-2 border-red-200 focus:border-red-500': 
+                                                                'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
+                                                          />
+                                                      </div>
+                                                  </div>
+
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label htmlFor="precio_hasta" className="text-right">
+                                                        Precio Hasta * 
+                                                      </Label>
+                                                      <div className="col-span-3 flex gap-2">
+                                                          <Input
+                                                            id="precio_hasta"
+                                                            type="text"
+                                                            disabled
+                                                            {...registerSalida('precio_hasta', {
+                                                              required: true, 
+                                                              })
+                                                            }
+                                                            placeholder="2000"
+                                                            className={`flex-1 ${errorsSalida?.precio_hasta?.type === 'required' ? 
+                                                                'border-2 border-red-200 focus:border-red-500': 
+                                                                'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
                                                           />
                                                       </div>
                                                   </div>
@@ -2191,6 +2367,7 @@ export default function ModulosPage() {
                                                     <div className="col-span-3 flex gap-2">
                                                       <Input
                                                         id="senia"
+                                                        disabled
                                                         type="text"
                                                         {...registerSalida('senia', {
                                                             required: true, })
@@ -2220,7 +2397,94 @@ export default function ModulosPage() {
                                                   </div>
                                                 </div>
                                               
+
+                                               <Card className="bg-gray-50">
+                                                    <CardHeader>
+                                                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                        <Building2 className="w-5 h-5 text-primary" />
+                                                        Hoteles y Precios
+                                                      </h3>
+                                                      <p className="text-sm text-muted-foreground">
+                                                        Selecciona los hoteles disponibles y configura los precios por tipo de habitación
+                                                      </p>
+                                                    </CardHeader>
+                                                    <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
+                                                      {dataHotelesList && dataHotelesList?.map((hotel: any) => (
+                                                        <Card
+                                                            key={hotel.hotelId}
+                                                            className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
+                                                          >
+                                                            {/* bg-primary/5 border-primary/30" : "bg-background */}
+                                                          <CardContent className="">
+                                                            <div className="space-y-4">
+                                                              <div className="flex items-center space-x-3 ">
+                                                                <Checkbox
+                                                                  
+                                                                  id={hotel.id}
+                                                                  checked={selectedHotels.has(hotel.id)}
+                                                                  onCheckedChange={() => handleHotelToggle(hotel.id)}
+                                                                />
+                                                                <div className="flex-1">
+                                                                  <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
+                                                                    {hotel.nombre}
+                                                                  </Label>
+                                                                  <div className="flex items-center gap-4 mt-1">
+                                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
+                                                                      {renderStars(hotel.estrellas)}
+                                                                    </Badge>
+                                                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                      <MapPin className="w-3 h-3" />
+                                                                      {/* <span>{hotel.ubicacion}</span> */}
+                                                                      <span>{hotel.direccion}</span>
+                                                                    </div>
+                                                                  </div>
+                                                                </div>
+                                                              </div>
+
+                                                              {selectedHotels.has(hotel.id) && (
+                                                                <div className="pl-6 border-l-2 border-emerald-200">
+                                                                  <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                                                                    Precios por tipo de habitación:
+                                                                  </h4>
+
+                                                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                    {hotel?.habitaciones?.length === 0 && 
+                                                                        <p className="text-sm font-medium text-muted-foreground">
+                                                                          No tiene habitaciones asignadas
+                                                                        </p>}
+                                                                    {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
+                                                                      <div key={habitacion.id} className="space-y-2">
+                                                                        <Label className="text-sm flex items-center gap-2">
+                                                                          {getRoomIcon(habitacion.tipo)}
+                                                                          {getRoomTypeLabel(habitacion.tipo)}
+                                                                        </Label>
+                                                                        
+                                                                        <div className="relative">
+                                                                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                                          <Input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            step="0.01"
+                                                                            placeholder="0.00"
+                                                                            className="pl-10"
+                                                                            disabled
+                                                                            value={habitacion?.precio_noche ?? ''}
+                                                                          />
+                                                                        </div>
+                                                                      </div>
+                                                                    ))}
+                                                                  </div>
+                                                                </div>
+                                                              )}
+                                                            </div>
+                                                          </CardContent>
+                                                        </Card>
+                                                      ))}
+                                                    </CardContent>
+                                                  </Card>
                                               </div>
+
+                                              
                                               <DialogFooter>
                                                 <Button type="button" variant="outline" className="cursor-pointer" 
                                                     onClick={resetSalidaForm}
@@ -2254,7 +2518,7 @@ export default function ModulosPage() {
                                             {salidas.map((salida: any) => (
                                               <TableRow key={salida.id}>
                                                 <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
-                                                <TableCell>{salida.fecha_regreso_v2}</TableCell>
+                                                <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
                                                 <TableCell>{formatearSeparadorMiles.format(salida.precio)}</TableCell>
                                                 <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
                                                 <TableCell>

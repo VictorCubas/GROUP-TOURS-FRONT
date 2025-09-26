@@ -323,9 +323,9 @@ export default function DestinoPage() {
           exact: false
         });
 
-        queryClient.invalidateQueries({
-          queryKey: ['paquetes-resumen'],
-        });
+        queryClient.invalidateQueries({queryKey: ['paquetes-resumen'],});
+
+        queryClient.invalidateQueries({queryKey: ['todos-hoteles-paquetes'],});
     },
   });
 
@@ -368,6 +368,8 @@ export default function DestinoPage() {
         queryClient.invalidateQueries({
           queryKey: ['usuarios-resumen'],
         });
+
+        queryClient.invalidateQueries({queryKey: ['todos-hoteles-paquetes'],});
     },
   });
 

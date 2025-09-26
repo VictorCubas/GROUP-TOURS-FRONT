@@ -47,3 +47,49 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
 
   return payload;
 }
+
+
+export const calcularRangoPrecio = (
+  hoteles: any[],
+  fechaIngreso: string | Date,
+  fechaRegreso: string | Date
+): { 
+  precioMin: number; 
+  precioMax: number; 
+  dias: number; 
+  noches: number } => {
+  const inicio = parseFechaLocal(fechaIngreso);
+  const fin = parseFechaLocal(fechaRegreso);
+
+  // Normalizar horas
+  inicio.setHours(0, 0, 0, 0);
+  fin.setHours(0, 0, 0, 0);
+
+  const msEnDia = 1000 * 60 * 60 * 24;
+
+  // Diferencia en días calendario exacta
+  const diffDias = Math.floor((fin.getTime() - inicio.getTime()) / msEnDia);
+
+  // Noches = días
+  const diffNoches = diffDias; // Corrección aquí
+
+  const precios: number[] = hoteles.flatMap(hotel =>
+    hotel.habitaciones.map((h: any) => h.precio_noche)
+  );
+
+  if (precios.length === 0) {
+    return { precioMin: 0, precioMax: 0, dias: diffDias, noches: diffNoches };
+  }
+
+  const precioMin = Math.min(...precios) * diffNoches;
+  const precioMax = Math.max(...precios) * diffNoches;
+
+  return { precioMin, precioMax, dias: diffDias, noches: diffNoches };
+};
+
+// Función auxiliar para parsear fechas como local
+const parseFechaLocal = (fecha: string | Date): Date => {
+  if (fecha instanceof Date) return fecha;
+  const [y, m, d] = fecha.split('-').map(Number);
+  return new Date(y, m - 1, d); // mes 0-indexado
+};
