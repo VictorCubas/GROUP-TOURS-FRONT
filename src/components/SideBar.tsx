@@ -23,6 +23,7 @@ const sidebarItems = [
       { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
       // { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
       { label: "Destinos", href: "/paquetes_viajes/destinos", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      { label: "Hoteles", href: "/paquetes_viajes/hoteles", color: "text-blue-400", bgcolor: "bg-blue-400" },
     ],
   },
   {

@@ -92,8 +92,8 @@ export async function fetchDataMonedaTodos() {
 }
 
 export async function fetchDataServiciosTodos() {
-  const resp = await axiosInstance.get(`/servicio/todos/`);
-  return resp?.data
+  const resp = await axiosInstance.get(`/servicio/?tipo=paquete`);
+  return resp?.data?.results
 }
 
 export async function fetchDataDistribuidoraTodos() {

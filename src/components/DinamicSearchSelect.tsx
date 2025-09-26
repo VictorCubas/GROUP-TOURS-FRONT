@@ -57,16 +57,21 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
       }
     }, [searchTerm, onSearchChange]);
 
-  // 🔹 Función para obtener el label dinámico (razon_social o nombre+apellido)
-  const getItemLabel = (item: T) => {
-    if ("razon_social" in item && item.razon_social) {
-      return String(item.razon_social);
-    }
-    if ("nombre" in item && "apellido" in item) {
-      return `${item.nombre} ${item.apellido}`;
-    }
-    return labelKey ? String(item[labelKey]) : "";
-  };
+    // 🔹 Función para obtener el label dinámico (razon_social o nombre+apellido)
+    const getItemLabel = (item: T) => {
+      if (item && typeof item === "object") {
+        if ("razon_social" in item && (item as any).razon_social) {
+          return String((item as any).razon_social);
+        }
+        if ("nombre" in item && "apellido" in item) {
+          return `${(item as any).nombre} ${(item as any).apellido}`;
+        }
+        return labelKey ? String((item as any)[labelKey]) : "";
+      }
+      // Fallback si llega algo que no es objeto
+      return String(item ?? "");
+    };
+
 
   // 🔹 Filtro local por razon_social, nombre, apellido o documento
   const filteredItems = dataList;

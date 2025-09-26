@@ -76,7 +76,7 @@ import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
+import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
 import { Checkbox } from "@/components/ui/checkbox"
@@ -492,6 +492,7 @@ export default function ModulosPage() {
 
       if (paqueteNoSeleccionada === undefined) {
         setPaqueteNoSeleccionada(true);
+        return;
       }
 
 
@@ -1136,7 +1137,7 @@ export default function ModulosPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
 
-                        {/* DESTINO */}
+                        {/* PAQUETE */}
                           <div className="space-y-2 mi-select-wrapper">
                             <Label htmlFor="paquete" className="text-gray-700 font-medium">
                               Paquete *
@@ -1861,7 +1862,7 @@ export default function ModulosPage() {
                                 <div>
                                   <div className="font-medium text-gray-900">{data.paquete.nombre}</div>
                                   <div className="text-sm text-gray-500">
-                                    {data.paquete.destino.nombre}, {data.paquete.destino.pais.nombre}
+                                    {data.paquete.destino.ciudad}, {data.paquete.destino.pais}
                                   </div>
                                 </div>
                               </div>
@@ -2032,7 +2033,7 @@ export default function ModulosPage() {
                               <div className="space-y-3">
                                 <div>
                                   <h3 className="font-semibold text-gray-900 text-lg font-sans">{pkg.paquete.nombre}</h3>
-                                  <p className="text-gray-600 text-sm font-sans">{pkg.paquete.destino.nombre}</p>
+                                  <p className="text-gray-600 text-sm font-sans">{pkg.paquete.destino.ciudad}</p>
                                 </div>
 
                                 <div className="flex items-center justify-between">

@@ -5,7 +5,7 @@ import axiosInstance from "@/service/axiosInterceptor";
 
 export const fetchData = async (page: number, page_size: number = 5, 
     filtros: any) => {
-    let url = `/destino/?page=${page}&page_size=${page_size}`;
+    let url = `/hotel/?page=${page}&page_size=${page_size}`;
 
 
     console.log('filtros: ', filtros)
@@ -13,6 +13,11 @@ export const fetchData = async (page: number, page_size: number = 5,
     console.log('nombre: ', filtros.nombre)
     if(filtros.nombre){
       url = url + `&busqueda=${filtros.nombre}`;
+    }
+
+    url = url + `&estrellas=`;
+    if(filtros.estrellas){
+      url = url + `${filtros.estrellas}`;
     }
 
     if(filtros.telefono){
@@ -44,31 +49,35 @@ export const fetchData = async (page: number, page_size: number = 5,
 
 
 //tanstackquery ya maneja el error y en el interceptor tambien
-export async function nuevoRolFetch(data: any) {
-    await axiosInstance.post(`/destino/`, data);    
+export async function nuevoDataFetch(data: any) {
+    await axiosInstance.post(`/hotel/`, data);    
 }
 
 export async function guardarDataEditado(data: any) {
-  await axiosInstance.put(`/destino/${data.id}/`, data);    
+  await axiosInstance.put(`/hotel/${data.id}/`, data);    
 }
 
 export async function activarDesactivarData({ dataId, activo }: { dataId: number; activo: boolean }) {
-  await axiosInstance.patch(`/destino/${dataId}/`, {activo});    
+  await axiosInstance.patch(`/hotel/${dataId}/`, {activo});    
 }
 
 export async function fetchResumen() {
-  const resp = await axiosInstance.get(`/destino/resumen/`);
+  const resp = await axiosInstance.get(`/hotel/resumen/`);
   return resp?.data
 }
 
-export async function fetchDataHoteles(nombre_ciudad: string, pais: string = "") {
-  console.log(pais);
-  const resp = await axiosInstance.get(`/hotel/?page=${1}&page_size=${10}&${nombre_ciudad ? '&ciudad=' + nombre_ciudad: ''}${pais ? '&pais=' + pais: ''}`);
-  // const resp = await axiosInstance.get(`/hotel/todos/page=1&page_size=10&pais_nombre=&pais=19`);
-  return resp?.data.results
+export async function fetchDataCadenas() {
+  const resp = await axiosInstance.get(`/hotel/cadenas/todos/`);
+  return resp?.data
 }
 
-export async function fetchDataDestinosTodos() {
-  const resp = await axiosInstance.get(`/destino/todos/`);
+export async function fetchDataHoteles() {
+  const resp = await axiosInstance.get(`/hotel/todos/`);
   return resp?.data
+}
+
+
+export async function fetchDataServiciosTodos() {
+  const resp = await axiosInstance.get(`/servicio/?tipo=hotel`);
+  return resp?.data?.results;
 }

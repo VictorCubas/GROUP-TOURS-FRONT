@@ -1,4 +1,3 @@
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -44,6 +43,11 @@ import {
   Building2,
   Table2,
   Grid3X3,
+  DollarSign,
+  User,
+  UserCheck,
+  Users2,
+  Bed,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -64,7 +68,7 @@ import { RiGroupLine } from "react-icons/ri";
 
 
 import "flatpickr/dist/themes/material_green.css";
-import Flatpickr from "react-flatpickr"; 
+// import Flatpickr from "react-flatpickr"; 
 
 
 import {
@@ -76,7 +80,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Distribuidora, Moneda, Paquete, RespuestaPaginada, TipoPaquete, } from "@/types/paquetes"
+import type { Distribuidora, Moneda, Paquete, RespuestaPaginada, SalidaPaquete, TipoPaquete, } from "@/types/paquetes"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
 import {Controller, useForm } from "react-hook-form"
@@ -85,39 +89,46 @@ import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { GenericSearchSelect } from "@/components/SimpleSearchSelect"
+import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
-import { fetchDataDestinosTodos } from "@/components/utils/httpDestino"
+import { fetchDataDestinosTodos, fetchDataHoteles } from "@/components/utils/httpDestino"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-
-// type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Paquetes" | "Roles" | "Reservas" | "Reportes"
-
-
-// const moduleColors = {
-//   Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
-//   Paquetes: "bg-emerald-50 text-emerald-600 border-emerald-200",
-//   Paquetes: "bg-orange-50 text-orange-600 border-orange-200",
-//   Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
-//   Reservas: "bg-pink-50 text-pink-600 border-pink-200",
-//   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
-// }
-
-// const tipoPersonaColores = {
-//   fisica: "bg-blue-100 text-blue-700 border-blue-200",
-//   juridica: "bg-emerald-100 text-emerald-700 border-emerald-200",
-// }
-
-
-// const tipoRemuneracionColores = {
-//   salario: "bg-blue-100 text-blue-700 border-blue-200",
-//   comision: "bg-blue-100 text-blue-700 border-blue-200",
-//   mixto: "bg-emerald-100 text-emerald-700 border-emerald-200",
-// }
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { calcularRangoPrecio, getPayload } from "@/helper/paquete"
 
 let dataList: Paquete[] = [];
 let tipoPaqueteFilterList: any[] = [];
+let habitacionesList: any[] = [];
+
+
+
+const getRoomIcon = (roomType: string) => {
+  switch (roomType) {
+    case "single":
+      return <User className="w-4 h-4" />
+    case "doble":
+      return <UserCheck className="w-4 h-4" />
+    case "triple":
+      return <Users2 className="w-4 h-4" />
+    default:
+      return <Bed className="w-4 h-4" />
+  }
+}
+
+const getRoomTypeLabel = (roomType: string) => {
+  switch (roomType) {
+    case "single":
+      return "Individual"
+    case "doble":
+      return "Doble"
+    case "triple":
+      return "Triple"
+    default:
+      return roomType
+  }
+}
 
 export default function ModulosPage() {
   const {siTienePermiso} = useSessionStore();
@@ -139,6 +150,12 @@ export default function ModulosPage() {
    const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
+
+  const [rangoPrecio, setRangoPrecio] = useState<{ precioMin: number; precioMax: number; dias: number; noches: number }>();
+  const [ciudadDataSelected, setCiudadDataSelected] = useState<any>();
+  const [ciudadDataCompleto, setCiudadDataCompleto] = useState<any>();
+  const [selectedHotels, setSelectedHotels] = useState<Set<string>>(new Set());
+  const [hotelPrices, setHotelPrices] = useState<Record<string, { single: number; doble: number; triple: number }>>({});
   
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
@@ -148,21 +165,20 @@ export default function ModulosPage() {
                   tipo_paquete: "all",                      // fisica | juridica | all
                   tipo_propiedad: "all",  
                 });
+
   
   // DATOS DEL FORMULARIO 
   const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
-                precio: '',
-                sena: '',
                 distribuidora_id: '',
                 propio: true,
                 personalizado: false,
-                fecha_salida: null, // Valor inicial explícitamente null
-                fecha_regreso: null
               }
             });
+
+    console.log(trigger);
   // DATOS DEL FORMULARIO 
 
 
@@ -176,6 +192,44 @@ export default function ModulosPage() {
                                                       totalPages: 5,
                                                       pageSize: 10
                                               });
+
+  // DATOS DE SALIDOS
+
+
+  // const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
+  const {
+    // control: controlSalida,
+    register: registerSalida,
+    handleSubmit: handleSubmitSalida,
+    watch: watchSalida,
+    setValue: setValueSalida,
+    formState: { errors: errorsSalida },
+    reset: resetSalida,
+  } = useForm({
+    mode: "onBlur",
+    defaultValues: {
+      precio_desde: '',
+      precio_hasta: '',
+      senia: '',
+      fecha_salida_v2: '',
+      fecha_regreso_v2: '',
+      cupo: '',
+    },
+  });
+
+  const [nuevaSalida, setNuevaSalida] = useState({
+      fecha_salida_v2: "",
+      fecha_regreso_v2: "",
+      precio: '',
+      senia: '',
+      cupo: "",
+    })
+
+    const [salidas, setSalidas] = useState<any[]>([])
+    const [isEditMode, setIsEditMode] = useState(false)
+    const [editingSalidaId, setEditingSalidaId] = useState<string | null>(null);
+    const [isAddRoomOpen, setIsAddSalidaOpen] = useState(false);
+    // DATOS DE SALIDOS
    
     console.log(distribuidoraSelected)
 
@@ -229,8 +283,28 @@ export default function ModulosPage() {
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
+
+  console.log(ciudadDataSelected)
+
+  const {data: dataHotelesList, isFetching: isFetchingHoteles,} = useQuery({
+        queryKey: ['todos-hoteles-paquetes', ciudadDataSelected], //data cached
+        queryFn: () => fetchDataHoteles(ciudadDataSelected),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
   // let filteredPermissions: Modulo[] = [];
 
+    console.log(dataHotelesList); 
+    console.log(isFetchingHoteles)
+
+    if(ciudadDataSelected && dataHotelesList){
+      console.log(ciudadDataSelected)
+      console.log(ciudadDataCompleto)
+
+      habitacionesList = [...dataHotelesList]; 
+      console.log(habitacionesList)
+    }
+    
 
   if(dataTipoPaqueteList && dataTipoPaqueteList.length){
     tipoPaqueteFilterList = [...dataTipoPaqueteList];
@@ -327,7 +401,7 @@ export default function ModulosPage() {
           nombre: '',
           tipo_paquete: '',
           precio: '',
-          sena: '',
+          senia: '',
           fecha_salida: '',
           fecha_regreso: '',
           distribuidora_id: '',
@@ -348,6 +422,7 @@ export default function ModulosPage() {
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
         handleDestinoNoSeleccionada(undefined)
+        handleCancel();
         
         setActiveTab('list');
         queryClient.invalidateQueries({
@@ -403,7 +478,7 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         reset({
             precio: '',
-            sena: '',
+            senia: '',
             tipo_paquete: '',
             fecha_salida: '',
             fecha_regreso: '',
@@ -412,6 +487,7 @@ export default function ModulosPage() {
           });
 
 
+          handleCancel();
           setImagePreview(placeholderViaje);
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
@@ -450,17 +526,20 @@ export default function ModulosPage() {
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
         handleDestinoNoSeleccionada(undefined)
+        setCiudadDataSelected(undefined);
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
+        setSalidas([]);
         reset({
             nombre: '',
             tipo_paquete: '',
             precio: '',
-            sena: '',
+            senia: '',
             fecha_salida: '',
             fecha_regreso: '',
             distribuidora_id: '',
             imagen: '',
+            moneda: ''
         });
 
 
@@ -473,66 +552,75 @@ export default function ModulosPage() {
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
-  if (destinoNoSeleccionada === undefined) {
-    setDestinoNoSeleccionada(true);
-  }
+    console.log(selectedPermissions)
+    const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, selectedPermissions)
 
-  const payload = {
-    ...dataForm,
-    destino_id: selectedDestinoID,
-    tipo_paquete_id: dataForm.tipo_paquete,
-    servicios_ids: selectedPermissions, 
-    moneda_id: dataForm.moneda,
-    fecha_inicio: dataForm.fecha_salida,
-    fecha_fin: dataForm.fecha_regreso,
-    activo: true,
-  };
-
-  // Eliminar campos que no se envían
-  delete payload.numero;
-  delete payload.tipo_paquete;
-  delete payload.destino;
-  delete payload.distribuidora;
-  delete payload.moneda;
-  delete payload.fecha_salida;
-  delete payload.fecha_regreso;
-  delete payload.imagen; // 🔹 MUY IMPORTANTE
-
-  if (watch("propio")) {
-    delete payload.distribuidora;
-    delete payload.distribuidora_id;
-  } else {
-    delete payload.cantidad_pasajeros;
-  }
-
-  const formData = new FormData();
-
-  // 🔹 Imagen opcional
-  if (dataForm.imagen && dataForm.imagen[0] instanceof File) {
-    formData.append("imagen", dataForm.imagen[0]);
-  }
-
-  // Agregar el resto de campos
-  Object.keys(payload).forEach((key) => {
-    const value = payload[key];
-    if (value !== undefined && value !== null) {
-      if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(key, v));
-      } else {
-        formData.append(key, value);
-      }
+    if (destinoNoSeleccionada === undefined || !prePayload.destino_id) {
+      console.log('destino no seleccionado...')
+      setDestinoNoSeleccionada(true);
+      return;
     }
-  });
 
-  console.log("FormData listo:", [...formData.entries()]);
-  mutate(formData);
-};
+
+    if(selectedPermissions.length === 0){
+      handleShowToast('Debes agregar al menos un servicio', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+
+    // 🔹 Imagen opcional
+    if (dataForm.imagen && dataForm.imagen[0] instanceof File) {
+      formData.append("imagen", dataForm.imagen[0]);
+    }
+
+
+    if(salidas.length === 0 && !watch('personalizado') 
+      && quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLocaleLowerCase() === 'terrestre'){
+      handleShowToast('Debes agregar al menos una salida', 'error');
+      return;
+    }
+
+    // Agregar el resto de campos
+    Object.keys(prePayload).forEach((key) => {
+      const value = prePayload[key];
+      if (value !== undefined && value !== null) {
+        if (key === "salidas") {
+          // 👇 Serializamos el array de objetos
+          console.log(JSON.stringify(value))
+          formData.append(key ,JSON.stringify(value));
+        }else if (Array.isArray(value)) {
+          value.forEach((v) => formData.append(key, v));
+        } else {
+          formData.append(key, value);
+        }
+      }
+    });
+
+    console.log("FormData listo:", [...formData.entries()]);
+    mutate(formData);
+  };
 
 
 
   const handleGuardarDataEditado = async (dataForm: any) => {
     const fecha_inicio = dataForm.fecha_salida ? formatearFechaDDMMYY(dataForm.fecha_salida) : null;
     const fecha_fin = dataForm.fecha_regreso ? formatearFechaDDMMYY(dataForm.fecha_regreso) : null;
+
+    console.log(salidas)
+
+    const salidasTemp = salidas.map((salida: any) => ({
+      fecha_salida: salida.fecha_salida_v2,
+      fecha_regreso: salida.fecha_regreso_v2,
+      precio_actual: salida.precio,
+      senia: salida.senia,
+      cupo: parseInt(salida.cupo, 10), // Entero
+      moneda_id: dataForm.moneda,
+      temporada_id: salida?.temporada_id || null, // Opcional
+    }))
+
+
+    console.log(salidasTemp)
 
     const payload = {
       ...dataForm,
@@ -542,6 +630,7 @@ export default function ModulosPage() {
       moneda_id: dataForm.moneda,
       fecha_inicio,
       fecha_fin,
+      salidas: salidasTemp
     };
 
     // Limpiar campos que no deben enviarse
@@ -560,6 +649,13 @@ export default function ModulosPage() {
       delete payload.cantidad_pasajeros;
     }
 
+
+    if(salidas.length === 0){
+      handleShowToast('Debes agregar al menos una salida', 'error');
+      return;
+    }
+
+
     const formData = new FormData();
 
     // ✅ Agregar imagen solo si es nueva (File)
@@ -577,7 +673,13 @@ export default function ModulosPage() {
         if (value instanceof File) {
           formData.append(key, value);
         }
-      } else if (Array.isArray(value)) {
+      } 
+      else if (key === "salidas") {
+        // 👇 Serializamos el array de objetos
+        console.log(JSON.stringify(value))
+        formData.append(key ,JSON.stringify(value));
+      }
+      else if (Array.isArray(value)) {
         value.forEach((v) => formData.append(key, v));
       } else if (value !== undefined && value !== null) {
         formData.append(key, value as any);
@@ -612,6 +714,23 @@ export default function ModulosPage() {
     // Si no cumple el formato esperado, devuelve la misma fecha
     return fecha;
   }
+
+
+  useEffect(() => {
+    console.log(selectedDestinoID);
+    
+    if(selectedDestinoID){
+      const selectedDestino = dataDestinoList.filter((destino: any) => destino.id.toString() === selectedDestinoID.toString());
+      console.log(selectedDestino)
+
+      if(selectedDestino.length){
+        // setValue('nombre', selectedDestino[0].ciudad_nombre);
+        setCiudadDataSelected(selectedDestino[0].ciudad_nombre)
+        setCiudadDataCompleto(selectedDestino[0])
+      }
+    }
+  }, [selectedDestinoID]);
+
   /********************************
    * CORREGIR ESTA PARTE
    *******************************/
@@ -668,7 +787,7 @@ export default function ModulosPage() {
   //     { id: 8, nombre: 'Seguro de Viaje' }
   //   ],
   //   precio: 2000,
-  //   sena: 0,
+  //   senia: 0,
   //   fecha_inicio: null,
   //   fecha_fin: null,
   //   personalizado: true,
@@ -682,7 +801,7 @@ export default function ModulosPage() {
   //   numero: 1
   // }
 
-  const servicios_ids = data.servicios.map(servicio => servicio.id)
+  const servicios_ids = data.servicios.map(servicio => servicio.id);
     console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
@@ -693,8 +812,19 @@ export default function ModulosPage() {
       // setSelectedPersonaID(data!.persona.id)
       setTipoPaqueteSelected(data!.tipo_paquete)
       setDistribuidoraSelected(data!.distribuidora);
-      setSelectedPermissions(servicios_ids)
-    
+      setSelectedPermissions(servicios_ids);
+
+    const salidas = data.salidas.map((salida: SalidaPaquete) => ({
+      id: salida.id,
+      fecha_salida_v2: salida.fecha_salida,
+      fecha_regreso_v2: salida.fecha_regreso,
+      moneda: salida.moneda.id,
+      precio: salida.precio_actual,
+      senia: salida.senia,
+      cupo: salida.cupo,
+    }))
+
+    setSalidas(salidas);
   }
 
   const toggleActivar = (modulo: Paquete) => {
@@ -774,6 +904,17 @@ export default function ModulosPage() {
   };
 
 
+  // FUNCIONES DE SALIDAS
+
+   const handleOpenModal = () => {
+    const monedaValue = watch('moneda');
+    if (!monedaValue) {
+      handleShowToast('Debes seleccionar primero la moneda', 'error');
+      return;
+    }
+    setIsAddSalidaOpen(true);
+  };
+  
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -781,6 +922,192 @@ export default function ModulosPage() {
       setImagePreview(url); // Mostrar preview de la nueva imagen
     }
   };
+
+
+  console.log(salidas)
+
+  const handleAddSalida = async (dataForm: any) => {
+    console.log(selectedHotels)
+
+    console.log(dataForm);
+    console.log(nuevaSalida);
+
+  
+
+    console.log(isEditMode);
+    console.log(editingSalidaId);
+
+    if (isEditMode && editingSalidaId) {
+      // 🔹 Editando habitación existente
+      const salidaEdited = {...dataForm, currency: watch('moneda')};
+      console.log(salidaEdited)
+      setSalidas((prev) =>
+        prev.map((salida) =>
+          salida.id === editingSalidaId
+            ? { ...salida, ...salidaEdited, senia: salidaEdited.senia } // Reemplazamos los valores con los del formulario
+            : salida
+        )
+      );
+    } else {
+      // 🔹 Agregando nueva habitación
+
+  //   {
+  //   precio: '2000',
+  //   senia: '250',
+  //   fecha_salida_v2: '2025-09-23',
+  //   fecha_regreso_v2: '2025-09-27',
+  //   cupo: '34'
+  // }
+    
+      console.log(nuevaSalida);
+      console.log(dataForm)
+      const salida: any = {
+        id: Date.now().toString(), // ID temporal
+        ...dataForm,
+        currency: watch('moneda'), // o nuevaSalida.currency
+      };
+
+      console.log(salida)
+      setSalidas((prev) => {
+        console.log(prev)
+        return [...prev, salida]
+      });
+    }
+
+    // Resetear formulario
+    resetSalidaForm();
+  };
+
+  const handleDeleteRoom = (roomId: string) => {
+    setSalidas((prev) => prev.filter((salida) => salida.id !== roomId))
+  }
+
+  const resetSalidaForm = () => {
+    setSelectedHotels(new Set());
+
+    setNuevaSalida({
+      fecha_salida_v2: "",
+      fecha_regreso_v2: "",
+      precio: '',
+      senia: '',
+      cupo: "",
+    })
+
+    resetSalida({
+      precio_desde: '',
+      precio_hasta: '',
+      senia: '',
+      fecha_salida_v2: '',
+      fecha_regreso_v2: '',
+      cupo: '',
+    });
+    setIsAddSalidaOpen(false);
+    setIsEditMode(false);
+    setEditingSalidaId(null);
+  }
+  
+    //   {
+  //   id: 2,
+  //   fecha_salida_v2: '2025-09-21',
+  //   moneda: 2,
+  //   precio: 2000,
+  //   cupo: 45
+  // }
+
+  const handleEditSalida = (salida: any) => {
+    console.log(salida);
+    // Cargamos los valores en el state que controla los <Input />
+    setNuevaSalida({
+      fecha_salida_v2: salida.fecha_salida_v2,
+      // si no tienes fecha_regreso aún, usa cadena vacía para <input type="date" />
+      fecha_regreso_v2: salida.fecha_regreso_v2 ?? '',
+      precio: salida.precio,
+      cupo: salida.cupo,
+      senia: salida?.senia ?? '',
+      // moneda: salida.moneda,
+    });
+
+    resetSalida({
+      ...salida
+    })
+
+    setEditingSalidaId(salida.id);
+    setIsEditMode(true);
+    setIsAddSalidaOpen(true);
+
+    // Si usas react-hook-form u otro Controller, setea también el value del select/Controller
+    setValue('moneda', salida.moneda.toString());
+  };
+
+    // FUNCIONES DE SALIDAS
+
+
+    const fechaSalida = watchSalida('fecha_salida_v2');
+    const fechaRegreso = watchSalida('fecha_regreso_v2');
+    console.log(fechaSalida, fechaRegreso) 
+
+    console.log(rangoPrecio);
+
+    useEffect(() => {
+      console.log(dataHotelesList)
+      console.log(selectedHotels);
+
+      // const idsSeleccionados = Array.from(selectedHotels).map(id => Number(id));
+
+      if (selectedHotels && fechaSalida && fechaRegreso && dataHotelesList) {
+
+        const hotelesFiltrados = dataHotelesList?.filter((hotel: any) =>
+          selectedHotels.has(hotel.id) // o idsSeleccionados.includes(hotel.id)
+        );
+
+        console.log(hotelesFiltrados);
+        console.log(fechaSalida, fechaRegreso)
+          // { min: 1680, max: 1760, dias: 8, noches: 8 }                  
+        console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso))
+        const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
+        setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
+        setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
+        setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+      }
+      // 👇 dependencias simples, sin llamadas complejas
+    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList]);
+
+    //FUCNIONES DE HOTELES DE LAS SALIDAS
+    const handleHotelToggle = (hotelId: string) => {
+      const newSelected = new Set(selectedHotels)
+      if (newSelected.has(hotelId)) {
+        newSelected.delete(hotelId)
+        const newPrices = { ...hotelPrices }
+        delete newPrices[hotelId]
+        setHotelPrices(newPrices)
+      } else {
+        newSelected.add(hotelId)
+        setHotelPrices({
+          ...hotelPrices,
+          [hotelId]: { single: 0, doble: 0, triple: 0 },
+        })
+      }
+      setSelectedHotels(newSelected)
+    }
+
+    //FUCNIONES DE HOTELES DE LAS SALIDAS
+
+
+    const renderStars = (rating: number) => {
+      return (
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Star
+              key={index}
+              className={`h-3 w-3 ${
+                index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+              }`}
+            />
+          ))}
+          <span className="ml-1 text-sm text-gray-600">({rating})</span>
+        </div>
+      );
+    };
 
   return (
     <>
@@ -846,7 +1173,7 @@ export default function ModulosPage() {
                       <h1 className="text-4xl font-bold text-white mb-2">{dataDetalle?.nombre}</h1>
                       <div className="flex items-center text-white/90 text-lg">
                         <MapPin className="w-5 h-5 mr-2" />
-                        <span>{dataDetalle?.destino.nombre}</span>
+                        <span>{dataDetalle?.destino.ciudad}</span>
                       </div>
                     </div>
                     <div className="text-right">
@@ -988,7 +1315,7 @@ export default function ModulosPage() {
                   {(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() === 'terrestre' && dataDetalle?.fecha_inicio)
                       &&
                         <>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-4">Fechas del Viaje</h3>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-4">Salida más próxima</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="flex items-center space-x-4">
                               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -1000,7 +1327,8 @@ export default function ModulosPage() {
                                   weekday: 'long', 
                                   year: 'numeric', 
                                   month: 'long', 
-                                  day: 'numeric' 
+                                  day: 'numeric' ,
+                                  timeZone: 'UTC', 
                                 })}</p>
                               </div>
                             </div>
@@ -1014,7 +1342,8 @@ export default function ModulosPage() {
                                   weekday: 'long', 
                                   year: 'numeric', 
                                   month: 'long', 
-                                  day: 'numeric' 
+                                  day: 'numeric' ,
+                                  timeZone: 'UTC', 
                                 })}</p>
                               </div>
                             </div>
@@ -1045,6 +1374,58 @@ export default function ModulosPage() {
 
                 {/* Servicios incluidos y excluidos */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
+                      Salidas
+                    </h3>
+                    <div className="space-y-4 max-h-60 overflow-y-auto">
+                      
+                      {[...dataDetalle!.salidas].map((item, index) => (
+                        <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
+
+                          <div className="flex items-center gap-3">
+                              <div className="bg-gradient-to-br from-green-100 to-emerald-100 p-2 rounded-xl">
+                                <Plane className="text-green-600 transform rotate-45" size={16} /> 
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">Salida</p>
+                                <p className="font-semibold text-slate-800">
+                                  {formatearFecha(item?.fecha_salida, false)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="bg-gradient-to-br from-orange-100 to-red-100 p-2 rounded-xl">
+                                <Plane className="text-orange-600 transform -rotate-45" size={16} />
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">Regreso</p>
+                                <p className="font-semibold text-slate-800">
+                                  {formatearFecha(item?.fecha_regreso, false)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="bg-gradient-to-br from-blue-100 to-blue-100 p-2 rounded-xl text-blue-600">
+                                {/* <DollarSignIcon className="text-blue-600" size={16} /> */}
+                                {dataDetalle?.moneda?.simbolo}
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">Precio</p>
+                                <p className="font-semibold text-slate-800">
+                                  {formatearSeparadorMiles.format(item?.precio_actual)}
+                                </p>
+                              </div>
+                            </div>
+                            {/* <p className="font-medium text-green-900">{dataDetalle?.moneda.simbolo}{item.precio_actual}</p> */}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
                       <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
@@ -1187,7 +1568,7 @@ export default function ModulosPage() {
 
             {/* Registration Form Tab */}
             <TabsContent value="form">
-              <form onSubmit={handleSubmit(!dataAEditar ? handleGuardarNuevaData: handleGuardarDataEditado)}>
+              <form id="mainForm" onSubmit={handleSubmit(!dataAEditar ? handleGuardarNuevaData: handleGuardarDataEditado)}>
                 <Card className="border-emerald-200 pt-0">
                   <CardHeader className="bg-emerald-50 border-b border-emerald-200 pt-8">
                     <div className="flex items-center gap-3">
@@ -1322,7 +1703,7 @@ export default function ModulosPage() {
                                     onValueChange={setSelectedDestinoID}
                                     handleDataNoSeleccionada={handleDestinoNoSeleccionada}
                                     placeholder="Selecciona el destino..."
-                                    labelKey="nombre"
+                                    labelKey="ciudad_nombre"
                                     secondaryLabelKey="pais_nombre"
                                     valueKey="id"
                                   />
@@ -1333,6 +1714,9 @@ export default function ModulosPage() {
                               {destinoNoSeleccionada === false && (
                                 <p className="text-red-400 text-sm">Este campo es requerido</p>
                               )}
+
+                              {onGuardar && !destinoNoSeleccionada && 
+                                  <p className="text-red-400 text-sm">Este campo es requerido</p>}
                           </div>
 
                           <div className="space-y-2 flex items-center justify-center gap-20">
@@ -1390,7 +1774,7 @@ export default function ModulosPage() {
                           </div>
 
 
-                          {/* MONTO PRECIO */}
+                          {/* CANTIDAD PASAJEROS */}
                           {watch("propio")  && 
                             <div className="space-y-2">
                               <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
@@ -1539,7 +1923,7 @@ export default function ModulosPage() {
                                       }}
                                     >
                                       <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                                        <SelectValue placeholder="Selecciona el tipo de paquete" />
+                                        <SelectValue placeholder="Selecciona el tipo de moneda" />
                                       </SelectTrigger>
                                       <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
                                         {dataMonedaList.map((data: Moneda) => 
@@ -1570,99 +1954,61 @@ export default function ModulosPage() {
                         </div>
                       
                           {/* MONTO PRECIO */}
-                          <div className="space-y-2">
+                          {/* <div className="space-y-2">
                             <Label htmlFor="precio" className="text-gray-700 font-medium">
                               Precio *
                             </Label>
                             <Input
                               id="precio"
                               autoComplete="precio"
+                              disabled
                               placeholder="Precio del paquete"
                               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                               {...register('precio', {
-                                required: {
-                                  value: true,
-                                  message: 'Este campo es requerido'
-                                }
+                               
                               })}
                             />
-                            <div>
-                              {errors.precio && (
-                                <span className="text-red-400 text-sm">
-                                  {errors.precio.message as string}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-
-                           {/* MONTO SEÑA */}
-                          <div className="space-y-2">
-                            <Label htmlFor="sena" className="text-gray-700 font-medium">
-                              Seña *
-                            </Label>
-                            <Input
-                              id="sena"
-                              autoComplete="sena"
-                              placeholder="Valor de seña"
-                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                              {...register('sena', {
-                                required: {
-                                  value: true,
-                                  message: 'Este campo es requerido'
-                                }
-                              })}
-                            />
-                            <div>
-                              {errors.sena && (
-                                <span className="text-red-400 text-sm">
-                                  {errors.sena.message as string}
-                                </span>
-                              )}
-                            </div>
-                          </div>            
+                            
+                          </div>           */}
                 
-                            <div className="space-y-2">
-                              <Label htmlFor="fecha_salida" className="text-gray-700 font-medium">
-                                Fecha de Salida *
-                              </Label>
+                            {/* <div className="space-y-2">
+                                <Label htmlFor="fecha_salida" className="text-gray-700 font-medium">
+                                  Fecha de Salida *
+                                </Label>
 
-                              <Controller
-                                name="fecha_salida"
-                                control={control}
-                                rules={{
-                                required: !watch('personalizado') ? "Este campo es requerido" : false,
-                              }}
-                                render={({ field }) => (
-                                  <Flatpickr
-                                    value={field.value}
-                                    onChange={(date) => {
+                                <Controller
+                                  name="fecha_salida"
+                                  control={control}
+                                  rules={{}} // Sin validación required
+                                  render={({ field }) => (
+                                    <Flatpickr
+                                      value={field.value}
+                                      onChange={(date) => {
                                         if (date[0]) {
                                           const fecha = date[0];
                                           const año = fecha.getFullYear();
                                           const mes = String(fecha.getMonth() + 1).padStart(2, "0");
                                           const dia = String(fecha.getDate()).padStart(2, "0");
-                                          field.onChange(`${año}-${mes}-${dia}`); // YYYY/MM/DD
+                                          field.onChange(`${año}-${mes}-${dia}`);
                                         } else {
                                           field.onChange(null);
                                         }
-                                        trigger("fecha_salida"); // Forzar revalidación
+                                        trigger("fecha_salida");
                                       }}
-                                    onClose={() => {
-                                      trigger("fecha_salida"); // Forzar revalidación al cerrar el calendario
-                                    }}
-                                    className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-2
-                                      focus:border-gray-500 focus:outline focus:outline-gray-500"
-                                    placeholder="DD/MM/YYYY"
-                                  />
-                                )}
-                              />
+                                      onClose={() => trigger("fecha_salida")}
+                                      className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-2
+                                        focus:border-gray-500 focus:outline focus:outline-gray-500"
+                                      placeholder="DD/MM/YYYY"
+                                      disabled
+                                    />
+                                  )}
+                                />
 
-                              {errors.fecha_salida?.message && (
-                                <span className="text-red-400 text-sm">
-                                  {errors.fecha_salida.message as string}
-                                </span>
-                              )}
+                                {errors.fecha_salida?.message && (
+                                  <span className="text-red-400 text-sm">
+                                    {errors.fecha_salida.message as string}
+                                  </span>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -1673,30 +2019,27 @@ export default function ModulosPage() {
                               <Controller
                                 name="fecha_regreso"
                                 control={control}
-                                rules={{
-                                  required: !watch('personalizado') ? "Este campo es requerido" : false,
-                                }}
+                                rules={{}} // Sin validación required
                                 render={({ field }) => (
                                   <Flatpickr
                                     value={field.value}
                                     onChange={(date) => {
-                                        if (date[0]) {
-                                          const fecha = date[0];
-                                          const año = fecha.getFullYear();
-                                          const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-                                          const dia = String(fecha.getDate()).padStart(2, "0");
-                                          field.onChange(`${año}-${mes}-${dia}`); // YYYY/MM/DD
-                                        } else {
-                                          field.onChange(null);
-                                        }
-                                        trigger("fecha_regreso"); // Forzar revalidación
-                                      }}
-                                    onClose={() => {
-                                      trigger("fecha_regreso"); // Forzar revalidación al cerrar el calendario
+                                      if (date[0]) {
+                                        const fecha = date[0];
+                                        const año = fecha.getFullYear();
+                                        const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+                                        const dia = String(fecha.getDate()).padStart(2, "0");
+                                        field.onChange(`${año}-${mes}-${dia}`);
+                                      } else {
+                                        field.onChange(null);
+                                      }
+                                      trigger("fecha_regreso");
                                     }}
+                                    onClose={() => trigger("fecha_regreso")}
                                     className="disabled-fecha-vencimiento mt-1 bg-blue-50 border border-blue-200 w-full rounded-lg p-2
                                       focus:border-gray-500 focus:outline focus:outline-gray-500"
                                     placeholder="DD/MM/YYYY"
+                                    disabled
                                   />
                                 )}
                               />
@@ -1706,7 +2049,8 @@ export default function ModulosPage() {
                                   {errors.fecha_regreso.message as string}
                                 </span>
                               )}
-                            </div>
+                            </div> */}
+
 
                            <div className="space-y-2 md:col-span-2">
                               <div className="space-y-2 md:col-span-2">
@@ -1826,15 +2170,6 @@ export default function ModulosPage() {
                                                 {servicio.nombre}
                                               </Label>
                                               <p className="text-xs text-gray-500 mt-1">{servicio.descripcion}</p>
-                                              <div className="flex items-center gap-2 mt-2">
-                                                {/* <Badge
-                                                  className='bg-blue-100 text-blue-700 border-blue-200'
-                                                >
-                                                </Badge> */}
-                                                {/* <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                                  {servicio?.moneda?.codigo}{servicio?.precio_habitacion} <span className="text-gray-500 font-normal">/ noche</span>
-                                                </Badge> */}
-                                              </div>
                                             </div>
                                           </div>
                                         </div>
@@ -1862,12 +2197,10 @@ export default function ModulosPage() {
                                       </Button>
                                     </div>
                                   )}
-
+ 
                                 </div>
 
-                                {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
-                                
-                                <div className="flex items-center gap-2 pt-2">
+                                  <div className="flex items-center gap-2 pt-2">
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -1908,7 +2241,317 @@ export default function ModulosPage() {
                                       : "Seleccionar todos"}{" "}
                                     
                                   </Button>
+
+                                  {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
                                 </div>
+
+                                {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && 
+                                   <Card className="mt-8">
+                                    <CardHeader>
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <CardTitle>Gestión de Salidas</CardTitle>
+                                          <CardDescription>Administre las salidas y sus tarifas</CardDescription>
+                                          {onGuardar && 
+                                            quitarAcentos(tipoPaqueteSelected?.nombre ?? '').toLowerCase() === 'terrestre' &&
+                                            !watch('personalizado')
+                                            && 
+                                            salidas.length === 0 &&
+                                            <p className="text-red-400">Debes agregar al menos una salida</p>
+                                          }
+                                        </div>
+                                        <Dialog 
+                                        open={isAddRoomOpen}
+                                          onOpenChange={(open) => {
+                                            if (!open) resetSalidaForm()
+                                            setIsAddSalidaOpen(open)
+                                          }}
+                                        >
+                                           {/* <DialogTrigger asChild> */}
+                                                <Button
+                                                  type="button"
+                                                  className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                  onClick={handleOpenModal} // 👈 validación antes de abrir
+                                                >
+                                                  <Plus className="h-4 w-4 mr-2" />
+                                                  Agregar Salidas
+                                                </Button>
+                                            {/* </DialogTrigger> */}
+                                          <DialogContent className="sm:max-w-[850px] max-h-[90vh]">
+                                            <form id="salidaForm" 
+                                             onSubmit={(e) => {
+                                                  e.stopPropagation(); // evita que el submit burbujee al form padre
+                                                  handleSubmitSalida(handleAddSalida)(e);
+                                                }}>
+                                              <DialogHeader>
+                                                <DialogTitle>Agregar Nueva Salida</DialogTitle>
+                                                <DialogDescription>
+                                                  Complete los datos de la nueva salida para agregarla al al paquete.
+                                                </DialogDescription>
+                                              </DialogHeader>
+                                              <div className="grid gap-4 py-4">
+                                                <div className="grid grid-cols-2 items-center gap-4">
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
+                                                        <Input
+                                                          type="date"
+                                                          id="fecha_salida_v2"
+                                                          {...registerSalida('fecha_salida_v2', { required: true })}
+                                                          className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
+                                                              'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                        />
+                                                  </div>
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
+                                                        <Input
+                                                          type="date"
+                                                          id="fecha_regreso_v2"
+                                                          {...registerSalida('fecha_regreso_v2', {
+                                                            required: true, 
+                                                          })
+                                                          }
+                                                          className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
+                                                              'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                        />
+                                                  </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 items-center gap-4">
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label htmlFor="precio_desde" className="text-right">
+                                                        Precio Desde * 
+                                                      </Label>
+                                                      <div className="col-span-3 flex gap-2">
+                                                          <Input
+                                                            id="precio_desde"
+                                                            type="text"
+                                                            disabled
+                                                            {...registerSalida('precio_desde', {
+                                                              required: true, 
+                                                              })
+                                                            }
+                                                            placeholder="2000"
+                                                            className={`flex-1 ${errorsSalida?.precio_desde?.type === 'required' ? 
+                                                                'border-2 border-red-200 focus:border-red-500': 
+                                                                'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
+                                                          />
+                                                      </div>
+                                                  </div>
+
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label htmlFor="precio_hasta" className="text-right">
+                                                        Precio Hasta * 
+                                                      </Label>
+                                                      <div className="col-span-3 flex gap-2">
+                                                          <Input
+                                                            id="precio_hasta"
+                                                            type="text"
+                                                            disabled
+                                                            {...registerSalida('precio_hasta', {
+                                                              required: true, 
+                                                              })
+                                                            }
+                                                            placeholder="2000"
+                                                            className={`flex-1 ${errorsSalida?.precio_hasta?.type === 'required' ? 
+                                                                'border-2 border-red-200 focus:border-red-500': 
+                                                                'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
+                                                          />
+                                                      </div>
+                                                  </div>
+
+                                                  {/* MONTO SEÑA */}
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="senia" className="text-gray-700 font-medium">
+                                                      Seña *
+                                                    </Label>
+                                                    <div className="col-span-3 flex gap-2">
+                                                      <Input
+                                                        id="senia"
+                                                        disabled
+                                                        type="text"
+                                                        {...registerSalida('senia', {
+                                                            required: true, })
+                                                          }
+                                                          placeholder="150"
+                                                          className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 'border-2 border-red-200 focus:border-red-500':
+                                                              'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                      />
+                                                    </div>
+                                                    
+                                                  </div>  
+
+                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                      <Label htmlFor="cupo" className="text-right">
+                                                        Cupo * 
+                                                      </Label>
+                                                      <div className="col-span-3 flex gap-2">
+                                                          <Input
+                                                            id="cupo"
+                                                            type="text"
+                                                            {...registerSalida('cupo', { required: true })}
+                                                            placeholder="46"
+                                                            className={`flex-1 ${errorsSalida?.cupo?.type === 'required' ? 'border-2 border-red-200 focus:border-red-500': 
+                                                              'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                          />
+                                                      </div>
+                                                  </div>
+                                                </div>
+                                              
+
+                                               <Card className="bg-gray-50">
+                                                    <CardHeader>
+                                                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                        <Building2 className="w-5 h-5 text-primary" />
+                                                        Hoteles y Precios
+                                                      </h3>
+                                                      <p className="text-sm text-muted-foreground">
+                                                        Selecciona los hoteles disponibles y configura los precios por tipo de habitación
+                                                      </p>
+                                                    </CardHeader>
+                                                    <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
+                                                      {dataHotelesList && dataHotelesList?.map((hotel: any) => (
+                                                        <Card
+                                                            key={hotel.hotelId}
+                                                            className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
+                                                          >
+                                                            {/* bg-primary/5 border-primary/30" : "bg-background */}
+                                                          <CardContent className="">
+                                                            <div className="space-y-4">
+                                                              <div className="flex items-center space-x-3 ">
+                                                                <Checkbox
+                                                                  
+                                                                  id={hotel.id}
+                                                                  checked={selectedHotels.has(hotel.id)}
+                                                                  onCheckedChange={() => handleHotelToggle(hotel.id)}
+                                                                />
+                                                                <div className="flex-1">
+                                                                  <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
+                                                                    {hotel.nombre}
+                                                                  </Label>
+                                                                  <div className="flex items-center gap-4 mt-1">
+                                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
+                                                                      {renderStars(hotel.estrellas)}
+                                                                    </Badge>
+                                                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                      <MapPin className="w-3 h-3" />
+                                                                      {/* <span>{hotel.ubicacion}</span> */}
+                                                                      <span>{hotel.direccion}</span>
+                                                                    </div>
+                                                                  </div>
+                                                                </div>
+                                                              </div>
+
+                                                              {selectedHotels.has(hotel.id) && (
+                                                                <div className="pl-6 border-l-2 border-emerald-200">
+                                                                  <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                                                                    Precios por tipo de habitación:
+                                                                  </h4>
+
+                                                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                    {hotel?.habitaciones?.length === 0 && 
+                                                                        <p className="text-sm font-medium text-muted-foreground">
+                                                                          No tiene habitaciones asignadas
+                                                                        </p>}
+                                                                    {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
+                                                                      <div key={habitacion.id} className="space-y-2">
+                                                                        <Label className="text-sm flex items-center gap-2">
+                                                                          {getRoomIcon(habitacion.tipo)}
+                                                                          {getRoomTypeLabel(habitacion.tipo)}
+                                                                        </Label>
+                                                                        
+                                                                        <div className="relative">
+                                                                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                                          <Input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            step="0.01"
+                                                                            placeholder="0.00"
+                                                                            className="pl-10"
+                                                                            disabled
+                                                                            value={habitacion?.precio_noche ?? ''}
+                                                                          />
+                                                                        </div>
+                                                                      </div>
+                                                                    ))}
+                                                                  </div>
+                                                                </div>
+                                                              )}
+                                                            </div>
+                                                          </CardContent>
+                                                        </Card>
+                                                      ))}
+                                                    </CardContent>
+                                                  </Card>
+                                              </div>
+
+                                              
+                                              <DialogFooter>
+                                                <Button type="button" variant="outline" className="cursor-pointer" 
+                                                    onClick={resetSalidaForm}
+                                                    >
+                                                  Cancelar
+                                                </Button>
+                                                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                    >
+                                                      Agregar Salida
+                                                </Button>
+                                              </DialogFooter>
+                                              </form>
+                                            </DialogContent>
+                                        </Dialog>
+                                      </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="rounded-md border">
+                                        <Table>
+                                          <TableHeader>
+                                            <TableRow>
+                                              <TableHead>Fecha Salida</TableHead>
+                                              <TableHead>Fecha Regreso</TableHead>
+                                              <TableHead>Precio</TableHead>
+                                              <TableHead>Seña</TableHead>
+                                              <TableHead>Cupo</TableHead>
+                                              <TableHead className="text-right">Acciones</TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {salidas.map((salida: any) => (
+                                              <TableRow key={salida.id}>
+                                                <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
+                                                <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
+                                                <TableCell>{formatearSeparadorMiles.format(salida.precio)}</TableCell>
+                                                <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
+                                                <TableCell>
+                                                  {salida.cupo}
+                                                  {/* {dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].codigo }) */}
+                                                </TableCell>
+                                                
+                                                <TableCell className="text-right">
+                                                  <div className="flex items-center justify-end gap-2">
+                                                    <Button type="button" variant="ghost" size="sm" 
+                                                          onClick={() => handleEditSalida(salida)}
+                                                          > 
+                                                      <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      className="text-destructive hover:text-destructive"
+                                                      onClick={() => handleDeleteRoom(salida.id)}
+                                                    >
+                                                      <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                  </div>
+                                                </TableCell>
+                                              </TableRow>
+                                            ))}
+                                          </TableBody>
+                                        </Table>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                }
+                                
                               </div>
                     </div>
 
@@ -2200,15 +2843,15 @@ export default function ModulosPage() {
 
                             <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.destino.nombre}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">{data.destino.pais.nombre}</div>
+                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.destino.ciudad}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">{data.destino.pais}</div>
                               </div>
                             </TableCell>
 
                             <TableCell>
                               <div>
                                 <div className="font-medium text-green-600 truncate max-w-xs">{data.moneda.simbolo} {formatearSeparadorMiles.format(data.precio)}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.sena)}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.senia)}</div>
                               </div>
                             </TableCell>
                             
@@ -2370,7 +3013,7 @@ export default function ModulosPage() {
                     {dataList.map((pkg) => (
                           <Card
                             key={pkg.id}
-                            className={`hover:shadow-lg transition-shadow cursor-pointer `}
+                            className={`hover:shadow-lg transition-shadow cursor-pointer mt-0 pt-0 `}
                           >
                             <div className="relative">
                               <img
@@ -2391,13 +3034,7 @@ export default function ModulosPage() {
                                   {pkg.tipo_paquete.nombre}
                                 </Badge>
                               </div>
-                              <div className="absolute top-3 right-3">
-                                <Checkbox
-                                  // checked={selectedPackages.includes(pkg.id)}
-                                  // onCheckedChange={() => handleSelectPackage(pkg.id)}
-                                  className="bg-white"
-                                />
-                              </div>
+                              
                               <div className="absolute bottom-3 right-3">
                                 <Badge
                                   className={
@@ -2414,7 +3051,7 @@ export default function ModulosPage() {
                               <div className="space-y-3">
                                 <div>
                                   <h3 className="font-semibold text-gray-900 text-lg font-sans">{pkg.nombre}</h3>
-                                  <p className="text-gray-600 text-sm font-sans">{pkg.destino.nombre}</p>
+                                  <p className="text-gray-600 text-sm font-sans">{pkg.destino.ciudad}</p>
                                 </div>
 
                                 <div className="flex items-center justify-between">
@@ -2422,8 +3059,8 @@ export default function ModulosPage() {
                                     <div className="font-semibold text-emerald-600 text-lg font-sans">
                                       {formatearSeparadorMiles.format(pkg?.precio ?? 0)}
                                     </div>
-                                    {pkg.sena > 0 && (
-                                      <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.sena ?? 0)}</div>
+                                    {pkg.senia > 0 && (
+                                      <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.senia ?? 0)}</div>
                                     )}
                                   </div>
                                   <Badge

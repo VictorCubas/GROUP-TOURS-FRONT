@@ -20,6 +20,7 @@ import {
   Shield,
   MapPin,
   HotelIcon,
+  Star,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -51,9 +52,10 @@ import { queryClient } from "@/components/utils/http"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { fetchDataNacionalidadTodos } from "@/components/utils/httpNacionalidades"
+import { fetchDataCiudadesTodos, fetchDataNacionalidadTodos } from "@/components/utils/httpNacionalidades"
 import { CountrySearchSelect } from "@/components/CountrySearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
+import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 
 
 const roleStatusColors = {
@@ -69,11 +71,16 @@ const enUsoColors = {
 
 let dataList: Destino[] = [];
 
-export default function RolesPage() {
+export default function DestinoPage() {
   const {siTienePermiso } = useSessionStore();
+  const [newDataCiudadList, setNewDataCiudadList] = useState<Destino[]>();
+  const [paisDataSelected, setPaisDataSelected] = useState<any>();
+  const [ciudadDataSelected, setCiudadDataSelected] = useState<any>();
+  const [selectedCiudadID, setSelectedCiudadID] = useState<number | "">("");
+  const [ciudadNoSeleccionada, setCiudadNoSeleccionada] = useState<boolean | undefined>();
   const [selectedNacionalidadID, setSelectedNacionalidadid] = useState<number | "">("");
   const [nacionalidadNoSeleccionada, setNacionalidadNoSeleccionada] = useState<boolean | undefined>();
-  const [nombreABuscar, setNombreABuscar] = useState("")
+  const [busquedaPorFiltro, setBusquedaPorFiltro] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Destino>();
   const [dataADesactivar, setDataADesactivar] = useState<Destino>();
@@ -84,15 +91,19 @@ export default function RolesPage() {
   const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [onGuardar, setOnGuardar] = useState(false);
+  const [ciudadBusqueda, setCiudadBusqueda] = useState<string>("");
+  const [hotelesSeleccionados, setHotelesSeleccionados] = useState<any[]>([]);
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
                   fecha_desde: "",
                   fecha_hasta: "",
                   nombre: ""
                 });
+
+              
   
   // DATOS DEL FORMULARIO 
-  const {register, handleSubmit, formState: {errors, }, reset} = 
+  const {register, handleSubmit, formState: {errors, }, setValue, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -129,9 +140,12 @@ export default function RolesPage() {
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
+  console.log(paisDataSelected);
+  console.log(ciudadDataSelected)
+
   const {data: dataHotelesList, isFetching: isFetchingHoteles,} = useQuery({
-      queryKey: ['todos-hoteles',], //data cached
-      queryFn: () => fetchDataHoteles(),
+      queryKey: ['todos-hoteles', ciudadDataSelected, paisDataSelected?.nombre], //data cached
+      queryFn: () => fetchDataHoteles(ciudadDataSelected, paisDataSelected?.nombre),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
@@ -142,6 +156,15 @@ export default function RolesPage() {
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
+  const {data: dataCiudadList, isFetching: isFetchingCiudad,} = useQuery({
+        queryKey: ['ciudades-disponibles', ciudadBusqueda, paisDataSelected?.id], //data cached
+        queryFn: () => fetchDataCiudadesTodos(ciudadBusqueda, paisDataSelected?.id),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+      });
+
+  
+    console.log('dataCiudadList: ', dataCiudadList)
+
 
   if(!isFetching && !isError){
     if(data?.results){
@@ -150,7 +173,61 @@ export default function RolesPage() {
   }
 
 
-  
+  useEffect(() => {
+      if(isFetchingCiudad){
+        setNewDataCiudadList([])
+      }
+    }, [isFetchingCiudad]);
+
+  useEffect(() => {
+      if(selectedCiudadID){
+        const selectedCiudad = dataCiudadList.filter((ciudad: any) => ciudad.id.toString() === selectedCiudadID.toString());
+
+        if(selectedCiudad.length){
+          setValue('nombre', selectedCiudad[0].nombre);
+          setCiudadDataSelected(selectedCiudad[0].nombre)
+        }
+      }
+    }, [selectedCiudadID]);
+
+  useEffect(() => {
+      if(selectedNacionalidadID){
+        const selectedPais = dataNacionalidadList.filter((pais: any) => pais.id.toString() === selectedNacionalidadID.toString());
+
+        if(selectedPais.length){
+          const pais = selectedPais[0];
+          console.log('pais: ', pais);
+          // const selectedCiudad = dataNacionalidadList.filter((ciudad: any) => ciudad.id.toString() === selectedNacionalidadID.toString());
+          setPaisDataSelected(pais);
+          if(!dataAEditar){
+            setSelectedCiudadID("");
+            setCiudadBusqueda("");
+          }
+        }
+      }
+    }, [selectedNacionalidadID]);
+
+
+    // useEffect(() => {
+    //   if(!selectedCiudadID || !selectedNacionalidadID){
+    //     dataHotelesListTemp = [];
+    //   }
+    //   else{
+    //     dataHotelesListTemp = [...dataHotelesList]
+    //   }
+    // }, [selectedCiudadID, selectedNacionalidadID]);
+
+
+  useEffect(() => {  
+    if(dataCiudadList){
+      if(dataAEditar){
+        setNewDataCiudadList([...dataCiudadList, dataAEditar.ciudad]);
+      }
+      else{
+        setNewDataCiudadList([...dataCiudadList])
+      }
+    }
+  }, [dataAEditar, dataCiudadList]);
 
 
   // Cálculos de paginación
@@ -188,23 +265,10 @@ export default function RolesPage() {
   const handleReset = () => {
     startTransition(() => {
         setShowActiveOnly(true);
-        setNombreABuscar("")
+        setBusquedaPorFiltro("")
       });
   }
 
-useEffect(() => {
-  const handler = setTimeout(() => {
-    console.log("⏱ Cambiando nombre a:", nombreABuscar);
-    setFiltros((prev) => ({
-      ...prev,
-      nombre: nombreABuscar.trim() // elimino espacios extra
-    }));
-  }, 750); 
-
-  return () => {
-    clearTimeout(handler); // limpia si el usuario sigue escribiendo
-  };
-}, [nombreABuscar]);
 
   
   const handleActiveOnly = () => {
@@ -213,6 +277,17 @@ useEffect(() => {
     setCurrentPage(1);
   }
 
+  useEffect(() => {
+      const handler = setTimeout(() => {
+        console.log('cambiando nombre')
+        setFiltros(filtroAnterior => ({...filtroAnterior, nombre: busquedaPorFiltro}))
+      }, 750) // ⏱️ medio segundo de espera
+  
+      return () => {
+        clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+      }
+    }, [busquedaPorFiltro]);
+  
 
   const {mutate, isPending: isPendingMutation} = useMutation({
     mutationFn: nuevoRolFetch,
@@ -226,6 +301,7 @@ useEffect(() => {
         setSelectedPermissions([])
         setSelectedNacionalidadid("")
         setOnGuardar(false);
+        handleCancel();
 
         setActiveTab('list');
          queryClient.invalidateQueries({
@@ -247,9 +323,9 @@ useEffect(() => {
           exact: false
         });
 
-        queryClient.invalidateQueries({
-          queryKey: ['paquetes-resumen'],
-        });
+        queryClient.invalidateQueries({queryKey: ['paquetes-resumen'],});
+
+        queryClient.invalidateQueries({queryKey: ['todos-hoteles-paquetes'],});
     },
   });
 
@@ -260,6 +336,10 @@ useEffect(() => {
         setDataAEditar(undefined);
         setSelectedNacionalidadid("");
         setOnGuardar(false);
+        setSelectedCiudadID("");
+        setPaisDataSelected(undefined);
+        setCiudadDataSelected(undefined);
+        handleCancel();
         reset({
             nombre: "",
             descripcion: "",
@@ -288,6 +368,8 @@ useEffect(() => {
         queryClient.invalidateQueries({
           queryKey: ['usuarios-resumen'],
         });
+
+        queryClient.invalidateQueries({queryKey: ['todos-hoteles-paquetes'],});
     },
   });
 
@@ -316,6 +398,13 @@ useEffect(() => {
   const handleCancel = () => {
         setOnGuardar(false);
         setDataAEditar(undefined);
+        setNewDataCiudadList([...dataCiudadList]);
+        setSelectedCiudadID("");
+        setSelectedNacionalidadid("");
+        setPaisDataSelected(undefined);
+        setCiudadDataSelected(undefined);
+        handleDataNoCiudadSeleccionada(undefined);
+        setHotelesSeleccionados([])
         reset({
             nombre: "",
             descripcion: "",
@@ -327,11 +416,23 @@ useEffect(() => {
   const handleGuardarNuevaData = async (dataForm: any) => {
     console.log('dataForm: ', dataForm);
     console.log('selectedPermissions: ', selectedPermissions)
-    if(selectedPermissions.length){
+    console.log(hotelesSeleccionados);
+
+    const hotelesIds = hotelesSeleccionados.map(hotel => hotel.id)
+
+    const payload = {...dataForm, 
+        activo: true, 
+        en_uso: false, 
+        ciudad_id: selectedCiudadID,
+        hoteles_ids: selectedPermissions}
+
+    console.log(payload)
+    
+    if(hotelesIds.length){
       mutate({...dataForm, 
         activo: true, 
         en_uso: false, 
-        pais_id: selectedNacionalidadID,
+        ciudad_id: selectedCiudadID,
         hoteles_ids: selectedPermissions});
     }
   }
@@ -351,8 +452,10 @@ useEffect(() => {
       
       const payLoad = {
                 ...dataEditado, 
+                ciudad_id: selectedCiudadID,
                 hoteles_ids: selectedPermissions,
-                pais_id: selectedNacionalidadID
+                pais_id: selectedNacionalidadID,
+                // ciuidad: selectedCiudadID
       };
       console.log('payload guardado: ', payLoad) 
       mutateGuardarEditado(payLoad);
@@ -362,23 +465,37 @@ useEffect(() => {
 
 
   useEffect(() => {
-    if (dataAEditar) {
-      reset({
-        nombre: dataAEditar.nombre,
-        descripcion: dataAEditar.descripcion,
-      });
-    }
-  }, [dataAEditar, reset]);
+      if (dataAEditar) {
+        console.log('reset data para editar: ', dataAEditar)
+        reset({
+          ...dataAEditar,
+          nombre: dataAEditar.ciudad.nombre,
+          // nacionalidad: dataAEditar.ciudad.pais_nombre,
+          // tipo_remuneracion: dataAEditar.tipo_remuneracion.id.toString(),
+          ciudad: dataAEditar.ciudad.id.toString(),
+          nacionalidad: dataAEditar.ciudad.pais_id.toString(),
+        });
+  
+        // const item = dataPersonaList.find((c: any) => c[valueKey] === value);
+        // setNewDataPersonaList([...dataPersonaList, dataAEditar.persona]);
+        // handleDataNoSeleccionada(true);
+      }
+    }, [dataAEditar, reset]);
 
 
   const handleEditar = (data: Destino) => {
-    setActiveTab('form');
     setDataAEditar(data);
     const hoteles = data.hoteles;
-    const hotelesIds = hoteles.map(destino => destino.id)
+    console.log(hoteles)
+    const hotelesIds = hoteles.map(hotel => hotel.id)
+    console.log(hotelesIds)
     console.log(data)
+    console.log('dataAEditar.persona.id: ', data.ciudad)
+    setSelectedNacionalidadid(Number(data.ciudad.pais_id));
+    setSelectedCiudadID(data.ciudad.id); 
     setSelectedPermissions(hotelesIds);
-    setSelectedNacionalidadid(data!.pais!.id);
+    setHotelesSeleccionados(hoteles)
+    setActiveTab('form');
   }
 
   const toggleActivar = (modulo: Destino) => {
@@ -409,6 +526,25 @@ useEffect(() => {
   //     prev.includes(permissionId) ? prev.filter((p) => p !== permissionId) : [...prev, permissionId],
   //   )
   // }
+
+
+  /**
+   * Sincroniza la lista de hotelesSeleccionados con los IDs marcados en selectedPermissions.
+   * Solo agrega, nunca quita: la eliminación se hace SOLO en la sección de seleccionados.
+   */
+  useEffect(() => {
+    if (!dataHotelesList) return;
+    const nuevos = dataHotelesList.filter(
+      (h: any) => selectedPermissions.includes(h.id) &&
+             !hotelesSeleccionados.some((sel) => sel.id === h.id)
+    );
+    if (nuevos.length) {
+      setHotelesSeleccionados((prev) => [...prev, ...nuevos]);
+    }
+  }, [selectedPermissions, dataHotelesList, hotelesSeleccionados]);
+
+  
+
   const handlePermissionToggle = (permissionId: number) => {
     setSelectedPermissions((prev) => {
       const updated =
@@ -423,7 +559,27 @@ useEffect(() => {
 
   const handleNacionalidadNoSeleccionada = (value: boolean | undefined) => {
     setNacionalidadNoSeleccionada(value);
+  };
+
+  const handleDataNoCiudadSeleccionada = (value: boolean | undefined) => {
+    setCiudadNoSeleccionada(value);
   }
+
+  const renderStars = (rating: number) => {
+      return (
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Star
+              key={index}
+              className={`h-3 w-3 ${
+                index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+              }`}
+            />
+          ))}
+          <span className="ml-1 text-sm text-gray-600">({rating})</span>
+        </div>
+      );
+    };
 
   return (
     <>
@@ -437,7 +593,7 @@ useEffect(() => {
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                        {dataDetalle?.nombre}
+                        {dataDetalle?.ciudad?.nombre}
                       </h2>
                       <p className="text-gray-600">Detalles completos del destino</p>
                     </div>
@@ -484,7 +640,7 @@ useEffect(() => {
                               <span className="text-sm">{hotel.nombre}</span>
 
                                <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                  {hotel?.moneda_codigo}{hotel?.precio_habitacion} <span className="text-gray-500 font-normal"> / noche</span>
+                                 <span className="text-gray-500 font-normal">{renderStars(hotel.estrellas)}</span>
                                 </Badge>
                             </div>
 
@@ -510,11 +666,20 @@ useEffect(() => {
                       </div>
                     </div> */}
 
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Última Modificación</Label>
-                      <p className="mt-1 text-gray-900">
-                        {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Fecha Creación</Label>
+                        <p className="mt-1 text-gray-900">
+                          {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-500">Última Modificación</Label>
+                        <p className="mt-1 text-gray-900">
+                          {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -548,7 +713,7 @@ useEffect(() => {
                 </div>
                 <h2 className='text-center'>Confirmacion de operación</h2>
               <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-                ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} el destino de <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
+                ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} el destino de <b>{capitalizePrimeraLetra(dataADesactivar?.ciudad?.nombre ?? '')}</b>? 
               </p>
 
               <div className='modal-actions'>
@@ -638,6 +803,7 @@ useEffect(() => {
                       </Label>
                     <Input
                         id="nombre"
+                        disabled
                         autoComplete="nombre"
                         placeholder="Nombre del destino"
                         className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -687,6 +853,34 @@ useEffect(() => {
                           {onGuardar && nacionalidadNoSeleccionada === undefined && <p className="text-red-400 text-sm">Este campo es requerido</p>}
                       </div>
 
+                     <div className="space-y-2 mi-select-wrapper">
+                        <Label htmlFor="ciudad" className="text-gray-700 font-medium">
+                          Ciudad *
+                        </Label>
+
+                        <div className="space-y-2">
+                          <DinamicSearchSelect
+                            // disabled={!dataAEditar}
+                            dataList={newDataCiudadList || []}
+                            value={selectedCiudadID}
+                            onValueChange={setSelectedCiudadID}
+                            handleDataNoSeleccionada={handleDataNoCiudadSeleccionada}
+                            onSearchChange={setCiudadBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                            isFetchingPersonas={isFetchingCiudad}
+                            placeholder="Buscar ciudad..."
+                            labelKey="nombre"
+                            valueKey="id"
+                          />
+                        </div>
+                          
+
+                          {ciudadNoSeleccionada === false && (
+                            <p className="text-red-400 text-sm">Este campo es requerido</p>
+                          )}
+
+                          {/* {onGuardar && nacionalidadNoSeleccionada === undefined && <p className="text-red-400 text-sm">Este campo es requerido</p>} */}
+                      </div>
+
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="description" className="text-gray-700 font-medium">
                         Descripción *
@@ -708,160 +902,185 @@ useEffect(() => {
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label className="text-gray-700 font-medium">Seleccione los hoteles *</Label>
+                        {/* === Sección 1: búsqueda y selección === */}
+                        <div>
+                          <Label className="text-gray-700 font-medium">Seleccione los hoteles *</Label>
 
-                      
-                      <div className="relative mb-4">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Buscar hoteles..."
-                          value={permissionSearchTerm}
-                          onChange={(e) => setPermissionSearchTerm(e.target.value)}
-                          className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                      </div>
+                          {/* Barra de búsqueda */}
+                          <div className="relative mb-4 mt-2">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              placeholder="Buscar hoteles..."
+                              value={permissionSearchTerm}
+                              onChange={(e) => setPermissionSearchTerm(e.target.value)}
+                              className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
 
-                      
-                      {selectedPermissions.length > 0 && (
-                        <div className="flex items-center gap-2 mb-3">
-                          <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                            {selectedPermissions.length} hoteles seleccionados
-                          </Badge>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedPermissions([])}
-                            className="text-red-600 border-red-200 hover:bg-red-50"
-                          >
-                            <X className="h-3 w-3 mr-1" />
-                            Limpiar selección
-                          </Button>
-                        </div>
-                      )}
+                          {selectedPermissions.length > 0 && (
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                {selectedPermissions.length} hoteles seleccionados
+                              </Badge>
+                            </div>
+                          )}
 
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
-                        {isFetchingHoteles && <div className="w-full flex items-center justify-center">
-                          <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
-                        </div>}
+                          {/* === Lista de hoteles === */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                            {isFetchingHoteles && (
+                              <div className="w-full flex items-center justify-center">
+                                <Loader2Icon className="animate-spin w-10 h-10 text-gray-300" />
+                              </div>
+                            )}
 
-                        {!isFetchingHoteles && dataHotelesList && dataHotelesList
-                            .filter((hotel: any) => 
-                              
-                              hotel.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
-                            
-                            )
-                            .map((hotel: any) => (
-                              <div
-                                key={hotel.id}
-                                className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
-                                          items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
-                                          border border-gray-200
-                                          ${selectedPermissions.includes(hotel.id) 
-                                            ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
-                                            : ''}`}
-                              >
-                                <div className="flex items-start w-full">
-                                  <div className="flex-shrink-0 mr-3 mt-0.5">
-                                    <Checkbox
-                                      id={`hotel-${hotel.id}`}
-                                      checked={selectedPermissions.includes(hotel.id)}
-                                      onCheckedChange={() => handlePermissionToggle(hotel.id)}
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <Label
-                                      htmlFor={`hotel-${hotel.id}`}
-                                      className="text-sm font-medium text-gray-900 cursor-pointer block"
-                                    >
-                                      {hotel.nombre}
-                                    </Label>
-                                    <p className="text-xs text-gray-500 mt-1">{hotel.descripcion}</p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                      {/* <Badge
-                                        className='bg-blue-100 text-blue-700 border-blue-200'
-                                      >
-                                      </Badge> */}
-                                      <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                        {hotel?.moneda?.simbolo}{hotel?.precio_habitacion} <span className="text-gray-500 font-normal">/ noche</span>
-                                      </Badge>
+                            {/* Verificación de ciudad/nacionalidad antes de mostrar */}
+                            {!isFetchingHoteles &&
+                              selectedCiudadID &&
+                              selectedNacionalidadID &&
+                              dataHotelesList
+                                ?.filter((hotel: any) =>
+                                  hotel.nombre
+                                    .toLowerCase()
+                                    .includes(permissionSearchTerm.toLowerCase())
+                                )
+                                .map((hotel: any) => (
+                                  <div
+                                    key={hotel.id}
+                                    className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
+                                      items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                      border border-gray-200
+                                      ${selectedPermissions.includes(hotel.id)
+                                        ? "ring-2 ring-blue-200 bg-blue-50/50 border-blue-200"
+                                        : ""}`}
+                                  >
+                                    <div className="flex items-start w-full">
+                                      <div className="flex-shrink-0 mr-3 mt-0.5">
+                                        <Checkbox
+                                          id={`hotel-${hotel.id}`}
+                                          checked={selectedPermissions.includes(hotel.id)}
+                                          onCheckedChange={() => handlePermissionToggle(hotel.id)}
+                                        />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <Label
+                                          htmlFor={`hotel-${hotel.id}`}
+                                          className="text-sm font-medium text-gray-900 cursor-pointer block"
+                                        >
+                                          {hotel.nombre}
+                                        </Label>
+                                        <p className="text-xs text-gray-500 mt-1 truncate max-w-xs">
+                                          {hotel.descripcion}
+                                        </p>
+                                      </div>
                                     </div>
                                   </div>
+                                ))}
+
+                            {/* Mensaje cuando no hay resultados */}
+                            {selectedCiudadID &&
+                              selectedNacionalidadID &&
+                              dataHotelesList &&
+                              dataHotelesList.filter((hotel: any) =>
+                                hotel.nombre
+                                  .toLowerCase()
+                                  .includes(permissionSearchTerm.toLowerCase())
+                              ).length === 0 && (
+                                <div className="col-span-2 text-center py-8">
+                                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                    <Search className="h-6 w-6 text-gray-400" />
+                                  </div>
+                                  <p className="text-gray-500 text-sm">
+                                    No se encontraron hoteles que coincidan con "
+                                    {permissionSearchTerm}"
+                                  </p>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPermissionSearchTerm("")}
+                                    className="mt-2"
+                                  >
+                                    Limpiar búsqueda
+                                  </Button>
                                 </div>
+                              )}
+
+                            {/* Mensaje si ciudad o nacionalidad no están seleccionadas */}
+                            {(!selectedCiudadID || !selectedNacionalidadID) && !isFetchingHoteles && (
+                              <div className="col-span-2 text-center py-6">
+                                <p className="text-gray-500 text-sm">
+                                  Selecciona primero el pais y la ciudad para ver los hoteles disponibles.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* === Sección 2: Hoteles seleccionados === */}
+                        <div className="bg-emerald-50 p-2 rounded-md px-3 py-2 border border-emerald-200">
+                          <Label className="text-sm font-medium text-gray-500 mt-5">
+                            Hoteles seleccionados ({hotelesSeleccionados.length})
+                          </Label>
+                          <div className="mt-2 space-y-2 max-h-50 overflow-y-auto">
+                            {hotelesSeleccionados.map((hotel) => (
+                              <div
+                                key={hotel.id}
+                                className="flex items-center justify-between gap-2
+                                group relative bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-blue-20"
+                              >
+                                <div className="flex-col items-center gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <HotelIcon className="h-4 w-4 text-blue-500" />
+                                    <span className="text-sm">{hotel.nombre}</span>
+                                    <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                                      {hotel.moneda_codigo}
+                                      {hotel.precio_habitacion}
+                                      <span className="text-gray-500 font-normal">
+                                        {renderStars(hotel.estrellas)}
+                                      </span>
+                                    </Badge>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-1 max-w-xs mt-2">
+                                    {hotel.servicios_detalle.length === 0 && (<p className="text-xs bg-gray-100 text-gray-600 border-gray-200">Sin servicios incluidos</p>)}
+                                    {hotel.servicios_detalle.length > 0 && hotel.servicios_detalle.slice(0, 2).map((servicio: any) => {
+                                      // const hotel = dataHotelesList?.find((p: any) => p.id === permi.id)
+                                      console.log('hotel')
+                                      return (
+                                        <Badge key={servicio.id} className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                                          {servicio.nombre}
+                                        </Badge>
+                                      )
+                                    })}
+                                    {hotel.servicios_detalle.length > 2 && (
+                                      <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                                        +{hotel.servicios_detalle.length - 2} más
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHotelesSeleccionados((prev) =>
+                                      prev.filter((h) => h.id !== hotel.id)
+                                    );
+                                    setSelectedPermissions((prev) =>
+                                      prev.filter((id) => id !== hotel.id)
+                                    );
+                                  }}
+                                  className="p-1 rounded hover:bg-red-100 text-red-500"
+                                  aria-label="Quitar hotel"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
                               </div>
                             ))}
-                                                  
-                        {dataHotelesList && dataHotelesList.filter(
-                          (hotel: any) =>
-                            hotel.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
-                        ).length === 0 && (
-                          <div className="col-span-2 text-center py-8">
-                            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                              <Search className="h-6 w-6 text-gray-400" />
-                            </div>
-                            <p className="text-gray-500 text-sm">
-                              No se encontraron hoteles que coincidan con "{permissionSearchTerm}"
-                            </p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setPermissionSearchTerm("")}
-                              className="mt-2"
-                            >
-                              Limpiar búsqueda
-                            </Button>
                           </div>
-                        )}
-
+                        </div>
                       </div>
 
-                      {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un hotel</span>}
-                      
-                      <div className="flex items-center gap-2 pt-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-
-                            const filteredPermissions = dataHotelesList.filter(
-                              (hotel: any) =>
-                                hotel.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
-                            )
-                            const allFilteredSelected = filteredPermissions.every((p: any) =>
-                              selectedPermissions.includes(p.id),
-                            )
-
-                            console.log('allFilteredSelected: ', allFilteredSelected )
-
-                            if (allFilteredSelected) {
-                              setSelectedPermissions((prev) =>
-                                prev.filter((id) => !filteredPermissions.map((p: any) => p.id).includes(id)),
-                              )
-                            } else {
-                              const newSelections = filteredPermissions
-                                .map((p:any) => p.id)
-                                .filter((id:any) => !selectedPermissions.includes(id))
-                              setSelectedPermissions((prev) => [...prev, ...newSelections])
-                            }
-                          }}
-                          className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                        >
-                          <Check className="h-3 w-3 mr-1" />
-                          {dataHotelesList && dataHotelesList
-                            .filter(
-                              (hotel: any) =>
-                                hotel.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
-                            )
-                            .every((p: any) => selectedPermissions.includes(p.id))
-                            ? "Deseleccionar"
-                            : "Seleccionar"}{" "}
-                          
-                        </Button>
-                      </div>
-                    </div>
                   </div>
 
                   <div className="flex gap-3">
@@ -955,8 +1174,8 @@ useEffect(() => {
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
                             placeholder="Buscar por nombre de destino o nombre de país..."
-                            value={nombreABuscar}
-                            onChange={(e) => setNombreABuscar(e.target.value)}
+                            value={busquedaPorFiltro}
+                            onChange={(e) => setBusquedaPorFiltro(e.target.value)}
                             className="pl-10 w-full border-gray-300 focus:border-blue-500"
                           />
                         </div>
@@ -1013,7 +1232,7 @@ useEffect(() => {
                             fecha_hasta: "",
                             nombre: ""
                           });
-                          setNombreABuscar(""); 
+                          setBusquedaPorFiltro(""); 
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
@@ -1034,7 +1253,6 @@ useEffect(() => {
                       <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                       <TableHead className="font-semibold text-gray-700">Hoteles</TableHead>
                       <TableHead className="font-semibold text-gray-700">Fecha Creación</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Última Modificación</TableHead>
                       <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1060,7 +1278,7 @@ useEffect(() => {
                               </TableCell>
                               <TableCell>
                                 <div>
-                                  <div className="font-medium text-gray-900">{data.nombre}</div>
+                                  <div className="font-medium text-gray-900">{data?.ciudad.nombre}</div>
                                   <div className="text-sm text-gray-500 truncate max-w-xs">{data.descripcion}</div>
                                 </div>
                               </TableCell>
@@ -1068,7 +1286,7 @@ useEffect(() => {
                                 <Badge
                                   className='text-xs bg-blue-100 text-blue-700 border-blue-200"'
                                 >
-                                  {data.pais.nombre}
+                                  {data?.ciudad?.pais_nombre}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -1086,12 +1304,13 @@ useEffect(() => {
                               <TableCell>
                                 <div className="flex flex-wrap gap-1 max-w-xs">
                                   {data.hoteles.slice(0, 2).map((permi) => {
-                                    const hotel = dataHotelesList?.find((p: any) => p.id === permi.id)
-                                    return hotel ? (
+                                    // const hotel = dataHotelesList?.find((p: any) => p.id === permi.id)
+                                    console.log('hotel')
+                                    return (
                                       <Badge key={permi.id} className="text-xs bg-blue-100 text-blue-700 border-blue-200">
-                                        {hotel.nombre}
+                                        {permi.nombre}
                                       </Badge>
-                                    ) : null
+                                    )
                                   })}
                                   {data.hoteles.length > 2 && (
                                     <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
@@ -1105,14 +1324,6 @@ useEffect(() => {
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
                                     {formatearFecha(data.fecha_creacion)}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm text-gray-500">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {formatearFecha(data.fecha_modificacion)}
                                   </div>
                                 </div>
                               </TableCell>
