@@ -4,7 +4,9 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
       fecha_salida: salida.fecha_salida_v2,
       fecha_regreso: salida.fecha_regreso_v2,
       senia: salida.senia,
-      precio_actual: salida.precio,
+      precio_actual: salida.precio_actual,
+      precio_final: salida?.precio_final,
+      hoteles: salida.hoteles_ids,
       cupo: parseInt(salida.cupo, 10), // Entero
       moneda_id: dataForm.moneda,
       temporada_id: salida?.temporada_id || null, // Opcional

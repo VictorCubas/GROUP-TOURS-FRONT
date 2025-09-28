@@ -48,6 +48,7 @@ import {
   UserCheck,
   Users2,
   Bed,
+  Tag,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -151,7 +152,7 @@ export default function ModulosPage() {
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
 
-  const [rangoPrecio, setRangoPrecio] = useState<{ precioMin: number; precioMax: number; dias: number; noches: number }>();
+  // const [rangoPrecio, setRangoPrecio] = useState<{ precioMin: number; precioMax: number; dias: number; noches: number }>();
   const [ciudadDataSelected, setCiudadDataSelected] = useState<any>();
   const [ciudadDataCompleto, setCiudadDataCompleto] = useState<any>();
   const [selectedHotels, setSelectedHotels] = useState<Set<string>>(new Set());
@@ -166,6 +167,7 @@ export default function ModulosPage() {
                   tipo_propiedad: "all",  
                 });
 
+  const [paqueteSubtipo, setPaqueteSubtipo] = useState<'flexible' | 'fijo'>('flexible');
   
   // DATOS DEL FORMULARIO 
   const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
@@ -209,6 +211,7 @@ export default function ModulosPage() {
     mode: "onBlur",
     defaultValues: {
       precio_desde: '',
+      cantidadNoche: '',
       precio_hasta: '',
       senia: '',
       fecha_salida_v2: '',
@@ -581,11 +584,15 @@ export default function ModulosPage() {
       return;
     }
 
+
+    console.log(salidas);
+
     // Agregar el resto de campos
     Object.keys(prePayload).forEach((key) => {
       const value = prePayload[key];
       if (value !== undefined && value !== null) {
         if (key === "salidas") {
+          console.log(value)
           // 👇 Serializamos el array de objetos
           console.log(JSON.stringify(value))
           formData.append(key ,JSON.stringify(value));
@@ -612,10 +619,11 @@ export default function ModulosPage() {
     const salidasTemp = salidas.map((salida: any) => ({
       fecha_salida: salida.fecha_salida_v2,
       fecha_regreso: salida.fecha_regreso_v2,
-      precio_actual: salida.precio,
+      precio_actual: salida.precio_desde,
       senia: salida.senia,
       cupo: parseInt(salida.cupo, 10), // Entero
       moneda_id: dataForm.moneda,
+      hoteles: salida.hoteles_ids,
       temporada_id: salida?.temporada_id || null, // Opcional
     }))
 
@@ -814,6 +822,9 @@ export default function ModulosPage() {
       setDistribuidoraSelected(data!.distribuidora);
       setSelectedPermissions(servicios_ids);
 
+
+    // const hootels = salida.hoteles.map((hotel: any) => hotel.id);
+
     const salidas = data.salidas.map((salida: SalidaPaquete) => ({
       id: salida.id,
       fecha_salida_v2: salida.fecha_salida,
@@ -822,10 +833,13 @@ export default function ModulosPage() {
       precio: salida.precio_actual,
       senia: salida.senia,
       cupo: salida.cupo,
+      hoteles_ids: salida.hoteles.map((hotel: any) => hotel?.id),
     }))
 
     setSalidas(salidas);
   }
+
+  console.log(salidas)
 
   const toggleActivar = (modulo: Paquete) => {
     setOnDesactivarData(true);
@@ -908,10 +922,26 @@ export default function ModulosPage() {
 
    const handleOpenModal = () => {
     const monedaValue = watch('moneda');
+    if (!selectedDestinoID) {
+      handleShowToast('Debes seleccionar primero el destino', 'error');
+      return;
+    }
+
     if (!monedaValue) {
       handleShowToast('Debes seleccionar primero la moneda', 'error');
       return;
     }
+
+    if(quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && !watch('cantidad_pasajeros')){
+      handleShowToast('Debes agregar la cantidad de pasajeros', 'error');
+      return;
+    }
+      
+
+    console.log(watch('cantidad_pasajeros'))
+    if(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() === 'terrestre')
+        setValueSalida('cupo', watch('cantidad_pasajeros')); 
+
     setIsAddSalidaOpen(true);
   };
   
@@ -932,19 +962,27 @@ export default function ModulosPage() {
     console.log(dataForm);
     console.log(nuevaSalida);
 
-  
+    console.log(selectedHotels)
+    const hotelesIds = [...selectedHotels];
+
+    console.log(hotelesIds)
 
     console.log(isEditMode);
     console.log(editingSalidaId);
 
     if (isEditMode && editingSalidaId) {
       // 🔹 Editando habitación existente
-      const salidaEdited = {...dataForm, currency: watch('moneda')};
+      const salidaEdited = {...dataForm, hoteles_ids:hotelesIds, currency: watch('moneda')};
+      delete salidaEdited.precio;
       console.log(salidaEdited)
       setSalidas((prev) =>
         prev.map((salida) =>
           salida.id === editingSalidaId
-            ? { ...salida, ...salidaEdited, senia: salidaEdited.senia } // Reemplazamos los valores con los del formulario
+            ? { 
+              // ...salida,
+              ...salidaEdited, 
+              senia: salidaEdited.senia 
+            } // Reemplazamos los valores con los del formulario
             : salida
         )
       );
@@ -964,6 +1002,9 @@ export default function ModulosPage() {
       const salida: any = {
         id: Date.now().toString(), // ID temporal
         ...dataForm,
+        precio_actual: dataForm.precio_desde,
+        precio_final: dataForm.precio_hasta,
+        hoteles_ids: hotelesIds,
         currency: watch('moneda'), // o nuevaSalida.currency
       };
 
@@ -995,6 +1036,7 @@ export default function ModulosPage() {
 
     resetSalida({
       precio_desde: '',
+      cantidadNoche: '',
       precio_hasta: '',
       senia: '',
       fecha_salida_v2: '',
@@ -1013,6 +1055,7 @@ export default function ModulosPage() {
   //   precio: 2000,
   //   cupo: 45
   // }
+
 
   const handleEditSalida = (salida: any) => {
     console.log(salida);
@@ -1035,6 +1078,13 @@ export default function ModulosPage() {
     setIsEditMode(true);
     setIsAddSalidaOpen(true);
 
+    console.log(salidas);
+    console.log(salida.hoteles_ids)
+    // const hotelesIds = salida.hoteles_ids.map((hotel: any) => hotel.id);
+    console.log(salida.hoteles_ids);
+
+    setSelectedHotels(new Set(salida.hoteles_ids.map(Number)));
+
     // Si usas react-hook-form u otro Controller, setea también el value del select/Controller
     setValue('moneda', salida.moneda.toString());
   };
@@ -1044,17 +1094,22 @@ export default function ModulosPage() {
 
     const fechaSalida = watchSalida('fecha_salida_v2');
     const fechaRegreso = watchSalida('fecha_regreso_v2');
-    console.log(fechaSalida, fechaRegreso) 
+    // console.log(fechaSalida, fechaRegreso) 
 
-    console.log(rangoPrecio);
+    // console.log(rangoPrecio);
 
     useEffect(() => {
-      console.log(dataHotelesList)
+      // console.log(dataHotelesList)
       console.log(selectedHotels);
 
       // const idsSeleccionados = Array.from(selectedHotels).map(id => Number(id));
 
       if (selectedHotels && fechaSalida && fechaRegreso && dataHotelesList) {
+
+        if(fechaRegreso < fechaSalida){
+          handleShowToast('La fecha de regreso debe ser mayor a la fecha de salida', 'error');
+          return;
+        }
 
         const hotelesFiltrados = dataHotelesList?.filter((hotel: any) =>
           selectedHotels.has(hotel.id) // o idsSeleccionados.includes(hotel.id)
@@ -1065,9 +1120,10 @@ export default function ModulosPage() {
           // { min: 1680, max: 1760, dias: 8, noches: 8 }                  
         console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso))
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
-        setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
+        // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
         setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
         setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+        setValueSalida('cantidadNoche', rangoPrecioDesdeHasta.noches.toString());
       }
       // 👇 dependencias simples, sin llamadas complejas
     }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList]);
@@ -1778,7 +1834,7 @@ export default function ModulosPage() {
                           {watch("propio")  && 
                             <div className="space-y-2">
                               <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
-                                Cantidad de pasajeros *
+                                Cantidad máxima *
                               </Label>
                               <Input
                                 id="cantidad_pasajeros"
@@ -2245,7 +2301,46 @@ export default function ModulosPage() {
                                   {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
                                 </div>
 
-                                {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && 
+                                <div className="bg-white rounded-lg shadow-md p-6">
+                                                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Tipo de Paquete</h2>
+                                                      <div className="grid md:grid-cols-2 gap-4">
+                                                        <div
+                                                          onClick={() => setPaqueteSubtipo('flexible')}
+                                                          className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                                                            paqueteSubtipo === 'flexible' 
+                                                              ? 'border-blue-500 bg-blue-50' 
+                                                              : 'border-gray-200 hover:border-gray-300'
+                                                          }`}
+                                                        >
+                                                          <div className="flex items-center mb-2">
+                                                            <Star className="w-5 h-5 text-blue-600 mr-2" />
+                                                            <span className="font-medium text-gray-900">Paquete Flexible</span>
+                                                          </div>
+                                                          <p className="text-sm text-gray-600">
+                                                            Múltiples opciones de hotel y habitación. El cliente elige al reservar.
+                                                          </p>
+                                                        </div>
+
+                                                        <div
+                                                          onClick={() => setPaqueteSubtipo('fijo')}
+                                                          className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                                                            paqueteSubtipo === 'fijo' 
+                                                              ? 'border-orange-500 bg-orange-50' 
+                                                              : 'border-gray-200 hover:border-gray-300'
+                                                          }`}
+                                                        >
+                                                          <div className="flex items-center mb-2">
+                                                            <Tag className="w-5 h-5 text-orange-600 mr-2" />
+                                                            <span className="font-medium text-gray-900">Promoción Especial</span>
+                                                          </div>
+                                                          <p className="text-sm text-gray-600">
+                                                            Hotel y habitación predefinidos con precio fijo.
+                                                          </p>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+
+                                {/* {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' &&  */}
                                    <Card className="mt-8">
                                     <CardHeader>
                                       <div className="flex items-center justify-between">
@@ -2277,226 +2372,253 @@ export default function ModulosPage() {
                                                   Agregar Salidas
                                                 </Button>
                                             {/* </DialogTrigger> */}
-                                          <DialogContent className="sm:max-w-[850px] max-h-[90vh]">
-                                            <form id="salidaForm" 
-                                             onSubmit={(e) => {
-                                                  e.stopPropagation(); // evita que el submit burbujee al form padre
-                                                  handleSubmitSalida(handleAddSalida)(e);
-                                                }}>
-                                              <DialogHeader>
-                                                <DialogTitle>Agregar Nueva Salida</DialogTitle>
-                                                <DialogDescription>
-                                                  Complete los datos de la nueva salida para agregarla al al paquete.
-                                                </DialogDescription>
-                                              </DialogHeader>
-                                              <div className="grid gap-4 py-4">
-                                                <div className="grid grid-cols-2 items-center gap-4">
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
-                                                        <Input
-                                                          type="date"
-                                                          id="fecha_salida_v2"
-                                                          {...registerSalida('fecha_salida_v2', { required: true })}
-                                                          className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
-                                                              'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                        />
-                                                  </div>
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
-                                                        <Input
-                                                          type="date"
-                                                          id="fecha_regreso_v2"
-                                                          {...registerSalida('fecha_regreso_v2', {
-                                                            required: true, 
-                                                          })
-                                                          }
-                                                          className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
-                                                              'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                        />
-                                                  </div>
-                                                </div>
+                                            <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-hidden p-0">
+                                               <div className="max-h-[90vh] overflow-y-auto p-6">
+                                                  <form id="salidaForm" 
+                                                onSubmit={(e) => {
+                                                      e.stopPropagation(); // evita que el submit burbujee al form padre
+                                                      handleSubmitSalida(handleAddSalida)(e);
+                                                    }}>
+                                                  <DialogHeader>
+                                                    <DialogTitle>Agregar Nueva Salida</DialogTitle>
+                                                    <DialogDescription>
+                                                      Complete los datos de la nueva salida para agregarla al al paquete.
+                                                    </DialogDescription>
+                                                  </DialogHeader>
+                                                  <div className="grid gap-4 py-4">
+                                                      <div className="bg-white rounded-lg shadow-md p-6">
+                                                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Información de Salidas</h2>
+                                                          <div className="grid grid-cols-2 items-center gap-4">
+                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
+                                                                  <Input
+                                                                    type="date"
+                                                                    id="fecha_salida_v2"
+                                                                    {...registerSalida('fecha_salida_v2', { required: true })}
+                                                                    className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
+                                                                        'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
+                                                                        'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                                  />
+                                                            </div>
+                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
+                                                                  <Input
+                                                                    type="date"
+                                                                    id="fecha_regreso_v2"
+                                                                    {...registerSalida('fecha_regreso_v2', {
+                                                                      required: true, 
+                                                                    })
+                                                                    }
+                                                                    className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
+                                                                        'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none': 
+                                                                        'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                                  />
+                                                            </div>
+                                                          </div>
 
-                                                <div className="grid grid-cols-2 items-center gap-4">
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label htmlFor="precio_desde" className="text-right">
-                                                        Precio Desde * 
-                                                      </Label>
-                                                      <div className="col-span-3 flex gap-2">
-                                                          <Input
-                                                            id="precio_desde"
-                                                            type="text"
-                                                            disabled
-                                                            {...registerSalida('precio_desde', {
-                                                              required: true, 
-                                                              })
-                                                            }
-                                                            placeholder="2000"
-                                                            className={`flex-1 ${errorsSalida?.precio_desde?.type === 'required' ? 
-                                                                'border-2 border-red-200 focus:border-red-500': 
-                                                                'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
-                                                          />
-                                                      </div>
-                                                  </div>
+                                                          <div className="grid grid-cols-2 items-center gap-4 pt-4">
 
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label htmlFor="precio_hasta" className="text-right">
-                                                        Precio Hasta * 
-                                                      </Label>
-                                                      <div className="col-span-3 flex gap-2">
-                                                          <Input
-                                                            id="precio_hasta"
-                                                            type="text"
-                                                            disabled
-                                                            {...registerSalida('precio_hasta', {
-                                                              required: true, 
-                                                              })
-                                                            }
-                                                            placeholder="2000"
-                                                            className={`flex-1 ${errorsSalida?.precio_hasta?.type === 'required' ? 
-                                                                'border-2 border-red-200 focus:border-red-500': 
-                                                                'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
-                                                          />
-                                                      </div>
-                                                  </div>
-
-                                                  {/* MONTO SEÑA */}
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="senia" className="text-gray-700 font-medium">
-                                                      Seña *
-                                                    </Label>
-                                                    <div className="col-span-3 flex gap-2">
-                                                      <Input
-                                                        id="senia"
-                                                        disabled
-                                                        type="text"
-                                                        {...registerSalida('senia', {
-                                                            required: true, })
-                                                          }
-                                                          placeholder="150"
-                                                          className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 'border-2 border-red-200 focus:border-red-500':
-                                                              'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                      />
-                                                    </div>
-                                                    
-                                                  </div>  
-
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label htmlFor="cupo" className="text-right">
-                                                        Cupo * 
-                                                      </Label>
-                                                      <div className="col-span-3 flex gap-2">
-                                                          <Input
-                                                            id="cupo"
-                                                            type="text"
-                                                            {...registerSalida('cupo', { required: true })}
-                                                            placeholder="46"
-                                                            className={`flex-1 ${errorsSalida?.cupo?.type === 'required' ? 'border-2 border-red-200 focus:border-red-500': 
-                                                              'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                          />
-                                                      </div>
-                                                  </div>
-                                                </div>
-                                              
-
-                                               <Card className="bg-gray-50">
-                                                    <CardHeader>
-                                                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                                                        <Building2 className="w-5 h-5 text-primary" />
-                                                        Hoteles y Precios
-                                                      </h3>
-                                                      <p className="text-sm text-muted-foreground">
-                                                        Selecciona los hoteles disponibles y configura los precios por tipo de habitación
-                                                      </p>
-                                                    </CardHeader>
-                                                    <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
-                                                      {dataHotelesList && dataHotelesList?.map((hotel: any) => (
-                                                        <Card
-                                                            key={hotel.hotelId}
-                                                            className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
-                                                          >
-                                                            {/* bg-primary/5 border-primary/30" : "bg-background */}
-                                                          <CardContent className="">
-                                                            <div className="space-y-4">
-                                                              <div className="flex items-center space-x-3 ">
-                                                                <Checkbox
-                                                                  
-                                                                  id={hotel.id}
-                                                                  checked={selectedHotels.has(hotel.id)}
-                                                                  onCheckedChange={() => handleHotelToggle(hotel.id)}
+                                                            {/* MONTO SEÑA */}
+                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                              <Label htmlFor="senia" className="text-gray-700 font-medium">
+                                                                Seña *
+                                                              </Label>
+                                                              <div className="col-span-3 flex gap-2">
+                                                                <Input
+                                                                  id="senia"
+                                                                  type="text"
+                                                                  {...registerSalida('senia', {
+                                                                      required: true, })
+                                                                    }
+                                                                    placeholder="150"
+                                                                    className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 
+                                                                        'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
+                                                                        'border-2 border-blue-200 focus:border-blue-500'}`}
                                                                 />
-                                                                <div className="flex-1">
-                                                                  <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
-                                                                    {hotel.nombre}
-                                                                  </Label>
-                                                                  <div className="flex items-center gap-4 mt-1">
-                                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
-                                                                      {renderStars(hotel.estrellas)}
-                                                                    </Badge>
-                                                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                      <MapPin className="w-3 h-3" />
-                                                                      {/* <span>{hotel.ubicacion}</span> */}
-                                                                      <span>{hotel.direccion}</span>
-                                                                    </div>
-                                                                  </div>
-                                                                </div>
                                                               </div>
+                                                              
+                                                            </div>  
 
-                                                              {selectedHotels.has(hotel.id) && (
-                                                                <div className="pl-6 border-l-2 border-emerald-200">
-                                                                  <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                                                                    Precios por tipo de habitación:
-                                                                  </h4>
-
-                                                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                                    {hotel?.habitaciones?.length === 0 && 
-                                                                        <p className="text-sm font-medium text-muted-foreground">
-                                                                          No tiene habitaciones asignadas
-                                                                        </p>}
-                                                                    {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
-                                                                      <div key={habitacion.id} className="space-y-2">
-                                                                        <Label className="text-sm flex items-center gap-2">
-                                                                          {getRoomIcon(habitacion.tipo)}
-                                                                          {getRoomTypeLabel(habitacion.tipo)}
-                                                                        </Label>
-                                                                        
-                                                                        <div className="relative">
-                                                                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                                                          <Input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            step="0.01"
-                                                                            placeholder="0.00"
-                                                                            className="pl-10"
-                                                                            disabled
-                                                                            value={habitacion?.precio_noche ?? ''}
-                                                                          />
-                                                                        </div>
-                                                                      </div>
-                                                                    ))}
-                                                                  </div>
-                                                                </div>
+                                                          {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' &&
+                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                              <Label htmlFor="cupo" className="text-right">
+                                                                Cupo *
+                                                              </Label>
+                                                              <div className="col-span-3 flex gap-2">
+                                                                <Input
+                                                                  id="cupo"
+                                                                  type="text"
+                                                                  placeholder="46"
+                                                                  {...registerSalida('cupo', {
+                                                                    required: true,
+                                                                    validate: (value) => {
+                                                                      const cantidadPasajeros = watch('cantidad_pasajeros') || 0;
+                                                                      return Number(value) <= cantidadPasajeros || `No puede ser mayor que ${cantidadPasajeros}`;
+                                                                    },
+                                                                  })}
+                                                                  className={`flex-1 border-2 focus:outline-none ${
+                                                                    errorsSalida?.cupo
+                                                                      ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                      : 'border-blue-200 focus:border-blue-500'
+                                                                  }`}
+                                                                />
+                                                              </div>
+                                                              {/* Mostrar mensaje de error */}
+                                                              {errorsSalida?.cupo && (
+                                                                <span className="text-red-500 text-sm col-span-4">
+                                                                  {errorsSalida.cupo.message as string}
+                                                                </span>
                                                               )}
                                                             </div>
-                                                          </CardContent>
-                                                        </Card>
-                                                      ))}
-                                                    </CardContent>
-                                                  </Card>
-                                              </div>
 
-                                              
-                                              <DialogFooter>
-                                                <Button type="button" variant="outline" className="cursor-pointer" 
-                                                    onClick={resetSalidaForm}
-                                                    >
-                                                  Cancelar
-                                                </Button>
-                                                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                                                    >
-                                                      Agregar Salida
-                                                </Button>
-                                              </DialogFooter>
-                                              </form>
+                                                          } 
+
+
+                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label htmlFor="precio_desde" className="text-right">
+                                                                  Precio Desde * 
+                                                                </Label>
+                                                              <div className="text-2xl font-bold text-blue-600">
+                                                                {formatearSeparadorMiles.format(+(watchSalida('precio_desde') ?? 0))}
+                                                              </div>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label htmlFor="precio_hasta" className="text-right">
+                                                                  Precio Hasta * 
+                                                                </Label>
+                                                                <div className="text-2xl font-bold text-blue-600">
+                                                                  {formatearSeparadorMiles.format(+(watchSalida('precio_hasta') ?? 0))}
+                                                                </div>
+                                                                {/* <div className="col-span-3 flex gap-2">
+                                                                    <Input
+                                                                      id="precio_hasta"
+                                                                      type="text"
+                                                                      disabled
+                                                                      {...registerSalida('precio_hasta', {
+                                                                        required: true, 
+                                                                        })
+                                                                      }
+                                                                      placeholder="2000"
+                                                                      className={`flex-1 ${errorsSalida?.precio_hasta?.type === 'required' ? 
+                                                                          'border-2 border-red-200 focus:border-red-500': 
+                                                                          'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
+                                                                    />
+                                                                </div> */}
+                                                            </div>
+
+                                                             <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label htmlFor="cantidadNoche" className="text-right">
+                                                                  Cantidad noches 
+                                                                </Label>
+                                                              <div className="text-2xl font-bold text-blue-600">
+                                                                {watchSalida('cantidadNoche') ? watchSalida('cantidadNoche') : 0}
+                                                              </div>
+                                                            </div>
+                                                          </div>
+                                                      </div>    
+                                                
+
+                                                      <Card className="bg-gray-50">
+                                                            <CardHeader>
+                                                              <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                                <Building2 className="w-5 h-5 text-primary" />
+                                                                Hoteles y Precios
+                                                              </h3>
+                                                              <p className="text-sm text-muted-foreground">
+                                                                Selecciona los hoteles disponibles y configura los precios por tipo de habitación
+                                                              </p>
+                                                            </CardHeader>
+                                                            <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
+                                                              {dataHotelesList && dataHotelesList?.map((hotel: any) => (
+                                                                <Card
+                                                                    key={hotel.hotelId}
+                                                                    className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
+                                                                  >
+                                                                    {/* bg-primary/5 border-primary/30" : "bg-background */}
+                                                                  <CardContent className="">
+                                                                    <div className="space-y-4">
+                                                                      <div className="flex items-center space-x-3 ">
+                                                                        <Checkbox
+                                                                          
+                                                                          id={hotel.id}
+                                                                          checked={selectedHotels.has(hotel.id)}
+                                                                          onCheckedChange={() => handleHotelToggle(hotel.id)}
+                                                                        />
+                                                                        <div className="flex-1">
+                                                                          <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
+                                                                            {hotel.nombre}
+                                                                          </Label>
+                                                                          <div className="flex items-center gap-4 mt-1">
+                                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
+                                                                              {renderStars(hotel.estrellas)}
+                                                                            </Badge>
+                                                                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                              <MapPin className="w-3 h-3" />
+                                                                              {/* <span>{hotel.ubicacion}</span> */}
+                                                                              <span>{hotel.direccion}</span>
+                                                                            </div>
+                                                                          </div>
+                                                                        </div>
+                                                                      </div>
+
+                                                                      {selectedHotels.has(hotel.id) && (
+                                                                        <div className="pl-6 border-l-2 border-emerald-200">
+                                                                          <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                                                                            Precios por tipo de habitación:
+                                                                          </h4>
+
+                                                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                            {hotel?.habitaciones?.length === 0 && 
+                                                                                <p className="text-sm font-medium text-muted-foreground">
+                                                                                  No tiene habitaciones asignadas
+                                                                                </p>}
+                                                                            {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
+                                                                              <div key={habitacion.id} className="space-y-2">
+                                                                                <Label className="text-sm flex items-center gap-2">
+                                                                                  {getRoomIcon(habitacion.tipo)}
+                                                                                  {getRoomTypeLabel(habitacion.tipo)}
+                                                                                </Label>
+                                                                                
+                                                                                <div className="relative">
+                                                                                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                                                  <Input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    step="0.01"
+                                                                                    placeholder="0.00"
+                                                                                    className="pl-10"
+                                                                                    disabled
+                                                                                    value={habitacion?.precio_noche ?? ''}
+                                                                                  />
+                                                                                </div>
+                                                                              </div>
+                                                                            ))}
+                                                                          </div>
+                                                                        </div>
+                                                                      )}
+                                                                    </div>
+                                                                  </CardContent>
+                                                                </Card>
+                                                              ))}
+                                                            </CardContent>
+                                                      </Card>
+                                                  </div>
+
+                                                  
+                                                  <DialogFooter>
+                                                    <Button type="button" variant="outline" className="cursor-pointer" 
+                                                        onClick={resetSalidaForm}
+                                                        >
+                                                      Cancelar
+                                                    </Button>
+                                                    <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                        >
+                                                          Agregar Salida
+                                                    </Button>
+                                                  </DialogFooter>
+                                                  </form>
+                                               </div>
                                             </DialogContent>
                                         </Dialog>
                                       </div>
@@ -2519,7 +2641,7 @@ export default function ModulosPage() {
                                               <TableRow key={salida.id}>
                                                 <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
                                                 <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
-                                                <TableCell>{formatearSeparadorMiles.format(salida.precio)}</TableCell>
+                                                <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_desde)}</TableCell>
                                                 <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
                                                 <TableCell>
                                                   {salida.cupo}
@@ -2550,7 +2672,6 @@ export default function ModulosPage() {
                                       </div>
                                     </CardContent>
                                   </Card>
-                                }
                                 
                               </div>
                     </div>

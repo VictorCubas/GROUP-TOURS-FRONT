@@ -39,9 +39,11 @@ export interface SalidaPaquete {
   moneda: Moneda;            // Objeto con id y nombre
   temporada: string | null;  // Puede ser null
   precio_actual: number;     // Precio numérico
+  precio_final?: number;     // Precio numérico
   senia: number;     // Precio numérico
   cupo: number;              // Cupo numérico
   activo: boolean;           // Estado booleano
+  hoteles: number[];
 }
 
 export interface Paquete {
@@ -62,6 +64,7 @@ export interface Paquete {
   propio: boolean;
   salidas: SalidaPaquete[]
   activo: boolean;
+  hoteles_ids: number[];
   imagen: string | null;
   imagen_url: string | null;
   fecha_creacion: string; // ISO datetime
