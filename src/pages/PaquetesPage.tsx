@@ -300,7 +300,8 @@ export default function ModulosPage() {
   const {data: dataHotelesList, isFetching: isFetchingHoteles,} = useQuery({
         queryKey: ['todos-hoteles-paquetes', ciudadDataSelected], //data cached
         queryFn: () => fetchDataHoteles(ciudadDataSelected),
-        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+        staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
+        enabled: Boolean(ciudadDataSelected),
     });
 
   // let filteredPermissions: Modulo[] = [];
