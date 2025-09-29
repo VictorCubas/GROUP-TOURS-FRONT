@@ -62,8 +62,11 @@ export async function fetchResumen() {
 }
 
 export async function fetchDataHoteles(nombre_ciudad: string, pais: string = "") {
+  if(!nombre_ciudad && !pais)
+    return;
+  
   console.log(pais);
-  const resp = await axiosInstance.get(`/hotel/?page=${1}&page_size=${10}&${nombre_ciudad ? '&ciudad=' + nombre_ciudad: ''}${pais ? '&pais=' + pais: ''}`);
+  const resp = await axiosInstance.get(`/hotel/?page=${1}&page_size=${10}&activo=true&${nombre_ciudad ? '&ciudad=' + nombre_ciudad: ''}${pais ? '&pais=' + pais: ''}`);
   // const resp = await axiosInstance.get(`/hotel/todos/page=1&page_size=10&pais_nombre=&pais=19`);
   return resp?.data.results
 }

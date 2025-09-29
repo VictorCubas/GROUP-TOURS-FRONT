@@ -211,6 +211,8 @@ export default function ModulosPage() {
     mode: "onBlur",
     defaultValues: {
       precio_desde: '',
+      precio_desde_editable: '',
+      precio_hasta_editable: '',
       cantidadNoche: '',
       precio_hasta: '',
       senia: '',
@@ -616,16 +618,23 @@ export default function ModulosPage() {
 
     console.log(salidas)
 
-    const salidasTemp = salidas.map((salida: any) => ({
-      fecha_salida: salida.fecha_salida_v2,
-      fecha_regreso: salida.fecha_regreso_v2,
-      precio_actual: salida.precio_desde,
-      senia: salida.senia,
-      cupo: parseInt(salida.cupo, 10), // Entero
-      moneda_id: dataForm.moneda,
-      hoteles: salida.hoteles_ids,
-      temporada_id: salida?.temporada_id || null, // Opcional
-    }))
+    const salidasTemp = salidas.map((salida: any) => {
+      const salActualizada: any = {
+        fecha_salida: salida.fecha_salida_v2,
+        fecha_regreso: salida.fecha_regreso_v2,
+        precio_actual: salida?.precio_actual ?? salida?.precio,
+        senia: salida.senia,
+        cupo: parseInt(salida.cupo, 10), // Entero
+        moneda_id: dataForm.moneda,
+        hoteles: salida.hoteles_ids,
+        temporada_id: salida?.temporada_id || null, // Opcional
+      };
+
+      if(salida?.precio_final)
+        salActualizada.precio_final = salida?.precio_final;
+
+      return salActualizada;
+    });
 
 
     console.log(salidasTemp)
@@ -823,6 +832,21 @@ export default function ModulosPage() {
       setSelectedPermissions(servicios_ids);
 
 
+    //   salidas: [
+    //   {
+    //     id: 53,
+    //     fecha_salida: '2025-09-28',
+    //     fecha_regreso: '2025-10-04',
+    //     moneda: { id: 2, nombre: 'Dolar' },
+    //     temporada: null,
+    //     precio_actual: 3000,
+    //     precio_final: 5000,
+    //     cupo: null,
+    //     senia: 250,
+    //     activo: true,
+    //     hoteles: [ { id: 26, nombre: 'Gran Meliá Iguazú' } ]
+    //   }
+    // ],
     // const hootels = salida.hoteles.map((hotel: any) => hotel.id);
 
     const salidas = data.salidas.map((salida: SalidaPaquete) => ({
@@ -831,6 +855,7 @@ export default function ModulosPage() {
       fecha_regreso_v2: salida.fecha_regreso,
       moneda: salida.moneda.id,
       precio: salida.precio_actual,
+      precio_final: salida.precio_final,
       senia: salida.senia,
       cupo: salida.cupo,
       hoteles_ids: salida.hoteles.map((hotel: any) => hotel?.id),
@@ -932,14 +957,14 @@ export default function ModulosPage() {
       return;
     }
 
-    if(quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && !watch('cantidad_pasajeros')){
+
+    if(quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && !watch('cantidad_pasajeros')
+      && watch('propio')){
       handleShowToast('Debes agregar la cantidad de pasajeros', 'error');
       return;
     }
       
-
-    console.log(watch('cantidad_pasajeros'))
-    if(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() === 'terrestre')
+    if(quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre')
         setValueSalida('cupo', watch('cantidad_pasajeros')); 
 
     setIsAddSalidaOpen(true);
@@ -957,7 +982,7 @@ export default function ModulosPage() {
   console.log(salidas)
 
   const handleAddSalida = async (dataForm: any) => {
-    console.log(selectedHotels)
+    console.log(selectedHotels) 
 
     console.log(dataForm);
     console.log(nuevaSalida);
@@ -971,10 +996,39 @@ export default function ModulosPage() {
     console.log(editingSalidaId);
 
     if (isEditMode && editingSalidaId) {
+  //      {
+  //   id: 46,
+  //   fecha_salida_v2: '2025-09-28',
+  //   fecha_regreso_v2: '2025-10-11',
+  //   moneda: 2,
+  //   precio: 3400,
+  //   senia: 250,
+  //   cupo: null,
+  //   hoteles_ids: [ 20, 19 ],
+  //   precio_desde_editable: 3400,
+  //   precio_hasta: '3250',
+  //   precio_hasta_editable: '',
+  //   precio_desde: '2600',
+  //   cantidadNoche: '13'
+  // }
       // 🔹 Editando habitación existente
-      const salidaEdited = {...dataForm, hoteles_ids:hotelesIds, currency: watch('moneda')};
+      const salidaEdited = {...dataForm, 
+        precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
+        precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
+        hoteles_ids:hotelesIds, 
+        currency: watch('moneda')};
       delete salidaEdited.precio;
+      
+      delete salidaEdited.precio_desde_editable;
+      delete salidaEdited.precio_hasta_editable;
+      delete salidaEdited.precio_desde;
+      delete salidaEdited.precio_hasta;
+      if(!propio && !salidaEdited?.precio_final){
+        delete salidaEdited.precio_final;
+      }
+
       console.log(salidaEdited)
+
       setSalidas((prev) =>
         prev.map((salida) =>
           salida.id === editingSalidaId
@@ -996,19 +1050,59 @@ export default function ModulosPage() {
   //   fecha_regreso_v2: '2025-09-27',
   //   cupo: '34'
   // }
+
+  // :25:31.761	      
+  // {
+  //   id: '1759094218438',
+  //   precio_desde: '2100',
+  //   cantidadNoche: '10',
+  //   precio_hasta: '2200',
+  //   senia: '250',
+  //   fecha_salida_v2: '2025-10-01',
+  //   fecha_regreso_v2: '2025-10-11',
+  //   cupo: '',
+  //   precio_desde_editable: '3400',
+  //   precio_hasta_editable: '',
+  //   precio_actual: '2100',
+  //   precio_final: '2200',
+  //   hoteles_ids: [ 20 ],
+  //   currency: '2'
+  // }
     
       console.log(nuevaSalida);
       console.log(dataForm)
       const salida: any = {
         id: Date.now().toString(), // ID temporal
         ...dataForm,
-        precio_actual: dataForm.precio_desde,
-        precio_final: dataForm.precio_hasta,
+        precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
+        precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
+        // precio_final: dataForm.precio_hasta,
         hoteles_ids: hotelesIds,
         currency: watch('moneda'), // o nuevaSalida.currency
       };
 
+      delete salida.precio_desde_editable;
+      delete salida.precio_hasta_editable;
+      if(!propio && !salida?.precio_final){
+        delete salida.precio_final;
+      }
+
       console.log(salida)
+
+  //       {
+  //   id: '1759095490960',
+  //   precio_desde: '1200',
+  //   cantidadNoche: '6',
+  //   precio_hasta: '1500',
+  //   senia: '250',
+  //   fecha_salida_v2: '2025-09-28',
+  //   fecha_regreso_v2: '2025-10-04',
+  //   cupo: '45',
+  //   precio_actual: '1200',
+  //   precio_final: '1500',
+  //   hoteles_ids: [ 20, 19 ],
+  //   currency: '2'
+  // }
       setSalidas((prev) => {
         console.log(prev)
         return [...prev, salida]
@@ -1025,6 +1119,7 @@ export default function ModulosPage() {
 
   const resetSalidaForm = () => {
     setSelectedHotels(new Set());
+    // setSalidas([])
 
     setNuevaSalida({
       fecha_salida_v2: "",
@@ -1038,6 +1133,8 @@ export default function ModulosPage() {
       precio_desde: '',
       cantidadNoche: '',
       precio_hasta: '',
+      precio_hasta_editable: '',
+      precio_desde_editable: '',
       senia: '',
       fecha_salida_v2: '',
       fecha_regreso_v2: '',
@@ -1060,18 +1157,23 @@ export default function ModulosPage() {
   const handleEditSalida = (salida: any) => {
     console.log(salida);
     // Cargamos los valores en el state que controla los <Input />
-    setNuevaSalida({
-      fecha_salida_v2: salida.fecha_salida_v2,
-      // si no tienes fecha_regreso aún, usa cadena vacía para <input type="date" />
-      fecha_regreso_v2: salida.fecha_regreso_v2 ?? '',
-      precio: salida.precio,
-      cupo: salida.cupo,
-      senia: salida?.senia ?? '',
-      // moneda: salida.moneda,
-    });
+    // setNuevaSalida({
+    //   fecha_salida_v2: salida.fecha_salida_v2,
+    //   // si no tienes fecha_regreso aún, usa cadena vacía para <input type="date" />
+    //   fecha_regreso_v2: salida.fecha_regreso_v2 ?? '',
+    //   precio: salida.precio,
+    //   cupo: salida.cupo,
+    //   senia: salida?.senia ?? '',
+    //   // moneda: salida.moneda,
+    // });
+
+    console.log(propio);
 
     resetSalida({
-      ...salida
+      ...salida,
+      precio_desde_editable: salida.precio ?? salida.precio_actual,
+      precio_hasta_editable: salida?.precio_final,
+      precio_hasta: salida?.precio_final ?? '',
     })
 
     setEditingSalidaId(salida.id);
@@ -1120,16 +1222,23 @@ export default function ModulosPage() {
           // { min: 1680, max: 1760, dias: 8, noches: 8 }                  
         console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso))
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
-        // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
-        setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
-        setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+        console.log(propio)
+        if(propio){
+          console.log(rangoPrecioDesdeHasta);
+          // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
+          setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
+          setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+        }
+
         setValueSalida('cantidadNoche', rangoPrecioDesdeHasta.noches.toString());
       }
       // 👇 dependencias simples, sin llamadas complejas
     }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList]);
 
+
     //FUCNIONES DE HOTELES DE LAS SALIDAS
-    const handleHotelToggle = (hotelId: string) => {
+    const handleHotelToggle = (hotelId: string, hotel: any) => {
+      console.log(hotel);
       const newSelected = new Set(selectedHotels)
       if (newSelected.has(hotelId)) {
         newSelected.delete(hotelId)
@@ -1137,6 +1246,28 @@ export default function ModulosPage() {
         delete newPrices[hotelId]
         setHotelPrices(newPrices)
       } else {
+        if(propio){
+          // handleShowToast('Se debe tener los precios de las habitaciones para este tipo de paquetes', 'error');
+          if(hotel.habitaciones.length === 0){
+            handleShowToast('Se debe cargar las habitaciones a este hotel para este tipo de paquete', 'error');
+            return;
+          }
+          else{
+            const tienePrecios = hotel.habitaciones.some((habitacion: any) => !habitacion.precio_noche)
+
+            if(tienePrecios){
+              handleShowToast('Se debe cargar los precios a todas habitaciones de este hotel para este tipo de paquete', 'error');
+              return;
+            }
+          }
+        }
+
+        
+          // handleShowToast('Se debe tener los precios de las habitaciones para este tipo de paquetes', 'error');
+          // handleShowToast('Se deben cargar las habitaciones a este hotel para este tipo de paquete', 'error');
+          // return;
+        // }
+
         newSelected.add(hotelId)
         setHotelPrices({
           ...hotelPrices,
@@ -1164,6 +1295,10 @@ export default function ModulosPage() {
         </div>
       );
     };
+
+
+  const propio = watch('propio');
+  const cantidadPasajeros = watch('cantidad_pasajeros');
 
   return (
     <>
@@ -2440,6 +2575,7 @@ export default function ModulosPage() {
                                                             </div>  
 
                                                           {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' &&
+                                                            propio &&
                                                             <div className="grid grid-cols-4 items-center gap-4">
                                                               <Label htmlFor="cupo" className="text-right">
                                                                 Cupo *
@@ -2452,8 +2588,8 @@ export default function ModulosPage() {
                                                                   {...registerSalida('cupo', {
                                                                     required: true,
                                                                     validate: (value) => {
-                                                                      const cantidadPasajeros = watch('cantidad_pasajeros') || 0;
-                                                                      return Number(value) <= cantidadPasajeros || `No puede ser mayor que ${cantidadPasajeros}`;
+                                                                      const cantidadPasajerosTemp = cantidadPasajeros || 0;
+                                                                      return Number(value) <= cantidadPasajerosTemp || `No puede ser mayor que ${cantidadPasajerosTemp}`;
                                                                     },
                                                                   })}
                                                                   className={`flex-1 border-2 focus:outline-none ${
@@ -2478,33 +2614,59 @@ export default function ModulosPage() {
                                                                 <Label htmlFor="precio_desde" className="text-right">
                                                                   Precio Desde * 
                                                                 </Label>
-                                                              <div className="text-2xl font-bold text-blue-600">
-                                                                {formatearSeparadorMiles.format(+(watchSalida('precio_desde') ?? 0))}
-                                                              </div>
+
+                                                                {!propio &&
+                                                                <div className="col-span-3 flex gap-2">
+                                                                  <Input
+                                                                    id="precio_desde_editable"
+                                                                    type="text"
+                                                                    {...registerSalida('precio_desde_editable', {
+                                                                        required: true, })
+                                                                      }
+                                                                      placeholder="150"
+                                                                       className={`flex-1 h-auto py-2 ${
+                                                                        errorsSalida?.precio_desde_editable
+                                                                          ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
+                                                                          : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
+                                                                      }`}
+                                                                  />
+                                                                </div>
+                                                                }
+
+                                                                {propio && 
+                                                                  <div className="text-2xl font-bold text-blue-600">
+                                                                    {formatearSeparadorMiles.format(+(watchSalida('precio_desde') ?? 0))}
+                                                                  </div>
+                                                                }
                                                             </div>
 
                                                             <div className="grid grid-cols-4 items-center gap-4">
                                                                 <Label htmlFor="precio_hasta" className="text-right">
-                                                                  Precio Hasta * 
+                                                                  Precio Hasta {propio && <span>*</span>} 
                                                                 </Label>
+                                                                {!propio &&
+                                                                  <div className="col-span-3 flex gap-2">
+                                                                    <Input
+                                                                      id="precio_hasta_editable"
+                                                                      type="text"
+                                                                      {...registerSalida('precio_hasta_editable', {
+                                                                          required: propio, })
+                                                                        }
+                                                                        placeholder=""
+                                                                         className={`flex-1 h-auto py-2 ${
+                                                                          errorsSalida?.precio_hasta_editable
+                                                                            ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
+                                                                            : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
+                                                                        }`}
+                                                                    />
+                                                                  </div>
+                                                                }
+
+                                                                {propio && 
                                                                 <div className="text-2xl font-bold text-blue-600">
                                                                   {formatearSeparadorMiles.format(+(watchSalida('precio_hasta') ?? 0))}
                                                                 </div>
-                                                                {/* <div className="col-span-3 flex gap-2">
-                                                                    <Input
-                                                                      id="precio_hasta"
-                                                                      type="text"
-                                                                      disabled
-                                                                      {...registerSalida('precio_hasta', {
-                                                                        required: true, 
-                                                                        })
-                                                                      }
-                                                                      placeholder="2000"
-                                                                      className={`flex-1 ${errorsSalida?.precio_hasta?.type === 'required' ? 
-                                                                          'border-2 border-red-200 focus:border-red-500': 
-                                                                          'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
-                                                                    />
-                                                                </div> */}
+                                                                }
                                                             </div>
 
                                                              <div className="grid grid-cols-4 items-center gap-4">
@@ -2543,7 +2705,7 @@ export default function ModulosPage() {
                                                                           
                                                                           id={hotel.id}
                                                                           checked={selectedHotels.has(hotel.id)}
-                                                                          onCheckedChange={() => handleHotelToggle(hotel.id)}
+                                                                          onCheckedChange={() => handleHotelToggle(hotel.id, hotel)}
                                                                         />
                                                                         <div className="flex-1">
                                                                           <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
@@ -2570,9 +2732,10 @@ export default function ModulosPage() {
 
                                                                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                                             {hotel?.habitaciones?.length === 0 && 
-                                                                                <p className="text-sm font-medium text-muted-foreground">
+                                                                                <p className="text-sm font-medium text-red-400">
                                                                                   No tiene habitaciones asignadas
-                                                                                </p>}
+                                                                                </p>
+                                                                            }
                                                                             {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
                                                                               <div key={habitacion.id} className="space-y-2">
                                                                                 <Label className="text-sm flex items-center gap-2">
@@ -2580,18 +2743,25 @@ export default function ModulosPage() {
                                                                                   {getRoomTypeLabel(habitacion.tipo)}
                                                                                 </Label>
                                                                                 
-                                                                                <div className="relative">
-                                                                                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                                                                  <Input
-                                                                                    type="number"
-                                                                                    min="0"
-                                                                                    step="0.01"
-                                                                                    placeholder="0.00"
-                                                                                    className="pl-10"
-                                                                                    disabled
-                                                                                    value={habitacion?.precio_noche ?? ''}
-                                                                                  />
-                                                                                </div>
+                                                                                {propio && habitacion?.precio_noche &&
+                                                                                  <div className="relative">
+                                                                                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                                                    <Input
+                                                                                      type="number"
+                                                                                      min="0"
+                                                                                      step="0.01"
+                                                                                      placeholder="0.00"
+                                                                                      className="pl-10"
+                                                                                      disabled
+                                                                                      value={habitacion?.precio_noche ?? ''}
+                                                                                    />
+                                                                                  </div>
+                                                                                }
+
+                                                                                {propio && !habitacion?.precio_noche && 
+                                                                                  <p className="text-sm font-medium text-red-400">
+                                                                                    Debes cargar el precio de la habitación
+                                                                                  </p>}
                                                                               </div>
                                                                             ))}
                                                                           </div>
@@ -2614,7 +2784,7 @@ export default function ModulosPage() {
                                                     </Button>
                                                     <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
                                                         >
-                                                          Agregar Salida
+                                                          {isEditMode ? 'Actualizar Salida' : 'Agregar Salida'}
                                                     </Button>
                                                   </DialogFooter>
                                                   </form>
@@ -2630,7 +2800,8 @@ export default function ModulosPage() {
                                             <TableRow>
                                               <TableHead>Fecha Salida</TableHead>
                                               <TableHead>Fecha Regreso</TableHead>
-                                              <TableHead>Precio</TableHead>
+                                              <TableHead>Precio Desde</TableHead>
+                                              <TableHead>Precio Hasta</TableHead>
                                               <TableHead>Seña</TableHead>
                                               <TableHead>Cupo</TableHead>
                                               <TableHead className="text-right">Acciones</TableHead>
@@ -2641,10 +2812,16 @@ export default function ModulosPage() {
                                               <TableRow key={salida.id}>
                                                 <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
                                                 <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
-                                                <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_desde)}</TableCell>
+                                                {/* <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_desde)}</TableCell> */}
+                                                <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_actual)}</TableCell>
+                                                <TableCell>{formatearSeparadorMiles.format(salida.precio_final)}</TableCell>
                                                 <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
                                                 <TableCell>
-                                                  {salida.cupo}
+                                                  {propio ? salida.cupo : 
+                                                   <Badge
+                                                    className="bg-gray-100 text-gray-700 border-gray-200">
+                                                    Sujeto a disponibilidad
+                                                  </Badge>}
                                                   {/* {dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].codigo }) */}
                                                 </TableCell>
                                                 
