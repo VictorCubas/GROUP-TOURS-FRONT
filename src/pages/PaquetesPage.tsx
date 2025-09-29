@@ -170,7 +170,7 @@ export default function ModulosPage() {
   const [paqueteSubtipo, setPaqueteSubtipo] = useState<'flexible' | 'fijo'>('flexible');
   
   // DATOS DEL FORMULARIO 
-  const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
+  const {control,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -180,7 +180,7 @@ export default function ModulosPage() {
               }
             });
 
-    console.log(trigger);
+    // console.log(trigger);
   // DATOS DEL FORMULARIO 
 
 
@@ -205,10 +205,16 @@ export default function ModulosPage() {
     handleSubmit: handleSubmitSalida,
     watch: watchSalida,
     setValue: setValueSalida,
-    formState: { errors: errorsSalida },
+    formState: { 
+      errors: errorsSalida, 
+      // isValid: isValidSalida, isSubmitting 
+    },
     reset: resetSalida,
+    // getValues: getValuesSalida,
+    trigger
   } = useForm({
-    mode: "onBlur",
+    mode: "onBlur", // 🔹 Cambio clave: Valida en submit para evitar issues en primer render
+    reValidateMode: 'onChange', //
     defaultValues: {
       precio_desde: '',
       precio_desde_editable: '',
@@ -359,6 +365,11 @@ export default function ModulosPage() {
   const startIndex = (currentPage - 1) * paginacion.pageSize
   const endIndex = startIndex + paginacion.pageSize
   // const paginatedPermisos = filteredPermissions.slice(startIndex, endIndex);
+
+
+  const propio = watch('propio');
+  const cantidadPasajeros = watch('cantidad_pasajeros');
+  const cantidadNoche = watchSalida('cantidadNoche');
 
   // Función para cambiar página
   const handlePageChange = (page: number) => {
@@ -890,6 +901,11 @@ export default function ModulosPage() {
     setDataDetalle(undefined);
   }
 
+  const handleDestinoNoSeleccionada = (value: boolean | undefined) => {
+    setDestinoNoSeleccionada(value);
+  }
+
+
   useEffect(() => {
     const handler = setTimeout(() => {
       console.log('cambiando nombre')
@@ -900,10 +916,6 @@ export default function ModulosPage() {
       clearTimeout(handler) // limpia el timeout si se sigue escribiendo
     }
   }, [nombreABuscar]);
-
-  const handleDestinoNoSeleccionada = (value: boolean | undefined) => {
-    setDestinoNoSeleccionada(value);
-  }
 
 
   useEffect(() => {
@@ -929,6 +941,15 @@ export default function ModulosPage() {
       clearErrors("porcentaje_comision");
     }
   }, [tipoPaqueteSelected, setValue, clearErrors]);
+
+
+  useEffect(() => {
+    if (!propio) {
+      setValueSalida('cupo', '', { shouldValidate: false }); // Limpia cupo si no es propio
+      resetSalida({ cupo: '' }, { keepDefaultValues: true }); // Resetea solo cupo
+    }
+  }, [propio, setValueSalida, resetSalida]);
+
 
 
   const handlePermissionToggle = (permissionId: number) => {
@@ -1139,7 +1160,7 @@ export default function ModulosPage() {
       senia: '',
       fecha_salida_v2: '',
       fecha_regreso_v2: '',
-      cupo: '',
+      cupo: propio ? '' : undefined,
     });
     setIsAddSalidaOpen(false);
     setIsEditMode(false);
@@ -1297,9 +1318,6 @@ export default function ModulosPage() {
       );
     };
 
-
-  const propio = watch('propio');
-  const cantidadPasajeros = watch('cantidad_pasajeros');
 
   return (
     <>
@@ -1967,7 +1985,7 @@ export default function ModulosPage() {
 
 
                           {/* CANTIDAD PASAJEROS */}
-                          {watch("propio")  && 
+                          {propio  && 
                             <div className="space-y-2">
                               <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
                                 Cantidad máxima *
@@ -1996,7 +2014,7 @@ export default function ModulosPage() {
 
 
                           {/* LISTADO DE DISTRIBUIDORA */}
-                          { !watch("propio") && 
+                          { !propio && 
                             <div className="space-y-2">
                               <Label htmlFor="distribuidora_id" className="text-gray-700 font-medium">
                                 Distribuidora *
@@ -2508,11 +2526,22 @@ export default function ModulosPage() {
                                             </Button>
                                             <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-hidden p-0">
                                                <div className="max-h-[90vh] overflow-y-auto p-6">
-                                                  <form id="salidaForm" 
-                                                onSubmit={(e) => {
-                                                      e.stopPropagation(); // evita que el submit burbujee al form padre
-                                                      handleSubmitSalida(handleAddSalida)(e);
-                                                    }}>
+                                                  <form 
+                                                      id="salidaForm" 
+                                                      onSubmit={async (e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        // Forzar validación
+                                                        const isValid = await trigger();
+                                                        if (isValid) {
+                                                          handleSubmitSalida(handleAddSalida)(e);
+                                                        }
+                                                        else{
+                                                          handleShowToast('Debes completar los campos requeridos', 'error')
+                                                        }
+                                                      }}
+                                                    >
+            
                                                   <DialogHeader>
                                                     <DialogTitle>Agregar Nueva Salida</DialogTitle>
                                                     <DialogDescription>
@@ -2573,8 +2602,7 @@ export default function ModulosPage() {
                                                               
                                                             </div>  
 
-                                                          {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' &&
-                                                            propio &&
+                                                          {propio &&
                                                             <div className="grid grid-cols-4 items-center gap-4">
                                                               <Label htmlFor="cupo" className="text-right">
                                                                 Cupo *
@@ -2585,11 +2613,13 @@ export default function ModulosPage() {
                                                                   type="text"
                                                                   placeholder="46"
                                                                   {...registerSalida('cupo', {
-                                                                    required: true,
-                                                                    validate: (value) => {
-                                                                      const cantidadPasajerosTemp = cantidadPasajeros || 0;
-                                                                      return Number(value) <= cantidadPasajerosTemp || `No puede ser mayor que ${cantidadPasajerosTemp}`;
-                                                                    },
+                                                                    required: propio ? 'El cupo es requerido' : false, // 🔹 Condicional
+                                                                    validate: propio
+                                                                      ? (value) => {
+                                                                          const cantidadPasajerosTemp = cantidadPasajeros || 0;
+                                                                          return Number(value) <= cantidadPasajerosTemp || `No puede ser mayor que ${cantidadPasajerosTemp}`;
+                                                                        }
+                                                                      : undefined,
                                                                   })}
                                                                   className={`flex-1 border-2 focus:outline-none ${
                                                                     errorsSalida?.cupo
@@ -2599,11 +2629,11 @@ export default function ModulosPage() {
                                                                 />
                                                               </div>
                                                               {/* Mostrar mensaje de error */}
-                                                              {errorsSalida?.cupo && (
+                                                              {/* {errorsSalida?.cupo && (
                                                                 <span className="text-red-500 text-sm col-span-4">
                                                                   {errorsSalida.cupo.message as string}
                                                                 </span>
-                                                              )}
+                                                              )} */}
                                                             </div>
 
                                                           } 
@@ -2614,8 +2644,12 @@ export default function ModulosPage() {
                                                                   Precio Desde * 
                                                                 </Label>
 
-                                                                {!propio &&
-                                                                <div className="col-span-3 flex gap-2">
+                                                                {propio ? 
+                                                                  <div className="text-2xl font-bold text-blue-600">
+                                                                    {formatearSeparadorMiles.format(+(watchSalida('precio_desde') ?? 0))}
+                                                                  </div> :
+
+                                                                  <div className="col-span-3 flex gap-2">
                                                                   <Input
                                                                     id="precio_desde_editable"
                                                                     type="text"
@@ -2631,19 +2665,18 @@ export default function ModulosPage() {
                                                                   />
                                                                 </div>
                                                                 }
-
-                                                                {propio && 
-                                                                  <div className="text-2xl font-bold text-blue-600">
-                                                                    {formatearSeparadorMiles.format(+(watchSalida('precio_desde') ?? 0))}
-                                                                  </div>
-                                                                }
                                                             </div>
 
                                                             <div className="grid grid-cols-4 items-center gap-4">
                                                                 <Label htmlFor="precio_hasta" className="text-right">
                                                                   Precio Hasta {propio && <span>*</span>} 
                                                                 </Label>
-                                                                {!propio &&
+
+                                                                {propio ? 
+                                                                  <div className="text-2xl font-bold text-blue-600">
+                                                                    {formatearSeparadorMiles.format(+(watchSalida('precio_hasta') ?? 0))}
+                                                                  </div> : 
+
                                                                   <div className="col-span-3 flex gap-2">
                                                                     <Input
                                                                       id="precio_hasta_editable"
@@ -2660,20 +2693,18 @@ export default function ModulosPage() {
                                                                     />
                                                                   </div>
                                                                 }
-
-                                                                {propio && 
-                                                                <div className="text-2xl font-bold text-blue-600">
-                                                                  {formatearSeparadorMiles.format(+(watchSalida('precio_hasta') ?? 0))}
-                                                                </div>
-                                                                }
                                                             </div>
 
                                                              <div className="grid grid-cols-4 items-center gap-4">
                                                                 <Label htmlFor="cantidadNoche" className="text-right">
                                                                   Cantidad noches 
                                                                 </Label>
+
+                                                                <Label htmlFor="cantidadNoche" className="text-right">
+                                                                  propio {JSON.stringify(propio)}
+                                                                </Label>
                                                               <div className="text-2xl font-bold text-blue-600">
-                                                                {watchSalida('cantidadNoche') ? watchSalida('cantidadNoche') : 0}
+                                                                {cantidadNoche ? cantidadNoche : 0}
                                                               </div>
                                                             </div>
                                                           </div>
