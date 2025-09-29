@@ -233,7 +233,7 @@ export default function ModulosPage() {
     const [salidas, setSalidas] = useState<any[]>([])
     const [isEditMode, setIsEditMode] = useState(false)
     const [editingSalidaId, setEditingSalidaId] = useState<string | null>(null);
-    const [isAddRoomOpen, setIsAddSalidaOpen] = useState(false);
+    const [isAddSalidaOpen, setIsAddSalidaOpen] = useState(false);
     // DATOS DE SALIDOS
    
     console.log(distribuidoraSelected)
@@ -982,7 +982,7 @@ export default function ModulosPage() {
   console.log(salidas)
 
   const handleAddSalida = async (dataForm: any) => {
-    console.log(selectedHotels) 
+    console.log(selectedHotels)  
 
     console.log(dataForm);
     console.log(nuevaSalida);
@@ -1023,6 +1023,7 @@ export default function ModulosPage() {
       delete salidaEdited.precio_hasta_editable;
       delete salidaEdited.precio_desde;
       delete salidaEdited.precio_hasta;
+
       if(!propio && !salidaEdited?.precio_final){
         delete salidaEdited.precio_final;
       }
@@ -2491,22 +2492,20 @@ export default function ModulosPage() {
                                           }
                                         </div>
                                         <Dialog 
-                                        open={isAddRoomOpen}
-                                          onOpenChange={(open) => {
-                                            if (!open) resetSalidaForm()
-                                            setIsAddSalidaOpen(open)
-                                          }}
-                                        >
-                                           {/* <DialogTrigger asChild> */}
-                                                <Button
-                                                  type="button"
-                                                  className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                                                  onClick={handleOpenModal} // 👈 validación antes de abrir
-                                                >
-                                                  <Plus className="h-4 w-4 mr-2" />
-                                                  Agregar Salidas
-                                                </Button>
-                                            {/* </DialogTrigger> */}
+                                          open={isAddSalidaOpen}
+                                            onOpenChange={(open) => {
+                                              if (!open) resetSalidaForm()
+                                              setIsAddSalidaOpen(open)
+                                            }}
+                                          >
+                                            <Button
+                                              type="button"
+                                              className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                              onClick={handleOpenModal} // 👈 validación antes de abrir
+                                            >
+                                              <Plus className="h-4 w-4 mr-2" />
+                                              Agregar Salidas
+                                            </Button>
                                             <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-hidden p-0">
                                                <div className="max-h-[90vh] overflow-y-auto p-6">
                                                   <form id="salidaForm" 
@@ -2812,9 +2811,17 @@ export default function ModulosPage() {
                                               <TableRow key={salida.id}>
                                                 <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
                                                 <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
+                                                {/* <TableCell>{JSON.stringify(salida)}</TableCell> */}
                                                 {/* <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_desde)}</TableCell> */}
                                                 <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_actual)}</TableCell>
-                                                <TableCell>{formatearSeparadorMiles.format(salida.precio_final)}</TableCell>
+                                                <TableCell>{salida?.precio_final ? 
+                                                        formatearSeparadorMiles.format(salida?.precio_final) : 
+                                                        <Badge
+                                                          className="bg-gray-100 text-gray-700 border-gray-200">
+                                                          Sin tope
+                                                        </Badge>
+                                                    }
+                                                </TableCell>
                                                 <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
                                                 <TableCell>
                                                   {propio ? salida.cupo : 
