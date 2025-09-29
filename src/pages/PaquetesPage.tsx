@@ -2700,10 +2700,6 @@ export default function ModulosPage() {
                                                                 <Label htmlFor="cantidadNoche" className="text-right">
                                                                   Cantidad noches 
                                                                 </Label>
-
-                                                                <Label htmlFor="cantidadNoche" className="text-right">
-                                                                  propio {JSON.stringify(propio)}
-                                                                </Label>
                                                               <div className="text-2xl font-bold text-blue-600">
                                                                 {cantidadNoche ? cantidadNoche : 0}
                                                               </div>
