@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { startTransition, use, useEffect, useState } from "react"
+import { startTransition, use, useCallback, useEffect, useState } from "react"
 import {
   Search,
   Plus,
@@ -138,7 +138,8 @@ export default function ModulosPage() {
   const [selectedDestinoID, setSelectedDestinoID] = useState<number | "">("");
   const [destinoNoSeleccionada, setDestinoNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
-  const [showActiveOnly, setShowActiveOnly] = useState(true)
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [validando, setValidando] = useState(false);
   const [dataAEditar, setDataAEditar] = useState<Paquete>();
   const [dataADesactivar, setDataADesactivar] = useState<Paquete>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
@@ -207,10 +208,10 @@ export default function ModulosPage() {
     setValue: setValueSalida,
     formState: { 
       errors: errorsSalida, 
-      // isValid: isValidSalida, isSubmitting 
+      isValid: isValidSalida, isSubmitting 
     },
     reset: resetSalida,
-    // getValues: getValuesSalida,
+    getValues: getValuesSalida,
     trigger
   } = useForm({
     mode: "onBlur", // 🔹 Cambio clave: Valida en submit para evitar issues en primer render
@@ -1004,6 +1005,7 @@ export default function ModulosPage() {
   console.log(salidas)
 
   const handleAddSalida = async (dataForm: any) => {
+    setValidando(true);
     console.log(selectedHotels)  
 
     console.log(dataForm);
@@ -1166,6 +1168,7 @@ export default function ModulosPage() {
     setIsAddSalidaOpen(false);
     setIsEditMode(false);
     setEditingSalidaId(null);
+    setValidando(false);
   }
   
     //   {
@@ -1175,6 +1178,31 @@ export default function ModulosPage() {
   //   precio: 2000,
   //   cupo: 45
   // }
+
+const handleSubmitClick = useCallback(async () => {
+    if (validando) return;
+
+    setValidando(true); // 🔹 Deshabilitar botón inmediatamente
+    const isValid = await trigger();
+    console.log('🛑 Submit triggered'); 
+    console.log('propio:', propio);
+    console.log('Valores actuales:', getValuesSalida());
+    console.log('Errores:', errorsSalida);
+    console.log('Es válido?', isValidSalida);
+    console.log('isButtonDisabled:', validando);
+    console.log('Validación forzada:', isValid);
+    if (isValid) {
+      // Ejecutar submit en un setTimeout para no bloquear la UI
+      setTimeout(() => {
+        handleSubmitSalida(handleAddSalida)();
+        setIsAddSalidaOpen(false); // 🔹 Cerrar modal inmediatamente
+      }, 0);
+    } else {
+      handleShowToast('Debes completar los campos requeridos', 'error');
+      setValidando(false); // 🔹 Rehabilitar si falla
+    }
+  }, [trigger, propio, getValuesSalida, errorsSalida, isValidSalida, validando, handleSubmitSalida, handleShowToast]);
+
 
 
   const handleEditSalida = (salida: any) => {
@@ -2497,393 +2525,410 @@ export default function ModulosPage() {
 
                                 {/* {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' &&  */}
                                    <Card className="mt-8">
-                                    <CardHeader>
-                                      <div className="flex items-center justify-between">
-                                        <div>
-                                          <CardTitle>Gestión de Salidas</CardTitle>
-                                          <CardDescription>Administre las salidas y sus tarifas</CardDescription>
-                                          {onGuardar && 
-                                            quitarAcentos(tipoPaqueteSelected?.nombre ?? '').toLowerCase() === 'terrestre' &&
-                                            !watch('personalizado')
-                                            && 
-                                            salidas.length === 0 &&
-                                            <p className="text-red-400">Debes agregar al menos una salida</p>
-                                          }
-                                        </div>
-                                        <Dialog 
-                                          open={isAddSalidaOpen}
-                                            onOpenChange={(open) => {
-                                              if (!open) resetSalidaForm()
-                                              setIsAddSalidaOpen(open)
-                                            }}
-                                          >
-                                            <Button
-                                              type="button"
-                                              className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                                              onClick={handleOpenModal} // 👈 validación antes de abrir
+                                      <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <CardTitle>Gestión de Salidas</CardTitle>
+                                            <CardDescription>Administre las salidas y sus tarifas</CardDescription>
+                                            {onGuardar && 
+                                              quitarAcentos(tipoPaqueteSelected?.nombre ?? '').toLowerCase() === 'terrestre' &&
+                                              !watch('personalizado')
+                                              && 
+                                              salidas.length === 0 &&
+                                              <p className="text-red-400">Debes agregar al menos una salida</p>
+                                            }
+                                          </div>
+                                          <Dialog 
+                                            open={isAddSalidaOpen}
+                                              onOpenChange={(open) => {
+                                                if (!open) resetSalidaForm()
+                                                setIsAddSalidaOpen(open)
+                                              }}
                                             >
-                                              <Plus className="h-4 w-4 mr-2" />
-                                              Agregar Salidas
-                                            </Button>
-                                            <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-hidden p-0">
-                                               <div className="max-h-[90vh] overflow-y-auto p-6">
-                                                  <form 
-                                                      id="salidaForm" 
-                                                      onSubmit={async (e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        // Forzar validación
-                                                        const isValid = await trigger();
-                                                        if (isValid) {
-                                                          handleSubmitSalida(handleAddSalida)(e);
-                                                        }
-                                                        else{
-                                                          handleShowToast('Debes completar los campos requeridos', 'error')
-                                                        }
-                                                      }}
-                                                    >
-            
-                                                  <DialogHeader>
-                                                    <DialogTitle>Agregar Nueva Salida</DialogTitle>
-                                                    <DialogDescription>
-                                                      Complete los datos de la nueva salida para agregarla al al paquete.
-                                                    </DialogDescription>
-                                                  </DialogHeader>
-                                                  <div className="grid gap-4 py-4">
-                                                      <div className="bg-white rounded-lg shadow-md p-6">
-                                                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Información de Salidas</h2>
-                                                          <div className="grid grid-cols-2 items-center gap-4">
-                                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                                <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
-                                                                  <Input
-                                                                    type="date"
-                                                                    id="fecha_salida_v2"
-                                                                    {...registerSalida('fecha_salida_v2', { required: true })}
-                                                                    className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
-                                                                        'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
-                                                                        'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                                  />
-                                                            </div>
-                                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                                <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
-                                                                  <Input
-                                                                    type="date"
-                                                                    id="fecha_regreso_v2"
-                                                                    {...registerSalida('fecha_regreso_v2', {
-                                                                      required: true, 
-                                                                    })
-                                                                    }
-                                                                    className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
-                                                                        'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none': 
-                                                                        'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                                  />
-                                                            </div>
-                                                          </div>
-
-                                                          <div className="grid grid-cols-2 items-center gap-4 pt-4">
-
-                                                            {/* MONTO SEÑA */}
-                                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                              <Label htmlFor="senia" className="text-gray-700 font-medium">
-                                                                Seña *
-                                                              </Label>
-                                                              <div className="col-span-3 flex gap-2">
-                                                                <Input
-                                                                  id="senia"
-                                                                  type="text"
-                                                                  {...registerSalida('senia', {
-                                                                      required: true, })
-                                                                    }
-                                                                    placeholder="150"
-                                                                    className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 
-                                                                        'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
-                                                                        'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                                />
+                                              <Button
+                                                type="button"
+                                                className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                onClick={handleOpenModal} // 👈 validación antes de abrir
+                                              >
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Agregar Salidas
+                                              </Button>
+                                              <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-hidden p-0">
+                                                <div className="max-h-[90vh] overflow-y-auto p-6">
+                                                    <form 
+                                                        id="salidaForm" 
+                                                        onSubmit={async (e) => {
+                                                          e.preventDefault();
+                                                          e.stopPropagation();
+                                                          handleSubmitClick()
+                                                          // setValidando(true)
+                                                          // console.log('🛑 Submit triggered');
+                                                          // console.log('propio:', propio); // 🔹 Debug
+                                                          // console.log('Valores actuales:', getValuesSalida());
+                                                          // console.log('Errores:', errorsSalida);
+                                                          // console.log('Es válido?', isValidSalida);
+                                                          // console.log('Is submitting?', isSubmitting);
+                                                          // const isValid = await trigger();
+                                                          // console.log('Validación forzada:', isValid);
+                                                          // if (isValid) {
+                                                          //   handleSubmitSalida(handleAddSalida)(e);
+                                                          // }
+                                                        }}
+                                                      >
+              
+                                                    <DialogHeader>
+                                                      <DialogTitle>Agregar Nueva Salida</DialogTitle>
+                                                      <DialogDescription>
+                                                        Complete los datos de la nueva salida para agregarla al al paquete.
+                                                      </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="grid gap-4 py-4">
+                                                        <div className="bg-white rounded-lg shadow-md p-6">
+                                                          <h2 className="text-lg font-semibold text-gray-900 mb-4">Información de Salidas</h2>
+                                                            <div className="grid grid-cols-2 items-center gap-4">
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
+                                                                    <Input
+                                                                      type="date"
+                                                                      id="fecha_salida_v2"
+                                                                      {...registerSalida('fecha_salida_v2', { required: true })}
+                                                                      className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
+                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
+                                                                          'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                                    />
                                                               </div>
-                                                              
-                                                            </div>  
-
-                                                          {propio &&
-                                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                              <Label htmlFor="cupo" className="text-right">
-                                                                Cupo *
-                                                              </Label>
-                                                              <div className="col-span-3 flex gap-2">
-                                                                <Input
-                                                                  id="cupo"
-                                                                  type="text"
-                                                                  placeholder="46"
-                                                                  {...registerSalida('cupo', {
-                                                                    required: propio ? 'El cupo es requerido' : false, // 🔹 Condicional
-                                                                    validate: propio
-                                                                      ? (value) => {
-                                                                          const cantidadPasajerosTemp = cantidadPasajeros || 0;
-                                                                          return Number(value) <= cantidadPasajerosTemp || `No puede ser mayor que ${cantidadPasajerosTemp}`;
-                                                                        }
-                                                                      : undefined,
-                                                                  })}
-                                                                  className={`flex-1 border-2 focus:outline-none ${
-                                                                    errorsSalida?.cupo
-                                                                      ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
-                                                                      : 'border-blue-200 focus:border-blue-500'
-                                                                  }`}
-                                                                />
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
+                                                                    <Input
+                                                                      type="date"
+                                                                      id="fecha_regreso_v2"
+                                                                      {...registerSalida('fecha_regreso_v2', {
+                                                                        required: true, 
+                                                                      })
+                                                                      }
+                                                                      className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
+                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none': 
+                                                                          'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                                    />
                                                               </div>
-                                                              {/* Mostrar mensaje de error */}
-                                                              {/* {errorsSalida?.cupo && (
-                                                                <span className="text-red-500 text-sm col-span-4">
-                                                                  {errorsSalida.cupo.message as string}
-                                                                </span>
-                                                              )} */}
                                                             </div>
 
-                                                          } 
+                                                            <div className="grid grid-cols-2 items-center gap-4 pt-4">
 
-
-                                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                                <Label htmlFor="precio_desde" className="text-right">
-                                                                  Precio Desde * 
+                                                              {/* MONTO SEÑA */}
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label htmlFor="senia" className="text-gray-700 font-medium">
+                                                                  Seña *
                                                                 </Label>
-
-                                                                {propio ? 
-                                                                  <div className="text-2xl font-bold text-blue-600">
-                                                                    {formatearSeparadorMiles.format(+(watchSalida('precio_desde') ?? 0))}
-                                                                  </div> :
-
-                                                                  <div className="col-span-3 flex gap-2">
+                                                                <div className="col-span-3 flex gap-2">
                                                                   <Input
-                                                                    id="precio_desde_editable"
+                                                                    id="senia"
                                                                     type="text"
-                                                                    {...registerSalida('precio_desde_editable', {
+                                                                    {...registerSalida('senia', {
                                                                         required: true, })
                                                                       }
                                                                       placeholder="150"
-                                                                       className={`flex-1 h-auto py-2 ${
-                                                                        errorsSalida?.precio_desde_editable
-                                                                          ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
-                                                                          : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
-                                                                      }`}
+                                                                      className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 
+                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
+                                                                          'border-2 border-blue-200 focus:border-blue-500'}`}
                                                                   />
                                                                 </div>
-                                                                }
-                                                            </div>
+                                                                
+                                                              </div>  
 
-                                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                                <Label htmlFor="precio_hasta" className="text-right">
-                                                                  Precio Hasta {propio && <span>*</span>} 
+                                                            {propio &&
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label htmlFor="cupo" className="text-right">
+                                                                  Cupo *
                                                                 </Label>
+                                                                <div className="col-span-3 flex gap-2">
+                                                                  <Input
+                                                                    id="cupo"
+                                                                    type="text"
+                                                                    placeholder="46"
+                                                                    {...registerSalida('cupo', {
+                                                                      required: propio ? 'El cupo es requerido' : false, // 🔹 Condicional
+                                                                      validate: propio
+                                                                        ? (value) => {
+                                                                            const cantidadPasajerosTemp = cantidadPasajeros || 0;
+                                                                            return Number(value) <= cantidadPasajerosTemp || `No puede ser mayor que ${cantidadPasajerosTemp}`;
+                                                                          }
+                                                                        : undefined,
+                                                                    })}
+                                                                    className={`flex-1 border-2 focus:outline-none ${
+                                                                      errorsSalida?.cupo
+                                                                        ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                        : 'border-blue-200 focus:border-blue-500'
+                                                                    }`}
+                                                                  />
+                                                                </div>
+                                                                {/* Mostrar mensaje de error */}
+                                                                {/* {errorsSalida?.cupo && (
+                                                                  <span className="text-red-500 text-sm col-span-4">
+                                                                    {errorsSalida.cupo.message as string}
+                                                                  </span>
+                                                                )} */}
+                                                              </div>
 
-                                                                {propio ? 
-                                                                  <div className="text-2xl font-bold text-blue-600">
-                                                                    {formatearSeparadorMiles.format(+(watchSalida('precio_hasta') ?? 0))}
-                                                                  </div> : 
+                                                            } 
 
-                                                                  <div className="col-span-3 flex gap-2">
+
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label htmlFor="precio_desde" className="text-right">
+                                                                    Precio Desde * 
+                                                                  </Label>
+
+                                                                  {propio ? 
+                                                                    <div className="text-2xl font-bold text-blue-600">
+                                                                      {formatearSeparadorMiles.format(+(watchSalida('precio_desde') ?? 0))}
+                                                                    </div> :
+
+                                                                    <div className="col-span-3 flex gap-2">
                                                                     <Input
-                                                                      id="precio_hasta_editable"
+                                                                      id="precio_desde_editable"
                                                                       type="text"
-                                                                      {...registerSalida('precio_hasta_editable', {
-                                                                          required: propio, })
+                                                                      {...registerSalida('precio_desde_editable', {
+                                                                          required: true, })
                                                                         }
-                                                                        placeholder=""
-                                                                         className={`flex-1 h-auto py-2 ${
-                                                                          errorsSalida?.precio_hasta_editable
+                                                                        placeholder="150"
+                                                                        className={`flex-1 h-auto py-2 ${
+                                                                          errorsSalida?.precio_desde_editable
                                                                             ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
                                                                             : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
                                                                         }`}
                                                                     />
                                                                   </div>
-                                                                }
-                                                            </div>
+                                                                  }
+                                                              </div>
 
-                                                             <div className="grid grid-cols-4 items-center gap-4">
-                                                                <Label htmlFor="cantidadNoche" className="text-right">
-                                                                  Cantidad noches 
-                                                                </Label>
-                                                              <div className="text-2xl font-bold text-blue-600">
-                                                                {cantidadNoche ? cantidadNoche : 0}
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label htmlFor="precio_hasta" className="text-right">
+                                                                    Precio Hasta {propio && <span>*</span>} 
+                                                                  </Label>
+
+                                                                  {propio ? 
+                                                                    <div className="text-2xl font-bold text-blue-600">
+                                                                      {formatearSeparadorMiles.format(+(watchSalida('precio_hasta') ?? 0))}
+                                                                    </div> : 
+
+                                                                    <div className="col-span-3 flex gap-2">
+                                                                      <Input
+                                                                        id="precio_hasta_editable"
+                                                                        type="text"
+                                                                        {...registerSalida('precio_hasta_editable', {
+                                                                            required: propio, })
+                                                                          }
+                                                                          placeholder=""
+                                                                          className={`flex-1 h-auto py-2 ${
+                                                                            errorsSalida?.precio_hasta_editable
+                                                                              ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
+                                                                              : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
+                                                                          }`}
+                                                                      />
+                                                                    </div>
+                                                                  }
+                                                              </div>
+
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label htmlFor="cantidadNoche" className="text-right">
+                                                                    Cantidad noches 
+                                                                  </Label>
+                                                                <div className="text-2xl font-bold text-blue-600">
+                                                                  {cantidadNoche ? cantidadNoche : 0}
+                                                                </div>
                                                               </div>
                                                             </div>
-                                                          </div>
-                                                      </div>    
-                                                
+                                                        </div>    
+                                                  
 
-                                                      <Card className="bg-gray-50">
-                                                            <CardHeader>
-                                                              <h3 className="text-lg font-semibold flex items-center gap-2">
-                                                                <Building2 className="w-5 h-5 text-primary" />
-                                                                Hoteles y Precios
-                                                              </h3>
-                                                              <p className="text-sm text-muted-foreground">
-                                                                Selecciona los hoteles disponibles y configura los precios por tipo de habitación
-                                                              </p>
-                                                            </CardHeader>
-                                                            <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
-                                                              {dataHotelesList && dataHotelesList?.map((hotel: any) => (
-                                                                <Card
-                                                                    key={hotel.hotelId}
-                                                                    className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
-                                                                  >
-                                                                    {/* bg-primary/5 border-primary/30" : "bg-background */}
-                                                                  <CardContent className="">
-                                                                    <div className="space-y-4">
-                                                                      <div className="flex items-center space-x-3 ">
-                                                                        <Checkbox
-                                                                          
-                                                                          id={hotel.id}
-                                                                          checked={selectedHotels.has(hotel.id)}
-                                                                          onCheckedChange={() => handleHotelToggle(hotel.id, hotel)}
-                                                                        />
-                                                                        <div className="flex-1">
-                                                                          <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
-                                                                            {hotel.nombre}
-                                                                          </Label>
-                                                                          <div className="flex items-center gap-4 mt-1">
-                                                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
-                                                                              {renderStars(hotel.estrellas)}
-                                                                            </Badge>
-                                                                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                              <MapPin className="w-3 h-3" />
-                                                                              {/* <span>{hotel.ubicacion}</span> */}
-                                                                              <span>{hotel.direccion}</span>
+                                                        <Card className="bg-gray-50">
+                                                              <CardHeader>
+                                                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                                  <Building2 className="w-5 h-5 text-primary" />
+                                                                  Hoteles y Precios
+                                                                </h3>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                  Selecciona los hoteles disponibles y configura los precios por tipo de habitación
+                                                                </p>
+                                                              </CardHeader>
+                                                              <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
+                                                                {dataHotelesList && dataHotelesList?.map((hotel: any) => (
+                                                                  <Card
+                                                                      key={hotel.hotelId}
+                                                                      className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
+                                                                    >
+                                                                      {/* bg-primary/5 border-primary/30" : "bg-background */}
+                                                                    <CardContent className="">
+                                                                      <div className="space-y-4">
+                                                                        <div className="flex items-center space-x-3 ">
+                                                                          <Checkbox
+                                                                            
+                                                                            id={hotel.id}
+                                                                            checked={selectedHotels.has(hotel.id)}
+                                                                            onCheckedChange={() => handleHotelToggle(hotel.id, hotel)}
+                                                                          />
+                                                                          <div className="flex-1">
+                                                                            <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
+                                                                              {hotel.nombre}
+                                                                            </Label>
+                                                                            <div className="flex items-center gap-4 mt-1">
+                                                                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
+                                                                                {renderStars(hotel.estrellas)}
+                                                                              </Badge>
+                                                                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                                <MapPin className="w-3 h-3" />
+                                                                                {/* <span>{hotel.ubicacion}</span> */}
+                                                                                <span>{hotel.direccion}</span>
+                                                                              </div>
                                                                             </div>
                                                                           </div>
                                                                         </div>
-                                                                      </div>
 
-                                                                      {selectedHotels.has(hotel.id) && (
-                                                                        <div className="pl-6 border-l-2 border-emerald-200">
-                                                                          <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                                                                            Precios por tipo de habitación:
-                                                                          </h4>
+                                                                        {selectedHotels.has(hotel.id) && (
+                                                                          <div className="pl-6 border-l-2 border-emerald-200">
+                                                                            <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                                                                              Precios por tipo de habitación:
+                                                                            </h4>
 
-                                                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                                            {hotel?.habitaciones?.length === 0 && 
-                                                                                <p className="text-sm font-medium text-red-400">
-                                                                                  No tiene habitaciones asignadas
-                                                                                </p>
-                                                                            }
-                                                                            {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
-                                                                              <div key={habitacion.id} className="space-y-2">
-                                                                                <Label className="text-sm flex items-center gap-2">
-                                                                                  {getRoomIcon(habitacion.tipo)}
-                                                                                  {getRoomTypeLabel(habitacion.tipo)}
-                                                                                </Label>
-                                                                                
-                                                                                {propio && habitacion?.precio_noche &&
-                                                                                  <div className="relative">
-                                                                                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                                                                    <Input
-                                                                                      type="number"
-                                                                                      min="0"
-                                                                                      step="0.01"
-                                                                                      placeholder="0.00"
-                                                                                      className="pl-10"
-                                                                                      disabled
-                                                                                      value={habitacion?.precio_noche ?? ''}
-                                                                                    />
-                                                                                  </div>
-                                                                                }
-
-                                                                                {propio && !habitacion?.precio_noche && 
+                                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                              {hotel?.habitaciones?.length === 0 && 
                                                                                   <p className="text-sm font-medium text-red-400">
-                                                                                    Debes cargar el precio de la habitación
-                                                                                  </p>}
-                                                                              </div>
-                                                                            ))}
-                                                                          </div>
-                                                                        </div>
-                                                                      )}
-                                                                    </div>
-                                                                  </CardContent>
-                                                                </Card>
-                                                              ))}
-                                                            </CardContent>
-                                                      </Card>
-                                                  </div>
+                                                                                    No tiene habitaciones asignadas
+                                                                                  </p>
+                                                                              }
+                                                                              {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
+                                                                                <div key={habitacion.id} className="space-y-2">
+                                                                                  <Label className="text-sm flex items-center gap-2">
+                                                                                    {getRoomIcon(habitacion.tipo)}
+                                                                                    {getRoomTypeLabel(habitacion.tipo)}
+                                                                                  </Label>
+                                                                                  
+                                                                                  {propio && habitacion?.precio_noche &&
+                                                                                    <div className="relative">
+                                                                                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                                                      <Input
+                                                                                        type="number"
+                                                                                        min="0"
+                                                                                        step="0.01"
+                                                                                        placeholder="0.00"
+                                                                                        className="pl-10"
+                                                                                        disabled
+                                                                                        value={habitacion?.precio_noche ?? ''}
+                                                                                      />
+                                                                                    </div>
+                                                                                  }
 
-                                                  
-                                                  <DialogFooter>
-                                                    <Button type="button" variant="outline" className="cursor-pointer" 
-                                                        onClick={resetSalidaForm}
-                                                        >
-                                                      Cancelar
-                                                    </Button>
-                                                    <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                                                        >
-                                                          {isEditMode ? 'Actualizar Salida' : 'Agregar Salida'}
-                                                    </Button>
-                                                  </DialogFooter>
-                                                  </form>
-                                               </div>
-                                            </DialogContent>
-                                        </Dialog>
-                                      </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="rounded-md border">
-                                        <Table>
-                                          <TableHeader>
-                                            <TableRow>
-                                              <TableHead>Fecha Salida</TableHead>
-                                              <TableHead>Fecha Regreso</TableHead>
-                                              <TableHead>Precio Desde</TableHead>
-                                              <TableHead>Precio Hasta</TableHead>
-                                              <TableHead>Seña</TableHead>
-                                              <TableHead>Cupo</TableHead>
-                                              <TableHead className="text-right">Acciones</TableHead>
-                                            </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                            {salidas.map((salida: any) => (
-                                              <TableRow key={salida.id}>
-                                                <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
-                                                <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
-                                                {/* <TableCell>{JSON.stringify(salida)}</TableCell> */}
-                                                {/* <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_desde)}</TableCell> */}
-                                                <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_actual)}</TableCell>
-                                                <TableCell>{salida?.precio_final ? 
-                                                        formatearSeparadorMiles.format(salida?.precio_final) : 
-                                                        <Badge
-                                                          className="bg-gray-100 text-gray-700 border-gray-200">
-                                                          Sin tope
-                                                        </Badge>
-                                                    }
-                                                </TableCell>
-                                                <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
-                                                <TableCell>
-                                                  {propio ? salida.cupo : 
-                                                   <Badge
-                                                    className="bg-gray-100 text-gray-700 border-gray-200">
-                                                    Sujeto a disponibilidad
-                                                  </Badge>}
-                                                  {/* {dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].codigo }) */}
-                                                </TableCell>
-                                                
-                                                <TableCell className="text-right">
-                                                  <div className="flex items-center justify-end gap-2">
-                                                    <Button type="button" variant="ghost" size="sm" 
-                                                          onClick={() => handleEditSalida(salida)}
-                                                          > 
-                                                      <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="text-destructive hover:text-destructive"
-                                                      onClick={() => handleDeleteRoom(salida.id)}
-                                                    >
-                                                      <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                  </div>
-                                                </TableCell>
+                                                                                  {propio && !habitacion?.precio_noche && 
+                                                                                    <p className="text-sm font-medium text-red-400">
+                                                                                      Debes cargar el precio de la habitación
+                                                                                    </p>}
+                                                                                </div>
+                                                                              ))}
+                                                                            </div>
+                                                                          </div>
+                                                                        )}
+                                                                      </div>
+                                                                    </CardContent>
+                                                                  </Card>
+                                                                ))}
+                                                              </CardContent>
+                                                        </Card>
+                                                    </div>
+
+                                                    
+                                                    <DialogFooter>
+                                                      <Button type="button" variant="outline" className="cursor-pointer" 
+                                                          onClick={resetSalidaForm}
+                                                          >
+                                                        Cancelar
+                                                      </Button>
+                                                      <Button 
+                                                        disabled={validando}
+                                                        type="submit" 
+                                                        aria-disabled={validando}
+                                                        // onClick={() => setValidando(true)}
+                                                        className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                          >
+                                                            {/* {isEditMode ? 'Actualizar Salida' : 'Agregar Salida'} */}
+
+                                                            {validando ? 
+                                                            <>
+                                                              <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                                                              Procesando...
+                                                            </> : 
+                                                            (isEditMode ? 'Actualizar Salida' : 'Agregar Salida')}
+                                                      </Button>
+                                                    </DialogFooter>
+                                                    </form>
+                                                </div>
+                                              </DialogContent>
+                                          </Dialog>
+                                        </div>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="rounded-md border">
+                                          <Table>
+                                            <TableHeader>
+                                              <TableRow>
+                                                <TableHead>Fecha Salida</TableHead>
+                                                <TableHead>Fecha Regreso</TableHead>
+                                                <TableHead>Precio Desde</TableHead>
+                                                <TableHead>Precio Hasta</TableHead>
+                                                <TableHead>Seña</TableHead>
+                                                <TableHead>Cupo</TableHead>
+                                                <TableHead className="text-right">Acciones</TableHead>
                                               </TableRow>
-                                            ))}
-                                          </TableBody>
-                                        </Table>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
+                                            </TableHeader>
+                                            <TableBody>
+                                              {salidas.map((salida: any) => (
+                                                <TableRow key={salida.id}>
+                                                  <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
+                                                  <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
+                                                  {/* <TableCell>{JSON.stringify(salida)}</TableCell> */}
+                                                  {/* <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_desde)}</TableCell> */}
+                                                  <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_actual)}</TableCell>
+                                                  <TableCell>{salida?.precio_final ? 
+                                                          formatearSeparadorMiles.format(salida?.precio_final) : 
+                                                          <Badge
+                                                            className="bg-gray-100 text-gray-700 border-gray-200">
+                                                            Sin tope
+                                                          </Badge>
+                                                      }
+                                                  </TableCell>
+                                                  <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
+                                                  <TableCell>
+                                                    {propio ? salida.cupo : 
+                                                    <Badge
+                                                      className="bg-gray-100 text-gray-700 border-gray-200">
+                                                      Sujeto a disponibilidad
+                                                    </Badge>}
+                                                    {/* {dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].codigo }) */}
+                                                  </TableCell>
+                                                  
+                                                  <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                      <Button type="button" variant="ghost" size="sm" 
+                                                            onClick={() => handleEditSalida(salida)}
+                                                            > 
+                                                        <Edit className="h-4 w-4" />
+                                                      </Button>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={() => handleDeleteRoom(salida.id)}
+                                                      >
+                                                        <Trash2 className="h-4 w-4" />
+                                                      </Button>
+                                                    </div>
+                                                  </TableCell>
+                                                </TableRow>
+                                              ))}
+                                            </TableBody>
+                                          </Table>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
                                 
                               </div>
                     </div>
