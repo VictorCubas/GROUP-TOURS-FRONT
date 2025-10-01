@@ -1,16 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selectedDestinoID: any, selectedPermissions: any []): any => {
-    const salidasTemp = salidas.map((salida: any) => ({
-      fecha_salida: salida.fecha_salida_v2,
-      fecha_regreso: salida.fecha_regreso_v2,
-      senia: salida.senia,
-      precio_actual: salida.precio_actual,
-      precio_final: salida?.precio_final,
-      hoteles: salida.hoteles_ids,
-      cupo: parseInt(salida.cupo, 10), // Entero
-      moneda_id: dataForm.moneda,
-      temporada_id: salida?.temporada_id || null, // Opcional
-    }))
+export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selectedDestinoID: any,
+ selectedPermissions: any [], paqueteModalidad: 'flexible' | 'fijo'): any => {
+
+    const salidasTemp = salidas.map((salida: any) => {
+        const sal: any = {
+        fecha_salida: salida.fecha_salida_v2,
+        fecha_regreso: salida.fecha_regreso_v2,
+        senia: salida.senia,
+        precio_actual: salida.precio_actual,
+        hoteles: salida.hoteles_ids,
+        cupo: parseInt(salida.cupo, 10), // Entero
+        moneda_id: dataForm.moneda,
+        temporada_id: salida?.temporada_id || null, // Opcional
+      }
+
+      if(paqueteModalidad === 'fijo')
+        sal.habitacion_fija = salida.habitacion_fija;
+
+      return sal;
+    }
+
+  )
 
   const payload = {
     ...dataForm,
@@ -21,6 +31,7 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
     fecha_inicio: dataForm.fecha_salida,
     fecha_fin: dataForm.fecha_regreso,
     salidas: salidasTemp,
+    modalidad: paqueteModalidad,
     activo: true,
   };
 
@@ -60,20 +71,10 @@ export const calcularRangoPrecio = (
   precioMax: number; 
   dias: number; 
   noches: number } => {
-  const inicio = parseFechaLocal(fechaIngreso);
-  const fin = parseFechaLocal(fechaRegreso);
-
-  // Normalizar horas
-  inicio.setHours(0, 0, 0, 0);
-  fin.setHours(0, 0, 0, 0);
-
-  const msEnDia = 1000 * 60 * 60 * 24;
-
-  // Diferencia en días calendario exacta
-  const diffDias = Math.floor((fin.getTime() - inicio.getTime()) / msEnDia);
-
+  
+  const diffDias = calculateNoches(fechaIngreso, fechaRegreso); // Corrección aquí;
   // Noches = días
-  const diffNoches = diffDias; // Corrección aquí
+  const diffNoches = diffDias;
 
   const precios: number[] = hoteles.flatMap(hotel =>
     hotel.habitaciones.map((h: any) => h.precio_noche)
@@ -88,6 +89,24 @@ export const calcularRangoPrecio = (
 
   return { precioMin, precioMax, dias: diffDias, noches: diffNoches };
 };
+
+
+export const calculateNoches = (fechaIngreso: string | Date, fechaRegreso: string | Date) => {
+    const inicio = parseFechaLocal(fechaIngreso);
+    const fin = parseFechaLocal(fechaRegreso);
+
+    // Normalizar horas
+    inicio.setHours(0, 0, 0, 0);
+    fin.setHours(0, 0, 0, 0);
+
+    const msEnDia = 1000 * 60 * 60 * 24;
+
+    // Diferencia en días calendario exacta
+    const diffDias = Math.floor((fin.getTime() - inicio.getTime()) / msEnDia);
+
+    return diffDias;
+
+}
 
 // Función auxiliar para parsear fechas como local
 const parseFechaLocal = (fecha: string | Date): Date => {

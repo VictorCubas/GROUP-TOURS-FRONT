@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface TipoPaquete{
   id: number;
   nombre: string;
@@ -44,6 +45,7 @@ export interface SalidaPaquete {
   cupo: number;              // Cupo numérico
   activo: boolean;           // Estado booleano
   hoteles: number[];
+  habitacion_fija?: any;
 }
 
 export interface Paquete {
@@ -56,6 +58,7 @@ export interface Paquete {
   precio: number;
   senia: number;
   moneda: Moneda;
+  modalidad: 'flexible' | 'fijo';
   fecha_inicio: string | null; // formato YYYY-MM-DD
   fecha_fin: string | null; // formato YYYY-MM-DD
   personalizado: boolean;
