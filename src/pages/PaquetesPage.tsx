@@ -740,7 +740,13 @@ export default function ModulosPage() {
         formData.append(key ,JSON.stringify(value));
       }
       else if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(key, v));
+        // value.forEach((v) => formData.append(key, v));
+        if (value.length === 0) {
+          
+          formData.append(key, JSON.stringify([])); // 👉 se envía como "[]"
+        } else {
+          value.forEach((v) => formData.append(key, v));
+        }
       } else if (value !== undefined && value !== null) {
         formData.append(key, value as any);
       }
@@ -2059,6 +2065,7 @@ const handleSubmitClick = useCallback(async () => {
                                 render={({ field }) => (
                                   <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                     <Select
+                                      disabled={!!dataAEditar}
                                       value={field.value}
                                       onValueChange={(value) => {
                                         field.onChange(value)
@@ -2154,7 +2161,7 @@ const handleSubmitClick = useCallback(async () => {
                                 render={({ field }) => {
                                   const isDisabled =
                                     quitarAcentos(tipoPaqueteSelected?.nombre.toLowerCase() ?? "") ===
-                                    "aereo";
+                                    "aereo" || !!dataAEditar;
 
                                   return (
                                     <div className="flex items-center gap-3 cursor-pointer m-0">
@@ -2189,6 +2196,7 @@ const handleSubmitClick = useCallback(async () => {
                               render={({ field }) => (
                                 <div className="flex items-center gap-3 cursor-pointer m-0">
                                   <Checkbox
+                                    disabled={!!dataAEditar}
                                     id="personalizado"
                                     checked={field.value}
                                     onCheckedChange={(checked) => field.onChange(!!checked)}
@@ -2239,11 +2247,12 @@ const handleSubmitClick = useCallback(async () => {
 
                               {isFetchingDistribuidora && (
                                 <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
-                                  <Select>
-                                    <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
-                                    <div className="w-full flex items-center justify-center">
-                                      <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                                    </div>
+                                  <Select >
+                                    <SelectTrigger 
+                                        className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
+                                      <div className="w-full flex items-center justify-center">
+                                        <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                                      </div>
                                     </SelectTrigger>
                                   </Select>
                                 </div>
@@ -2258,6 +2267,7 @@ const handleSubmitClick = useCallback(async () => {
                                     <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                       <Select
                                         value={field.value}
+                                        disabled={!!dataAEditar}
                                         onValueChange={(value) => {
                                           field.onChange(value)
                                           if (value) {
@@ -2669,19 +2679,26 @@ const handleSubmitClick = useCallback(async () => {
                                     
                                   </Button>
 
-                                  {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
+                                  {/* {JSON.stringify(selectedPermissions)}
+                                  {JSON.stringify(onGuardar)} */}
+                                  {propio && onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
                                 </div>
 
                                 <div className="bg-white rounded-lg shadow-md p-6">
                                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Modalidad de Paquete</h2>
                                   <div className="grid md:grid-cols-2 gap-4">
                                     <div
-                                      onClick={() => setPaqueteModalidad('flexible')}
+                                      onClick={() => {
+                                        if(dataAEditar)
+                                          return;
+
+                                        setPaqueteModalidad('flexible')
+                                      }}
                                       className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
                                         paqueteModalidad === 'flexible' 
                                           ? 'border-blue-500 bg-blue-50' 
                                           : 'border-gray-200 hover:border-gray-300'
-                                      }`}
+                                      }  ${(dataAEditar && paqueteModalidad === 'flexible') ? 'opacity-45' : 'opacity-80'} `}
                                     >
                                       <div className="flex items-center mb-2">
                                         <Star className="w-5 h-5 text-blue-600 mr-2" />
@@ -2693,12 +2710,17 @@ const handleSubmitClick = useCallback(async () => {
                                     </div>
 
                                     <div
-                                      onClick={() => setPaqueteModalidad('fijo')}
-                                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                                        paqueteModalidad === 'fijo' 
+                                      onClick={() => {
+                                        if(dataAEditar)
+                                          return;
+                                        
+                                        setPaqueteModalidad('fijo')
+                                      }}
+                                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all 
+                                        ${paqueteModalidad === 'fijo' 
                                           ? 'border-orange-500 bg-orange-50' 
                                           : 'border-gray-200 hover:border-gray-300'
-                                      }`}
+                                      }  ${(dataAEditar && paqueteModalidad === 'fijo') ? 'opacity-45' : 'opacity-80'} `}
                                     >
                                       <div className="flex items-center mb-2">
                                         <Tag className="w-5 h-5 text-orange-600 mr-2" />
@@ -3222,14 +3244,16 @@ const handleSubmitClick = useCallback(async () => {
                                                             > 
                                                         <Edit className="h-4 w-4" />
                                                       </Button>
-                                                      <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-destructive hover:text-destructive"
-                                                        onClick={() => handleDeleteRoom(salida.id)}
-                                                      >
-                                                        <Trash2 className="h-4 w-4" />
-                                                      </Button>
+                                                      {!dataAEditar && 
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          className="text-destructive hover:text-destructive"
+                                                          onClick={() => handleDeleteRoom(salida.id)}
+                                                        >
+                                                          <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                      }
                                                     </div>
                                                   </TableCell>
                                                 </TableRow>
@@ -3275,6 +3299,13 @@ const handleSubmitClick = useCallback(async () => {
                       {dataAEditar &&
                         <Button 
                           disabled={isPendingEdit}
+                          onClick={() => {
+                              setOnGuardar(true)
+                              
+                              if(destinoNoSeleccionada === undefined){
+                                  setDestinoNoSeleccionada(false);
+                                }
+                            }}
                           type="submit"
                           className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
                         {isPendingEdit ? 
