@@ -46,6 +46,8 @@ export interface SalidaPaquete {
   activo: boolean;           // Estado booleano
   hoteles: number[];
   habitacion_fija?: any;
+  ganancia?: any;
+  comision?: any;
 }
 
 export interface Paquete {

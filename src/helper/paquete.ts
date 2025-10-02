@@ -17,6 +17,14 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
       if(paqueteModalidad === 'fijo')
         sal.habitacion_fija = salida.habitacion_fija;
 
+      if(propio)
+        sal.ganancia = salida.ganancia;
+      else
+        sal.comision = salida.comision;
+
+      if(salida.precio_final)
+        sal.precio_final = salida.precio_final;
+
       return sal;
     }
 

@@ -98,7 +98,9 @@ import { fetchDataDestinosTodos, fetchDataHoteles } from "@/components/utils/htt
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete"
+import { calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete";
+import { NumericFormat } from 'react-number-format';
+
 
 let dataList: Paquete[] = [];
 let tipoPaqueteFilterList: any[] = [];
@@ -203,7 +205,7 @@ export default function ModulosPage() {
 
   // const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
   const {
-    // control: controlSalida,
+    control: controlSalida,
     register: registerSalida,
     handleSubmit: handleSubmitSalida,
     watch: watchSalida,
@@ -228,6 +230,8 @@ export default function ModulosPage() {
       fecha_salida_v2: '',
       fecha_regreso_v2: '',
       cupo: '',
+      ganancia: '',
+      comision: '',
     },
   });
 
@@ -237,6 +241,8 @@ export default function ModulosPage() {
       precio: '',
       senia: '',
       cupo: "",
+      ganancia: "",
+      comision: ""
     })
 
     const [salidas, setSalidas] = useState<any[]>([])
@@ -555,6 +561,8 @@ export default function ModulosPage() {
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
         setSalidas([]);
+        setSelectedPermissions([])
+        setPermissionSearchTerm("")
         reset({
             nombre: '',
             tipo_paquete: '',
@@ -592,6 +600,8 @@ export default function ModulosPage() {
       handleShowToast('Debes agregar al menos un servicio', 'error');
       return;
     }
+
+    console.log(prePayload)
 
     const formData = new FormData();
 
@@ -656,6 +666,14 @@ export default function ModulosPage() {
 
       if(paqueteModalidad === 'fijo')
         salActualizada.habitacion_fija = salida.habitacion_fija;
+      // else if(paqueteModalidad === 'flexible'){
+        
+      // }
+
+      if(propio)
+        salActualizada.ganancia = salida.ganancia;
+      else
+        salActualizada.comision = salida.comision;
 
       return salActualizada;
     });
@@ -888,12 +906,24 @@ export default function ModulosPage() {
         hoteles_ids: salida.hoteles.map((hotel: any) => hotel?.id), 
       }
 
-      if(data.modalidad === 'fijo')
-          sal.habitacion_fija = salida.habitacion_fija.id;
-
+      console.log(data.modalidad)
+      if(data.modalidad === 'fijo'){
+        sal.habitacion_fija = salida.habitacion_fija.id;
+      }
+      else if(data.modalidad === 'flexible'){
+        // sal.ganancia = salida.ganancia;
+      }
+      
+      if(propio)
+        sal.ganancia = salida.ganancia;
+      else
+        sal.comision = salida.comision;
+      
 
       return sal;
     })
+
+    console.log(salidas);
 
     setSalidas(salidas);
   }
@@ -970,10 +1000,16 @@ export default function ModulosPage() {
     if (!propio) {
       setValueSalida('cupo', '', { shouldValidate: false }); // Limpia cupo si no es propio
       resetSalida({ cupo: '' }, { keepDefaultValues: true }); // Resetea solo cupo
+
+      setValueSalida('ganancia', '', { shouldValidate: false }); // Limpia cupo si no es propio
+      resetSalida({ ganancia: '' }, { keepDefaultValues: true }); // Resetea solo cupo
     }
     else{
       setValueSalida('precio_desde_editable', '', { shouldValidate: false }); // Limpia cupo si no es propio
       resetSalida({ precio_desde_editable: '' }, { keepDefaultValues: true }); // Resetea solo cupo
+
+      setValueSalida('comision', '', { shouldValidate: false }); // Limpia cupo si no es propio
+      resetSalida({ comision: '' }, { keepDefaultValues: true }); // Resetea solo cupo
     }
   }, [propio, setValueSalida, resetSalida]);
 
@@ -1166,9 +1202,18 @@ export default function ModulosPage() {
         salida.habitacion_fija = fixedRoomTypeIdRef.current;
 
       delete salida.precio_desde_editable;
+      delete salida.precio_desde;
       delete salida.precio_hasta_editable;
+      delete salida.precio_hasta;
       if(!propio && !salida?.precio_final || paqueteModalidad === 'fijo'){
         delete salida.precio_final;
+      }
+
+      if(propio){
+        delete salida.comision;
+      }
+      else{
+        delete salida.ganancia;
       }
 
       console.log(salida)
@@ -1213,6 +1258,8 @@ export default function ModulosPage() {
       precio: '',
       senia: '',
       cupo: "",
+      ganancia: '',
+      comision: '',
     })
 
     resetSalida({
@@ -1223,7 +1270,8 @@ export default function ModulosPage() {
       precio_desde_editable: '',
       senia: '',
       fecha_salida_v2: '',
-      fecha_regreso_v2: '',
+      ganancia: '',
+      comision: '',
       cupo: propio ? '' : undefined,
     });
     setIsAddSalidaOpen(false);
@@ -1299,14 +1347,17 @@ const handleSubmitClick = useCallback(async () => {
     setIsAddSalidaOpen(true);
 
     console.log(salidas);
-    console.log(salida.hoteles_ids)
+    console.log(salida.hoteles_ids) 
     // const hotelesIds = salida.hoteles_ids.map((hotel: any) => hotel.id);
     console.log(salida.hoteles_ids);
 
     setSelectedHotels(new Set(salida.hoteles_ids.map(Number)));
 
+    console.log(salida);
+    console.log(salida.moneda);
+    console.log(salida.currency); 
     // Si usas react-hook-form u otro Controller, setea también el value del select/Controller
-    setValue('moneda', salida.moneda.toString());
+    setValue('moneda', salida?.moneda?.toString() ?? salida?.currency?.toString());
 
     if(paqueteModalidad === 'fijo')
       setFixedRoomTypeId(salida?.habitacion_fija ?? '');
@@ -2869,6 +2920,116 @@ const handleSubmitClick = useCallback(async () => {
                                                                   {cantidadNoche ? cantidadNoche : 0}
                                                                 </div>
                                                               </div>
+
+
+                                                               {/* PORCENTAJE DE GANANCIA */}
+                                                               {propio &&
+                                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                                      <Label htmlFor="ganancia" className="text-gray-700 font-medium">
+                                                                        Porcentaje de ganancia *
+                                                                      </Label>
+                                                                      <div className="col-span-3 flex gap-2">  
+                                                                        <Controller
+                                                                          name="ganancia"
+                                                                          control={controlSalida} // <-- usa el control correcto de tu form de salidas
+                                                                          rules={{
+                                                                            required: 'Debes completar este campo',
+                                                                            validate: (value) => {
+                                                                              // valor puede ser number | null
+                                                                              if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                                return 'Valor inválido';
+                                                                              }
+                                                                              return true;
+                                                                            },
+                                                                          }}
+                                                                            render={({ field, fieldState: { error } }) => (
+                                                                              <div className="flex flex-col">
+                                                                                <NumericFormat
+                                                                                  value={field.value ?? ''}                     // muestra vacío si no hay valor
+                                                                                  onValueChange={(values) => {
+                                                                                    // values.floatValue es number | undefined
+                                                                                    field.onChange(values.floatValue ?? null); // guarda number o null
+                                                                                  }}
+                                                                                  onBlur={field.onBlur}
+                                                                                  thousandSeparator="."
+                                                                                  decimalSeparator=","
+                                                                                  decimalScale={1}
+                                                                                  fixedDecimalScale
+                                                                                  suffix=" %"
+                                                                                  placeholder="5%, 10%, 15%, etc."
+                                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                                    error
+                                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                                      : 'border-blue-200 focus:border-blue-500'
+                                                                                  }`}
+                                                                                />
+                                                                                {/* {error && (
+                                                                                  <span className="text-red-400 text-sm mt-1">
+                                                                                    {error.message}
+                                                                                  </span>
+                                                                                )} */}
+                                                                            </div>
+                                                                          )}
+                                                                        />
+                                                                      </div>
+                                                                  </div>  
+                                                               }
+
+
+                                                               {/* PORCENTAJE DE COMISION */}
+                                                               {!propio &&
+                                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                                      <Label htmlFor="comision" className="text-gray-700 font-medium">
+                                                                        Porcentaje de comision *
+                                                                      </Label>
+                                                                      <div className="col-span-3 flex gap-2">  
+                                                                        <Controller
+                                                                          name="comision"
+                                                                          control={controlSalida} // <-- usa el control correcto de tu form de salidas
+                                                                          rules={{
+                                                                            required: 'Debes completar este campo',
+                                                                            validate: (value) => {
+                                                                              // valor puede ser number | null
+                                                                              if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                                return 'Valor inválido';
+                                                                              }
+                                                                              return true;
+                                                                            },
+                                                                          }}
+                                                                            render={({ field, fieldState: { error } }) => (
+                                                                              <div className="flex flex-col">
+                                                                                <NumericFormat
+                                                                                  value={field.value ?? ''}                     // muestra vacío si no hay valor
+                                                                                  onValueChange={(values) => {
+                                                                                    // values.floatValue es number | undefined
+                                                                                    field.onChange(values.floatValue ?? null); // guarda number o null
+                                                                                  }}
+                                                                                  onBlur={field.onBlur}
+                                                                                  thousandSeparator="."
+                                                                                  decimalSeparator=","
+                                                                                  decimalScale={1}
+                                                                                  fixedDecimalScale
+                                                                                  suffix=" %"
+                                                                                  placeholder="5%, 10%, 15%, etc."
+                                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                                    error
+                                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                                      : 'border-blue-200 focus:border-blue-500'
+                                                                                  }`}
+                                                                                />
+                                                                                {/* {error && (
+                                                                                  <span className="text-red-400 text-sm mt-1">
+                                                                                    {error.message}
+                                                                                  </span>
+                                                                                )} */}
+                                                                            </div>
+                                                                          )}
+                                                                        />
+                                                                      </div>
+                                                                  </div>  
+                                                               }
+                                                                
+
                                                             </div>
                                                         </div>    
                                                   
@@ -3131,8 +3292,6 @@ const handleSubmitClick = useCallback(async () => {
                         variant="outline"
                         className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent cursor-pointer"
                         onClick={() => {
-                            setSelectedPermissions([])
-                            setPermissionSearchTerm("")
                             handleCancel()
                         }}
                       >
