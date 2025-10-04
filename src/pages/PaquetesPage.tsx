@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { startTransition, use, useEffect, useState } from "react"
+import { startTransition, use, useCallback, useEffect, useRef, useState } from "react"
 import {
   Search,
   Plus,
@@ -48,6 +48,9 @@ import {
   UserCheck,
   Users2,
   Bed,
+  Tag,
+  AlertCircle,
+  CirclePlus,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -96,7 +99,9 @@ import { fetchDataDestinosTodos, fetchDataHoteles } from "@/components/utils/htt
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { calcularRangoPrecio, getPayload } from "@/helper/paquete"
+import { calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete";
+import { NumericFormat } from 'react-number-format';
+
 
 let dataList: Paquete[] = [];
 let tipoPaqueteFilterList: any[] = [];
@@ -137,7 +142,8 @@ export default function ModulosPage() {
   const [selectedDestinoID, setSelectedDestinoID] = useState<number | "">("");
   const [destinoNoSeleccionada, setDestinoNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
-  const [showActiveOnly, setShowActiveOnly] = useState(true)
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [validando, setValidando] = useState(false);
   const [dataAEditar, setDataAEditar] = useState<Paquete>();
   const [dataADesactivar, setDataADesactivar] = useState<Paquete>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
@@ -145,13 +151,13 @@ export default function ModulosPage() {
   const [tipoPaqueteSelected, setTipoPaqueteSelected] = useState<TipoPaquete>();
   const [distribuidoraSelected, setDistribuidoraSelected] = useState<Distribuidora>();
   const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  const [selectedServicios, setSelectedServicios] = useState<number[]>([])
   const [dataDetalle, setDataDetalle] = useState<Paquete>();
-   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
 
-  const [rangoPrecio, setRangoPrecio] = useState<{ precioMin: number; precioMax: number; dias: number; noches: number }>();
+  // const [rangoPrecio, setRangoPrecio] = useState<{ precioMin: number; precioMax: number; dias: number; noches: number }>();
   const [ciudadDataSelected, setCiudadDataSelected] = useState<any>();
   const [ciudadDataCompleto, setCiudadDataCompleto] = useState<any>();
   const [selectedHotels, setSelectedHotels] = useState<Set<string>>(new Set());
@@ -166,9 +172,11 @@ export default function ModulosPage() {
                   tipo_propiedad: "all",  
                 });
 
+  const [paqueteModalidad, setPaqueteModalidad] = useState<'flexible' | 'fijo'>('flexible');
+  const [fixedRoomTypeId, setFixedRoomTypeId] = useState('');
   
   // DATOS DEL FORMULARIO 
-  const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
+  const {control,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -178,7 +186,7 @@ export default function ModulosPage() {
               }
             });
 
-    console.log(trigger);
+    // console.log(trigger);
   // DATOS DEL FORMULARIO 
 
 
@@ -198,22 +206,33 @@ export default function ModulosPage() {
 
   // const {control,trigger,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
   const {
-    // control: controlSalida,
+    control: controlSalida,
     register: registerSalida,
     handleSubmit: handleSubmitSalida,
     watch: watchSalida,
     setValue: setValueSalida,
-    formState: { errors: errorsSalida },
+    formState: { 
+      errors: errorsSalida, 
+      isValid: isValidSalida, 
+    },
     reset: resetSalida,
+    getValues: getValuesSalida,
+    trigger
   } = useForm({
-    mode: "onBlur",
+    mode: "onBlur", // 🔹 Cambio clave: Valida en submit para evitar issues en primer render
+    reValidateMode: 'onChange', //
     defaultValues: {
       precio_desde: '',
+      precio_desde_editable: '',
+      precio_hasta_editable: '',
+      cantidadNoche: '',
       precio_hasta: '',
       senia: '',
       fecha_salida_v2: '',
       fecha_regreso_v2: '',
       cupo: '',
+      ganancia: '',
+      comision: '',
     },
   });
 
@@ -223,12 +242,14 @@ export default function ModulosPage() {
       precio: '',
       senia: '',
       cupo: "",
+      ganancia: "",
+      comision: ""
     })
 
     const [salidas, setSalidas] = useState<any[]>([])
     const [isEditMode, setIsEditMode] = useState(false)
     const [editingSalidaId, setEditingSalidaId] = useState<string | null>(null);
-    const [isAddRoomOpen, setIsAddSalidaOpen] = useState(false);
+    const [isAddSalidaOpen, setIsAddSalidaOpen] = useState(false);
     // DATOS DE SALIDOS
    
     console.log(distribuidoraSelected)
@@ -289,7 +310,8 @@ export default function ModulosPage() {
   const {data: dataHotelesList, isFetching: isFetchingHoteles,} = useQuery({
         queryKey: ['todos-hoteles-paquetes', ciudadDataSelected], //data cached
         queryFn: () => fetchDataHoteles(ciudadDataSelected),
-        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+        staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
+        enabled: Boolean(ciudadDataSelected),
     });
 
   // let filteredPermissions: Modulo[] = [];
@@ -355,6 +377,14 @@ export default function ModulosPage() {
   const endIndex = startIndex + paginacion.pageSize
   // const paginatedPermisos = filteredPermissions.slice(startIndex, endIndex);
 
+
+  const propio = watch('propio');
+  const cantidadPasajeros = watch('cantidad_pasajeros');
+  const personalizado = watch('personalizado');
+  const cantidadNoche = watchSalida('cantidadNoche');
+  const precioDesde = watchSalida('precio_desde');
+  const precioHasta = watchSalida('precio_hasta');
+
   // Función para cambiar página
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -417,7 +447,7 @@ export default function ModulosPage() {
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
         setImagePreview(placeholderViaje);
-        setSelectedPermissions([])
+        setSelectedServicios([])
         setSelectedDestinoID("");
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
@@ -527,9 +557,13 @@ export default function ModulosPage() {
         setDistribuidoraSelected(undefined);
         handleDestinoNoSeleccionada(undefined)
         setCiudadDataSelected(undefined);
+        setFixedRoomTypeId('');
+        setPaqueteModalidad('flexible')
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
         setSalidas([]);
+        setSelectedServicios([])
+        setPermissionSearchTerm("")
         reset({
             nombre: '',
             tipo_paquete: '',
@@ -550,10 +584,23 @@ export default function ModulosPage() {
         setActiveTab('list');
   }
 
+  
 
   const handleGuardarNuevaData = async (dataForm: any) => {
-    console.log(selectedPermissions)
-    const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, selectedPermissions)
+    console.log(selectedServicios)
+
+    const serviciosListSelected = selectedServicios.map(s => {
+      return {
+        servicio_id: s,
+        precio: watch(`precio_personalizado_${s}`) ?? ''
+      }
+    })
+
+
+    console.log(serviciosListSelected); 
+    console.log(salidas);
+    console.log(dataServiciosList);
+    const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, serviciosListSelected, paqueteModalidad);
 
     if (destinoNoSeleccionada === undefined || !prePayload.destino_id) {
       console.log('destino no seleccionado...')
@@ -562,10 +609,12 @@ export default function ModulosPage() {
     }
 
 
-    if(selectedPermissions.length === 0){
+    if(selectedServicios.length === 0){
       handleShowToast('Debes agregar al menos un servicio', 'error');
       return;
     }
+
+    console.log(prePayload);
 
     const formData = new FormData();
 
@@ -575,20 +624,23 @@ export default function ModulosPage() {
     }
 
 
-    if(salidas.length === 0 && !watch('personalizado') 
-      && quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLocaleLowerCase() === 'terrestre'){
+    if(salidas.length === 0 && !personalizado){
       handleShowToast('Debes agregar al menos una salida', 'error');
       return;
     }
 
+
+    console.log(salidas);
+
     // Agregar el resto de campos
-    Object.keys(prePayload).forEach((key) => {
+    Object.keys(prePayload).forEach((key) => { 
       const value = prePayload[key];
       if (value !== undefined && value !== null) {
-        if (key === "salidas") {
+        if (key === "salidas" || key === 'servicios_data') {
+          console.log(value)
           // 👇 Serializamos el array de objetos
           console.log(JSON.stringify(value))
-          formData.append(key ,JSON.stringify(value));
+          formData.append(key, JSON.stringify(value));
         }else if (Array.isArray(value)) {
           value.forEach((v) => formData.append(key, v));
         } else {
@@ -597,7 +649,7 @@ export default function ModulosPage() {
       }
     });
 
-    console.log("FormData listo:", [...formData.entries()]);
+    console.log("FormData listo:", [...formData.entries()]); 
     mutate(formData);
   };
 
@@ -609,28 +661,59 @@ export default function ModulosPage() {
 
     console.log(salidas)
 
-    const salidasTemp = salidas.map((salida: any) => ({
-      fecha_salida: salida.fecha_salida_v2,
-      fecha_regreso: salida.fecha_regreso_v2,
-      precio_actual: salida.precio,
-      senia: salida.senia,
-      cupo: parseInt(salida.cupo, 10), // Entero
-      moneda_id: dataForm.moneda,
-      temporada_id: salida?.temporada_id || null, // Opcional
-    }))
+    const salidasTemp = salidas.map((salida: any) => {
+      const salActualizada: any = {
+        fecha_salida: salida.fecha_salida_v2,
+        fecha_regreso: salida.fecha_regreso_v2,
+        precio_actual: salida?.precio_actual ?? salida?.precio,
+        senia: salida.senia,
+        cupo: parseInt(salida.cupo, 10), // Entero
+        moneda_id: dataForm.moneda,
+        hoteles: salida.hoteles_ids,
+        temporada_id: salida?.temporada_id || null, // Opcional
+      };
 
+      if(salida?.precio_final)
+        salActualizada.precio_final = salida?.precio_final;
+
+      if(paqueteModalidad === 'fijo')
+        salActualizada.habitacion_fija = salida.habitacion_fija;
+      // else if(paqueteModalidad === 'flexible'){
+        
+      // }
+
+      if(propio)
+        salActualizada.ganancia = salida.ganancia;
+      else
+        salActualizada.comision = salida.comision;
+
+      return salActualizada;
+    });
+
+    
 
     console.log(salidasTemp)
+
+     const serviciosListSelected = selectedServicios.map(s => {
+      return {
+        servicio_id: s,
+        precio: watch(`precio_personalizado_${s}`) ?? ''
+      }
+    })
+
+
+    console.log(serviciosListSelected)
 
     const payload = {
       ...dataForm,
       destino_id: selectedDestinoID,
       tipo_paquete_id: tipoPaqueteSelected?.id,
-      servicios_ids: selectedPermissions,
+      servicios_data: serviciosListSelected,
       moneda_id: dataForm.moneda,
       fecha_inicio,
       fecha_fin,
-      salidas: salidasTemp
+      salidas: salidasTemp,
+      modalidad: paqueteModalidad,
     };
 
     // Limpiar campos que no deben enviarse
@@ -643,7 +726,7 @@ export default function ModulosPage() {
     delete payload.fecha_salida;
     delete payload.distribuidora;
 
-    if (watch("propio")) {
+    if (propio) {
       delete payload.distribuidora_id;
     } else {
       delete payload.cantidad_pasajeros;
@@ -655,7 +738,7 @@ export default function ModulosPage() {
       return;
     }
 
-
+    console.log(payload)
     const formData = new FormData();
 
     // ✅ Agregar imagen solo si es nueva (File)
@@ -674,13 +757,19 @@ export default function ModulosPage() {
           formData.append(key, value);
         }
       } 
-      else if (key === "salidas") {
+      else if (key === "salidas" || key === 'servicios_data') {
         // 👇 Serializamos el array de objetos
         console.log(JSON.stringify(value))
         formData.append(key ,JSON.stringify(value));
       }
       else if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(key, v));
+        // value.forEach((v) => formData.append(key, v));
+        if (value.length === 0) {
+          
+          formData.append(key, JSON.stringify([])); // 👉 se envía como "[]"
+        } else {
+          value.forEach((v) => formData.append(key, v));
+        }
       } else if (value !== undefined && value !== null) {
         formData.append(key, value as any);
       }
@@ -771,6 +860,18 @@ export default function ModulosPage() {
     }
   }, [dataAEditar, reset]);
 
+  /**
+   * RESETEO DE LOS CAMPOS DE PRECIO PERSONALIZADO
+   */
+  useEffect(() => {
+    console.log(dataAEditar)
+    if (dataAEditar?.servicios?.length) {
+      dataAEditar.servicios.forEach((servicio: any) => { 
+        setValue(`precio_personalizado_${servicio.servicio_id}`, servicio.precio ?? '');
+      });
+    }
+  }, [dataAEditar, reset, setValue]);
+
 
   const handleEditar = (data: Paquete) => {
   //   {
@@ -800,8 +901,23 @@ export default function ModulosPage() {
   //   fecha_modificacion: '2025-09-09T10:49:05+0000',
   //   numero: 1
   // }
+//    servicios: [
+    //   {
+    //     servicio_id: 9,
+    //     nombre_servicio: 'Actividades Recreativas',
+    //     precio: 12
+    //   },
+    //   { servicio_id: 8, nombre_servicio: 'Seguro de Viaje', precio: 69 }
+    // ],
 
-  const servicios_ids = data.servicios.map(servicio => servicio.id);
+    const servicios_ids = data.servicios.map((servicio: any) => {
+      console.log(servicio.precio);
+      // setTimeout(() => {
+      //   setValue(`precio_personalizado_${servicio.servicio_id}`, servicio.precio ?? '');
+      // }, 0);
+      return servicio.servicio_id;
+    });
+
     console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
@@ -812,20 +928,64 @@ export default function ModulosPage() {
       // setSelectedPersonaID(data!.persona.id)
       setTipoPaqueteSelected(data!.tipo_paquete)
       setDistribuidoraSelected(data!.distribuidora);
-      setSelectedPermissions(servicios_ids);
+      console.log(servicios_ids)
+      setSelectedServicios(servicios_ids);
+      setPaqueteModalidad(data.modalidad)
 
-    const salidas = data.salidas.map((salida: SalidaPaquete) => ({
-      id: salida.id,
-      fecha_salida_v2: salida.fecha_salida,
-      fecha_regreso_v2: salida.fecha_regreso,
-      moneda: salida.moneda.id,
-      precio: salida.precio_actual,
-      senia: salida.senia,
-      cupo: salida.cupo,
-    }))
+
+    //   salidas: [
+    //   {
+    //     id: 53,
+    //     fecha_salida: '2025-09-28',
+    //     fecha_regreso: '2025-10-04',
+    //     moneda: { id: 2, nombre: 'Dolar' },
+    //     temporada: null,
+    //     precio_actual: 3000,
+    //     precio_final: 5000,
+    //     cupo: null,
+    //     senia: 250,
+    //     activo: true,
+    //     hoteles: [ { id: 26, nombre: 'Gran Meliá Iguazú' } ]
+    //   }
+    // ],
+    // const hootels = salida.hoteles.map((hotel: any) => hotel.id);
+
+    const salidas = data.salidas.map((salida: SalidaPaquete) => {
+      const sal: any =  {
+        id: salida.id,
+        fecha_salida_v2: salida.fecha_salida,
+        fecha_regreso_v2: salida.fecha_regreso,
+        moneda: salida.moneda.id,
+        precio: salida.precio_actual,
+        precio_final: salida.precio_final,
+        senia: salida.senia,
+        cupo: salida.cupo,
+        hoteles_ids: salida.hoteles.map((hotel: any) => hotel?.id), 
+      }
+
+      console.log(data.modalidad)
+      if(data.modalidad === 'fijo'){
+        sal.habitacion_fija = salida.habitacion_fija.id;
+      }
+      else if(data.modalidad === 'flexible'){
+        // sal.ganancia = salida.ganancia;
+      }
+      
+      if(propio)
+        sal.ganancia = salida.ganancia;
+      else
+        sal.comision = salida.comision;
+      
+
+      return sal;
+    })
+
+    console.log(salidas);
 
     setSalidas(salidas);
   }
+
+  console.log(salidas)
 
   const toggleActivar = (modulo: Paquete) => {
     setOnDesactivarData(true);
@@ -851,6 +1011,11 @@ export default function ModulosPage() {
     setDataDetalle(undefined);
   }
 
+  const handleDestinoNoSeleccionada = (value: boolean | undefined) => {
+    setDestinoNoSeleccionada(value);
+  }
+
+
   useEffect(() => {
     const handler = setTimeout(() => {
       console.log('cambiando nombre')
@@ -861,10 +1026,6 @@ export default function ModulosPage() {
       clearTimeout(handler) // limpia el timeout si se sigue escribiendo
     }
   }, [nombreABuscar]);
-
-  const handleDestinoNoSeleccionada = (value: boolean | undefined) => {
-    setDestinoNoSeleccionada(value);
-  }
 
 
   useEffect(() => {
@@ -892,8 +1053,27 @@ export default function ModulosPage() {
   }, [tipoPaqueteSelected, setValue, clearErrors]);
 
 
-  const handlePermissionToggle = (permissionId: number) => {
-    setSelectedPermissions((prev) => {
+  useEffect(() => {
+    if (!propio) {
+      setValueSalida('cupo', '', { shouldValidate: false }); // Limpia cupo si no es propio
+      resetSalida({ cupo: '' }, { keepDefaultValues: true }); // Resetea solo cupo
+
+      setValueSalida('ganancia', '', { shouldValidate: false }); // Limpia cupo si no es propio
+      resetSalida({ ganancia: '' }, { keepDefaultValues: true }); // Resetea solo cupo
+    }
+    else{
+      setValueSalida('precio_desde_editable', '', { shouldValidate: false }); // Limpia cupo si no es propio
+      resetSalida({ precio_desde_editable: '' }, { keepDefaultValues: true }); // Resetea solo cupo
+
+      setValueSalida('comision', '', { shouldValidate: false }); // Limpia cupo si no es propio
+      resetSalida({ comision: '' }, { keepDefaultValues: true }); // Resetea solo cupo
+    }
+  }, [propio, setValueSalida, resetSalida]);
+
+
+
+  const handleServicioToggle = (permissionId: number) => {
+    setSelectedServicios((prev) => {
       const updated =
         prev.includes(permissionId)
           ? prev.filter((p) => p !== permissionId) // quitar
@@ -908,10 +1088,26 @@ export default function ModulosPage() {
 
    const handleOpenModal = () => {
     const monedaValue = watch('moneda');
+    if (!selectedDestinoID) {
+      handleShowToast('Debes seleccionar primero el destino', 'error');
+      return;
+    }
+
     if (!monedaValue) {
       handleShowToast('Debes seleccionar primero la moneda', 'error');
       return;
     }
+
+
+    if(quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && !watch('cantidad_pasajeros')
+      && watch('propio')){
+      handleShowToast('Debes agregar la cantidad de pasajeros', 'error');
+      return;
+    }
+      
+    if(quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre')
+        setValueSalida('cupo', watch('cantidad_pasajeros')); 
+
     setIsAddSalidaOpen(true);
   };
   
@@ -925,26 +1121,94 @@ export default function ModulosPage() {
 
 
   console.log(salidas)
+  console.log(fixedRoomTypeId)
+    console.log([...selectedHotels])
+
+  const fixedRoomTypeIdRef = useRef(fixedRoomTypeId);
+  const selectedHotelsRef = useRef(selectedHotels);
+
+  useEffect(() => {
+    fixedRoomTypeIdRef.current = fixedRoomTypeId;
+  }, [fixedRoomTypeId]);
+
+  useEffect(() => {
+    selectedHotelsRef.current = selectedHotels;
+  }, [selectedHotels]);
 
   const handleAddSalida = async (dataForm: any) => {
-    console.log(selectedHotels)
+    setValidando(true);
+    const hotelesIds = Array.from(selectedHotelsRef.current); 
+    console.log(fixedRoomTypeIdRef.current);
+    console.log(selectedHotelsRef);
+
+    if(paqueteModalidad === 'fijo'){
+      if(!fixedRoomTypeIdRef.current || !hotelesIds.length){ 
+        handleShowToast('Debes seleccionar un hotel y una habitación', 'error');
+        setValidando(false);
+        return;
+      }
+    }
+
+    console.log(selectedHotels)  
 
     console.log(dataForm);
     console.log(nuevaSalida);
 
-  
+    console.log(selectedHotels)
+    
+
+    console.log(hotelesIds)
 
     console.log(isEditMode);
     console.log(editingSalidaId);
 
     if (isEditMode && editingSalidaId) {
+  //      {
+  //   id: 46,
+  //   fecha_salida_v2: '2025-09-28',
+  //   fecha_regreso_v2: '2025-10-11',
+  //   moneda: 2,
+  //   precio: 3400,
+  //   senia: 250,
+  //   cupo: null,
+  //   hoteles_ids: [ 20, 19 ],
+  //   precio_desde_editable: 3400,
+  //   precio_hasta: '3250',
+  //   precio_hasta_editable: '',
+  //   precio_desde: '2600',
+  //   cantidadNoche: '13'
+  // }
       // 🔹 Editando habitación existente
-      const salidaEdited = {...dataForm, currency: watch('moneda')};
+      const salidaEdited: any = {...dataForm, 
+        precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
+        precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
+        hoteles_ids:hotelesIds, 
+        currency: watch('moneda')};
+
+      if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current)
+        salidaEdited.habitacion_fija = fixedRoomTypeIdRef.current;
+
+      delete salidaEdited.precio;
+      
+      delete salidaEdited.precio_desde_editable;
+      delete salidaEdited.precio_hasta_editable;
+      delete salidaEdited.precio_desde;
+      delete salidaEdited.precio_hasta;
+
+      if(!propio && !salidaEdited?.precio_final){
+        delete salidaEdited.precio_final;
+      }
+
       console.log(salidaEdited)
+
       setSalidas((prev) =>
         prev.map((salida) =>
           salida.id === editingSalidaId
-            ? { ...salida, ...salidaEdited, senia: salidaEdited.senia } // Reemplazamos los valores con los del formulario
+            ? { 
+              // ...salida,
+              ...salidaEdited, 
+              senia: salidaEdited.senia 
+            } // Reemplazamos los valores con los del formulario
             : salida
         )
       );
@@ -958,22 +1222,81 @@ export default function ModulosPage() {
   //   fecha_regreso_v2: '2025-09-27',
   //   cupo: '34'
   // }
+
+  // :25:31.761	      
+  // {
+  //   id: '1759094218438',
+  //   precio_desde: '2100',
+  //   cantidadNoche: '10',
+  //   precio_hasta: '2200',
+  //   senia: '250',
+  //   fecha_salida_v2: '2025-10-01',
+  //   fecha_regreso_v2: '2025-10-11',
+  //   cupo: '',
+  //   precio_desde_editable: '3400',
+  //   precio_hasta_editable: '',
+  //   precio_actual: '2100',
+  //   precio_final: '2200',
+  //   hoteles_ids: [ 20 ],
+  //   currency: '2'
+  // }
     
       console.log(nuevaSalida);
       console.log(dataForm)
       const salida: any = {
         id: Date.now().toString(), // ID temporal
         ...dataForm,
+        precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
+        precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
+        // precio_final: dataForm.precio_hasta,
+        hoteles_ids: hotelesIds,
         currency: watch('moneda'), // o nuevaSalida.currency
       };
 
+
+      console.log(fixedRoomTypeIdRef.current)
+      if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current)
+        salida.habitacion_fija = fixedRoomTypeIdRef.current;
+
+      delete salida.precio_desde_editable;
+      delete salida.precio_desde;
+      delete salida.precio_hasta_editable;
+      delete salida.precio_hasta;
+      if(!propio && !salida?.precio_final || paqueteModalidad === 'fijo'){
+        delete salida.precio_final;
+      }
+
+      if(propio){
+        delete salida.comision;
+      }
+      else{
+        delete salida.ganancia;
+      }
+
       console.log(salida)
+
+  //       {
+  //   id: '1759095490960',
+  //   precio_desde: '1200',
+  //   cantidadNoche: '6',
+  //   precio_hasta: '1500',
+  //   senia: '250',
+  //   fecha_salida_v2: '2025-09-28',
+  //   fecha_regreso_v2: '2025-10-04',
+  //   cupo: '45',
+  //   precio_actual: '1200',
+  //   precio_final: '1500',
+  //   hoteles_ids: [ 20, 19 ],
+  //   currency: '2'
+  // }
       setSalidas((prev) => {
         console.log(prev)
         return [...prev, salida]
       });
     }
 
+
+    setIsAddSalidaOpen(false); // 🔹 Cerrar modal inmediatamente
     // Resetear formulario
     resetSalidaForm();
   };
@@ -984,6 +1307,7 @@ export default function ModulosPage() {
 
   const resetSalidaForm = () => {
     setSelectedHotels(new Set());
+    // setSalidas([])
 
     setNuevaSalida({
       fecha_salida_v2: "",
@@ -991,19 +1315,27 @@ export default function ModulosPage() {
       precio: '',
       senia: '',
       cupo: "",
+      ganancia: '',
+      comision: '',
     })
 
     resetSalida({
       precio_desde: '',
+      cantidadNoche: '',
       precio_hasta: '',
+      precio_hasta_editable: '',
+      precio_desde_editable: '',
       senia: '',
       fecha_salida_v2: '',
-      fecha_regreso_v2: '',
-      cupo: '',
+      ganancia: '',
+      comision: '',
+      cupo: propio ? '' : undefined,
     });
     setIsAddSalidaOpen(false);
     setIsEditMode(false);
     setEditingSalidaId(null);
+    setValidando(false);
+    setFixedRoomTypeId('')
   }
   
     //   {
@@ -1014,29 +1346,78 @@ export default function ModulosPage() {
   //   cupo: 45
   // }
 
+const handleSubmitClick = useCallback(async () => {
+    if (validando) return;
+    setValidando(true); // 🔹 Deshabilitar botón inmediatamente
+    const isValid = await trigger();
+    console.log('🛑 Submit triggered'); 
+    console.log('propio:', propio);
+    console.log('Valores actuales:', getValuesSalida());
+    console.log('Errores:', errorsSalida);
+    console.log('Es válido?', isValidSalida);
+    console.log('isButtonDisabled:', validando);
+    console.log('Validación forzada:', isValid);
+    if (isValid) {
+      // Ejecutar submit en un setTimeout para no bloquear la UI
+
+      const hotelesIds = Array.from(selectedHotels);
+        console.log(fixedRoomTypeId)
+        console.log(hotelesIds)
+
+      setTimeout(() => {
+        handleSubmitSalida(handleAddSalida)();
+        
+      }, 0);
+    } else {
+      handleShowToast('Debes completar los campos requeridos', 'error');
+      setValidando(false); // 🔹 Rehabilitar si falla
+    }
+  }, [trigger, propio, getValuesSalida, errorsSalida, isValidSalida, validando, handleSubmitSalida, handleShowToast]);
+
+
+
   const handleEditSalida = (salida: any) => {
     console.log(salida);
     // Cargamos los valores en el state que controla los <Input />
-    setNuevaSalida({
-      fecha_salida_v2: salida.fecha_salida_v2,
-      // si no tienes fecha_regreso aún, usa cadena vacía para <input type="date" />
-      fecha_regreso_v2: salida.fecha_regreso_v2 ?? '',
-      precio: salida.precio,
-      cupo: salida.cupo,
-      senia: salida?.senia ?? '',
-      // moneda: salida.moneda,
-    });
+    // setNuevaSalida({
+    //   fecha_salida_v2: salida.fecha_salida_v2,
+    //   // si no tienes fecha_regreso aún, usa cadena vacía para <input type="date" />
+    //   fecha_regreso_v2: salida.fecha_regreso_v2 ?? '',
+    //   precio: salida.precio,
+    //   cupo: salida.cupo,
+    //   senia: salida?.senia ?? '',
+    //   // moneda: salida.moneda,
+    // });
+
+    console.log(propio);
 
     resetSalida({
-      ...salida
+      ...salida,
+      precio_desde_editable: salida.precio ?? salida.precio_actual,
+      precio_hasta_editable: salida?.precio_final,
+      precio_hasta: salida?.precio_final ?? '', 
+      precio_desde: salida.precio ?? salida.precio_actual
     })
 
     setEditingSalidaId(salida.id);
     setIsEditMode(true);
     setIsAddSalidaOpen(true);
 
+    console.log(salidas);
+    console.log(salida.hoteles_ids) 
+    // const hotelesIds = salida.hoteles_ids.map((hotel: any) => hotel.id);
+    console.log(salida.hoteles_ids);
+
+    setSelectedHotels(new Set(salida.hoteles_ids.map(Number)));
+
+    console.log(salida);
+    console.log(salida.moneda);
+    console.log(salida.currency); 
     // Si usas react-hook-form u otro Controller, setea también el value del select/Controller
-    setValue('moneda', salida.moneda.toString());
+    setValue('moneda', salida?.moneda?.toString() ?? salida?.currency?.toString());
+
+    if(paqueteModalidad === 'fijo')
+      setFixedRoomTypeId(salida?.habitacion_fija ?? '');
   };
 
     // FUNCIONES DE SALIDAS
@@ -1046,49 +1427,151 @@ export default function ModulosPage() {
     const fechaRegreso = watchSalida('fecha_regreso_v2');
     console.log(fechaSalida, fechaRegreso) 
 
-    console.log(rangoPrecio);
+    // console.log(rangoPrecio);
 
     useEffect(() => {
-      console.log(dataHotelesList)
-      console.log(selectedHotels);
+      // console.log(dataHotelesList)
+      console.log(selectedHotels); 
+      console.log(fechaSalida);
+      console.log(fechaRegreso);
+      console.log(dataHotelesList);
+      console.log(fixedRoomTypeId);
+      console.log([...selectedHotels].length);  
 
       // const idsSeleccionados = Array.from(selectedHotels).map(id => Number(id));
 
-      if (selectedHotels && fechaSalida && fechaRegreso && dataHotelesList) {
+      if (selectedHotels && [...selectedHotels].length && fechaSalida && fechaRegreso && dataHotelesList) {
+
+        if(fechaRegreso < fechaSalida){
+          handleShowToast('La fecha de regreso debe ser mayor a la fecha de salida', 'error');
+          return;
+        }
 
         const hotelesFiltrados = dataHotelesList?.filter((hotel: any) =>
           selectedHotels.has(hotel.id) // o idsSeleccionados.includes(hotel.id)
         );
 
-        console.log(hotelesFiltrados);
+        console.log(selectedHotels); 
+        console.log(dataHotelesList)
+        console.log(hotelesFiltrados); 
         console.log(fechaSalida, fechaRegreso)
           // { min: 1680, max: 1760, dias: 8, noches: 8 }                  
         console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso))
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
-        setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
-        setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
-        setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+        console.log(propio)
+        if(propio){
+          console.log(rangoPrecioDesdeHasta);
+          // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
+
+          
+          if(paqueteModalidad === 'flexible'){
+            setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
+            setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+          }
+          else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
+            console.log(fixedRoomTypeId);
+            console.log(hotelesFiltrados);
+            console.log(hotelesFiltrados[0].habitaciones);
+            // setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMin.toString());
+            const habitacionFiltered =  hotelesFiltrados[0].habitaciones?.filter((habitacion: any) => habitacion.id === fixedRoomTypeId)
+            console.log(habitacionFiltered);
+            console.log(habitacionFiltered[0].precio_noche);
+            console.log(rangoPrecioDesdeHasta.noches);
+            console.log(habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches);
+            setValueSalida('precio_desde', (habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches).toString());
+            setValueSalida('precio_hasta', '');
+          }
+        }
+
+      }
+
+      if(fechaSalida && fechaRegreso){
+         if(fechaRegreso < fechaSalida){
+          handleShowToast('La fecha de regreso debe ser mayor a la fecha de salida', 'error');
+          return;
+        }
+        setValueSalida('cantidadNoche', calculateNoches(fechaSalida, fechaRegreso).toString());
       }
       // 👇 dependencias simples, sin llamadas complejas
-    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList]);
+    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList, fixedRoomTypeId]);
+
 
     //FUCNIONES DE HOTELES DE LAS SALIDAS
-    const handleHotelToggle = (hotelId: string) => {
-      const newSelected = new Set(selectedHotels)
-      if (newSelected.has(hotelId)) {
-        newSelected.delete(hotelId)
-        const newPrices = { ...hotelPrices }
-        delete newPrices[hotelId]
-        setHotelPrices(newPrices)
-      } else {
-        newSelected.add(hotelId)
-        setHotelPrices({
-          ...hotelPrices,
-          [hotelId]: { single: 0, doble: 0, triple: 0 },
-        })
+    // FUNCIONES DE HOTELES DE LAS SALIDAS
+  const handleHotelToggle = (hotelId: string, hotel: any) => {
+    console.log(hotel);
+
+    if (paqueteModalidad === 'fijo') {
+      setFixedRoomTypeId('');
+
+      // Solo un hotel permitido
+      if (propio) {
+        if (hotel.habitaciones.length === 0) {
+          handleShowToast(
+            'Se debe cargar las habitaciones a este hotel para este tipo de paquete',
+            'error'
+          );
+          return;
+        }
+
+        const tienePrecios = hotel.habitaciones.some(
+          (habitacion: any) => !habitacion.precio_noche
+        );
+
+        if (tienePrecios) {
+          handleShowToast(
+            'Se debe cargar los precios a todas habitaciones de este hotel para este tipo de paquete',
+            'error'
+          );
+          return;
+        }
       }
-      setSelectedHotels(newSelected)
+
+      // Selección única
+      setSelectedHotels(new Set([hotelId]));
+      setHotelPrices({
+        [hotelId]: { single: 0, doble: 0, triple: 0 },
+      });
+    } else {
+      // Modo flexible: selección múltiple
+      const newSelected = new Set(selectedHotels);
+      const newPrices = { ...hotelPrices };
+
+      if (newSelected.has(hotelId)) {
+        newSelected.delete(hotelId);
+        delete newPrices[hotelId];
+      } else {
+        if (propio) {
+          if (hotel.habitaciones.length === 0) {
+            handleShowToast(
+              'Se debe cargar las habitaciones a este hotel para este tipo de paquete',
+              'error'
+            );
+            return;
+          }
+
+          const tienePrecios = hotel.habitaciones.some(
+            (habitacion: any) => !habitacion.precio_noche
+          );
+
+          if (tienePrecios) {
+            handleShowToast(
+              'Se debe cargar los precios a todas habitaciones de este hotel para este tipo de paquete',
+              'error'
+            );
+            return;
+          }
+        }
+
+        newSelected.add(hotelId);
+        newPrices[hotelId] = { single: 0, doble: 0, triple: 0 };
+      }
+
+      setSelectedHotels(newSelected);
+      setHotelPrices(newPrices);
     }
+  };
+
 
     //FUCNIONES DE HOTELES DE LAS SALIDAS
 
@@ -1108,6 +1591,7 @@ export default function ModulosPage() {
         </div>
       );
     };
+
 
   return (
     <>
@@ -1632,6 +2116,7 @@ export default function ModulosPage() {
                                 render={({ field }) => (
                                   <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                     <Select
+                                      disabled={!!dataAEditar}
                                       value={field.value}
                                       onValueChange={(value) => {
                                         field.onChange(value)
@@ -1727,7 +2212,7 @@ export default function ModulosPage() {
                                 render={({ field }) => {
                                   const isDisabled =
                                     quitarAcentos(tipoPaqueteSelected?.nombre.toLowerCase() ?? "") ===
-                                    "aereo";
+                                    "aereo" || !!dataAEditar;
 
                                   return (
                                     <div className="flex items-center gap-3 cursor-pointer m-0">
@@ -1762,6 +2247,7 @@ export default function ModulosPage() {
                               render={({ field }) => (
                                 <div className="flex items-center gap-3 cursor-pointer m-0">
                                   <Checkbox
+                                    disabled={!!dataAEditar}
                                     id="personalizado"
                                     checked={field.value}
                                     onCheckedChange={(checked) => field.onChange(!!checked)}
@@ -1775,10 +2261,10 @@ export default function ModulosPage() {
 
 
                           {/* CANTIDAD PASAJEROS */}
-                          {watch("propio")  && 
+                          {propio  && 
                             <div className="space-y-2">
                               <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
-                                Cantidad de pasajeros *
+                                Cantidad máxima *
                               </Label>
                               <Input
                                 id="cantidad_pasajeros"
@@ -1804,7 +2290,7 @@ export default function ModulosPage() {
 
 
                           {/* LISTADO DE DISTRIBUIDORA */}
-                          { !watch("propio") && 
+                          { !propio && 
                             <div className="space-y-2">
                               <Label htmlFor="distribuidora_id" className="text-gray-700 font-medium">
                                 Distribuidora *
@@ -1812,11 +2298,12 @@ export default function ModulosPage() {
 
                               {isFetchingDistribuidora && (
                                 <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
-                                  <Select>
-                                    <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
-                                    <div className="w-full flex items-center justify-center">
-                                      <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                                    </div>
+                                  <Select >
+                                    <SelectTrigger 
+                                        className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
+                                      <div className="w-full flex items-center justify-center">
+                                        <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                                      </div>
                                     </SelectTrigger>
                                   </Select>
                                 </div>
@@ -1831,6 +2318,7 @@ export default function ModulosPage() {
                                     <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                       <Select
                                         value={field.value}
+                                        disabled={!!dataAEditar}
                                         onValueChange={(value) => {
                                           field.onChange(value)
                                           if (value) {
@@ -2114,16 +2602,16 @@ export default function ModulosPage() {
                                 </div>
 
                                 
-                                {selectedPermissions.length > 0 && (
+                                {selectedServicios.length > 0 && (
                                   <div className="flex items-center gap-2 mb-3">
                                     <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                                      {selectedPermissions.length} servicios seleccionados
+                                      {selectedServicios.length} servicios seleccionados
                                     </Badge>
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => setSelectedPermissions([])}
+                                      onClick={() => setSelectedServicios([])}
                                       className="text-red-600 border-red-200 hover:bg-red-50"
                                     >
                                       <X className="h-3 w-3 mr-1" />
@@ -2150,27 +2638,95 @@ export default function ModulosPage() {
                                           className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
                                                     items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
                                                     border border-gray-200
-                                                    ${selectedPermissions.includes(servicio.id) 
+                                                    ${selectedServicios.includes(servicio.id) 
                                                       ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
                                                       : ''}`}
                                         >
-                                          <div className="flex items-start w-full">
-                                            <div className="flex-shrink-0 mr-3 mt-0.5">
-                                              <Checkbox
-                                                id={`servicio-${servicio.id}`}
-                                                checked={selectedPermissions.includes(servicio.id)}
-                                                onCheckedChange={() => handlePermissionToggle(servicio.id)}
-                                              />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                              <Label
-                                                htmlFor={`servicio-${servicio.id}`}
-                                                className="text-sm font-medium text-gray-900 cursor-pointer block"
-                                              >
-                                                {servicio.nombre}
-                                              </Label>
-                                              <p className="text-xs text-gray-500 mt-1">{servicio.descripcion}</p>
-                                            </div>
+                                          <div className="flex items-center justify-center w-full">
+                                              <div className="flex items-start w-full">
+                                                <div className="flex-shrink-0 mr-3 mt-0.5">
+                                                  <Checkbox
+                                                    id={`servicio-${servicio.id}`}
+                                                    checked={selectedServicios.includes(servicio.id)}
+                                                    onCheckedChange={() => handleServicioToggle(servicio.id)}
+                                                  />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <Label
+                                                    htmlFor={`servicio-${servicio.id}`}
+                                                    className="text-sm font-medium text-gray-900 cursor-pointer block"
+                                                  >
+                                                    {servicio.nombre}
+                                                    {selectedServicios.includes(servicio.id) &&
+                                                      <div className="col-span-2 flex gap-2 mt-2">  
+                                                        <div>
+                                                          <Input
+                                                              id="precio_base"
+                                                              type="text"
+                                                              value={servicio?.precio}
+                                                              disabled
+                                                              {...register('precio_base', )
+                                                                }
+                                                                placeholder="150"
+                                                                className={`h-8 flex-1 border-2 border-blue-200 focus:border-blue-500
+                                                                  disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed`}
+                                                            />
+                                                            <Label className="block text-xs font-light text-gray-700 mb-1">
+                                                              Precio por defecto
+                                                            </Label>
+                                                        </div>
+                                                            
+                                                        <div>
+                                                          <Controller
+                                                            name={`precio_personalizado_${servicio.id}`}   // 🔹 campo único por servicio
+                                                            control={control}
+                                                            defaultValue={''}
+                                                            rules={{
+                                                              validate: (value) => {
+                                                                // ⚡ Solo validamos si tiene un valor
+                                                                if (value !== null && value !== undefined && value !== '' && isNaN(Number(value))) {
+                                                                  return 'Valor inválido';
+                                                                }
+                                                                return true;
+                                                              },
+                                                            }}
+                                                            render={({ field, fieldState: { error } }) => (
+                                                              <div className="flex flex-col">
+                                                                <NumericFormat
+                                                                  value={field.value ?? ''} 
+                                                                  onValueChange={(values) => {
+                                                                    field.onChange(values.floatValue ?? null);
+                                                                  }}
+                                                                  onBlur={field.onBlur}
+                                                                  thousandSeparator="."
+                                                                  decimalSeparator=","
+                                                                  placeholder="50 $"
+                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                    error
+                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                      : 'border-blue-200 focus:border-blue-500'
+                                                                  }`}
+                                                                />
+                                                                {error && (
+                                                                  <span className="text-red-400 text-xs mt-1">{error.message}</span>
+                                                                )}
+                                                              </div>
+                                                            )}
+                                                          />
+
+
+                                                          <Label className="block text-xs font-light text-gray-700 mb-1">
+                                                            Precio personalizado
+                                                          </Label>
+                                                        </div>
+                                                      </div>
+                                                    }
+                                                  </Label>
+                                                  {/* <p className="text-xs text-gray-500 mt-1">{servicio.descripcion}</p> */}
+                                                </div>
+
+                                              </div>
+                                              <span onClick={() => handleServicioToggle(servicio.id)}><CirclePlus className="text-blue-400" /></span>
                                           </div>
                                         </div>
                                       ))}
@@ -2212,20 +2768,20 @@ export default function ModulosPage() {
                                           servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
                                       )
                                       const allFilteredSelected = filteredPermissions.every((p: any) =>
-                                        selectedPermissions.includes(p.id),
+                                        selectedServicios.includes(p.id),
                                       )
 
                                       console.log('allFilteredSelected: ', allFilteredSelected )
 
                                       if (allFilteredSelected) {
-                                        setSelectedPermissions((prev) =>
+                                        setSelectedServicios((prev) =>
                                           prev.filter((id) => !filteredPermissions.map((p: any) => p.id).includes(id)),
                                         )
                                       } else {
                                         const newSelections = filteredPermissions
                                           .map((p:any) => p.id)
-                                          .filter((id:any) => !selectedPermissions.includes(id))
-                                        setSelectedPermissions((prev) => [...prev, ...newSelections])
+                                          .filter((id:any) => !selectedServicios.includes(id))
+                                        setSelectedServicios((prev) => [...prev, ...newSelections])
                                       }
                                     }}
                                     className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50"
@@ -2236,321 +2792,596 @@ export default function ModulosPage() {
                                         (servicio: any) =>
                                           servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
                                       )
-                                      .every((p: any) => selectedPermissions.includes(p.id))
+                                      .every((p: any) => selectedServicios.includes(p.id))
                                       ? "Deseleccionar todos"
                                       : "Seleccionar todos"}{" "}
                                     
                                   </Button>
 
-                                  {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
+                                  {/* {JSON.stringify(selectedServicios)}
+                                  {JSON.stringify(onGuardar)} */}
+                                  {propio && onGuardar && selectedServicios.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
                                 </div>
 
-                                {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && 
+                                <div className="bg-white rounded-lg shadow-md p-6">
+                                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Modalidad de Paquete</h2>
+                                  <div className="grid md:grid-cols-2 gap-4">
+                                    <div
+                                      onClick={() => {
+                                        if(dataAEditar)
+                                          return;
+
+                                        setPaqueteModalidad('flexible')
+                                      }}
+                                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                                        paqueteModalidad === 'flexible' 
+                                          ? 'border-blue-500 bg-blue-50' 
+                                          : 'border-gray-200 hover:border-gray-300'
+                                      }  ${(dataAEditar && paqueteModalidad === 'flexible') ? 'opacity-45' : 'opacity-80'} `}
+                                    >
+                                      <div className="flex items-center mb-2">
+                                        <Star className="w-5 h-5 text-blue-600 mr-2" />
+                                        <span className="font-medium text-gray-900">Paquete Flexible</span>
+                                      </div>
+                                      <p className="text-sm text-gray-600">
+                                        Múltiples opciones de hotel y habitación. El cliente elige al reservar.
+                                      </p>
+                                    </div>
+
+                                    <div
+                                      onClick={() => {
+                                        if(dataAEditar)
+                                          return;
+                                        
+                                        setPaqueteModalidad('fijo')
+                                      }}
+                                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all 
+                                        ${paqueteModalidad === 'fijo' 
+                                          ? 'border-orange-500 bg-orange-50' 
+                                          : 'border-gray-200 hover:border-gray-300'
+                                      }  ${(dataAEditar && paqueteModalidad === 'fijo') ? 'opacity-45' : 'opacity-80'} `}
+                                    >
+                                      <div className="flex items-center mb-2">
+                                        <Tag className="w-5 h-5 text-orange-600 mr-2" />
+                                        <span className="font-medium text-gray-900">Promoción Especial</span>
+                                      </div>
+                                      <p className="text-sm text-gray-600">
+                                        Hotel y habitación predefinidos con precio fijo.
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' &&  */}
                                    <Card className="mt-8">
-                                    <CardHeader>
-                                      <div className="flex items-center justify-between">
-                                        <div>
-                                          <CardTitle>Gestión de Salidas</CardTitle>
-                                          <CardDescription>Administre las salidas y sus tarifas</CardDescription>
-                                          {onGuardar && 
-                                            quitarAcentos(tipoPaqueteSelected?.nombre ?? '').toLowerCase() === 'terrestre' &&
-                                            !watch('personalizado')
-                                            && 
-                                            salidas.length === 0 &&
-                                            <p className="text-red-400">Debes agregar al menos una salida</p>
-                                          }
-                                        </div>
-                                        <Dialog 
-                                        open={isAddRoomOpen}
-                                          onOpenChange={(open) => {
-                                            if (!open) resetSalidaForm()
-                                            setIsAddSalidaOpen(open)
-                                          }}
-                                        >
-                                           {/* <DialogTrigger asChild> */}
-                                                <Button
-                                                  type="button"
-                                                  className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                                                  onClick={handleOpenModal} // 👈 validación antes de abrir
-                                                >
-                                                  <Plus className="h-4 w-4 mr-2" />
-                                                  Agregar Salidas
-                                                </Button>
-                                            {/* </DialogTrigger> */}
-                                          <DialogContent className="sm:max-w-[850px] max-h-[90vh]">
-                                            <form id="salidaForm" 
-                                             onSubmit={(e) => {
-                                                  e.stopPropagation(); // evita que el submit burbujee al form padre
-                                                  handleSubmitSalida(handleAddSalida)(e);
-                                                }}>
-                                              <DialogHeader>
-                                                <DialogTitle>Agregar Nueva Salida</DialogTitle>
-                                                <DialogDescription>
-                                                  Complete los datos de la nueva salida para agregarla al al paquete.
-                                                </DialogDescription>
-                                              </DialogHeader>
-                                              <div className="grid gap-4 py-4">
-                                                <div className="grid grid-cols-2 items-center gap-4">
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
-                                                        <Input
-                                                          type="date"
-                                                          id="fecha_salida_v2"
-                                                          {...registerSalida('fecha_salida_v2', { required: true })}
-                                                          className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
-                                                              'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                        />
-                                                  </div>
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
-                                                        <Input
-                                                          type="date"
-                                                          id="fecha_regreso_v2"
-                                                          {...registerSalida('fecha_regreso_v2', {
-                                                            required: true, 
-                                                          })
-                                                          }
-                                                          className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
-                                                              'border-2 border-red-200 focus:border-red-500': 'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                        />
-                                                  </div>
-                                                </div>
+                                      <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <CardTitle>Gestión de Salidas</CardTitle>
+                                            <CardDescription>Administre las salidas y sus tarifas</CardDescription>
+                                            {onGuardar && 
+                                              quitarAcentos(tipoPaqueteSelected?.nombre ?? '').toLowerCase() === 'terrestre' &&
+                                              !personalizado
+                                              && 
+                                              salidas.length === 0 &&
+                                              <p className="text-red-400">Debes agregar al menos una salida</p>
+                                            }
+                                          </div>
+                                          <Dialog 
+                                            open={isAddSalidaOpen}
+                                              onOpenChange={(open) => {
+                                                if (!open) resetSalidaForm()
+                                                setIsAddSalidaOpen(open)
+                                              }}
+                                            >
+                                              <Button
+                                                type="button"
+                                                className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                onClick={handleOpenModal} // 👈 validación antes de abrir
+                                              >
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Agregar Salidas
+                                              </Button>
+                                              <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-hidden p-0">
+                                                <div className="max-h-[90vh] overflow-y-auto p-6">
+                                                    <form 
+                                                        id="salidaForm" 
+                                                        onSubmit={async (e) => {
+                                                          e.preventDefault();
+                                                          e.stopPropagation();
+                                                          handleSubmitClick()
+                                                        }}
+                                                      >
+              
+                                                    <DialogHeader>
+                                                      <DialogTitle>Agregar Nueva Salida</DialogTitle>
+                                                      <DialogDescription>
+                                                        Complete los datos de la nueva salida para agregarla al al paquete.
+                                                      </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="grid gap-4 py-4">
+                                                        <div className="bg-white rounded-lg shadow-md p-6">
+                                                          <h2 className="text-lg font-semibold text-gray-900 mb-4">Información de Salidas</h2>
+                                                            <div className="grid grid-cols-2 items-center gap-4">
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label className="text-sm text-gray-600 font-medium">Fecha Salida *</Label>
+                                                                    <Input
+                                                                      type="date"
+                                                                      id="fecha_salida_v2"
+                                                                      {...registerSalida('fecha_salida_v2', { required: true })}
+                                                                      className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
+                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
+                                                                          'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                                    />
+                                                              </div>
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label className="text-sm text-gray-600 font-medium">Fecha Regreso *</Label>
+                                                                    <Input
+                                                                      type="date"
+                                                                      id="fecha_regreso_v2"
+                                                                      {...registerSalida('fecha_regreso_v2', {
+                                                                        required: true, 
+                                                                      })
+                                                                      }
+                                                                      className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
+                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none': 
+                                                                          'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                                    />
+                                                              </div>
+                                                            </div>
 
-                                                <div className="grid grid-cols-2 items-center gap-4">
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label htmlFor="precio_desde" className="text-right">
-                                                        Precio Desde * 
-                                                      </Label>
-                                                      <div className="col-span-3 flex gap-2">
-                                                          <Input
-                                                            id="precio_desde"
-                                                            type="text"
-                                                            disabled
-                                                            {...registerSalida('precio_desde', {
-                                                              required: true, 
-                                                              })
-                                                            }
-                                                            placeholder="2000"
-                                                            className={`flex-1 ${errorsSalida?.precio_desde?.type === 'required' ? 
-                                                                'border-2 border-red-200 focus:border-red-500': 
-                                                                'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
-                                                          />
-                                                      </div>
-                                                  </div>
+                                                            <div className="grid grid-cols-2 items-center gap-4 pt-4">
 
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label htmlFor="precio_hasta" className="text-right">
-                                                        Precio Hasta * 
-                                                      </Label>
-                                                      <div className="col-span-3 flex gap-2">
-                                                          <Input
-                                                            id="precio_hasta"
-                                                            type="text"
-                                                            disabled
-                                                            {...registerSalida('precio_hasta', {
-                                                              required: true, 
-                                                              })
-                                                            }
-                                                            placeholder="2000"
-                                                            className={`flex-1 ${errorsSalida?.precio_hasta?.type === 'required' ? 
-                                                                'border-2 border-red-200 focus:border-red-500': 
-                                                                'border-2 border-emerald-200 focus:border-emerald-800 disabled:text-emerald-900'}`}
-                                                          />
-                                                      </div>
-                                                  </div>
+                                                              {/* MONTO SEÑA */}
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label htmlFor="senia" className="text-gray-700 font-medium">
+                                                                  Seña *
+                                                                </Label>
+                                                                <div className="col-span-3 flex gap-2">
+                                                                  <Input
+                                                                    id="senia"
+                                                                    type="text"
+                                                                    {...registerSalida('senia', {
+                                                                        required: true, })
+                                                                      }
+                                                                      placeholder="150"
+                                                                      className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 
+                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
+                                                                          'border-2 border-blue-200 focus:border-blue-500'}`}
+                                                                  />
+                                                                </div>
+                                                                
+                                                              </div>  
 
-                                                  {/* MONTO SEÑA */}
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="senia" className="text-gray-700 font-medium">
-                                                      Seña *
-                                                    </Label>
-                                                    <div className="col-span-3 flex gap-2">
-                                                      <Input
-                                                        id="senia"
-                                                        disabled
-                                                        type="text"
-                                                        {...registerSalida('senia', {
-                                                            required: true, })
-                                                          }
-                                                          placeholder="150"
-                                                          className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 'border-2 border-red-200 focus:border-red-500':
-                                                              'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                      />
-                                                    </div>
-                                                    
-                                                  </div>  
+                                                            {propio &&
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                <Label htmlFor="cupo" className="text-right">
+                                                                  Cupo *
+                                                                </Label>
+                                                                <div className="col-span-3 flex gap-2">
+                                                                  <Input
+                                                                    id="cupo"
+                                                                    type="text"
+                                                                    placeholder="46"
+                                                                    {...registerSalida('cupo', {
+                                                                      required: propio ? 'El cupo es requerido' : false, // 🔹 Condicional
+                                                                      validate: propio
+                                                                        ? (value) => {
+                                                                            const cantidadPasajerosTemp = cantidadPasajeros || 0;
+                                                                            return Number(value) <= cantidadPasajerosTemp || `No puede ser mayor que ${cantidadPasajerosTemp}`;
+                                                                          }
+                                                                        : undefined,
+                                                                    })}
+                                                                    className={`flex-1 border-2 focus:outline-none ${
+                                                                      errorsSalida?.cupo
+                                                                        ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                        : 'border-blue-200 focus:border-blue-500'
+                                                                    }`}
+                                                                  />
+                                                                </div>
+                                                                {/* Mostrar mensaje de error */}
+                                                                {/* {errorsSalida?.cupo && (
+                                                                  <span className="text-red-500 text-sm col-span-4">
+                                                                    {errorsSalida.cupo.message as string}
+                                                                  </span>
+                                                                )} */}
+                                                              </div>
 
-                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                      <Label htmlFor="cupo" className="text-right">
-                                                        Cupo * 
-                                                      </Label>
-                                                      <div className="col-span-3 flex gap-2">
-                                                          <Input
-                                                            id="cupo"
-                                                            type="text"
-                                                            {...registerSalida('cupo', { required: true })}
-                                                            placeholder="46"
-                                                            className={`flex-1 ${errorsSalida?.cupo?.type === 'required' ? 'border-2 border-red-200 focus:border-red-500': 
-                                                              'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                          />
-                                                      </div>
-                                                  </div>
-                                                </div>
-                                              
+                                                            } 
 
-                                               <Card className="bg-gray-50">
-                                                    <CardHeader>
-                                                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                                                        <Building2 className="w-5 h-5 text-primary" />
-                                                        Hoteles y Precios
-                                                      </h3>
-                                                      <p className="text-sm text-muted-foreground">
-                                                        Selecciona los hoteles disponibles y configura los precios por tipo de habitación
-                                                      </p>
-                                                    </CardHeader>
-                                                    <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
-                                                      {dataHotelesList && dataHotelesList?.map((hotel: any) => (
-                                                        <Card
-                                                            key={hotel.hotelId}
-                                                            className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
-                                                          >
-                                                            {/* bg-primary/5 border-primary/30" : "bg-background */}
-                                                          <CardContent className="">
-                                                            <div className="space-y-4">
-                                                              <div className="flex items-center space-x-3 ">
-                                                                <Checkbox
-                                                                  
-                                                                  id={hotel.id}
-                                                                  checked={selectedHotels.has(hotel.id)}
-                                                                  onCheckedChange={() => handleHotelToggle(hotel.id)}
-                                                                />
-                                                                <div className="flex-1">
-                                                                  <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
-                                                                    {hotel.nombre}
+
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label htmlFor="precio_desde" className="text-right">
+                                                                    Precio Desde * 
                                                                   </Label>
-                                                                  <div className="flex items-center gap-4 mt-1">
-                                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
-                                                                      {renderStars(hotel.estrellas)}
-                                                                    </Badge>
-                                                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                      <MapPin className="w-3 h-3" />
-                                                                      {/* <span>{hotel.ubicacion}</span> */}
-                                                                      <span>{hotel.direccion}</span>
-                                                                    </div>
+
+                                                                  {propio ? 
+                                                                    <div className="text-2xl font-bold text-blue-600">
+                                                                      {formatearSeparadorMiles.format(+(precioDesde ?? 0))}
+                                                                    </div> :
+
+                                                                    <div className="col-span-3 flex gap-2">
+                                                                    <Input
+                                                                      id="precio_desde_editable"
+                                                                      type="text"
+                                                                      {...registerSalida('precio_desde_editable', {
+                                                                          required: true, })
+                                                                        }
+                                                                        placeholder="150"
+                                                                        className={`flex-1 h-auto py-2 ${
+                                                                          errorsSalida?.precio_desde_editable
+                                                                            ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
+                                                                            : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
+                                                                        }`}
+                                                                    />
                                                                   </div>
+                                                                  }
+                                                              </div>
+
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label htmlFor="precio_hasta" className="text-right">
+                                                                    Precio Hasta {propio && <span>*</span>} 
+                                                                  </Label>
+
+                                                                  {propio ? 
+                                                                    <div className="text-2xl font-bold text-blue-600 flex">
+                                                                      {
+                                                                        paqueteModalidad === 'flexible' ? 
+                                                                          formatearSeparadorMiles.format(+(precioHasta ?? 0)) :
+                                                                          <Badge
+                                                                            className="bg-gray-100 text-gray-700 border-gray-200">
+                                                                            No aplica
+                                                                          </Badge>
+                                                                      }
+                                                                    </div> : 
+
+                                                                    <div className="col-span-3 flex gap-2">
+                                                                      <Input
+                                                                        id="precio_hasta_editable"
+                                                                        type="text"
+                                                                        {...registerSalida('precio_hasta_editable', {
+                                                                            required: propio, })
+                                                                          }
+                                                                          placeholder=""
+                                                                          className={`flex-1 h-auto py-2 ${
+                                                                            errorsSalida?.precio_hasta_editable
+                                                                              ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
+                                                                              : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
+                                                                          }`}
+                                                                      />
+                                                                    </div>
+                                                                  }
+                                                              </div>
+
+                                                              <div className="grid grid-cols-4 items-center gap-4">
+                                                                  <Label htmlFor="cantidadNoche" className="text-right">
+                                                                    Cantidad noches 
+                                                                  </Label>
+                                                                <div className="text-2xl font-bold text-blue-600">
+                                                                  {cantidadNoche ? cantidadNoche : 0}
                                                                 </div>
                                                               </div>
 
-                                                              {selectedHotels.has(hotel.id) && (
-                                                                <div className="pl-6 border-l-2 border-emerald-200">
-                                                                  <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                                                                    Precios por tipo de habitación:
-                                                                  </h4>
 
-                                                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                                    {hotel?.habitaciones?.length === 0 && 
-                                                                        <p className="text-sm font-medium text-muted-foreground">
-                                                                          No tiene habitaciones asignadas
-                                                                        </p>}
-                                                                    {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
-                                                                      <div key={habitacion.id} className="space-y-2">
-                                                                        <Label className="text-sm flex items-center gap-2">
-                                                                          {getRoomIcon(habitacion.tipo)}
-                                                                          {getRoomTypeLabel(habitacion.tipo)}
-                                                                        </Label>
-                                                                        
-                                                                        <div className="relative">
-                                                                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                                                          <Input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            step="0.01"
-                                                                            placeholder="0.00"
-                                                                            className="pl-10"
-                                                                            disabled
-                                                                            value={habitacion?.precio_noche ?? ''}
-                                                                          />
-                                                                        </div>
+                                                               {/* PORCENTAJE DE GANANCIA */}
+                                                               {propio &&
+                                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                                      <Label htmlFor="ganancia" className="text-gray-700 font-medium">
+                                                                        Porcentaje de ganancia *
+                                                                      </Label>
+                                                                      <div className="col-span-3 flex gap-2">  
+                                                                        <Controller
+                                                                          name="ganancia"
+                                                                          control={controlSalida} // <-- usa el control correcto de tu form de salidas
+                                                                          rules={{
+                                                                            required: 'Debes completar este campo',
+                                                                            validate: (value) => {
+                                                                              // valor puede ser number | null
+                                                                              if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                                return 'Valor inválido';
+                                                                              }
+                                                                              return true;
+                                                                            },
+                                                                          }}
+                                                                            render={({ field, fieldState: { error } }) => (
+                                                                              <div className="flex flex-col">
+                                                                                <NumericFormat
+                                                                                  value={field.value ?? ''}                     // muestra vacío si no hay valor
+                                                                                  onValueChange={(values) => {
+                                                                                    // values.floatValue es number | undefined
+                                                                                    field.onChange(values.floatValue ?? null); // guarda number o null
+                                                                                  }}
+                                                                                  onBlur={field.onBlur}
+                                                                                  thousandSeparator="."
+                                                                                  decimalSeparator=","
+                                                                                  decimalScale={1}
+                                                                                  fixedDecimalScale
+                                                                                  suffix=" %"
+                                                                                  placeholder="5%, 10%, 15%, etc."
+                                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                                    error
+                                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                                      : 'border-blue-200 focus:border-blue-500'
+                                                                                  }`}
+                                                                                />
+                                                                                {/* {error && (
+                                                                                  <span className="text-red-400 text-sm mt-1">
+                                                                                    {error.message}
+                                                                                  </span>
+                                                                                )} */}
+                                                                            </div>
+                                                                          )}
+                                                                        />
                                                                       </div>
-                                                                    ))}
+                                                                  </div>  
+                                                               }
+
+
+                                                               {/* PORCENTAJE DE COMISION */}
+                                                               {!propio &&
+                                                                  <div className="grid grid-cols-4 items-center gap-4">
+                                                                      <Label htmlFor="comision" className="text-gray-700 font-medium">
+                                                                        Porcentaje de comision *
+                                                                      </Label>
+                                                                      <div className="col-span-3 flex gap-2">  
+                                                                        <Controller
+                                                                          name="comision"
+                                                                          control={controlSalida} // <-- usa el control correcto de tu form de salidas
+                                                                          rules={{
+                                                                            required: 'Debes completar este campo',
+                                                                            validate: (value) => {
+                                                                              // valor puede ser number | null
+                                                                              if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                                return 'Valor inválido';
+                                                                              }
+                                                                              return true;
+                                                                            },
+                                                                          }}
+                                                                            render={({ field, fieldState: { error } }) => (
+                                                                              <div className="flex flex-col">
+                                                                                <NumericFormat
+                                                                                  value={field.value ?? ''}                     // muestra vacío si no hay valor
+                                                                                  onValueChange={(values) => {
+                                                                                    // values.floatValue es number | undefined
+                                                                                    field.onChange(values.floatValue ?? null); // guarda number o null
+                                                                                  }}
+                                                                                  onBlur={field.onBlur}
+                                                                                  thousandSeparator="."
+                                                                                  decimalSeparator=","
+                                                                                  decimalScale={1}
+                                                                                  fixedDecimalScale
+                                                                                  suffix=" %"
+                                                                                  placeholder="5%, 10%, 15%, etc."
+                                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                                    error
+                                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                                      : 'border-blue-200 focus:border-blue-500'
+                                                                                  }`}
+                                                                                />
+                                                                                {/* {error && (
+                                                                                  <span className="text-red-400 text-sm mt-1">
+                                                                                    {error.message}
+                                                                                  </span>
+                                                                                )} */}
+                                                                            </div>
+                                                                          )}
+                                                                        />
+                                                                      </div>
+                                                                  </div>  
+                                                               }
+                                                                
+
+                                                            </div>
+                                                        </div>    
+                                                  
+
+                                                        <Card className="bg-gray-50">
+                                                              <CardHeader>
+                                                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                                  <Building2 className="w-5 h-5 text-primary" />
+                                                                  Hoteles y Precios
+                                                                </h3>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                  Selecciona los hoteles disponibles y configura los precios por tipo de habitación
+                                                                </p>
+
+                                                                {paqueteModalidad === 'fijo' && 
+                                                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                                                  <div className="flex items-center text-orange-800">
+                                                                    <AlertCircle className="w-5 h-5 mr-2" />
+                                                                    <span className="font-medium text-sm">
+                                                                      Selecciona un hotel y tipo de habitación específicos para esta paquete
+                                                                    </span>
                                                                   </div>
                                                                 </div>
-                                                              )}
-                                                            </div>
-                                                          </CardContent>
-                                                        </Card>
-                                                      ))}
-                                                    </CardContent>
-                                                  </Card>
-                                              </div>
+                                                                }
+                                                              </CardHeader>
+                                                              <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
+                                                                {dataHotelesList && dataHotelesList?.map((hotel: any) => (
+                                                                  <Card
+                                                                      key={hotel.hotelId}
+                                                                      className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
+                                                                    >
+                                                                      {/* bg-primary/5 border-primary/30" : "bg-background */}
+                                                                    <CardContent className="">
+                                                                      <div className="space-y-4">
+                                                                        <div className="flex items-center space-x-3 ">
+                                                                          <Checkbox
+                                                                            
+                                                                            id={hotel.id}
+                                                                            checked={selectedHotels.has(hotel.id)}
+                                                                            onCheckedChange={() => handleHotelToggle(hotel.id, hotel)}
+                                                                          />
+                                                                          <div className="flex-1">
+                                                                            <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
+                                                                              {hotel.nombre}
+                                                                            </Label>
+                                                                            <div className="flex items-center gap-4 mt-1">
+                                                                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
+                                                                                {renderStars(hotel.estrellas)}
+                                                                              </Badge>
+                                                                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                                <MapPin className="w-3 h-3" />
+                                                                                {/* <span>{hotel.ubicacion}</span> */}
+                                                                                <span>{hotel.direccion}</span>
+                                                                              </div>
+                                                                            </div>
+                                                                          </div>
+                                                                        </div>
 
-                                              
-                                              <DialogFooter>
-                                                <Button type="button" variant="outline" className="cursor-pointer" 
-                                                    onClick={resetSalidaForm}
-                                                    >
-                                                  Cancelar
-                                                </Button>
-                                                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                                                    >
-                                                      Agregar Salida
-                                                </Button>
-                                              </DialogFooter>
-                                              </form>
-                                            </DialogContent>
-                                        </Dialog>
-                                      </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="rounded-md border">
-                                        <Table>
-                                          <TableHeader>
-                                            <TableRow>
-                                              <TableHead>Fecha Salida</TableHead>
-                                              <TableHead>Fecha Regreso</TableHead>
-                                              <TableHead>Precio</TableHead>
-                                              <TableHead>Seña</TableHead>
-                                              <TableHead>Cupo</TableHead>
-                                              <TableHead className="text-right">Acciones</TableHead>
-                                            </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                            {salidas.map((salida: any) => (
-                                              <TableRow key={salida.id}>
-                                                <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
-                                                <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
-                                                <TableCell>{formatearSeparadorMiles.format(salida.precio)}</TableCell>
-                                                <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
-                                                <TableCell>
-                                                  {salida.cupo}
-                                                  {/* {dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == salida.currency)[0].codigo }) */}
-                                                </TableCell>
-                                                
-                                                <TableCell className="text-right">
-                                                  <div className="flex items-center justify-end gap-2">
-                                                    <Button type="button" variant="ghost" size="sm" 
-                                                          onClick={() => handleEditSalida(salida)}
-                                                          > 
-                                                      <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="text-destructive hover:text-destructive"
-                                                      onClick={() => handleDeleteRoom(salida.id)}
-                                                    >
-                                                      <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                  </div>
-                                                </TableCell>
+                                                                        {selectedHotels.has(hotel.id) && (
+                                                                          <div className="pl-6 border-l-2 border-emerald-200">
+                                                                            <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                                                                              Precios por tipo de habitación:
+                                                                            </h4>
+
+                                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                              {hotel?.habitaciones?.length === 0 && 
+                                                                                  <p className="text-sm font-medium text-red-400">
+                                                                                    No tiene habitaciones asignadas
+                                                                                  </p>
+                                                                              }
+                                                                              {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
+                                                                                <div key={habitacion.id} className="space-y-2">
+                                                                                  <div onClick={paqueteModalidad === 'fijo' ? () => setFixedRoomTypeId(habitacion.id) : undefined}
+                                                                                    className={`flex gap-2 p-3 rounded-lg border cursor-pointer transition-all
+                                                                                      ${fixedRoomTypeId === habitacion.id ? 'border-green-400 bg-green-100':
+                                                                                        'border-gray-200 hover:border-gray-300'}`
+                                                                                    }>
+                                                                                    <Label className="text-sm flex items-center gap-2">
+                                                                                      {getRoomIcon(habitacion.tipo)}
+                                                                                      {getRoomTypeLabel(habitacion.tipo)}
+                                                                                    </Label>
+                                                                                    
+                                                                                    {propio && habitacion?.precio_noche &&
+                                                                                      <div className="flex items-center">
+                                                                                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                                                                                        <span className='text-muted-foreground'>{habitacion?.precio_noche ?? ''}</span>
+                                                                                        {/* <Input
+                                                                                          type="number"
+                                                                                          min="0"
+                                                                                          step="0.01"
+                                                                                          placeholder="0.00"
+                                                                                          className="pl-10"
+                                                                                          disabled
+                                                                                          value={habitacion?.precio_noche ?? ''}
+                                                                                        /> */}
+                                                                                      </div>
+                                                                                    }
+                                                                                  </div>
+
+                                                                                  {propio && !habitacion?.precio_noche && 
+                                                                                    <p className="text-sm font-medium text-red-400">
+                                                                                      Debes cargar el precio de la habitación
+                                                                                    </p>}
+                                                                                </div>
+                                                                              ))}
+                                                                            </div>
+                                                                          </div>
+                                                                        )}
+                                                                      </div>
+                                                                    </CardContent>
+                                                                  </Card>
+                                                                ))}
+                                                              </CardContent>
+                                                        </Card>
+                                                    </div>
+
+                                                    
+                                                    <DialogFooter>
+                                                      <Button type="button" variant="outline" className="cursor-pointer" 
+                                                          onClick={resetSalidaForm}
+                                                          >
+                                                        Cancelar
+                                                      </Button>
+                                                      <Button 
+                                                        disabled={validando}
+                                                        type="submit" 
+                                                        aria-disabled={validando}
+                                                        // onClick={() => setValidando(true)}
+                                                        className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                          >
+                                                            {/* {isEditMode ? 'Actualizar Salida' : 'Agregar Salida'} */}
+
+                                                            {validando ? 
+                                                            <>
+                                                              <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                                                              Procesando...
+                                                            </> : 
+                                                            (isEditMode ? 'Actualizar Salida' : 'Agregar Salida')}
+                                                      </Button>
+                                                    </DialogFooter>
+                                                    </form>
+                                                </div>
+                                              </DialogContent>
+                                          </Dialog>
+                                        </div>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="rounded-md border">
+                                          <Table>
+                                            <TableHeader>
+                                              <TableRow>
+                                                <TableHead>Fecha Salida</TableHead>
+                                                <TableHead>Fecha Regreso</TableHead>
+                                                <TableHead>{paqueteModalidad === 'flexible' ? 'Precio Desde' : 'Precio fijo'}</TableHead>
+                                                <TableHead>Precio Hasta</TableHead>
+                                                <TableHead>Seña</TableHead>
+                                                <TableHead>Cupo</TableHead>
+                                                <TableHead className="text-right">Acciones</TableHead>
                                               </TableRow>
-                                            ))}
-                                          </TableBody>
-                                        </Table>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                }
+                                            </TableHeader>
+                                            <TableBody>
+                                              {salidas.map((salida: any) => (
+                                                <TableRow key={salida.id}>
+                                                  <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
+                                                  <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
+                                                  {/* <TableCell>{JSON.stringify(salida)}</TableCell> */}
+                                                  {/* <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_desde)}</TableCell> */}
+                                                  <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_actual)}</TableCell>
+                                                  <TableCell>{salida?.precio_final ? 
+                                                          formatearSeparadorMiles.format(salida?.precio_final) : 
+                                                          <Badge
+                                                            className="bg-gray-100 text-gray-700 border-gray-200">
+                                                            {paqueteModalidad === 'flexible' ? 'Sin tope' : 'No aplica'}
+                                                          </Badge>
+                                                      }
+                                                  </TableCell>
+                                                  <TableCell>{formatearSeparadorMiles.format(salida.senia)}</TableCell>
+                                                  <TableCell>
+                                                    {propio ? salida.cupo : 
+                                                    <Badge
+                                                      className="bg-gray-100 text-gray-700 border-gray-200">
+                                                      Sujeto a disponibilidad
+                                                    </Badge>}
+                                                  </TableCell>
+                                                  
+                                                  <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                      <Button type="button" variant="ghost" size="sm" 
+                                                            onClick={() => handleEditSalida(salida)}
+                                                            > 
+                                                        <Edit className="h-4 w-4" />
+                                                      </Button>
+                                                      {!dataAEditar && 
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          className="text-destructive hover:text-destructive"
+                                                          onClick={() => handleDeleteRoom(salida.id)}
+                                                        >
+                                                          <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                      }
+                                                    </div>
+                                                  </TableCell>
+                                                </TableRow>
+                                              ))}
+                                            </TableBody>
+                                          </Table>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
                                 
                               </div>
                     </div>
@@ -2587,6 +3418,13 @@ export default function ModulosPage() {
                       {dataAEditar &&
                         <Button 
                           disabled={isPendingEdit}
+                          onClick={() => {
+                              setOnGuardar(true)
+                              
+                              if(destinoNoSeleccionada === undefined){
+                                  setDestinoNoSeleccionada(false);
+                                }
+                            }}
                           type="submit"
                           className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
                         {isPendingEdit ? 
@@ -2604,8 +3442,6 @@ export default function ModulosPage() {
                         variant="outline"
                         className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent cursor-pointer"
                         onClick={() => {
-                            setSelectedPermissions([])
-                            setPermissionSearchTerm("")
                             handleCancel()
                         }}
                       >
@@ -2771,6 +3607,7 @@ export default function ModulosPage() {
                           <TableHead className="font-semibold text-gray-700">Fechas</TableHead>
                           <TableHead className="font-semibold text-gray-700">Propiedad</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Genero</TableHead> */}
+                          <TableHead className="font-semibold text-gray-700">Modalidad</TableHead>
                           <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Uso</TableHead> */}
                           {/* <TableHead className="font-semibold text-gray-700">Prioridad</TableHead> */}
@@ -2912,6 +3749,18 @@ export default function ModulosPage() {
                               </div>: '-'}
                               
                             </TableCell> */}
+
+                            <TableCell>
+                              <Badge
+                                className={
+                                  data.modalidad === 'flexible'
+                                    ? "bg-blue-100 text-blue-700 border-blue-200"
+                                    : "bg-orange-100 text-orange-700 border-orange-200"
+                                }
+                              >
+                                {capitalizePrimeraLetra(data?.modalidad)}
+                              </Badge>
+                            </TableCell>
 
                             <TableCell>
                               <Badge
@@ -3093,19 +3942,25 @@ export default function ModulosPage() {
                                 )}
 
                                 <div className="flex gap-2 pt-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="flex-1 font-sans bg-transparent"
-                                    onClick={() => handleVerDetalles(pkg)}
-                                  >
-                                    <Eye className="h-3 w-3 mr-1" />
-                                    Ver
-                                  </Button>
-                                  <Button size="sm" className="flex-1 bg-emerald-500 hover:bg-emerald-600 font-sans">
-                                    <Edit className="h-3 w-3 mr-1" />
-                                    Editar
-                                  </Button>
+                                  {siTienePermiso("paquetes", "leer") && 
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 font-sans bg-transparent"
+                                      onClick={() => handleVerDetalles(pkg)}
+                                    >
+                                      <Eye className="h-3 w-3 mr-1" />
+                                      Ver
+                                    </Button>
+                                  }
+
+                                  {siTienePermiso("paquetes", "modificar") &&
+                                    <Button size="sm" className="flex-1 bg-emerald-500 hover:bg-emerald-600 font-sans"
+                                      onClick={() => handleEditar(pkg)}>
+                                      <Edit className="h-3 w-3 mr-1" />
+                                      Editar
+                                    </Button>
+                                  }
                                 </div>
                               </div>
                             </CardContent>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface TipoPaquete{
   id: number;
   nombre: string;
@@ -39,9 +40,14 @@ export interface SalidaPaquete {
   moneda: Moneda;            // Objeto con id y nombre
   temporada: string | null;  // Puede ser null
   precio_actual: number;     // Precio numérico
+  precio_final?: number;     // Precio numérico
   senia: number;     // Precio numérico
   cupo: number;              // Cupo numérico
   activo: boolean;           // Estado booleano
+  hoteles: number[];
+  habitacion_fija?: any;
+  ganancia?: any;
+  comision?: any;
 }
 
 export interface Paquete {
@@ -54,6 +60,7 @@ export interface Paquete {
   precio: number;
   senia: number;
   moneda: Moneda;
+  modalidad: 'flexible' | 'fijo';
   fecha_inicio: string | null; // formato YYYY-MM-DD
   fecha_fin: string | null; // formato YYYY-MM-DD
   personalizado: boolean;
@@ -62,6 +69,7 @@ export interface Paquete {
   propio: boolean;
   salidas: SalidaPaquete[]
   activo: boolean;
+  hoteles_ids: number[];
   imagen: string | null;
   imagen_url: string | null;
   fecha_creacion: string; // ISO datetime
