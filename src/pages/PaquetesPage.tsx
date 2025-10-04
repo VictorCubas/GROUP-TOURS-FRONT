@@ -379,7 +379,7 @@ export default function ModulosPage() {
 
 
   const propio = watch('propio');
-  const cantidadPasajeros = watch('cantidad_pasajeros');
+  // const cantidadPasajeros = watch('cantidad_pasajeros');
   const personalizado = watch('personalizado');
   const cantidadNoche = watchSalida('cantidadNoche');
   const precioDesde = watchSalida('precio_desde');
