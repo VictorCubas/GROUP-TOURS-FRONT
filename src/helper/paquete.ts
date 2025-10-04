@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selectedDestinoID: any,
- selectedPermissions: any [], paqueteModalidad: 'flexible' | 'fijo'): any => {
+ serviciosListSelected: any [], paqueteModalidad: 'flexible' | 'fijo'): any => {
 
     const salidasTemp = salidas.map((salida: any) => {
         const sal: any = {
@@ -34,7 +34,7 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
     ...dataForm,
     destino_id: selectedDestinoID,
     tipo_paquete_id: dataForm.tipo_paquete,
-    servicios_ids: selectedPermissions, 
+    servicios_data: serviciosListSelected, 
     moneda_id: dataForm.moneda,
     fecha_inicio: dataForm.fecha_salida,
     fecha_fin: dataForm.fecha_regreso,

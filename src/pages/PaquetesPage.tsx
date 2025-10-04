@@ -50,6 +50,7 @@ import {
   Bed,
   Tag,
   AlertCircle,
+  CirclePlus,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -150,9 +151,9 @@ export default function ModulosPage() {
   const [tipoPaqueteSelected, setTipoPaqueteSelected] = useState<TipoPaquete>();
   const [distribuidoraSelected, setDistribuidoraSelected] = useState<Distribuidora>();
   const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  const [selectedServicios, setSelectedServicios] = useState<number[]>([])
   const [dataDetalle, setDataDetalle] = useState<Paquete>();
-   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
 
@@ -446,7 +447,7 @@ export default function ModulosPage() {
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
         setImagePreview(placeholderViaje);
-        setSelectedPermissions([])
+        setSelectedServicios([])
         setSelectedDestinoID("");
         setTipoPaqueteSelected(undefined);
         setDistribuidoraSelected(undefined);
@@ -561,7 +562,7 @@ export default function ModulosPage() {
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
         setSalidas([]);
-        setSelectedPermissions([])
+        setSelectedServicios([])
         setPermissionSearchTerm("")
         reset({
             nombre: '',
@@ -583,11 +584,23 @@ export default function ModulosPage() {
         setActiveTab('list');
   }
 
+  
 
   const handleGuardarNuevaData = async (dataForm: any) => {
-    console.log(selectedPermissions)
+    console.log(selectedServicios)
+
+    const serviciosListSelected = selectedServicios.map(s => {
+      return {
+        servicio_id: s,
+        precio: watch(`precio_personalizado_${s}`) ?? ''
+      }
+    })
+
+
+    console.log(serviciosListSelected); 
     console.log(salidas);
-    const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, selectedPermissions, paqueteModalidad)
+    console.log(dataServiciosList);
+    const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, serviciosListSelected, paqueteModalidad);
 
     if (destinoNoSeleccionada === undefined || !prePayload.destino_id) {
       console.log('destino no seleccionado...')
@@ -596,12 +609,12 @@ export default function ModulosPage() {
     }
 
 
-    if(selectedPermissions.length === 0){
+    if(selectedServicios.length === 0){
       handleShowToast('Debes agregar al menos un servicio', 'error');
       return;
     }
 
-    console.log(prePayload)
+    console.log(prePayload);
 
     const formData = new FormData();
 
@@ -611,8 +624,7 @@ export default function ModulosPage() {
     }
 
 
-    if(salidas.length === 0 && !personalizado 
-      && quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLocaleLowerCase() === 'terrestre'){
+    if(salidas.length === 0 && !personalizado){
       handleShowToast('Debes agregar al menos una salida', 'error');
       return;
     }
@@ -621,14 +633,14 @@ export default function ModulosPage() {
     console.log(salidas);
 
     // Agregar el resto de campos
-    Object.keys(prePayload).forEach((key) => {
+    Object.keys(prePayload).forEach((key) => { 
       const value = prePayload[key];
       if (value !== undefined && value !== null) {
-        if (key === "salidas") {
+        if (key === "salidas" || key === 'servicios_data') {
           console.log(value)
           // 👇 Serializamos el array de objetos
           console.log(JSON.stringify(value))
-          formData.append(key ,JSON.stringify(value));
+          formData.append(key, JSON.stringify(value));
         }else if (Array.isArray(value)) {
           value.forEach((v) => formData.append(key, v));
         } else {
@@ -678,14 +690,25 @@ export default function ModulosPage() {
       return salActualizada;
     });
 
+    
 
     console.log(salidasTemp)
+
+     const serviciosListSelected = selectedServicios.map(s => {
+      return {
+        servicio_id: s,
+        precio: watch(`precio_personalizado_${s}`) ?? ''
+      }
+    })
+
+
+    console.log(serviciosListSelected)
 
     const payload = {
       ...dataForm,
       destino_id: selectedDestinoID,
       tipo_paquete_id: tipoPaqueteSelected?.id,
-      servicios_ids: selectedPermissions,
+      servicios_data: serviciosListSelected,
       moneda_id: dataForm.moneda,
       fecha_inicio,
       fecha_fin,
@@ -734,7 +757,7 @@ export default function ModulosPage() {
           formData.append(key, value);
         }
       } 
-      else if (key === "salidas") {
+      else if (key === "salidas" || key === 'servicios_data') {
         // 👇 Serializamos el array de objetos
         console.log(JSON.stringify(value))
         formData.append(key ,JSON.stringify(value));
@@ -837,6 +860,18 @@ export default function ModulosPage() {
     }
   }, [dataAEditar, reset]);
 
+  /**
+   * RESETEO DE LOS CAMPOS DE PRECIO PERSONALIZADO
+   */
+  useEffect(() => {
+    console.log(dataAEditar)
+    if (dataAEditar?.servicios?.length) {
+      dataAEditar.servicios.forEach((servicio: any) => { 
+        setValue(`precio_personalizado_${servicio.servicio_id}`, servicio.precio ?? '');
+      });
+    }
+  }, [dataAEditar, reset, setValue]);
+
 
   const handleEditar = (data: Paquete) => {
   //   {
@@ -866,8 +901,23 @@ export default function ModulosPage() {
   //   fecha_modificacion: '2025-09-09T10:49:05+0000',
   //   numero: 1
   // }
+//    servicios: [
+    //   {
+    //     servicio_id: 9,
+    //     nombre_servicio: 'Actividades Recreativas',
+    //     precio: 12
+    //   },
+    //   { servicio_id: 8, nombre_servicio: 'Seguro de Viaje', precio: 69 }
+    // ],
 
-  const servicios_ids = data.servicios.map(servicio => servicio.id);
+    const servicios_ids = data.servicios.map((servicio: any) => {
+      console.log(servicio.precio);
+      // setTimeout(() => {
+      //   setValue(`precio_personalizado_${servicio.servicio_id}`, servicio.precio ?? '');
+      // }, 0);
+      return servicio.servicio_id;
+    });
+
     console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
@@ -878,7 +928,8 @@ export default function ModulosPage() {
       // setSelectedPersonaID(data!.persona.id)
       setTipoPaqueteSelected(data!.tipo_paquete)
       setDistribuidoraSelected(data!.distribuidora);
-      setSelectedPermissions(servicios_ids);
+      console.log(servicios_ids)
+      setSelectedServicios(servicios_ids);
       setPaqueteModalidad(data.modalidad)
 
 
@@ -1021,8 +1072,8 @@ export default function ModulosPage() {
 
 
 
-  const handlePermissionToggle = (permissionId: number) => {
-    setSelectedPermissions((prev) => {
+  const handleServicioToggle = (permissionId: number) => {
+    setSelectedServicios((prev) => {
       const updated =
         prev.includes(permissionId)
           ? prev.filter((p) => p !== permissionId) // quitar
@@ -2551,16 +2602,16 @@ const handleSubmitClick = useCallback(async () => {
                                 </div>
 
                                 
-                                {selectedPermissions.length > 0 && (
+                                {selectedServicios.length > 0 && (
                                   <div className="flex items-center gap-2 mb-3">
                                     <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                                      {selectedPermissions.length} servicios seleccionados
+                                      {selectedServicios.length} servicios seleccionados
                                     </Badge>
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => setSelectedPermissions([])}
+                                      onClick={() => setSelectedServicios([])}
                                       className="text-red-600 border-red-200 hover:bg-red-50"
                                     >
                                       <X className="h-3 w-3 mr-1" />
@@ -2587,27 +2638,95 @@ const handleSubmitClick = useCallback(async () => {
                                           className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
                                                     items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
                                                     border border-gray-200
-                                                    ${selectedPermissions.includes(servicio.id) 
+                                                    ${selectedServicios.includes(servicio.id) 
                                                       ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
                                                       : ''}`}
                                         >
-                                          <div className="flex items-start w-full">
-                                            <div className="flex-shrink-0 mr-3 mt-0.5">
-                                              <Checkbox
-                                                id={`servicio-${servicio.id}`}
-                                                checked={selectedPermissions.includes(servicio.id)}
-                                                onCheckedChange={() => handlePermissionToggle(servicio.id)}
-                                              />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                              <Label
-                                                htmlFor={`servicio-${servicio.id}`}
-                                                className="text-sm font-medium text-gray-900 cursor-pointer block"
-                                              >
-                                                {servicio.nombre}
-                                              </Label>
-                                              <p className="text-xs text-gray-500 mt-1">{servicio.descripcion}</p>
-                                            </div>
+                                          <div className="flex items-center justify-center w-full">
+                                              <div className="flex items-start w-full">
+                                                <div className="flex-shrink-0 mr-3 mt-0.5">
+                                                  <Checkbox
+                                                    id={`servicio-${servicio.id}`}
+                                                    checked={selectedServicios.includes(servicio.id)}
+                                                    onCheckedChange={() => handleServicioToggle(servicio.id)}
+                                                  />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <Label
+                                                    htmlFor={`servicio-${servicio.id}`}
+                                                    className="text-sm font-medium text-gray-900 cursor-pointer block"
+                                                  >
+                                                    {servicio.nombre}
+                                                    {selectedServicios.includes(servicio.id) &&
+                                                      <div className="col-span-2 flex gap-2 mt-2">  
+                                                        <div>
+                                                          <Input
+                                                              id="precio_base"
+                                                              type="text"
+                                                              value={servicio?.precio}
+                                                              disabled
+                                                              {...register('precio_base', )
+                                                                }
+                                                                placeholder="150"
+                                                                className={`h-8 flex-1 border-2 border-blue-200 focus:border-blue-500
+                                                                  disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed`}
+                                                            />
+                                                            <Label className="block text-xs font-light text-gray-700 mb-1">
+                                                              Precio por defecto
+                                                            </Label>
+                                                        </div>
+                                                            
+                                                        <div>
+                                                          <Controller
+                                                            name={`precio_personalizado_${servicio.id}`}   // 🔹 campo único por servicio
+                                                            control={control}
+                                                            defaultValue={''}
+                                                            rules={{
+                                                              validate: (value) => {
+                                                                // ⚡ Solo validamos si tiene un valor
+                                                                if (value !== null && value !== undefined && value !== '' && isNaN(Number(value))) {
+                                                                  return 'Valor inválido';
+                                                                }
+                                                                return true;
+                                                              },
+                                                            }}
+                                                            render={({ field, fieldState: { error } }) => (
+                                                              <div className="flex flex-col">
+                                                                <NumericFormat
+                                                                  value={field.value ?? ''} 
+                                                                  onValueChange={(values) => {
+                                                                    field.onChange(values.floatValue ?? null);
+                                                                  }}
+                                                                  onBlur={field.onBlur}
+                                                                  thousandSeparator="."
+                                                                  decimalSeparator=","
+                                                                  placeholder="50 $"
+                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                    error
+                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                      : 'border-blue-200 focus:border-blue-500'
+                                                                  }`}
+                                                                />
+                                                                {error && (
+                                                                  <span className="text-red-400 text-xs mt-1">{error.message}</span>
+                                                                )}
+                                                              </div>
+                                                            )}
+                                                          />
+
+
+                                                          <Label className="block text-xs font-light text-gray-700 mb-1">
+                                                            Precio personalizado
+                                                          </Label>
+                                                        </div>
+                                                      </div>
+                                                    }
+                                                  </Label>
+                                                  {/* <p className="text-xs text-gray-500 mt-1">{servicio.descripcion}</p> */}
+                                                </div>
+
+                                              </div>
+                                              <span onClick={() => handleServicioToggle(servicio.id)}><CirclePlus className="text-blue-400" /></span>
                                           </div>
                                         </div>
                                       ))}
@@ -2649,20 +2768,20 @@ const handleSubmitClick = useCallback(async () => {
                                           servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
                                       )
                                       const allFilteredSelected = filteredPermissions.every((p: any) =>
-                                        selectedPermissions.includes(p.id),
+                                        selectedServicios.includes(p.id),
                                       )
 
                                       console.log('allFilteredSelected: ', allFilteredSelected )
 
                                       if (allFilteredSelected) {
-                                        setSelectedPermissions((prev) =>
+                                        setSelectedServicios((prev) =>
                                           prev.filter((id) => !filteredPermissions.map((p: any) => p.id).includes(id)),
                                         )
                                       } else {
                                         const newSelections = filteredPermissions
                                           .map((p:any) => p.id)
-                                          .filter((id:any) => !selectedPermissions.includes(id))
-                                        setSelectedPermissions((prev) => [...prev, ...newSelections])
+                                          .filter((id:any) => !selectedServicios.includes(id))
+                                        setSelectedServicios((prev) => [...prev, ...newSelections])
                                       }
                                     }}
                                     className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50"
@@ -2673,15 +2792,15 @@ const handleSubmitClick = useCallback(async () => {
                                         (servicio: any) =>
                                           servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
                                       )
-                                      .every((p: any) => selectedPermissions.includes(p.id))
+                                      .every((p: any) => selectedServicios.includes(p.id))
                                       ? "Deseleccionar todos"
                                       : "Seleccionar todos"}{" "}
                                     
                                   </Button>
 
-                                  {/* {JSON.stringify(selectedPermissions)}
+                                  {/* {JSON.stringify(selectedServicios)}
                                   {JSON.stringify(onGuardar)} */}
-                                  {propio && onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
+                                  {propio && onGuardar && selectedServicios.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
                                 </div>
 
                                 <div className="bg-white rounded-lg shadow-md p-6">
