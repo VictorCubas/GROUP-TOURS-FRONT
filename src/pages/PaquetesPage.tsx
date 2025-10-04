@@ -2648,7 +2648,7 @@ const handleSubmitClick = useCallback(async () => {
                                                   <Checkbox
                                                     id={`servicio-${servicio.id}`}
                                                     checked={selectedServicios.includes(servicio.id)}
-                                                    onCheckedChange={() => handleServicioToggle(servicio.id)}
+                                                    // onCheckedChange={() => handleServicioToggle(servicio.id)}
                                                   />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -2726,7 +2726,12 @@ const handleSubmitClick = useCallback(async () => {
                                                 </div>
 
                                               </div>
-                                              <span onClick={() => handleServicioToggle(servicio.id)}><CirclePlus className="text-blue-400" /></span>
+                                              <span onClick={() => handleServicioToggle(servicio.id)}>
+                                                {selectedServicios.includes(servicio.id) ?
+                                                  <Trash2 className="text-red-400 w-7 h-7 hover:bg-red-100 rounded-sm p-1" /> :
+                                                  <CirclePlus className="text-blue-400 w-7 h-7 hover:bg-blue-100 rounded-sm p-1" />
+                                                }
+                                              </span>
                                           </div>
                                         </div>
                                       ))}
@@ -2937,56 +2942,113 @@ const handleSubmitClick = useCallback(async () => {
                                                                 <Label htmlFor="senia" className="text-gray-700 font-medium">
                                                                   Seña *
                                                                 </Label>
-                                                                <div className="col-span-3 flex gap-2">
-                                                                  <Input
-                                                                    id="senia"
-                                                                    type="text"
-                                                                    {...registerSalida('senia', {
-                                                                        required: true, })
+
+                                                              <div className="col-span-3 flex gap-2">  
+                                                                <Controller
+                                                                  name="senia"
+                                                                  control={controlSalida}
+                                                                  rules={{
+                                                                    required: 'Debes completar este campo',
+                                                                    validate: (value) => {
+                                                                      if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                        return 'Valor inválido';
                                                                       }
-                                                                      placeholder="150"
-                                                                      className={`flex-1 ${errorsSalida?.senia?.type === 'required' ? 
-                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
-                                                                          'border-2 border-blue-200 focus:border-blue-500'}`}
-                                                                  />
-                                                                </div>
-                                                                
-                                                              </div>  
+                                                                      if (Number(value) <= 0) {
+                                                                        return 'El valor debe ser mayor que cero';
+                                                                      }
+                                                                      return true;
+                                                                    },
+                                                                  }}
+                                                                  render={({ field, fieldState: { error } }) => (
+                                                                    <div className="flex flex-col w-full">
+                                                                      <NumericFormat
+                                                                        value={field.value ?? ''}
+                                                                        onValueChange={(values) => {
+                                                                          const val = values.floatValue ?? null;
+                                                                          if (val === null || val <= 0) {
+                                                                            field.onChange(null);
+                                                                          } else {
+                                                                            field.onChange(val);
+                                                                          }
+                                                                        }}
+                                                                        onBlur={field.onBlur}
+                                                                        thousandSeparator="."
+                                                                        decimalSeparator=","
+                                                                        allowNegative={false}          // ❌ no permite números negativos
+                                                                        decimalScale={0}               // ❌ sin decimales
+                                                                        allowLeadingZeros={false}      // evita números tipo 0001
+                                                                        placeholder="ej: 250"
+                                                                        className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                          error
+                                                                            ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                            : 'border-blue-200 focus:border-blue-500'
+                                                                        }`}
+                                                                      />
+                                                                      {/* Mensaje de error (si quieres mostrarlo): */}
+                                                                      {/* {error && (
+                                                                        <span className="text-red-400 text-sm mt-1">{error.message}</span>
+                                                                      )} */}
+                                                                    </div>
+                                                                  )}
+                                                                />
+                                                              </div>
+                                                            </div>  
 
                                                             {propio &&
                                                               <div className="grid grid-cols-4 items-center gap-4">
                                                                 <Label htmlFor="cupo" className="text-right">
                                                                   Cupo *
                                                                 </Label>
-                                                                <div className="col-span-3 flex gap-2">
-                                                                  <Input
-                                                                    id="cupo"
-                                                                    type="text"
-                                                                    placeholder="46"
-                                                                    {...registerSalida('cupo', {
-                                                                      required: propio ? 'El cupo es requerido' : false, // 🔹 Condicional
-                                                                      validate: propio
-                                                                        ? (value) => {
-                                                                            const cantidadPasajerosTemp = cantidadPasajeros || 0;
-                                                                            return Number(value) <= cantidadPasajerosTemp || `No puede ser mayor que ${cantidadPasajerosTemp}`;
-                                                                          }
-                                                                        : undefined,
-                                                                    })}
-                                                                    className={`flex-1 border-2 focus:outline-none ${
-                                                                      errorsSalida?.cupo
-                                                                        ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
-                                                                        : 'border-blue-200 focus:border-blue-500'
-                                                                    }`}
+                                                                <div className="col-span-3 flex gap-2">  
+                                                                  <Controller
+                                                                    name="cupo"
+                                                                    control={controlSalida}
+                                                                    rules={{
+                                                                      required: 'Debes completar este campo',
+                                                                      validate: (value) => {
+                                                                        if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                          return 'Valor inválido';
+                                                                        }
+                                                                        if (Number(value) <= 0) {
+                                                                          return 'El valor debe ser mayor que cero';
+                                                                        }
+                                                                        return true;
+                                                                      },
+                                                                    }}
+                                                                    render={({ field, fieldState: { error } }) => (
+                                                                      <div className="flex flex-col w-full">
+                                                                        <NumericFormat
+                                                                          value={field.value ?? ''}
+                                                                          onValueChange={(values) => {
+                                                                            const val = values.floatValue ?? null;
+                                                                            if (val === null || val <= 0) {
+                                                                              field.onChange(null);
+                                                                            } else {
+                                                                              field.onChange(val);
+                                                                            }
+                                                                          }}
+                                                                          onBlur={field.onBlur}
+                                                                          thousandSeparator="."
+                                                                          decimalSeparator=","
+                                                                          allowNegative={false}          // ❌ no permite números negativos
+                                                                          decimalScale={0}               // ❌ sin decimales
+                                                                          allowLeadingZeros={false}      // evita números tipo 0001
+                                                                          placeholder="ej: 46"
+                                                                          className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                            error
+                                                                              ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                              : 'border-blue-200 focus:border-blue-500'
+                                                                          }`}
+                                                                        />
+                                                                        {/* Mensaje de error (si quieres mostrarlo): */}
+                                                                        {/* {error && (
+                                                                          <span className="text-red-400 text-sm mt-1">{error.message}</span>
+                                                                        )} */}
+                                                                      </div>
+                                                                    )}
                                                                   />
                                                                 </div>
-                                                                {/* Mostrar mensaje de error */}
-                                                                {/* {errorsSalida?.cupo && (
-                                                                  <span className="text-red-500 text-sm col-span-4">
-                                                                    {errorsSalida.cupo.message as string}
-                                                                  </span>
-                                                                )} */}
                                                               </div>
-
                                                             } 
 
 
@@ -3094,7 +3156,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                                   onBlur={field.onBlur}
                                                                                   thousandSeparator="."
                                                                                   decimalSeparator=","
-                                                                                  decimalScale={1}
+                                                                                  decimalScale={0}
                                                                                   fixedDecimalScale
                                                                                   suffix=" %"
                                                                                   placeholder="5%, 10%, 15%, etc."
@@ -3148,7 +3210,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                                   onBlur={field.onBlur}
                                                                                   thousandSeparator="."
                                                                                   decimalSeparator=","
-                                                                                  decimalScale={1}
+                                                                                  decimalScale={0}
                                                                                   fixedDecimalScale
                                                                                   suffix=" %"
                                                                                   placeholder="5%, 10%, 15%, etc."
