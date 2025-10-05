@@ -48,6 +48,7 @@ export interface SalidaPaquete {
   habitacion_fija?: any;
   ganancia?: any;
   comision?: any;
+  cupos_habitaciones?: any[];
 }
 
 export interface Paquete {
