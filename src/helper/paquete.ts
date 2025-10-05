@@ -11,6 +11,7 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
         hoteles: salida.hoteles_ids,
         cupo: parseInt(salida.cupo, 10), // Entero
         moneda_id: dataForm.moneda,
+        cupos_habitaciones: salida.cupos_habitaciones,
         temporada_id: salida?.temporada_id || null, // Opcional
       }
 
