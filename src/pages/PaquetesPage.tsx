@@ -218,7 +218,7 @@ export default function ModulosPage() {
     reset: resetSalida,
     getValues: getValuesSalida,
     trigger
-  } = useForm({
+  } = useForm<any>({
     mode: "onBlur", // 🔹 Cambio clave: Valida en submit para evitar issues en primer render
     reValidateMode: 'onChange', //
     defaultValues: {
@@ -670,6 +670,7 @@ export default function ModulosPage() {
         cupo: parseInt(salida.cupo, 10), // Entero
         moneda_id: dataForm.moneda,
         hoteles: salida.hoteles_ids,
+        cupos_habitaciones: salida.cupos_habitaciones,
         temporada_id: salida?.temporada_id || null, // Opcional
       };
 
@@ -694,7 +695,7 @@ export default function ModulosPage() {
 
     console.log(salidasTemp)
 
-     const serviciosListSelected = selectedServicios.map(s => {
+    const serviciosListSelected = selectedServicios.map(s => {
       return {
         servicio_id: s,
         precio: watch(`precio_personalizado_${s}`) ?? ''
@@ -874,47 +875,7 @@ export default function ModulosPage() {
 
 
   const handleEditar = (data: Paquete) => {
-  //   {
-  //   id: 5,
-  //   nombre: 'Paris Unico',
-  //   tipo_paquete: { id: 2, nombre: 'Aereo' },
-  //   destino: { id: 9, nombre: 'Paris', pais: { id: 19, nombre: 'Francia' } },
-  //   distribuidora: { id: 1, nombre: 'Consorcio Travel' },
-  //   moneda: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' },
-  //   servicios: [
-  //     { id: 9, nombre: 'Actividades Recreativas' },
-  //     { id: 7, nombre: 'Asistencia Básica al Pasajero' },
-  //     { id: 6, nombre: 'Desayuno Diario' },
-  //     { id: 8, nombre: 'Seguro de Viaje' }
-  //   ],
-  //   precio: 2000,
-  //   senia: 0,
-  //   fecha_inicio: null,
-  //   fecha_fin: null,
-  //   personalizado: true,
-  //   cantidad_pasajeros: null,
-  //   propio: false,
-  //   activo: true,
-  //   imagen: null,
-  //   imagen_url: null,
-  //   fecha_creacion: '2025-09-09T10:49:05+0000',
-  //   fecha_modificacion: '2025-09-09T10:49:05+0000',
-  //   numero: 1
-  // }
-//    servicios: [
-    //   {
-    //     servicio_id: 9,
-    //     nombre_servicio: 'Actividades Recreativas',
-    //     precio: 12
-    //   },
-    //   { servicio_id: 8, nombre_servicio: 'Seguro de Viaje', precio: 69 }
-    // ],
-
     const servicios_ids = data.servicios.map((servicio: any) => {
-      console.log(servicio.precio);
-      // setTimeout(() => {
-      //   setValue(`precio_personalizado_${servicio.servicio_id}`, servicio.precio ?? '');
-      // }, 0);
       return servicio.servicio_id;
     });
 
@@ -932,24 +893,6 @@ export default function ModulosPage() {
       setSelectedServicios(servicios_ids);
       setPaqueteModalidad(data.modalidad)
 
-
-    //   salidas: [
-    //   {
-    //     id: 53,
-    //     fecha_salida: '2025-09-28',
-    //     fecha_regreso: '2025-10-04',
-    //     moneda: { id: 2, nombre: 'Dolar' },
-    //     temporada: null,
-    //     precio_actual: 3000,
-    //     precio_final: 5000,
-    //     cupo: null,
-    //     senia: 250,
-    //     activo: true,
-    //     hoteles: [ { id: 26, nombre: 'Gran Meliá Iguazú' } ]
-    //   }
-    // ],
-    // const hootels = salida.hoteles.map((hotel: any) => hotel.id);
-
     const salidas = data.salidas.map((salida: SalidaPaquete) => {
       const sal: any =  {
         id: salida.id,
@@ -960,6 +903,7 @@ export default function ModulosPage() {
         precio_final: salida.precio_final,
         senia: salida.senia,
         cupo: salida.cupo,
+        cupos_habitaciones: salida.cupos_habitaciones,
         hoteles_ids: salida.hoteles.map((hotel: any) => hotel?.id), 
       }
 
@@ -1154,6 +1098,23 @@ export default function ModulosPage() {
     console.log(dataForm);
     console.log(nuevaSalida);
 
+    let habitacionesCuposList = Object.entries(dataForm)
+        .filter(([key, value]) => key.startsWith('cupo_habitacion_') && value != null)
+        .map(([key, value]) => {
+          // 🔹 Guardamos el valor
+          const habitacion_id = Number(key.replace('cupo_habitacion_', ''));
+          const cupo = Number(value);
+
+          // 🔹 Eliminamos la propiedad del dataForm
+          delete dataForm[key];
+
+          return { habitacion_id, cupo };
+        });
+
+      console.log(habitacionesCuposList); 
+      console.log(dataForm); // 
+
+
     console.log(selectedHotels)
     
 
@@ -1163,26 +1124,17 @@ export default function ModulosPage() {
     console.log(editingSalidaId);
 
     if (isEditMode && editingSalidaId) {
-  //      {
-  //   id: 46,
-  //   fecha_salida_v2: '2025-09-28',
-  //   fecha_regreso_v2: '2025-10-11',
-  //   moneda: 2,
-  //   precio: 3400,
-  //   senia: 250,
-  //   cupo: null,
-  //   hoteles_ids: [ 20, 19 ],
-  //   precio_desde_editable: 3400,
-  //   precio_hasta: '3250',
-  //   precio_hasta_editable: '',
-  //   precio_desde: '2600',
-  //   cantidadNoche: '13'
-  // }
+        if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current){
+          const rooms = habitacionesCuposList.filter((hab: any) => hab.habitacion_id.toString() === fixedRoomTypeIdRef.current.toString())
+          habitacionesCuposList = [...rooms];
+        }
+
       // 🔹 Editando habitación existente
       const salidaEdited: any = {...dataForm, 
         precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
         precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
         hoteles_ids:hotelesIds, 
+        cupos_habitaciones: habitacionesCuposList,
         currency: watch('moneda')};
 
       if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current)
@@ -1213,34 +1165,6 @@ export default function ModulosPage() {
         )
       );
     } else {
-      // 🔹 Agregando nueva habitación
-
-  //   {
-  //   precio: '2000',
-  //   senia: '250',
-  //   fecha_salida_v2: '2025-09-23',
-  //   fecha_regreso_v2: '2025-09-27',
-  //   cupo: '34'
-  // }
-
-  // :25:31.761	      
-  // {
-  //   id: '1759094218438',
-  //   precio_desde: '2100',
-  //   cantidadNoche: '10',
-  //   precio_hasta: '2200',
-  //   senia: '250',
-  //   fecha_salida_v2: '2025-10-01',
-  //   fecha_regreso_v2: '2025-10-11',
-  //   cupo: '',
-  //   precio_desde_editable: '3400',
-  //   precio_hasta_editable: '',
-  //   precio_actual: '2100',
-  //   precio_final: '2200',
-  //   hoteles_ids: [ 20 ],
-  //   currency: '2'
-  // }
-    
       console.log(nuevaSalida);
       console.log(dataForm)
       const salida: any = {
@@ -1249,6 +1173,7 @@ export default function ModulosPage() {
         precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
         precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
         // precio_final: dataForm.precio_hasta,
+        cupos_habitaciones: habitacionesCuposList,
         hoteles_ids: hotelesIds,
         currency: watch('moneda'), // o nuevaSalida.currency
       };
@@ -1273,22 +1198,8 @@ export default function ModulosPage() {
         delete salida.ganancia;
       }
 
-      console.log(salida)
+      console.log(salida);
 
-  //       {
-  //   id: '1759095490960',
-  //   precio_desde: '1200',
-  //   cantidadNoche: '6',
-  //   precio_hasta: '1500',
-  //   senia: '250',
-  //   fecha_salida_v2: '2025-09-28',
-  //   fecha_regreso_v2: '2025-10-04',
-  //   cupo: '45',
-  //   precio_actual: '1200',
-  //   precio_final: '1500',
-  //   hoteles_ids: [ 20, 19 ],
-  //   currency: '2'
-  // }
       setSalidas((prev) => {
         console.log(prev)
         return [...prev, salida]
@@ -1338,16 +1249,10 @@ export default function ModulosPage() {
     setFixedRoomTypeId('')
   }
   
-    //   {
-  //   id: 2,
-  //   fecha_salida_v2: '2025-09-21',
-  //   moneda: 2,
-  //   precio: 2000,
-  //   cupo: 45
-  // }
 
 const handleSubmitClick = useCallback(async () => {
     if (validando) return;
+
     setValidando(true); // 🔹 Deshabilitar botón inmediatamente
     const isValid = await trigger();
     console.log('🛑 Submit triggered'); 
@@ -1375,21 +1280,30 @@ const handleSubmitClick = useCallback(async () => {
   }, [trigger, propio, getValuesSalida, errorsSalida, isValidSalida, validando, handleSubmitSalida, handleShowToast]);
 
 
+  /**
+   * RESETEO DE LOS CAMPOS DEL FORMULARIO SALIDA
+   */
+  useEffect(() => {
+    if (!editingSalidaId || !isAddSalidaOpen) return;
+
+    const salida = dataAEditar?.salidas?.find(
+      (s: any) => s.id.toString() === editingSalidaId.toString()
+    );
+
+    if (!salida) return;
+
+    salida.cupos_habitaciones?.forEach((habitacion: any) => {
+      const fieldName = `cupo_habitacion_${habitacion.habitacion.id}`;
+      const value = habitacion.cupo ?? '';
+      setValueSalida(fieldName, value);
+    });
+  }, [editingSalidaId, selectedHotels, isAddSalidaOpen, dataAEditar?.salidas, setValueSalida]);
+
+
 
   const handleEditSalida = (salida: any) => {
-    console.log(salida);
-    // Cargamos los valores en el state que controla los <Input />
-    // setNuevaSalida({
-    //   fecha_salida_v2: salida.fecha_salida_v2,
-    //   // si no tienes fecha_regreso aún, usa cadena vacía para <input type="date" />
-    //   fecha_regreso_v2: salida.fecha_regreso_v2 ?? '',
-    //   precio: salida.precio,
-    //   cupo: salida.cupo,
-    //   senia: salida?.senia ?? '',
-    //   // moneda: salida.moneda,
-    // });
-
-    console.log(propio);
+    // console.log(salida);
+    // console.log(propio);
 
     resetSalida({
       ...salida,
@@ -1486,7 +1400,7 @@ const handleSubmitClick = useCallback(async () => {
       }
 
       if(fechaSalida && fechaRegreso){
-         if(fechaRegreso < fechaSalida){
+        if(fechaRegreso < fechaSalida){
           handleShowToast('La fecha de regreso debe ser mayor a la fecha de salida', 'error');
           return;
         }
@@ -1595,7 +1509,7 @@ const handleSubmitClick = useCallback(async () => {
 
   return (
     <>
-       {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
+      {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="bg-white/95 rounded-xl shadow-xl max-w-5xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
               {/* Header con imagen */}
@@ -3230,7 +3144,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                         />
                                                                       </div>
                                                                   </div>  
-                                                               }
+                                                              }
                                                                 
 
                                                             </div>
@@ -3297,7 +3211,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                               Precios por tipo de habitación:
                                                                             </h4>
 
-                                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                            <div className={`grid grid-cols-2 ${propio ? 'md:grid-cols-2': 'md:grid-cols-3'} gap-4`}>
                                                                               {hotel?.habitaciones?.length === 0 && 
                                                                                   <p className="text-sm font-medium text-red-400">
                                                                                     No tiene habitaciones asignadas
@@ -3305,38 +3219,90 @@ const handleSubmitClick = useCallback(async () => {
                                                                               }
                                                                               {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
                                                                                 <div key={habitacion.id} className="space-y-2">
-                                                                                  <div onClick={paqueteModalidad === 'fijo' ? () => setFixedRoomTypeId(habitacion.id) : undefined}
-                                                                                    className={`flex gap-2 p-3 rounded-lg border cursor-pointer transition-all
-                                                                                      ${fixedRoomTypeId === habitacion.id ? 'border-green-400 bg-green-100':
-                                                                                        'border-gray-200 hover:border-gray-300'}`
-                                                                                    }>
-                                                                                    <Label className="text-sm flex items-center gap-2">
+                                                                                  <div 
+                                                                                    onClick={paqueteModalidad === 'fijo' ? 
+                                                                                        () => setFixedRoomTypeId(habitacion.id) 
+                                                                                        : undefined
+                                                                                    }
+                                                                                    className={`flex flex-col md:flex-row gap-2 p-3 rounded-lg border cursor-pointer transition-all
+                                                                                      ${fixedRoomTypeId === habitacion.id ? 'border-green-400 bg-green-100' : 'border-gray-200 hover:border-gray-300'}`}
+                                                                                  >
+                                                                                    {/* Icono y tipo de habitación */}
+                                                                                    <Label className="text-sm flex items-center gap-2 md:w-1/4">
                                                                                       {getRoomIcon(habitacion.tipo)}
                                                                                       {getRoomTypeLabel(habitacion.tipo)}
                                                                                     </Label>
-                                                                                    
+
+                                                                                    {/* Precio y cupo */}
                                                                                     {propio && habitacion?.precio_noche &&
-                                                                                      <div className="flex items-center">
-                                                                                        <DollarSign className="w-4 h-4 text-muted-foreground" />
-                                                                                        <span className='text-muted-foreground'>{habitacion?.precio_noche ?? ''}</span>
-                                                                                        {/* <Input
-                                                                                          type="number"
-                                                                                          min="0"
-                                                                                          step="0.01"
-                                                                                          placeholder="0.00"
-                                                                                          className="pl-10"
-                                                                                          disabled
-                                                                                          value={habitacion?.precio_noche ?? ''}
-                                                                                        /> */}
-                                                                                      </div>
+                                                                                      <div className="flex flex-col md:flex-row md:items-center md:gap-8 w-full">
+                                                                                        {/* Precio por noche */}
+                                                                                        <div className="relative right-[0.4rem] flex items-center p-1 rounded-md w-full md:w-auto justify-between md:justify-start">
+                                                                                          <DollarSign className="w-4 h-4 text-muted-foreground mr-1" />
+                                                                                          <span className="text-muted-foreground">{habitacion?.precio_noche ?? ''}</span>
+                                                                                        </div>
+
+                                                                                          {(paqueteModalidad === 'flexible' || paqueteModalidad === 'fijo' && fixedRoomTypeId === habitacion.id) && 
+                                                                                            <div className="grid grid-cols-1 sm:grid-cols-5 items-center gap-2 w-full md:w-auto">
+                                                                                              <Label htmlFor="cupo" className="text-righ col-span-1 p-1 rounded-md">
+                                                                                                Cupo:
+                                                                                              </Label>
+                                                                                              <div className="col-span-4 sm:col-span-4">
+                                                                                                <Controller
+                                                                                                  name={`cupo_habitacion_${habitacion.id}`}
+                                                                                                  control={controlSalida}
+                                                                                                  rules={{
+                                                                                                    required: 'Debes completar este campo',
+                                                                                                    validate: (value) => {
+                                                                                                      if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                                                        return 'Valor inválido';
+                                                                                                      }
+                                                                                                      if (Number(value) <= 0) {
+                                                                                                        return 'El valor debe ser mayor que cero';
+                                                                                                      }
+                                                                                                      return true;
+                                                                                                    },
+                                                                                                  }}
+                                                                                                  render={({ field, fieldState: { error } }) => (
+                                                                                                    <div className="flex flex-col w-full">
+                                                                                                      <NumericFormat
+                                                                                                        value={field.value ?? ''}
+                                                                                                        onValueChange={(values) => {
+                                                                                                          const val = values.floatValue ?? null;
+                                                                                                          field.onChange(val && val > 0 ? val : null);
+                                                                                                        }}
+                                                                                                        onBlur={field.onBlur}
+                                                                                                        thousandSeparator="."
+                                                                                                        decimalSeparator=","
+                                                                                                        allowNegative={false}
+                                                                                                        decimalScale={0}
+                                                                                                        allowLeadingZeros={false}
+                                                                                                        placeholder="ej: 20"
+                                                                                                        className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                                                          error
+                                                                                                            ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                                                            : 'border-blue-200 focus:border-blue-500'
+                                                                                                        }`}
+                                                                                                      />
+                                                                                                    </div>
+                                                                                                  )}
+                                                                                                />
+                                                                                              </div>
+                                                                                            </div>
+                                                                                          }
+                                                                                        {/* Cupo */}
+                                                                                      </div> 
+                                                                                    }
+
+                                                                                    {/* Mensaje si no hay precio */}
+                                                                                    {propio && !habitacion?.precio_noche && 
+                                                                                      <p className="text-sm font-medium text-red-400 mt-2 md:mt-0">
+                                                                                        Debes cargar el precio de la habitación
+                                                                                      </p>
                                                                                     }
                                                                                   </div>
-
-                                                                                  {propio && !habitacion?.precio_noche && 
-                                                                                    <p className="text-sm font-medium text-red-400">
-                                                                                      Debes cargar el precio de la habitación
-                                                                                    </p>}
                                                                                 </div>
+
                                                                               ))}
                                                                             </div>
                                                                           </div>
@@ -3421,6 +3387,7 @@ const handleSubmitClick = useCallback(async () => {
                                                   <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
                                                       <Button type="button" variant="ghost" size="sm" 
+                                                            className="cursor-pointer"
                                                             onClick={() => handleEditSalida(salida)}
                                                             > 
                                                         <Edit className="h-4 w-4" />
