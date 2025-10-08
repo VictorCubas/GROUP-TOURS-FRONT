@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { startTransition, use, useCallback, useEffect, useRef, useState } from "react"
+import { startTransition, use, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Search,
   Plus,
@@ -51,6 +51,7 @@ import {
   Tag,
   AlertCircle,
   CirclePlus,
+  Info,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -86,7 +87,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Distribuidora, Moneda, Paquete, RespuestaPaginada, SalidaPaquete, TipoPaquete, } from "@/types/paquetes"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
-import {Controller, useForm } from "react-hook-form"
+import {Controller, useForm, useWatch } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
@@ -99,7 +100,7 @@ import { fetchDataDestinosTodos, fetchDataHoteles } from "@/components/utils/htt
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete";
+import { calcularCostoPaquete, calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete";
 import { NumericFormat } from 'react-number-format';
 
 
@@ -156,6 +157,9 @@ export default function ModulosPage() {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
+
+  const [totalPrecioServiciosEdicion, setTotalPrecioServiciosEdicion] = useState<number | null>(null);
+
 
   // const [rangoPrecio, setRangoPrecio] = useState<{ precioMin: number; precioMax: number; dias: number; noches: number }>();
   const [ciudadDataSelected, setCiudadDataSelected] = useState<any>();
@@ -251,7 +255,7 @@ export default function ModulosPage() {
     const [editingSalidaId, setEditingSalidaId] = useState<string | null>(null);
     const [isAddSalidaOpen, setIsAddSalidaOpen] = useState(false);
     // DATOS DE SALIDOS
-   
+
     console.log(distribuidoraSelected)
 
   const {data: dataDestinoList, isFetching: isFetchingDestino,} = useQuery({
@@ -379,12 +383,15 @@ export default function ModulosPage() {
 
 
   const propio = watch('propio');
-  // const cantidadPasajeros = watch('cantidad_pasajeros');
+  const cantidadPasajeros = watch('cantidad_pasajeros');
   const personalizado = watch('personalizado');
   const cantidadNoche = watchSalida('cantidadNoche');
   const precioDesde = watchSalida('precio_desde');
+  const monedaSeleccionada = watch('moneda');
   const precioHasta = watchSalida('precio_hasta');
 
+
+  console.log(monedaSeleccionada)
   // Función para cambiar página
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -592,7 +599,7 @@ export default function ModulosPage() {
     const serviciosListSelected = selectedServicios.map(s => {
       return {
         servicio_id: s,
-        precio: watch(`precio_personalizado_${s}`) ?? ''
+        precio: watch(`precio_personalizado_servicio_${s}`) ?? ''
       }
     })
 
@@ -698,7 +705,7 @@ export default function ModulosPage() {
     const serviciosListSelected = selectedServicios.map(s => {
       return {
         servicio_id: s,
-        precio: watch(`precio_personalizado_${s}`) ?? ''
+        precio: watch(`precio_personalizado_servicio_${s}`) ?? ''
       }
     })
 
@@ -868,7 +875,7 @@ export default function ModulosPage() {
     console.log(dataAEditar)
     if (dataAEditar?.servicios?.length) {
       dataAEditar.servicios.forEach((servicio: any) => { 
-        setValue(`precio_personalizado_${servicio.servicio_id}`, servicio.precio ?? '');
+        setValue(`precio_personalizado_servicio_${servicio.servicio_id}`, servicio.precio ?? '');
       });
     }
   }, [dataAEditar, reset, setValue]);
@@ -1016,7 +1023,9 @@ export default function ModulosPage() {
 
 
 
-  const handleServicioToggle = (permissionId: number) => {
+  const handleServicioToggle = (permissionId: number, precio: number) => {
+    console.log(precio);
+    console.log(permissionId)
     setSelectedServicios((prev) => {
       const updated =
         prev.includes(permissionId)
@@ -1028,9 +1037,117 @@ export default function ModulosPage() {
   };
 
 
+  /******************************************************
+   *        INICIO DEL INICIALIZAR LOS CAMPO DE 
+   *          precio_personalizado_servicio_ID
+   *        
+   ******************************************************/
+
+    // 🔹 Observamos los precios personalizados
+  const preciosPersonalizadosServicios = useWatch({ control });
+
+// 🔹 Calculamos el total de servicios
+const totalPrecioServiciosMemo = useMemo(() => {
+  // 🧩 Si el paquete no es propio, no sumamos servicios
+  if (!propio) {
+    return 0;
+  }
+
+  // 🧩 Modo edición
+  if (dataAEditar) {
+    const hayCambios =
+      selectedServicios.length > 0 ||
+      Object.keys(preciosPersonalizadosServicios).length > 0;
+
+    // 🔹 Si hay cambios activos, recalcular dinámicamente
+    if (hayCambios) {
+      return selectedServicios.reduce((acc, id) => {
+        const servicio = dataServiciosList.find((s: any) => s.id === id);
+        if (!servicio) return acc;
+
+        const precioCustom =
+          preciosPersonalizadosServicios?.[`precio_personalizado_servicio_${id}`] ?? null;
+
+        const precioFinal =
+          precioCustom !== null && precioCustom !== undefined && precioCustom !== ""
+            ? Number(precioCustom)
+            : Number(servicio.precio) > 0
+            ? Number(servicio.precio)
+            : Number(servicio.precio_base);
+
+        return acc + (isNaN(precioFinal) ? 0 : precioFinal);
+      }, 0);
+    }
+
+    // 🔹 Si no hay cambios, usar valor inicial del backend
+    return totalPrecioServiciosEdicion ?? 0;
+  }
+
+  // 🔹 Modo creación
+  return selectedServicios.reduce((acc, id) => {
+    const servicio = dataServiciosList.find((s: any) => s.id === id);
+    if (!servicio) return acc;
+
+    const precioCustom =
+      preciosPersonalizadosServicios?.[`precio_personalizado_servicio_${id}`] ?? null;
+
+    const precioFinal =
+      precioCustom !== null && precioCustom !== undefined && precioCustom !== ""
+        ? Number(precioCustom)
+        : Number(servicio.precio) > 0
+        ? Number(servicio.precio)
+        : Number(servicio.precio_base);
+
+    return acc + (isNaN(precioFinal) ? 0 : precioFinal);
+  }, 0);
+}, [
+  propio,
+  dataAEditar,
+  selectedServicios,
+  preciosPersonalizadosServicios,
+  totalPrecioServiciosEdicion,
+  dataServiciosList,
+]);
+
+// 🔹 Calculamos el costo total del paquete
+// Si no es propio, ignora los servicios (solo hoteles)
+const costoTotalPaquete = calcularCostoPaquete(
+  salidas,
+  propio ? totalPrecioServiciosMemo ?? 0 : 0
+);
+
+console.log("Costo total paquete:", costoTotalPaquete);
+console.log("Total servicios memo:", totalPrecioServiciosMemo);
+
+// 🔹 Inicializamos los campos de precios personalizados al entrar en edición
+useEffect(() => {
+  // 🧩 Solo si es propio cargamos los servicios
+  if (propio && dataAEditar?.servicios?.length) {
+    dataAEditar.servicios.forEach((servicio: any) => {
+      const valor =
+        servicio.precio && Number(servicio.precio) > 0
+          ? servicio.precio
+          : servicio.precio_base;
+      setValue(`precio_personalizado_servicio_${servicio.servicio_id}`, valor);
+    });
+
+    // Calculamos y seteamos el total inicial
+    const totalServicios = dataAEditar.servicios.reduce((acc, s: any) => {
+      const precioValido =
+        s.precio && Number(s.precio) > 0
+          ? Number(s.precio)
+          : Number(s.precio_base);
+      return acc + (isNaN(precioValido) ? 0 : precioValido);
+    }, 0);
+
+    setTotalPrecioServiciosEdicion(totalServicios);
+  }
+}, [dataAEditar, propio, setValue]);
+
+
   // FUNCIONES DE SALIDAS
 
-   const handleOpenModal = () => {
+  const handleOpenModal = () => {
     const monedaValue = watch('moneda');
     if (!selectedDestinoID) {
       handleShowToast('Debes seleccionar primero el destino', 'error');
@@ -1374,12 +1491,12 @@ const handleSubmitClick = useCallback(async () => {
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
         console.log(propio)
         if(propio){
-          console.log(rangoPrecioDesdeHasta);
+          console.log(rangoPrecioDesdeHasta); 
           // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
 
           
           if(paqueteModalidad === 'flexible'){
-            setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
+            setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString()); 
             setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
           }
           else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
@@ -2367,7 +2484,7 @@ const handleSubmitClick = useCallback(async () => {
                               placeholder="Precio del paquete"
                               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                               {...register('precio', {
-                               
+
                               })}
                             />
                             
@@ -2454,7 +2571,7 @@ const handleSubmitClick = useCallback(async () => {
                             </div> */}
 
 
-                           <div className="space-y-2 md:col-span-2">
+                            <div className="space-y-2 md:col-span-2">
                               <div className="space-y-2 md:col-span-2">
                                   <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Imagen del Paquete
@@ -2499,6 +2616,59 @@ const handleSubmitClick = useCallback(async () => {
                                   </div>
                               </div>
                           </div>
+
+                            {(totalPrecioServiciosMemo || costoTotalPaquete) && salidas.length > 0 && (
+                              <Card className="transition-all duration-200 bg-emerald-50 border-emerald-300 space-y-2 md:col-span-2">
+                                <CardContent className="space-y-4 w-full">
+                                  <div className="flex items-start justify-between w-full">
+                                    <div>
+                                      <Label className="text-base mb-2 flex items-center gap-2">
+                                        Estimación de Precio
+                                        <Info className="w-4 h-4 text-muted-foreground" />
+                                      </Label>
+                                      <div className="mt-3 w-full">
+                                        <div className="flex items-baseline gap-2">
+                                          <span className="text-md text-muted-foreground">Desde</span>
+                                          <span className="text-3xl font-bold text-emerald-600">
+                                            {dataMonedaList
+                                              .filter((moneda: any) => moneda?.id?.toString() === monedaSeleccionada?.toString())
+                                              .map((moneda: any) => (
+                                                <p key={moneda.id}>
+                                                  {moneda.simbolo} {formatearSeparadorMiles.format(costoTotalPaquete.precio_actual_total)}
+                                                </p>
+                                              ))}
+                                          </span>
+                                          {/* <span>{}</span> */}
+                                          {!!costoTotalPaquete?.precio_final_total && paqueteModalidad === 'flexible' && 
+                                            <>
+                                              <span className="text-md text-muted-foreground">Hasta</span>
+                                              <span className="text-3xl font-bold text-emerald-600">
+                                                {dataMonedaList
+                                                  .filter((moneda: any) => moneda?.id?.toString() === monedaSeleccionada?.toString())
+                                                  .map((moneda: any) => (
+                                                    <p key={moneda.id}>
+                                                      {/* {costoTotalPaquete.precio_final_total ? moneda.simbolo + ' ' + formatearSeparadorMiles.format(costoTotalPaquete.precio_final_total) :''} */}
+                                                      {moneda.simbolo} {formatearSeparadorMiles.format(costoTotalPaquete.precio_final_total)}
+                                                    </p>
+                                                  ))}
+                                              </span>
+                                            </>
+                                          }
+                                          {!!costoTotalPaquete?.precio_final_total && 
+                                            <span className="text-sm text-muted-foreground">-</span>
+                                          }
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-2">
+                                          por persona • Incluye alojamiento + servicios • {salidas.length} salida
+                                          {salidas.length > 1 ? "s" : ""} disponible{salidas.length > 1 ? "s" : ""}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+
 
 
                             <div className="space-y-2 md:col-span-2">
@@ -2571,7 +2741,7 @@ const handleSubmitClick = useCallback(async () => {
                                                     className="text-sm font-medium text-gray-900 cursor-pointer block"
                                                   >
                                                     {servicio.nombre}
-                                                    {selectedServicios.includes(servicio.id) &&
+                                                    {selectedServicios.includes(servicio.id) && propio &&
                                                       <div className="col-span-2 flex gap-2 mt-2">  
                                                         <div>
                                                           <Input
@@ -2592,7 +2762,7 @@ const handleSubmitClick = useCallback(async () => {
                                                             
                                                         <div>
                                                           <Controller
-                                                            name={`precio_personalizado_${servicio.id}`}   // 🔹 campo único por servicio
+                                                            name={`precio_personalizado_servicio_${servicio.id}`}   // 🔹 campo único por servicio
                                                             control={control}
                                                             defaultValue={''}
                                                             rules={{
@@ -2640,7 +2810,7 @@ const handleSubmitClick = useCallback(async () => {
                                                 </div>
 
                                               </div>
-                                              <span onClick={() => handleServicioToggle(servicio.id)}>
+                                              <span onClick={() => handleServicioToggle(servicio.id, servicio?.precio ?? 0)}>
                                                 {selectedServicios.includes(servicio.id) ?
                                                   <Trash2 className="text-red-400 w-7 h-7 hover:bg-red-100 rounded-sm p-1" /> :
                                                   <CirclePlus className="text-blue-400 w-7 h-7 hover:bg-blue-100 rounded-sm p-1" />
@@ -2926,6 +3096,12 @@ const handleSubmitClick = useCallback(async () => {
                                                                         if (Number(value) <= 0) {
                                                                           return 'El valor debe ser mayor que cero';
                                                                         }
+
+                                                                        if(Number(value) > cantidadPasajeros){
+                                                                          handleShowToast('El cupo por salida no puede superar a la cantidad maxima de pasajeros', 'error')
+                                                                          return 'El cupo por salida no puede superar a la cantidad maxima de pasajeros';
+                                                                        }
+
                                                                         return true;
                                                                       },
                                                                     }}
@@ -3040,7 +3216,7 @@ const handleSubmitClick = useCallback(async () => {
 
 
                                                                {/* PORCENTAJE DE GANANCIA */}
-                                                               {propio &&
+                                                                {propio &&
                                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                                       <Label htmlFor="ganancia" className="text-gray-700 font-medium">
                                                                         Porcentaje de ganancia *
@@ -3056,6 +3232,10 @@ const handleSubmitClick = useCallback(async () => {
                                                                               if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
                                                                                 return 'Valor inválido';
                                                                               }
+
+                                                                              if (Number(value) <= 0) {
+                                                                                return 'El valor debe ser mayor que cero';
+                                                                              }
                                                                               return true;
                                                                             },
                                                                           }}
@@ -3070,8 +3250,10 @@ const handleSubmitClick = useCallback(async () => {
                                                                                   onBlur={field.onBlur}
                                                                                   thousandSeparator="."
                                                                                   decimalSeparator=","
-                                                                                  decimalScale={0}
-                                                                                  fixedDecimalScale
+                                                                                  allowNegative={false}          // ❌ no permite números negativos
+                                                                                  decimalScale={0}               // ❌ sin decimales
+                                                                                  allowLeadingZeros={false}  
+                                                                                  // fixedDecimalScale
                                                                                   suffix=" %"
                                                                                   placeholder="5%, 10%, 15%, etc."
                                                                                   className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
