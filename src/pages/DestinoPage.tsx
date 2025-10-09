@@ -658,6 +658,17 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
                       <p className="mt-1 text-gray-900">{dataDetalle?.descripcion}</p>
                     </div>
 
+
+                    <div className="mb-8">
+                      <label className="text-sm font-medium text-gray-500">
+                        Zona Geográfica
+                      </label>
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl px-5 py-4">
+                        <MapPin size={24} className="text-blue-600" />
+                        <span className="text-lg font-medium text-slate-800">{dataDetalle?.zona_geografica ?? 'Zona no asignada'}</span>
+                      </div>
+                    </div>
+
                     <div>
                       <Label className="text-sm font-medium text-gray-500">
                         Hoteles asociados ({dataDetalle?.hoteles.length})
@@ -669,12 +680,10 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
                               <HotelIcon className="h-4 w-4 text-blue-500" />
                               <span className="text-sm">{hotel.nombre}</span>
 
-                               <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                 <span className="text-gray-500 font-normal">{renderStars(hotel.estrellas)}</span>
-                                </Badge>
+                              <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                                <span className="text-gray-500 font-normal">{renderStars(hotel.estrellas)}</span>
+                              </Badge>
                             </div>
-
-                         
                           </>
                         ))}
                       </div>
