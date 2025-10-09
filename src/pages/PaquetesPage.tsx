@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { startTransition, use, useCallback, useEffect, useRef, useState } from "react"
+import { startTransition, use, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Search,
   Plus,
@@ -51,6 +51,7 @@ import {
   Tag,
   AlertCircle,
   CirclePlus,
+  Info,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -86,7 +87,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Distribuidora, Moneda, Paquete, RespuestaPaginada, SalidaPaquete, TipoPaquete, } from "@/types/paquetes"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
-import {Controller, useForm } from "react-hook-form"
+import {Controller, useForm, useWatch } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
@@ -99,8 +100,9 @@ import { fetchDataDestinosTodos, fetchDataHoteles } from "@/components/utils/htt
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete";
+import { calcularCostoPaquete, calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete";
 import { NumericFormat } from 'react-number-format';
+import { fetchDataZonasGeograficasTodos } from "@/components/utils/httpNacionalidades"
 
 
 let dataList: Paquete[] = [];
@@ -157,11 +159,15 @@ export default function ModulosPage() {
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
 
+  const [totalPrecioServiciosEdicion, setTotalPrecioServiciosEdicion] = useState<number | null>(null);
+
+
   // const [rangoPrecio, setRangoPrecio] = useState<{ precioMin: number; precioMax: number; dias: number; noches: number }>();
   const [ciudadDataSelected, setCiudadDataSelected] = useState<any>();
   const [ciudadDataCompleto, setCiudadDataCompleto] = useState<any>();
   const [selectedHotels, setSelectedHotels] = useState<Set<string>>(new Set());
   const [hotelPrices, setHotelPrices] = useState<Record<string, { single: number; doble: number; triple: number }>>({});
+  const [selectedZonaGeograficaID, setSelectedZonaGeograficaID] = useState<number | "">("");
   
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
@@ -183,6 +189,7 @@ export default function ModulosPage() {
                 distribuidora_id: '',
                 propio: true,
                 personalizado: false,
+                zona_geografica: "",
               }
             });
 
@@ -251,7 +258,7 @@ export default function ModulosPage() {
     const [editingSalidaId, setEditingSalidaId] = useState<string | null>(null);
     const [isAddSalidaOpen, setIsAddSalidaOpen] = useState(false);
     // DATOS DE SALIDOS
-   
+
     console.log(distribuidoraSelected)
 
   const {data: dataDestinoList, isFetching: isFetchingDestino,} = useQuery({
@@ -303,6 +310,13 @@ export default function ModulosPage() {
     queryFn: () => fetchResumen(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
+
+
+  const {data: dataZonaGeograficaList, isFetching: isFetchingZonaGeografica,} = useQuery({
+        queryKey: ['todos-zona-geografica',], //data cached
+        queryFn: () => fetchDataZonasGeograficasTodos(),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
 
 
   console.log(ciudadDataSelected)
@@ -379,12 +393,15 @@ export default function ModulosPage() {
 
 
   const propio = watch('propio');
-  // const cantidadPasajeros = watch('cantidad_pasajeros');
+  const cantidadPasajeros = watch('cantidad_pasajeros');
   const personalizado = watch('personalizado');
   const cantidadNoche = watchSalida('cantidadNoche');
   const precioDesde = watchSalida('precio_desde');
+  const monedaSeleccionada = watch('moneda');
   const precioHasta = watchSalida('precio_hasta');
 
+
+  console.log(monedaSeleccionada)
   // Función para cambiar página
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -412,7 +429,8 @@ export default function ModulosPage() {
     startTransition(() => {
         // setSearchTerm("");
         setShowActiveOnly(true);
-        setNombreABuscar("")
+        setNombreABuscar("");
+        setSelectedZonaGeograficaID("")
       });
   }
 
@@ -562,8 +580,8 @@ export default function ModulosPage() {
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
         setSalidas([]);
-        setSelectedServicios([])
-        setPermissionSearchTerm("")
+        setSelectedServicios([]);
+        setPermissionSearchTerm("");
         reset({
             nombre: '',
             tipo_paquete: '',
@@ -573,7 +591,8 @@ export default function ModulosPage() {
             fecha_regreso: '',
             distribuidora_id: '',
             imagen: '',
-            moneda: ''
+            moneda: '',
+            zona_geografica: ''
         });
 
 
@@ -592,7 +611,7 @@ export default function ModulosPage() {
     const serviciosListSelected = selectedServicios.map(s => {
       return {
         servicio_id: s,
-        precio: watch(`precio_personalizado_${s}`) ?? ''
+        precio: watch(`precio_personalizado_servicio_${s}`) ?? ''
       }
     })
 
@@ -698,7 +717,7 @@ export default function ModulosPage() {
     const serviciosListSelected = selectedServicios.map(s => {
       return {
         servicio_id: s,
-        precio: watch(`precio_personalizado_${s}`) ?? ''
+        precio: watch(`precio_personalizado_servicio_${s}`) ?? ''
       }
     })
 
@@ -808,18 +827,45 @@ export default function ModulosPage() {
 
   useEffect(() => {
     console.log(selectedDestinoID);
+    let timeout: NodeJS.Timeout;
     
     if(selectedDestinoID){
       const selectedDestino = dataDestinoList.filter((destino: any) => destino.id.toString() === selectedDestinoID.toString());
-      console.log(selectedDestino)
+      console.log(selectedDestino) 
 
-      if(selectedDestino.length){
+      if(selectedDestino.length){  
         // setValue('nombre', selectedDestino[0].ciudad_nombre);
-        setCiudadDataSelected(selectedDestino[0].ciudad_nombre)
-        setCiudadDataCompleto(selectedDestino[0])
+        setCiudadDataSelected(selectedDestino[0].ciudad_nombre);
+        setCiudadDataCompleto(selectedDestino[0]);
+
+        //zona_geografica_nombre
+        //zona_geografica_nombre
+        timeout = setTimeout(() => {
+          setValue('zona_geografica', selectedDestino[0]?.zona_geografica_nombre ?? 'No tiene zona asignada')
+        }, 0);
       }
     }
-  }, [selectedDestinoID]);
+
+    return () => clearTimeout(timeout);
+  }, [dataDestinoList, selectedDestinoID, setValue]);
+
+
+
+  useEffect(() => {
+      // if(!selectedZonaGeograficaID) return;
+    const handler = setTimeout(() => {
+      // console.log('cambiando nombre')
+
+      const selectedZona = dataZonaGeograficaList.filter((zona: any) => zona.id.toString() === selectedZonaGeograficaID.toString());
+      console.log(selectedZona)
+
+      setFiltros(filtroAnterior => ({...filtroAnterior, zona_geografica: selectedZona[0]?.nombre}))
+    }, 750) // ⏱️ medio segundo de espera
+
+    return () => {
+      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+    }
+  }, [dataZonaGeograficaList, selectedZonaGeograficaID]);
 
   /********************************
    * CORREGIR ESTA PARTE
@@ -868,7 +914,7 @@ export default function ModulosPage() {
     console.log(dataAEditar)
     if (dataAEditar?.servicios?.length) {
       dataAEditar.servicios.forEach((servicio: any) => { 
-        setValue(`precio_personalizado_${servicio.servicio_id}`, servicio.precio ?? '');
+        setValue(`precio_personalizado_servicio_${servicio.servicio_id}`, servicio.precio ?? '');
       });
     }
   }, [dataAEditar, reset, setValue]);
@@ -879,6 +925,7 @@ export default function ModulosPage() {
       return servicio.servicio_id;
     });
 
+    console.log(servicios_ids)
     console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
@@ -1016,7 +1063,9 @@ export default function ModulosPage() {
 
 
 
-  const handleServicioToggle = (permissionId: number) => {
+  const handleServicioToggle = (permissionId: number, precio: number) => {
+    console.log(precio); 
+    console.log(permissionId)
     setSelectedServicios((prev) => {
       const updated =
         prev.includes(permissionId)
@@ -1028,9 +1077,117 @@ export default function ModulosPage() {
   };
 
 
+  /******************************************************
+   *        INICIO DEL INICIALIZAR LOS CAMPO DE 
+   *          precio_personalizado_servicio_ID
+   *        
+   ******************************************************/
+
+    // 🔹 Observamos los precios personalizados
+  const preciosPersonalizadosServicios = useWatch({ control });
+
+// 🔹 Calculamos el total de servicios
+const totalPrecioServiciosMemo = useMemo(() => {
+  // 🧩 Si el paquete no es propio, no sumamos servicios
+  if (!propio) {
+    return 0;
+  }
+
+  // 🧩 Modo edición
+  if (dataAEditar) {
+    const hayCambios =
+      selectedServicios.length > 0 ||
+      Object.keys(preciosPersonalizadosServicios).length > 0;
+
+    // 🔹 Si hay cambios activos, recalcular dinámicamente
+    if (hayCambios) {
+      return selectedServicios.reduce((acc, id) => {
+        const servicio = dataServiciosList.find((s: any) => s.id === id);
+        if (!servicio) return acc;
+
+        const precioCustom =
+          preciosPersonalizadosServicios?.[`precio_personalizado_servicio_${id}`] ?? null;
+
+        const precioFinal =
+          precioCustom !== null && precioCustom !== undefined && precioCustom !== ""
+            ? Number(precioCustom)
+            : Number(servicio.precio) > 0
+            ? Number(servicio.precio)
+            : Number(servicio.precio_base);
+
+        return acc + (isNaN(precioFinal) ? 0 : precioFinal);
+      }, 0);
+    }
+
+    // 🔹 Si no hay cambios, usar valor inicial del backend
+    return totalPrecioServiciosEdicion ?? 0;
+  }
+
+  // 🔹 Modo creación
+  return selectedServicios.reduce((acc, id) => {
+    const servicio = dataServiciosList.find((s: any) => s.id === id);
+    if (!servicio) return acc;
+
+    const precioCustom =
+      preciosPersonalizadosServicios?.[`precio_personalizado_servicio_${id}`] ?? null;
+
+    const precioFinal =
+      precioCustom !== null && precioCustom !== undefined && precioCustom !== ""
+        ? Number(precioCustom)
+        : Number(servicio.precio) > 0
+        ? Number(servicio.precio)
+        : Number(servicio.precio_base);
+
+    return acc + (isNaN(precioFinal) ? 0 : precioFinal);
+  }, 0);
+}, [
+  propio,
+  dataAEditar,
+  selectedServicios,
+  preciosPersonalizadosServicios,
+  totalPrecioServiciosEdicion,
+  dataServiciosList,
+]);
+
+// 🔹 Calculamos el costo total del paquete
+// Si no es propio, ignora los servicios (solo hoteles)
+const costoTotalPaquete = calcularCostoPaquete(
+  salidas,
+  propio ? totalPrecioServiciosMemo ?? 0 : 0
+);
+
+console.log("Costo total paquete:", costoTotalPaquete);
+console.log("Total servicios memo:", totalPrecioServiciosMemo);
+
+// 🔹 Inicializamos los campos de precios personalizados al entrar en edición
+useEffect(() => {
+  // 🧩 Solo si es propio cargamos los servicios
+  if (propio && dataAEditar?.servicios?.length) {
+    dataAEditar.servicios.forEach((servicio: any) => {
+      const valor =
+        servicio.precio && Number(servicio.precio) > 0
+          ? servicio.precio
+          : servicio.precio_base;
+      setValue(`precio_personalizado_servicio_${servicio.servicio_id}`, valor);
+    });
+
+    // Calculamos y seteamos el total inicial
+    const totalServicios = dataAEditar.servicios.reduce((acc, s: any) => {
+      const precioValido =
+        s.precio && Number(s.precio) > 0
+          ? Number(s.precio)
+          : Number(s.precio_base);
+      return acc + (isNaN(precioValido) ? 0 : precioValido);
+    }, 0);
+
+    setTotalPrecioServiciosEdicion(totalServicios);
+  }
+}, [dataAEditar, propio, setValue]);
+
+
   // FUNCIONES DE SALIDAS
 
-   const handleOpenModal = () => {
+  const handleOpenModal = () => {
     const monedaValue = watch('moneda');
     if (!selectedDestinoID) {
       handleShowToast('Debes seleccionar primero el destino', 'error');
@@ -1216,6 +1373,13 @@ export default function ModulosPage() {
     setSalidas((prev) => prev.filter((salida) => salida.id !== roomId))
   }
 
+
+  const handleCadenaNoSeleccionada = (value: boolean | undefined) => {
+    console.log(value)
+    console.log(selectedZonaGeograficaID)
+    // setCadenaNoSeleccionada(value); 
+  }
+
   const resetSalidaForm = () => {
     setSelectedHotels(new Set());
     // setSalidas([])
@@ -1374,12 +1538,12 @@ const handleSubmitClick = useCallback(async () => {
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
         console.log(propio)
         if(propio){
-          console.log(rangoPrecioDesdeHasta);
+          console.log(rangoPrecioDesdeHasta); 
           // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
 
           
           if(paqueteModalidad === 'flexible'){
-            setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString());
+            setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString()); 
             setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
           }
           else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
@@ -1770,6 +1934,16 @@ const handleSubmitClick = useCallback(async () => {
                       }
                 </div>
 
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    Zona Geográfica
+                  </h3>
+                  <div className="flex items-center gap-3 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl px-5 py-4">
+                    <MapPin size={24} className="text-blue-600" />
+                    <span className="text-lg font-medium text-slate-800">{dataDetalle?.zona_geografica?.nombre ?? 'Zona no asignada'}</span>
+                  </div>
+                </div>
+
                 {/* Servicios incluidos y excluidos */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                   <div>
@@ -1840,7 +2014,7 @@ const handleSubmitClick = useCallback(async () => {
                             {index > 2 && <div className="w-2 h-2 bg-green-600 rounded-full" />}
                           </div>
                           <div>
-                            <p className="font-medium text-green-900">{item.nombre}</p>
+                            <p className="font-medium text-green-900">{item.nombre_servicio}</p>
                           </div>
                         </div>
                       ))}
@@ -2118,6 +2292,38 @@ const handleSubmitClick = useCallback(async () => {
                                   <p className="text-red-400 text-sm">Este campo es requerido</p>}
                           </div>
 
+
+                          {/* ZONA GEOGRAFICA*/}
+                          <div className="space-y-1">
+                            <div className="flex gap-3">
+                              <Label htmlFor="name" className="text-gray-700 font-medium">
+                                Zona Geográfica *
+                              </Label>
+      
+                              <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                Solo lectura
+                              </span>
+                            </div>
+                            <Input
+                                id="zona_geografica"
+                                disabled
+                                autoComplete="zona_geografica"
+                                placeholder="Se determinará según el destino seleccionado"
+                                className={`border-gray-300 focus:border-blue-500 focus:ring-blue-500
+                                    w-full px-3 py-4 border-2 border-dashed rounded-lg bg-gradient-to-r from-gray-50 to-teal-50 text-gray-900 cursor-not-allowed font-medium
+                                    !text-lg placeholder:text-lg`}
+                                {...register('zona_geografica', {
+                                // required: true, 
+                                // validate: {blankSpace: (value) => !!value.trim()},
+                                // minLength: 3
+                                })}
+                              />
+                            <div>
+                              {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                              {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
+                            </div>
+                          </div>
+
                           <div className="space-y-2 flex items-center justify-center gap-20">
                             <Controller
                                 name="propio"
@@ -2367,7 +2573,7 @@ const handleSubmitClick = useCallback(async () => {
                               placeholder="Precio del paquete"
                               className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                               {...register('precio', {
-                               
+
                               })}
                             />
                             
@@ -2454,7 +2660,7 @@ const handleSubmitClick = useCallback(async () => {
                             </div> */}
 
 
-                           <div className="space-y-2 md:col-span-2">
+                            <div className="space-y-2 md:col-span-2">
                               <div className="space-y-2 md:col-span-2">
                                   <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Imagen del Paquete
@@ -2499,6 +2705,59 @@ const handleSubmitClick = useCallback(async () => {
                                   </div>
                               </div>
                           </div>
+
+                            {(totalPrecioServiciosMemo || costoTotalPaquete) && salidas.length > 0 && (
+                              <Card className="transition-all duration-200 bg-emerald-50 border-emerald-300 space-y-2 md:col-span-2">
+                                <CardContent className="space-y-4 w-full">
+                                  <div className="flex items-start justify-between w-full">
+                                    <div>
+                                      <Label className="text-base mb-2 flex items-center gap-2">
+                                        Estimación de Precio
+                                        <Info className="w-4 h-4 text-muted-foreground" />
+                                      </Label>
+                                      <div className="mt-3 w-full">
+                                        <div className="flex items-baseline gap-2">
+                                          <span className="text-md text-muted-foreground">Desde</span>
+                                          <span className="text-3xl font-bold text-emerald-600">
+                                            {dataMonedaList
+                                              .filter((moneda: any) => moneda?.id?.toString() === monedaSeleccionada?.toString())
+                                              .map((moneda: any) => (
+                                                <p key={moneda.id}>
+                                                  {moneda.simbolo} {formatearSeparadorMiles.format(costoTotalPaquete.precio_actual_total)}
+                                                </p>
+                                              ))}
+                                          </span>
+                                          {/* <span>{}</span> */}
+                                          {!!costoTotalPaquete?.precio_final_total && paqueteModalidad === 'flexible' && 
+                                            <>
+                                              <span className="text-md text-muted-foreground">Hasta</span>
+                                              <span className="text-3xl font-bold text-emerald-600">
+                                                {dataMonedaList
+                                                  .filter((moneda: any) => moneda?.id?.toString() === monedaSeleccionada?.toString())
+                                                  .map((moneda: any) => (
+                                                    <p key={moneda.id}>
+                                                      {/* {costoTotalPaquete.precio_final_total ? moneda.simbolo + ' ' + formatearSeparadorMiles.format(costoTotalPaquete.precio_final_total) :''} */}
+                                                      {moneda.simbolo} {formatearSeparadorMiles.format(costoTotalPaquete.precio_final_total)}
+                                                    </p>
+                                                  ))}
+                                              </span>
+                                            </>
+                                          }
+                                          {!!costoTotalPaquete?.precio_final_total && 
+                                            <span className="text-sm text-muted-foreground">-</span>
+                                          }
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-2">
+                                          por persona • Incluye alojamiento + servicios • {salidas.length} salida
+                                          {salidas.length > 1 ? "s" : ""} disponible{salidas.length > 1 ? "s" : ""}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+
 
 
                             <div className="space-y-2 md:col-span-2">
@@ -2571,7 +2830,7 @@ const handleSubmitClick = useCallback(async () => {
                                                     className="text-sm font-medium text-gray-900 cursor-pointer block"
                                                   >
                                                     {servicio.nombre}
-                                                    {selectedServicios.includes(servicio.id) &&
+                                                    {selectedServicios.includes(servicio.id) && propio &&
                                                       <div className="col-span-2 flex gap-2 mt-2">  
                                                         <div>
                                                           <Input
@@ -2592,7 +2851,7 @@ const handleSubmitClick = useCallback(async () => {
                                                             
                                                         <div>
                                                           <Controller
-                                                            name={`precio_personalizado_${servicio.id}`}   // 🔹 campo único por servicio
+                                                            name={`precio_personalizado_servicio_${servicio.id}`}   // 🔹 campo único por servicio
                                                             control={control}
                                                             defaultValue={''}
                                                             rules={{
@@ -2640,7 +2899,7 @@ const handleSubmitClick = useCallback(async () => {
                                                 </div>
 
                                               </div>
-                                              <span onClick={() => handleServicioToggle(servicio.id)}>
+                                              <span onClick={() => handleServicioToggle(servicio.id, servicio?.precio ?? 0)}>
                                                 {selectedServicios.includes(servicio.id) ?
                                                   <Trash2 className="text-red-400 w-7 h-7 hover:bg-red-100 rounded-sm p-1" /> :
                                                   <CirclePlus className="text-blue-400 w-7 h-7 hover:bg-blue-100 rounded-sm p-1" />
@@ -2926,6 +3185,12 @@ const handleSubmitClick = useCallback(async () => {
                                                                         if (Number(value) <= 0) {
                                                                           return 'El valor debe ser mayor que cero';
                                                                         }
+
+                                                                        if(Number(value) > cantidadPasajeros){
+                                                                          handleShowToast('El cupo por salida no puede superar a la cantidad maxima de pasajeros', 'error')
+                                                                          return 'El cupo por salida no puede superar a la cantidad maxima de pasajeros';
+                                                                        }
+
                                                                         return true;
                                                                       },
                                                                     }}
@@ -3040,7 +3305,7 @@ const handleSubmitClick = useCallback(async () => {
 
 
                                                                {/* PORCENTAJE DE GANANCIA */}
-                                                               {propio &&
+                                                                {propio &&
                                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                                       <Label htmlFor="ganancia" className="text-gray-700 font-medium">
                                                                         Porcentaje de ganancia *
@@ -3056,6 +3321,10 @@ const handleSubmitClick = useCallback(async () => {
                                                                               if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
                                                                                 return 'Valor inválido';
                                                                               }
+
+                                                                              if (Number(value) <= 0) {
+                                                                                return 'El valor debe ser mayor que cero';
+                                                                              }
                                                                               return true;
                                                                             },
                                                                           }}
@@ -3070,8 +3339,10 @@ const handleSubmitClick = useCallback(async () => {
                                                                                   onBlur={field.onBlur}
                                                                                   thousandSeparator="."
                                                                                   decimalSeparator=","
-                                                                                  decimalScale={0}
-                                                                                  fixedDecimalScale
+                                                                                  allowNegative={false}          // ❌ no permite números negativos
+                                                                                  decimalScale={0}               // ❌ sin decimales
+                                                                                  allowLeadingZeros={false}  
+                                                                                  // fixedDecimalScale
                                                                                   suffix=" %"
                                                                                   placeholder="5%, 10%, 15%, etc."
                                                                                   className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
@@ -3599,6 +3870,36 @@ const handleSubmitClick = useCallback(async () => {
                         />
                       </div>
 
+                      <div className="space-y-2 mi-select-wrapper w-2/5">
+                          {isFetchingZonaGeografica &&
+                          <Select>
+                            <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
+                              <div className="w-full flex items-center justify-center">
+                                <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                              </div>
+                            </SelectTrigger>
+                          </Select>
+                          }
+                          {!isFetchingZonaGeografica && 
+                            <>
+                              <div className="space-y-2 w-full">
+                                <GenericSearchSelect
+                                  dataList={dataZonaGeograficaList}
+                                  value={selectedZonaGeograficaID}
+                                  onValueChange={setSelectedZonaGeograficaID}
+                                  handleDataNoSeleccionada={handleCadenaNoSeleccionada}
+                                  placeholder="Selecciona la zona geografica..."
+                                  labelKey="nombre"
+                                  // secondaryLabelKey="destino"
+                                  // thirdLabelKey="pais"
+                                  valueKey="id"
+                                />
+                            </div>
+                            </>
+                          }
+                        </div>
+                      
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -3611,7 +3912,8 @@ const handleSubmitClick = useCallback(async () => {
                             tipo_paquete: "all",
                             tipo_propiedad: "all"
                           });
-                          setNombreABuscar(""); 
+                          setNombreABuscar("");
+                          setSelectedZonaGeograficaID("");
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
@@ -3619,7 +3921,7 @@ const handleSubmitClick = useCallback(async () => {
                         Limpiar filtros 
                       </Button>
                     </div>
-                   </div>
+                  </div>
                 </CardHeader>
 
                 <CardContent className="p-0">
@@ -3868,7 +4170,7 @@ const handleSubmitClick = useCallback(async () => {
                                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                   <Search className="h-8 w-8 text-gray-400" />
                                 </div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron modulos</h3>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron paquetes</h3>
                                 <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
                                 <Button
                                   onClick={handleReset}

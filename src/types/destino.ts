@@ -29,6 +29,7 @@ export interface Destino {
   hoteles: Hotel[];
   activo: boolean;
   en_uso: boolean;
+  zona_geografica?: string;
   fecha_creacion: string; // formato ISO con zona horaria
   fecha_modificacion: string;
 }

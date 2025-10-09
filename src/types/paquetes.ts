@@ -6,7 +6,7 @@ export interface TipoPaquete{
 
 export interface Servicio{
   id: number;
-  nombre: string;
+  nombre_servicio: string;
 }
 
 export interface Destino{
@@ -14,6 +14,12 @@ export interface Destino{
   ciudad: string;
   // pais: Pais
   pais: string
+}
+export interface ZonaGeografica{
+  id: number;
+  nombre: string;
+  // pais: Pais
+  descripcion: string
 }
 
 export interface Pais{
@@ -57,6 +63,7 @@ export interface Paquete {
   nombre: string;
   tipo_paquete: TipoPaquete;
   destino: Destino;
+  zona_geografica?: ZonaGeografica;
   distribuidora?: Distribuidora;
   precio: number;
   senia: number;

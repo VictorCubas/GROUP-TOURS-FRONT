@@ -1,3 +1,5 @@
+import type { SalidaPaquete } from "@/types/paquetes";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selectedDestinoID: any,
  serviciosListSelected: any [], paqueteModalidad: 'flexible' | 'fijo'): any => {
@@ -123,3 +125,42 @@ const parseFechaLocal = (fecha: string | Date): Date => {
   const [y, m, d] = fecha.split('-').map(Number);
   return new Date(y, m - 1, d); // mes 0-indexado
 };
+
+
+
+
+
+/**
+ * Calcula el costo total del paquete sumando el total de servicios
+ * al menor precio_actual y al mayor precio_final del array.
+ */
+export function calcularCostoPaquete(
+  salidas: SalidaPaquete[],
+  totalPrecioServicios: number
+) {
+  if (!salidas || salidas.length === 0) {
+    return {
+      precio_actual_total: totalPrecioServicios,
+      precio_final_total: totalPrecioServicios,
+    };
+  }
+
+
+  console.log(totalPrecioServicios);
+
+  // 🔹 Convertir a número y buscar min y max
+  const preciosActual = salidas.map((s: any) => Number(s.precio_actual ? s.precio_actual : s.precio));
+  const preciosFinal = salidas.map((s) => Number(s.precio_final));
+
+  const menorPrecioActual = Math.min(...preciosActual);
+  const mayorPrecioFinal = Math.max(...preciosFinal);
+
+  // 🔹 Calcular sumas finales
+  const precio_actual_total = menorPrecioActual + totalPrecioServicios;
+  const precio_final_total = mayorPrecioFinal + totalPrecioServicios;
+
+  return {
+    precio_actual_total,
+    precio_final_total,
+  };
+}
