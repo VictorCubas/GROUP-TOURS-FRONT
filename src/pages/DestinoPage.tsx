@@ -169,7 +169,7 @@ export default function DestinoPage() {
 
 
   const {data: dataZonaGeograficaList, isFetching: isFetchingZonaGeografica,} = useQuery({
-        queryKey: ['todos-cadenas',], //data cached
+        queryKey: ['todos-zona-geografica',], //data cached
         queryFn: () => fetchDataZonasGeograficasTodos(),
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
@@ -281,8 +281,9 @@ export default function DestinoPage() {
   const handleReset = () => {
     startTransition(() => {
         setShowActiveOnly(true);
-        setBusquedaPorFiltro("")
-        setRazonSocialABuscar("")
+        setBusquedaPorFiltro("");
+        setRazonSocialABuscar("");
+        setSelectedZonaGeograficaID("");
       });
   }
 
@@ -324,7 +325,6 @@ export default function DestinoPage() {
 
     
     useEffect(() => {
-      // if(!selectedZonaGeograficaID) return;
       const handler = setTimeout(() => {
         // console.log('cambiando nombre')
 
@@ -810,7 +810,7 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
             <TabsTrigger  value="list" className="cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white">
               Lista de Destinos
             </TabsTrigger>
-             <TabsTrigger disabled={!siTienePermiso("destinos", "crear")} 
+            <TabsTrigger disabled={!siTienePermiso("destinos", "crear")} 
               value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
               Crear Destino
             </TabsTrigger>
@@ -1294,21 +1294,7 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
                         />
                       </div>
 
-                      {/* <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Buscar por zona geografica..."
-                          value={razonSocialABuscar}
-                          onChange={(e) => setRazonSocialABuscar(e.target.value)}
-                          className="pl-10 w-72 border-gray-300 focus:border-blue-500"
-                        />
-                      </div> */}
-
                       <div className="space-y-2 mi-select-wrapper w-2/5">
-                          {/* <Label htmlFor="cadena" className="text-gray-700 font-medium">
-                            Cadena Hotelera
-                          </Label> */}
-    
                           {isFetchingZonaGeografica &&
                           <Select>
                             <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
@@ -1335,10 +1321,6 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
                             </div>
                             </>
                           }
-    
-                            {/* {cadenaNoSeleccionada === false && (
-                              <p className="text-red-400 text-sm">Este campo es requerido</p>
-                            )} */}
                         </div>
 
                       <Button

@@ -102,6 +102,7 @@ import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { calcularCostoPaquete, calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete";
 import { NumericFormat } from 'react-number-format';
+import { fetchDataZonasGeograficasTodos } from "@/components/utils/httpNacionalidades"
 
 
 let dataList: Paquete[] = [];
@@ -166,6 +167,7 @@ export default function ModulosPage() {
   const [ciudadDataCompleto, setCiudadDataCompleto] = useState<any>();
   const [selectedHotels, setSelectedHotels] = useState<Set<string>>(new Set());
   const [hotelPrices, setHotelPrices] = useState<Record<string, { single: number; doble: number; triple: number }>>({});
+  const [selectedZonaGeograficaID, setSelectedZonaGeograficaID] = useState<number | "">("");
   
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
@@ -187,6 +189,7 @@ export default function ModulosPage() {
                 distribuidora_id: '',
                 propio: true,
                 personalizado: false,
+                zona_geografica: "",
               }
             });
 
@@ -309,6 +312,13 @@ export default function ModulosPage() {
   });
 
 
+  const {data: dataZonaGeograficaList, isFetching: isFetchingZonaGeografica,} = useQuery({
+        queryKey: ['todos-zona-geografica',], //data cached
+        queryFn: () => fetchDataZonasGeograficasTodos(),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
+
   console.log(ciudadDataSelected)
 
   const {data: dataHotelesList, isFetching: isFetchingHoteles,} = useQuery({
@@ -419,7 +429,8 @@ export default function ModulosPage() {
     startTransition(() => {
         // setSearchTerm("");
         setShowActiveOnly(true);
-        setNombreABuscar("")
+        setNombreABuscar("");
+        setSelectedZonaGeograficaID("")
       });
   }
 
@@ -569,8 +580,8 @@ export default function ModulosPage() {
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
         setSalidas([]);
-        setSelectedServicios([])
-        setPermissionSearchTerm("")
+        setSelectedServicios([]);
+        setPermissionSearchTerm("");
         reset({
             nombre: '',
             tipo_paquete: '',
@@ -580,7 +591,8 @@ export default function ModulosPage() {
             fecha_regreso: '',
             distribuidora_id: '',
             imagen: '',
-            moneda: ''
+            moneda: '',
+            zona_geografica: ''
         });
 
 
@@ -815,18 +827,45 @@ export default function ModulosPage() {
 
   useEffect(() => {
     console.log(selectedDestinoID);
+    let timeout: NodeJS.Timeout;
     
     if(selectedDestinoID){
       const selectedDestino = dataDestinoList.filter((destino: any) => destino.id.toString() === selectedDestinoID.toString());
-      console.log(selectedDestino)
+      console.log(selectedDestino) 
 
-      if(selectedDestino.length){
+      if(selectedDestino.length){  
         // setValue('nombre', selectedDestino[0].ciudad_nombre);
-        setCiudadDataSelected(selectedDestino[0].ciudad_nombre)
-        setCiudadDataCompleto(selectedDestino[0])
+        setCiudadDataSelected(selectedDestino[0].ciudad_nombre);
+        setCiudadDataCompleto(selectedDestino[0]);
+
+        //zona_geografica_nombre
+        //zona_geografica_nombre
+        timeout = setTimeout(() => {
+          setValue('zona_geografica', selectedDestino[0]?.zona_geografica_nombre ?? 'No tiene zona asignada')
+        }, 0);
       }
     }
-  }, [selectedDestinoID]);
+
+    return () => clearTimeout(timeout);
+  }, [dataDestinoList, selectedDestinoID, setValue]);
+
+
+
+  useEffect(() => {
+      // if(!selectedZonaGeograficaID) return;
+    const handler = setTimeout(() => {
+      // console.log('cambiando nombre')
+
+      const selectedZona = dataZonaGeograficaList.filter((zona: any) => zona.id.toString() === selectedZonaGeograficaID.toString());
+      console.log(selectedZona)
+
+      setFiltros(filtroAnterior => ({...filtroAnterior, zona_geografica: selectedZona[0]?.nombre}))
+    }, 750) // ⏱️ medio segundo de espera
+
+    return () => {
+      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+    }
+  }, [dataZonaGeograficaList, selectedZonaGeograficaID]);
 
   /********************************
    * CORREGIR ESTA PARTE
@@ -1332,6 +1371,13 @@ useEffect(() => {
 
   const handleDeleteRoom = (roomId: string) => {
     setSalidas((prev) => prev.filter((salida) => salida.id !== roomId))
+  }
+
+
+  const handleCadenaNoSeleccionada = (value: boolean | undefined) => {
+    console.log(value)
+    console.log(selectedZonaGeograficaID)
+    // setCadenaNoSeleccionada(value); 
   }
 
   const resetSalidaForm = () => {
@@ -1888,6 +1934,16 @@ const handleSubmitClick = useCallback(async () => {
                       }
                 </div>
 
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    Zona Geográfica
+                  </h3>
+                  <div className="flex items-center gap-3 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl px-5 py-4">
+                    <MapPin size={24} className="text-blue-600" />
+                    <span className="text-lg font-medium text-slate-800">{dataDetalle?.zona_geografica?.nombre ?? 'Zona no asignada'}</span>
+                  </div>
+                </div>
+
                 {/* Servicios incluidos y excluidos */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                   <div>
@@ -2234,6 +2290,38 @@ const handleSubmitClick = useCallback(async () => {
 
                               {onGuardar && !destinoNoSeleccionada && 
                                   <p className="text-red-400 text-sm">Este campo es requerido</p>}
+                          </div>
+
+
+                          {/* ZONA GEOGRAFICA*/}
+                          <div className="space-y-1">
+                            <div className="flex gap-3">
+                              <Label htmlFor="name" className="text-gray-700 font-medium">
+                                Zona Geográfica *
+                              </Label>
+      
+                              <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                Solo lectura
+                              </span>
+                            </div>
+                            <Input
+                                id="zona_geografica"
+                                disabled
+                                autoComplete="zona_geografica"
+                                placeholder="Se determinará según el destino seleccionado"
+                                className={`border-gray-300 focus:border-blue-500 focus:ring-blue-500
+                                    w-full px-3 py-4 border-2 border-dashed rounded-lg bg-gradient-to-r from-gray-50 to-teal-50 text-gray-900 cursor-not-allowed font-medium
+                                    !text-lg placeholder:text-lg`}
+                                {...register('zona_geografica', {
+                                // required: true, 
+                                // validate: {blankSpace: (value) => !!value.trim()},
+                                // minLength: 3
+                                })}
+                              />
+                            <div>
+                              {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                              {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
+                            </div>
                           </div>
 
                           <div className="space-y-2 flex items-center justify-center gap-20">
@@ -3782,6 +3870,36 @@ const handleSubmitClick = useCallback(async () => {
                         />
                       </div>
 
+                      <div className="space-y-2 mi-select-wrapper w-2/5">
+                          {isFetchingZonaGeografica &&
+                          <Select>
+                            <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
+                              <div className="w-full flex items-center justify-center">
+                                <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                              </div>
+                            </SelectTrigger>
+                          </Select>
+                          }
+                          {!isFetchingZonaGeografica && 
+                            <>
+                              <div className="space-y-2 w-full">
+                                <GenericSearchSelect
+                                  dataList={dataZonaGeograficaList}
+                                  value={selectedZonaGeograficaID}
+                                  onValueChange={setSelectedZonaGeograficaID}
+                                  handleDataNoSeleccionada={handleCadenaNoSeleccionada}
+                                  placeholder="Selecciona la zona geografica..."
+                                  labelKey="nombre"
+                                  // secondaryLabelKey="destino"
+                                  // thirdLabelKey="pais"
+                                  valueKey="id"
+                                />
+                            </div>
+                            </>
+                          }
+                        </div>
+                      
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -3794,7 +3912,8 @@ const handleSubmitClick = useCallback(async () => {
                             tipo_paquete: "all",
                             tipo_propiedad: "all"
                           });
-                          setNombreABuscar(""); 
+                          setNombreABuscar("");
+                          setSelectedZonaGeograficaID("");
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
@@ -3802,7 +3921,7 @@ const handleSubmitClick = useCallback(async () => {
                         Limpiar filtros 
                       </Button>
                     </div>
-                   </div>
+                  </div>
                 </CardHeader>
 
                 <CardContent className="p-0">

@@ -15,6 +15,12 @@ export interface Destino{
   // pais: Pais
   pais: string
 }
+export interface ZonaGeografica{
+  id: number;
+  nombre: string;
+  // pais: Pais
+  descripcion: string
+}
 
 export interface Pais{
   id: number;
@@ -57,6 +63,7 @@ export interface Paquete {
   nombre: string;
   tipo_paquete: TipoPaquete;
   destino: Destino;
+  zona_geografica?: ZonaGeografica;
   distribuidora?: Distribuidora;
   precio: number;
   senia: number;
@@ -70,7 +77,6 @@ export interface Paquete {
   propio: boolean;
   salidas: SalidaPaquete[]
   activo: boolean;
-  zona_geografica?: string;
   hoteles_ids: number[];
   imagen: string | null;
   imagen_url: string | null;
