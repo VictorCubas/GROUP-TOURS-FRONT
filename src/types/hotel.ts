@@ -1,4 +1,8 @@
-import type { Servicio } from "./paquetes";
+export interface Servicio{
+  id: number;
+  nombre: string;
+}
+
 
 export interface Habitacion {
   id: number;

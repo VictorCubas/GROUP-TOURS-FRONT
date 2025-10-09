@@ -6,7 +6,7 @@ export interface TipoPaquete{
 
 export interface Servicio{
   id: number;
-  nombre: string;
+  nombre_servicio: string;
 }
 
 export interface Destino{
