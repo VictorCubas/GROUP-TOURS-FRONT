@@ -6,7 +6,7 @@ export interface TipoPaquete{
 
 export interface Servicio{
   id: number;
-  nombre: string;
+  nombre_servicio: string;
 }
 
 export interface Destino{
@@ -70,6 +70,7 @@ export interface Paquete {
   propio: boolean;
   salidas: SalidaPaquete[]
   activo: boolean;
+  zona_geografica?: string;
   hoteles_ids: number[];
   imagen: string | null;
   imagen_url: string | null;

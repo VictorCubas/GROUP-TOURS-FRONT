@@ -21,6 +21,7 @@ import {
   MapPin,
   HotelIcon,
   Star,
+  Info,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -52,10 +53,11 @@ import { queryClient } from "@/components/utils/http"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { fetchDataCiudadesTodos, fetchDataNacionalidadTodos } from "@/components/utils/httpNacionalidades"
+import { fetchDataCiudadesTodos, fetchDataNacionalidadTodos, fetchDataZonasGeograficasTodos } from "@/components/utils/httpNacionalidades"
 import { CountrySearchSelect } from "@/components/CountrySearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
+import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 
 
 const roleStatusColors = {
@@ -93,6 +95,8 @@ export default function DestinoPage() {
   const [onGuardar, setOnGuardar] = useState(false);
   const [ciudadBusqueda, setCiudadBusqueda] = useState<string>("");
   const [hotelesSeleccionados, setHotelesSeleccionados] = useState<any[]>([]);
+  const [razonSocialABuscar, setRazonSocialABuscar] = useState("");
+  const [selectedZonaGeograficaID, setSelectedZonaGeograficaID] = useState<number | "">("");
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
                   fecha_desde: "",
@@ -109,6 +113,7 @@ export default function DestinoPage() {
               defaultValues: {
                 nombre: "",
                 descripcion: "",
+                zona_geografica: "",
               }
             });
   // DATOS DEL FORMULARIO 
@@ -162,6 +167,13 @@ export default function DestinoPage() {
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
+
+  const {data: dataZonaGeograficaList, isFetching: isFetchingZonaGeografica,} = useQuery({
+        queryKey: ['todos-cadenas',], //data cached
+        queryFn: () => fetchDataZonasGeograficasTodos(),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
   
     console.log('dataCiudadList: ', dataCiudadList)
 
@@ -198,6 +210,10 @@ export default function DestinoPage() {
           const pais = selectedPais[0];
           console.log('pais: ', pais);
           // const selectedCiudad = dataNacionalidadList.filter((ciudad: any) => ciudad.id.toString() === selectedNacionalidadID.toString());
+
+          // if(pais?.zona_geografica__nombre)
+          setValue('zona_geografica', pais?.zona_geografica__nombre ?? 'No tiene zona asignada')
+
           setPaisDataSelected(pais);
           if(!dataAEditar){
             setSelectedCiudadID("");
@@ -205,7 +221,7 @@ export default function DestinoPage() {
           }
         }
       }
-    }, [selectedNacionalidadID]);
+    }, [dataAEditar, dataNacionalidadList, selectedNacionalidadID, setValue]);
 
 
     // useEffect(() => {
@@ -266,6 +282,7 @@ export default function DestinoPage() {
     startTransition(() => {
         setShowActiveOnly(true);
         setBusquedaPorFiltro("")
+        setRazonSocialABuscar("")
       });
   }
 
@@ -277,6 +294,8 @@ export default function DestinoPage() {
     setCurrentPage(1);
   }
 
+  // filtros
+
   useEffect(() => {
       const handler = setTimeout(() => {
         console.log('cambiando nombre')
@@ -287,91 +306,102 @@ export default function DestinoPage() {
         clearTimeout(handler) // limpia el timeout si se sigue escribiendo
       }
     }, [busquedaPorFiltro]);
+
+
+    console.log(filtros)
+    console.log(razonSocialABuscar)
+
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        // console.log('cambiando nombre')
+        setFiltros(filtroAnterior => ({...filtroAnterior, zona_geografica: razonSocialABuscar}))
+      }, 750) // ⏱️ medio segundo de espera
+  
+      return () => {
+        clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+      }
+    }, [razonSocialABuscar]);
+
+    
+    useEffect(() => {
+      // if(!selectedZonaGeograficaID) return;
+      const handler = setTimeout(() => {
+        // console.log('cambiando nombre')
+
+        const selectedZona = dataZonaGeograficaList.filter((zona: any) => zona.id.toString() === selectedZonaGeograficaID.toString());
+        console.log(selectedZona)
+
+        setFiltros(filtroAnterior => ({...filtroAnterior, zona_geografica: selectedZona[0]?.nombre}))
+      }, 750) // ⏱️ medio segundo de espera
+  
+      return () => {
+        clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+      }
+    }, [dataZonaGeograficaList, selectedZonaGeograficaID]);
   
 
-  const {mutate, isPending: isPendingMutation} = useMutation({
-    mutationFn: nuevoRolFetch,
-    onSuccess: () => {
-        handleShowToast('Se ha creado un nuevo destino satisfactoriamente', 'success');
-        reset({
-            nombre: "",
-            descripcion: "",
-          });
-
-        setSelectedPermissions([])
-        setSelectedNacionalidadid("")
-        setOnGuardar(false);
-        handleCancel();
-
-        setActiveTab('list');
-         queryClient.invalidateQueries({
-          queryKey: ['destinos'],
-          exact: false
-        });
-
-         queryClient.invalidateQueries({
-          queryKey: ['destinos-disponibles'],
-          exact: false
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['destinos-resumen'],
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['paquetes'],
-          exact: false
-        });
-
-        queryClient.invalidateQueries({queryKey: ['paquetes-resumen'],});
-
-        queryClient.invalidateQueries({queryKey: ['todos-hoteles-paquetes'],});
-    },
+  // ✅ Utilidad para invalidar queries
+const invalidateQueries = (keys: string[]) => {
+  keys.forEach((key) => {
+    queryClient.invalidateQueries({ queryKey: [key], exact: false });
   });
+};
 
-  const {mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
-    mutationFn: guardarDataEditado,
-    onSuccess: () => {
-        handleShowToast('Se ha guardado el modulo satisfactoriamente', 'success');
-        setDataAEditar(undefined);
-        setSelectedNacionalidadid("");
-        setOnGuardar(false);
-        setSelectedCiudadID("");
-        setPaisDataSelected(undefined);
-        setCiudadDataSelected(undefined);
-        handleCancel();
-        reset({
-            nombre: "",
-            descripcion: "",
-          });
-        setActiveTab('list');
-         queryClient.invalidateQueries({
-          queryKey: ['destinos'],
-          exact: false
-        });
+// ✅ Utilidad para resetear el formulario y limpiar estados
+const resetFormulario = () => {
+  reset({ nombre: "", descripcion: "" });
+  setSelectedPermissions([]);
+  setSelectedNacionalidadid("");
+  setSelectedCiudadID("");
+  setPaisDataSelected(undefined);
+  setCiudadDataSelected(undefined);
+  setDataAEditar(undefined);
+  setOnGuardar(false);
+  handleCancel();
+  setActiveTab("list");
+};
 
-         queryClient.invalidateQueries({
-          queryKey: ['destinos-disponibles'],
-          exact: false
-        });
+// ✅ Mutación para crear destino
+const { mutate, isPending: isPendingMutation } = useMutation({
+  mutationFn: nuevoRolFetch,
+  onSuccess: () => {
+    handleShowToast("Se ha creado un nuevo destino satisfactoriamente", "success");
+    resetFormulario();
+    invalidateQueries([
+      "destinos",
+      "destinos-disponibles",
+      "destinos-resumen",
+      "paquetes",
+      "paquetes-resumen",
+      "todos-hoteles-paquetes",
+    ]);
+  },
+  onError: (error) => {
+    console.error(error);
+    handleShowToast("No se pudo crear el destino. Inténtalo nuevamente.", "error");
+  },
+});
 
-        queryClient.invalidateQueries({
-          queryKey: ['hoteles'],
-          exact: false
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['usuarios'],
-          exact: false
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['usuarios-resumen'],
-        });
-
-        queryClient.invalidateQueries({queryKey: ['todos-hoteles-paquetes'],});
-    },
-  });
+// ✅ Mutación para guardar destino editado
+const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
+  mutationFn: guardarDataEditado,
+  onSuccess: () => {
+    handleShowToast("Se ha guardado el destino satisfactoriamente", "success");
+    resetFormulario();
+    invalidateQueries([
+      "destinos",
+      "destinos-disponibles",
+      "hoteles",
+      "usuarios",
+      "usuarios-resumen",
+      "todos-hoteles-paquetes",
+    ]);
+  },
+  onError: (error) => {
+    console.error(error);
+    handleShowToast("No se pudo guardar el destino. Inténtalo nuevamente.", "error");
+  },
+});
 
   const {mutate: mutateDesactivar, isPending: isPendingDesactivar} = useMutation({
     mutationFn: activarDesactivarData,
@@ -521,11 +551,11 @@ export default function DestinoPage() {
     setDataDetalle(undefined);
   }
 
-  // const handlePermissionToggle = (permissionId: number) => {
-  //   setSelectedPermissions((prev) =>
-  //     prev.includes(permissionId) ? prev.filter((p) => p !== permissionId) : [...prev, permissionId],
-  //   )
-  // }
+  const handleCadenaNoSeleccionada = (value: boolean | undefined) => {
+    console.log(value)
+    console.log(selectedZonaGeograficaID)
+    // setCadenaNoSeleccionada(value); 
+  }
 
 
   /**
@@ -797,28 +827,9 @@ export default function DestinoPage() {
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-gray-700 font-medium">
-                        Nombre del Destino *
-                      </Label>
-                    <Input
-                        id="nombre"
-                        disabled
-                        autoComplete="nombre"
-                        placeholder="Nombre del destino"
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        {...register('nombre', {
-                        required: true, 
-                        validate: {blankSpace: (value) => !!value.trim()},
-                        minLength: 3})}
-                      />
-                      <div>
-                        {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                        {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
-                      </div>
-                    </div>
 
-                     <div className="space-y-2 mi-select-wrapper">
+                     {/* PAIS */}
+                    <div className="space-y-2 mi-select-wrapper">
                         <Label htmlFor="nacionalidad" className="text-gray-700 font-medium">
                           Pais *
                         </Label>
@@ -853,13 +864,15 @@ export default function DestinoPage() {
                           {onGuardar && nacionalidadNoSeleccionada === undefined && <p className="text-red-400 text-sm">Este campo es requerido</p>}
                       </div>
 
-                     <div className="space-y-2 mi-select-wrapper">
+                        {/* CIUIDAD */}
+                      <div className="space-y-2 mi-select-wrapper">
                         <Label htmlFor="ciudad" className="text-gray-700 font-medium">
                           Ciudad *
                         </Label>
 
                         <div className="space-y-2">
                           <DinamicSearchSelect
+                            disabled={!selectedNacionalidadID}
                             // disabled={!dataAEditar}
                             dataList={newDataCiudadList || []}
                             value={selectedCiudadID}
@@ -872,7 +885,14 @@ export default function DestinoPage() {
                             valueKey="id"
                           />
                         </div>
+
+                        {/* {JSON.stringify(selectedNacionalidadID)}
+                        {JSON.stringify(nacionalidadNoSeleccionada)} */}
                           
+                          {!selectedNacionalidadID && <p className="mt-1.5 text-sm text-gray-500 flex items-center gap-1">
+                            <Info className="w-4 h-4" />
+                            Primero selecciona un país
+                          </p>}
 
                           {ciudadNoSeleccionada === false && (
                             <p className="text-red-400 text-sm">Este campo es requerido</p>
@@ -880,6 +900,68 @@ export default function DestinoPage() {
 
                           {/* {onGuardar && nacionalidadNoSeleccionada === undefined && <p className="text-red-400 text-sm">Este campo es requerido</p>} */}
                       </div>
+
+
+                    {/* ZONA GEOGRAFICA*/}
+                    <div className="space-y-2">
+                      <div className="flex gap-4">
+                        <Label htmlFor="name" className="text-gray-700 font-medium">
+                          Zona Geográfica *
+                        </Label>
+
+                        <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          Solo lectura
+                        </span>
+                      </div>
+                      <Input
+                          id="zona_geografica"
+                          disabled
+                          autoComplete="zona_geografica"
+                          placeholder="Se determinará según el país seleccionado"
+                          className={`border-gray-300 focus:border-blue-500 focus:ring-blue-500
+                              w-full px-4 py-6 border-2 border-dashed rounded-lg bg-gradient-to-r from-gray-50 to-teal-50 text-gray-900 cursor-not-allowed font-medium
+                              !text-lg placeholder:text-lg`}
+                          {...register('zona_geografica', {
+                          // required: true, 
+                          // validate: {blankSpace: (value) => !!value.trim()},
+                          // minLength: 3
+                          })}
+                        />
+                      <div>
+                        {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                        {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
+                      </div>
+                    </div>
+
+                    {/* NOMBRE DEL DESTINO*/}
+                    <div className="space-y-2">
+                      <div className="flex gap-4">
+                        <Label htmlFor="name" className="text-gray-700 font-medium">
+                          Nombre del Destino *
+                        </Label>
+
+                        <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          Auto-completado
+                        </span>
+                      </div>
+                      <Input
+                          id="nombre"
+                          disabled
+                          autoComplete="nombre"
+                          placeholder="Se completará automáticamente"
+                          className={`border-gray-300 focus:border-blue-500 focus:ring-blue-500
+                              w-full px-4 py-6 border-2 border-dashed rounded-lg bg-gradient-to-r from-gray-50 to-teal-50 text-gray-700 cursor-not-allowed font-medium
+                              !text-lg placeholder:text-lg`}
+                          {...register('nombre', {
+                          required: true, 
+                          validate: {blankSpace: (value) => !!value.trim()},
+                          minLength: 3})}
+                        />
+                      <div>
+                        {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                        {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
+                      </div>
+                    </div>
 
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="description" className="text-gray-700 font-medium">
@@ -1179,25 +1261,6 @@ export default function DestinoPage() {
                             className="pl-10 w-full border-gray-300 focus:border-blue-500"
                           />
                         </div>
-
-                        {/* <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input
-                            placeholder="Buscar por razon social..."
-                            value={razonSocialABuscar}
-                            onChange={(e) => setRazonSocialABuscar(e.target.value)}
-                            className="pl-10 w-72 border-gray-300 focus:border-blue-500"
-                          />
-                        </div> */}
-
-                        {/* <Button
-                          onClick={handleBuscarPorNombre}
-                          variant="outline"
-                          size="icon"
-                          className="border-gray-300 hover:bg-gray-50 bg-transparent cursor-pointer"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button> */}
                       </div>
                     </div>
 
@@ -1222,6 +1285,53 @@ export default function DestinoPage() {
                         />
                       </div>
 
+                      {/* <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Buscar por zona geografica..."
+                          value={razonSocialABuscar}
+                          onChange={(e) => setRazonSocialABuscar(e.target.value)}
+                          className="pl-10 w-72 border-gray-300 focus:border-blue-500"
+                        />
+                      </div> */}
+
+                      <div className="space-y-2 mi-select-wrapper w-2/5">
+                          {/* <Label htmlFor="cadena" className="text-gray-700 font-medium">
+                            Cadena Hotelera
+                          </Label> */}
+    
+                          {isFetchingZonaGeografica &&
+                          <Select>
+                            <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
+                              <div className="w-full flex items-center justify-center">
+                                <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
+                              </div>
+                            </SelectTrigger>
+                          </Select>
+                          }
+                          {!isFetchingZonaGeografica && 
+                            <>
+                              <div className="space-y-2 w-full">
+                                <GenericSearchSelect
+                                  dataList={dataZonaGeograficaList}
+                                  value={selectedZonaGeograficaID}
+                                  onValueChange={setSelectedZonaGeograficaID}
+                                  handleDataNoSeleccionada={handleCadenaNoSeleccionada}
+                                  placeholder="Selecciona la zona geografica..."
+                                  labelKey="nombre"
+                                  // secondaryLabelKey="destino"
+                                  // thirdLabelKey="pais"
+                                  valueKey="id"
+                                />
+                            </div>
+                            </>
+                          }
+    
+                            {/* {cadenaNoSeleccionada === false && (
+                              <p className="text-red-400 text-sm">Este campo es requerido</p>
+                            )} */}
+                        </div>
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -1233,6 +1343,8 @@ export default function DestinoPage() {
                             nombre: ""
                           });
                           setBusquedaPorFiltro(""); 
+                          setRazonSocialABuscar("");
+                          setSelectedZonaGeograficaID("");
                         }}
                       className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
                       >
@@ -1240,7 +1352,7 @@ export default function DestinoPage() {
                         Limpiar filtros 
                       </Button>
                     </div>
-                   </div>
+                  </div>
                 </CardHeader>
 
               <CardContent className="p-0">

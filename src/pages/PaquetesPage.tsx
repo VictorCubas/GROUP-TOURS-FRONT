@@ -886,6 +886,7 @@ export default function ModulosPage() {
       return servicio.servicio_id;
     });
 
+    console.log(servicios_ids)
     console.log('data: ', data)
     setActiveTab('form');
     setDataAEditar(data);
@@ -1024,7 +1025,7 @@ export default function ModulosPage() {
 
 
   const handleServicioToggle = (permissionId: number, precio: number) => {
-    console.log(precio);
+    console.log(precio); 
     console.log(permissionId)
     setSelectedServicios((prev) => {
       const updated =
@@ -1957,7 +1958,7 @@ const handleSubmitClick = useCallback(async () => {
                             {index > 2 && <div className="w-2 h-2 bg-green-600 rounded-full" />}
                           </div>
                           <div>
-                            <p className="font-medium text-green-900">{item.nombre}</p>
+                            <p className="font-medium text-green-900">{item.nombre_servicio}</p>
                           </div>
                         </div>
                       ))}
@@ -4050,7 +4051,7 @@ const handleSubmitClick = useCallback(async () => {
                                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                   <Search className="h-8 w-8 text-gray-400" />
                                 </div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron modulos</h3>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron paquetes</h3>
                                 <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
                                 <Button
                                   onClick={handleReset}

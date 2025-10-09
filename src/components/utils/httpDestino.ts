@@ -15,6 +15,10 @@ export const fetchData = async (page: number, page_size: number = 5,
       url = url + `&busqueda=${filtros.nombre}`;
     }
 
+    if(filtros.zona_geografica){
+      url = url + `&zona_geografica=${filtros.zona_geografica}`;
+    }
+
     if(filtros.telefono){
       url = url + `&telefono=${filtros.telefono}`;
     }
