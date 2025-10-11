@@ -44,6 +44,108 @@ export const fetchData = async (page: number, page_size: number = 5,
   }
 
 
+export const fetchDataPasajeros = async (page: number, page_size: number = 5, 
+    filtros: any) => {
+    let url = `/personas/?page=${page}&page_size=${page_size}`;
+
+    console.log('filtros: ', filtros)
+
+    console.log('nombre: ', filtros.nombre)
+    if(filtros.nombre){
+      url = url + `&nombre=${filtros.nombre}`;
+    }
+
+    if(filtros.razon_social){
+      url = url + `&razon_social=${filtros.razon_social}`;
+    }
+
+    if(filtros.tipo !== 'all'){
+      url = url + `&tipo=${filtros.tipo}`;
+    }
+
+    if(filtros.sexo !== 'all'){
+      url = url + `&sexo=${filtros.sexo}`;
+    }
+
+    if(filtros.documento){
+      url = url + `&documento=${filtros.documento}`;
+    }
+
+    if(filtros.telefono){
+      url = url + `&telefono=${filtros.telefono}`;
+    }
+
+    if(filtros.fecha_desde && filtros.fecha_hasta){
+      url = url + `&fecha_desde=${filtros.fecha_desde}`;
+      url = url + `&fecha_hasta=${filtros.fecha_hasta}`;
+    }
+
+    url = url + `&activo=${filtros.activo}`;
+
+    try {
+      const resp = await axiosInstance.get(url);
+      console.log('personas list: ', resp?.data);
+      if(resp?.data?.results){
+        // setPermisos(resp?.data?.results ?? []);
+
+        return resp?.data.results ?? null;
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+export const fetchDataPaquetes = async (page: number, page_size: number = 5, 
+    filtros: any) => {
+    let url = `/paquete/?page=${page}&page_size=${page_size}`;
+
+    console.log('filtros: ', filtros)
+
+    console.log('busqueda: ', filtros.busqueda)
+    if(filtros.busqueda){
+      url = url + `&busqueda=${filtros.busqueda}`;
+    }
+
+    if(filtros.zona_geografica){
+      url = url + `&zona_geografica=${filtros.zona_geografica}`;
+    }
+
+    // if(filtros.telefono){
+    //   url = url + `&telefono=${filtros.telefono}`;
+    // }
+
+    // if(filtros.tipo_paquete !== 'all'){
+    //   url = url + `&tipo_paquete=${filtros.tipo_paquete}`;
+    // }
+
+    // if(filtros.tipo_propiedad !== 'all'){
+    //   url = url + `&propio=${filtros.tipo_propiedad === 'Propio'}`;
+    // }
+
+    // if(filtros.sexo !== 'all'){
+    //   url = url + `&sexo=${filtros.sexo}`;
+    // }
+
+    if(filtros.fecha_desde && filtros.fecha_hasta){
+      url = url + `&fecha_creacion_desde=${filtros.fecha_desde}`;
+      url = url + `&fecha_creacion_hasta=${filtros.fecha_hasta}`;
+    }
+
+    url = url + `&activo=${filtros.activo}`;
+
+    try {
+      const resp = await axiosInstance.get(url);
+      console.log('personas list: ', resp?.data);
+      if(resp?.data?.results){
+        // setPermisos(resp?.data?.results ?? []);
+
+        return resp?.data.results ?? null;
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
 //tanstackquery ya maneja el error y en el interceptor tambien
 export async function nuevoDataFetch(data: any) {
     await axiosInstance.post(`/reservas/`, data);    

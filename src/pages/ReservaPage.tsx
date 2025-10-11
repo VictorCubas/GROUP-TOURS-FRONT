@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
@@ -35,6 +36,7 @@ import {
   Grid3X3,
   Crown,
   User,
+  CalendarDays,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -67,7 +69,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Distribuidora, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import {formatearFecha, formatearSeparadorMiles, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpReservas"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos, fetchDataPasajeros, fetchDataPaquetes } from "@/components/utils/httpReservas"
 import { fetchData as fetchDataPersona } from "@/components/utils/httpPersona"
 
 import {Controller, useForm } from "react-hook-form"
@@ -76,13 +78,14 @@ import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { GenericSearchSelect } from "@/components/GenericSearchSelect"
+// import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
 import { Checkbox } from "@/components/ui/checkbox"
-import { fetchDataPaqueteTodos, fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
+import {fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
+import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -110,12 +113,17 @@ import type { Persona } from "@/types/empleados"
 
 let dataList: Reserva[] = [];
 let tipoReservaFilterList: any[] = [];
+let dataPasajerosList: any[] = [];
+// let dataPaquetesList: any[] = [];
 console.log(tipoReservaFilterList);
+
+let paqueteSeleccionado: any = [];
 
 export default function ModulosPage() {
   const {siTienePermiso} = useSessionStore();
   // const [setSearchTerm] = useState("")
   const [selectedPaqueteID, setSelectedPaqueteID] = useState<number | "">("");
+  const [selectedSalidaID, setSelectedSalidaID] = useState<string>("");
   const [paqueteNoSeleccionada, setPaqueteNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
@@ -124,19 +132,24 @@ export default function ModulosPage() {
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
   const [tipoPaqueteSelected, setTipoPaqueteSelected] = useState<TipoPaquete>();
-  const [distribuidoraSelected, setDistribuidoraSelected] = useState<Distribuidora>();
-  const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  // const [distribuidoraSelected, setDistribuidoraSelected] = useState<Distribuidora>();
+  const [pasajerosSearchTerm, setPasajerosSearchTerm] = useState("");
+  const [selectedPasajeros, setSelectedPasajeros] = useState<number[]>([])
   const [selectedPasajerosData, setSelectedPasajerosData] = useState<any[]>([])
   const [dataDetalle, setDataDetalle] = useState<Reserva>();
-   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
   const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
+  const [newDataPaqueteList, setNewDataPaqueteList] = useState<Persona[]>();
   const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
+  const [paqueteBusqueda, setPaqueteBusqueda] = useState<string>("");
   const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
   const [selectedTitularData, setSelectedTitularData] = useState<any | undefined>();
+  const [selectedPaqueteData, setSelectedPaqueteData] = useState<any | undefined>();
   const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
+  // const [paqueteNoSeleccionada, setPaqueteNoSeleccionada] = useState<boolean | undefined>();
+  const [startDebounce, setStartDebounce] = useState<boolean>(false);
   
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
@@ -144,6 +157,10 @@ export default function ModulosPage() {
                   fecha_hasta: "",
                   nombre: "",
                   estado: "all",  
+                });
+
+  const [filtrosPasajeros, setFiltrosPasajeros] = useState({
+                  activo: true, tipo: 'fisica', sexo: 'all', nombre: ""
                 });
   
   // DATOS DEL FORMULARIO 
@@ -170,12 +187,13 @@ export default function ModulosPage() {
 
   console.log(onVerDetalles)
   console.log(dataDetalle);
-   
-    console.log(distribuidoraSelected)
+  // console.log(distribuidoraSelected)
 
   const {data: dataPaquetesList, isFetching: isFetchingPaquete,} = useQuery({
-      queryKey: ['paquetes-disponibles',], //data cached
-      queryFn: () => fetchDataPaqueteTodos(),
+      queryKey: ['paquetes-disponibles', 1, 10, {activo: true, busqueda: paqueteBusqueda}], //data cached
+      // queryFn: () => fetchDataPaquetes(1, 10, filtrosPaquetes),
+      queryFn: () => fetchDataPaquetes(1, 10, {activo: true, busqueda: paqueteBusqueda}),
+      enabled: Boolean(paqueteBusqueda),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
@@ -185,13 +203,34 @@ export default function ModulosPage() {
   //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   //   });
 
-   const {data: dataPersonaList, isFetching: isFetchingPersonas} = useQuery({
+  const {data: dataPersonaList, isFetching: isFetchingPersonas} = useQuery({
     queryKey: ['personas-disponibles', 1, 10, {activo: true, tipo: 'fisica', sexo: 'all', nombre: personaBusqueda}], //data cached 
     queryFn: () => fetchDataPersona(1, 10, {activo: true, tipo: 'fisica', sexo: 'all', nombre: personaBusqueda}),
+    staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
+    // enabled: !((filtros.fecha_desde && !filtros.fecha_hasta) || (!filtros.fecha_desde && filtros.fecha_hasta))
+    enabled: Boolean(personaBusqueda)
+  ,
+  });
+
+
+  const {data: dataPasajerosListTemp, isFetching: isFetchingPasajeros} = useQuery({
+    queryKey: ['pasajeros-disponibles', 1, 10, filtrosPasajeros], //data cached 
+    queryFn: () => fetchDataPasajeros(1, 10, filtrosPasajeros),
     staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
     enabled: !((filtros.fecha_desde && !filtros.fecha_hasta) || (!filtros.fecha_desde && filtros.fecha_hasta))
   ,
   });
+
+  console.log(dataPasajerosListTemp)
+
+  if(isFetchingPasajeros)
+    dataPasajerosList = [];
+  else
+    dataPasajerosList = dataPasajerosListTemp;
+
+
+  console.log(dataPasajerosList)
+  console.log(dataPaquetesList);
 
   const {data: dataTipoPaqueteList, isFetching: isFetchingTipoPaquetes,} = useQuery({
       queryKey: ['tipos-paquetes-disponibles',], //data cached
@@ -206,11 +245,11 @@ export default function ModulosPage() {
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
-  const {data: dataServiciosList, isFetching: isFetchingServicios,} = useQuery({
-      queryKey: ['servicios-disponibles',], //data cached
-      queryFn: () => fetchDataServiciosTodos(),
-      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-    });
+  // const {data: dataServiciosList, isFetching: isFetchingServicios,} = useQuery({
+  //     queryKey: ['servicios-disponibles',], //data cached
+  //     queryFn: () => fetchDataServiciosTodos(),
+  //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  //   });
 
   const {data: dataDistribuidoraList, isFetching: isFetchingDistribuidora,} = useQuery({
       queryKey: ['distribuidoras-disponibles',], //data cached
@@ -220,7 +259,7 @@ export default function ModulosPage() {
 
 
   console.log(isFetchingTipoPaquetes);
-  console.log(dataMonedaList, isFetchingServicios);
+  // console.log(dataMonedaList, isFetchingServicios);
   console.log( isFetchingMoneda);
   console.log(dataDistribuidoraList, isFetchingDistribuidora);
   // console.log(dataMonedaList, isFetchingServicios);
@@ -260,7 +299,7 @@ export default function ModulosPage() {
   // if(!isFetchingPersonas){
   //   console.log('dataListPersonas: ', dataPersonaList)
   // }
-   useEffect(() => {
+  useEffect(() => {
       if(isFetchingPersonas){
         setNewDataPersonaList([])
       }
@@ -272,7 +311,7 @@ export default function ModulosPage() {
     console.log(watch('titularComoPasajero')); ;
 
 
-   useEffect(() => {  
+  useEffect(() => {  
     if(dataPersonaList){
       if(dataAEditar){
         setNewDataPersonaList([...dataPersonaList, dataAEditar.titular]);
@@ -284,6 +323,28 @@ export default function ModulosPage() {
     }
   }, [dataAEditar, dataPersonaList]);
 
+  //BUSCADOR DE PAQUETES
+  useEffect(() => {
+    if(isFetchingPaquete){
+      setNewDataPaqueteList([])
+    }
+  }, [isFetchingPaquete]);
+
+  useEffect(() => {  
+    if(dataPaquetesList){
+      if(dataAEditar){
+        setNewDataPaqueteList([...dataPaquetesList, dataAEditar.titular]);
+      }
+      else{
+        console.log('dataPersonaList: ', dataPaquetesList)
+        setNewDataPaqueteList([...dataPaquetesList])
+      }
+    }
+  }, [dataAEditar, dataPaquetesList]);
+
+
+
+  console.log(newDataPaqueteList)
 
     useEffect(() => {
       if (!tipoPaqueteSelected) return;
@@ -355,12 +416,13 @@ export default function ModulosPage() {
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
-        setSelectedPermissions([])
+        setSelectedPasajeros([])
         setSelectedPaqueteID("");
         setTipoPaqueteSelected(undefined);
-        setDistribuidoraSelected(undefined);
+        // setDistribuidoraSelected(undefined);
         handlePaqueteNoSeleccionada(undefined);
-        selectedTitularData(undefined)
+        setSelectedTitularData(undefined)
+        setSelectedPaqueteData(undefined)
         
         setActiveTab('list');
         queryClient.invalidateQueries({
@@ -457,7 +519,23 @@ export default function ModulosPage() {
   }
 
   const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
+    console.log(value)
     setPersonaNoSeleccionada(value);
+  }
+
+  const handleDataNoPaqueteSeleccionada = (value: boolean | undefined) => {
+    setPaqueteNoSeleccionada(value);
+  }
+
+
+  if(selectedPaqueteID){
+    console.log(selectedPaqueteID)
+    console.log(dataPaquetesList)
+    console.log(newDataPaqueteList)
+    console.log(selectedPaqueteData)
+    
+    // paqueteSeleccionado = dataPaquetesList.filter((p: any) => p.id.toString() === selectedPaqueteID.toString())
+    console.log(paqueteSeleccionado)
   }
 
 
@@ -465,14 +543,17 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         setOnGuardar(false)
         setSelectedTitularData(undefined)
+        setSelectedPaqueteData(undefined)
         setSelectedPaqueteID("");
         setTipoPaqueteSelected(undefined);
-        setDistribuidoraSelected(undefined);
+        // setDistribuidoraSelected(undefined);
         handlePaqueteNoSeleccionada(undefined)
         setSelectedPersonaID("");
         handleDataNoSeleccionada(undefined)
         handleDataNoPersonaSeleccionada(undefined)
-        setNewDataPersonaList([...dataPersonaList.results])
+        handleDataNoPaqueteSeleccionada(undefined)
+        setNewDataPersonaList([...dataPersonaList.results]);
+        setNewDataPaqueteList([...dataPaquetesList])
         reset({
             nombre: '',
             distribuidora_id: '',
@@ -554,7 +635,7 @@ export default function ModulosPage() {
       ...dataForm,
       destino_id: selectedPaqueteID,
       tipo_paquete_id: tipoPaqueteSelected?.id,
-      servicios_ids: selectedPermissions,
+      servicios_ids: selectedPasajeros,
       persona: selectedPersonaID,
     };
 
@@ -645,14 +726,14 @@ export default function ModulosPage() {
     setActiveTab('form');
     setDataAEditar(data);
 
-     setSelectedPersonaID(data!.titular.id)
+    setSelectedPersonaID(data!.titular.id)
     
 
     //COMENTADO TEMPORALMENTE
       // setSelectedPaqueteID(data!.destino.id)
       // setTipoPaqueteSelected(data!.tipo_paquete)
       // setDistribuidoraSelected(data!.distribuidora);
-      // setSelectedPermissions(servicios_ids)
+      // setSelectedPasajeros(servicios_ids)
     
   }
 
@@ -691,6 +772,23 @@ export default function ModulosPage() {
     }
   }, [nombreABuscar]);
 
+  // BUSCADOR DE PASAJEROS
+  useEffect(() => {
+    setStartDebounce(true);
+    const handler = setTimeout(() => {
+      console.log('cambiando nombre')
+      setFiltrosPasajeros(filtroPersona => ({...filtroPersona, nombre: pasajerosSearchTerm}))
+      setStartDebounce(false);
+    }, 750) // ⏱️ medio segundo de espera
+
+    return () => {
+      clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+    }
+  }, [pasajerosSearchTerm]);
+
+  // if(startDebounce)
+  //   dataPasajerosList = []
+
   const handlePaqueteNoSeleccionada = (value: boolean | undefined) => {
     setPaqueteNoSeleccionada(value);
   }
@@ -725,7 +823,7 @@ export default function ModulosPage() {
 
   const handlePermissionToggle = (permissionId: number, pasajero: any) => {
     // 🔹 Primero actualizamos los ids seleccionados
-    setSelectedPermissions((prev) => {
+    setSelectedPasajeros((prev) => {
       let updated;
 
       if (prev.includes(permissionId)) {
@@ -1143,34 +1241,23 @@ export default function ModulosPage() {
                               Paquete *
                             </Label>
 
-                            {isFetchingPaquete &&
-                            <Select>
-                              <SelectTrigger className="cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 w-46 flex">
-                                <div className="w-full flex items-center justify-center">
-                                  <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
-                                </div>
-                              </SelectTrigger>
-                            </Select>
-                            }
-                            {!isFetchingPaquete && 
-                              <>
-                                <div className="space-y-2">
-                                  <GenericSearchSelect
-                                    dataList={dataPaquetesList}
-                                    value={selectedPaqueteID}
-                                    onValueChange={setSelectedPaqueteID}
-                                    handleDataNoSeleccionada={handlePaqueteNoSeleccionada}
-                                    placeholder="Selecciona el paquete..."
-                                    labelKey="nombre"
-                                    secondaryLabelKey="destino"
-                                    thirdLabelKey="pais"
-                                    valueKey="id"
-                                  />
-                              </div>
-                              </>
-                            }
+                            <div className="space-y-2">
+                              <DinamicSearchSelect
+                                  disabled={!!dataAEditar}
+                                  dataList={newDataPaqueteList || []}
+                                  value={selectedPaqueteID}
+                                  onValueChange={setSelectedPaqueteID}
+                                  setSelectedTitularData={setSelectedPaqueteData}
+                                  handleDataNoSeleccionada={handleDataNoPaqueteSeleccionada}
+                                  onSearchChange={setPaqueteBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                  isFetchingPersonas={isFetchingPaquete}
+                                  placeholder="Buscar paquete..."
+                                  labelKey="nombre"
+                                  valueKey="id"
+                                />
+                            </div>
 
-                              {paqueteNoSeleccionada === false && (
+                              {(paqueteNoSeleccionada === false || (onGuardar === true && paqueteNoSeleccionada === undefined)) && (
                                 <p className="text-red-400 text-sm">Este campo es requerido</p>
                               )}
                           </div>
@@ -1180,23 +1267,23 @@ export default function ModulosPage() {
                               <Label htmlFor="persona" className="text-gray-700 font-medium">
                                 Titular *
                               </Label>
-                              
-                                <div className="space-y-2">
-                                    <DinamicSearchSelect
-                                      disabled={!!dataAEditar}
-                                      dataList={newDataPersonaList || []}
-                                      value={selectedPersonaID}
-                                      onValueChange={setSelectedPersonaID}
-                                      setSelectedTitularData={setSelectedTitularData}
-                                      handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
-                                      onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
-                                      isFetchingPersonas={isFetchingPersonas}
-                                      placeholder="Buscar titular..."
-                                      valueKey="id"
-                                    />
-                                </div>
+                            
+                              <div className="space-y-2">
+                                  <DinamicSearchSelect
+                                    disabled={!!dataAEditar}
+                                    dataList={newDataPersonaList || []}
+                                    value={selectedPersonaID}
+                                    onValueChange={setSelectedPersonaID}
+                                    setSelectedTitularData={setSelectedTitularData}
+                                    handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                                    onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                    isFetchingPersonas={isFetchingPersonas}
+                                    placeholder="Buscar titular..."
+                                    valueKey="id"
+                                  />
+                              </div>
   
-                                {personaNoSeleccionada === false || (onGuardar === true && personaNoSeleccionada === undefined) &&(
+                                {(personaNoSeleccionada === false || (onGuardar === true && personaNoSeleccionada === undefined)) && (
                                   <p className="text-red-400 text-sm">Este campo es requerido</p>
                                 )}
                             </div>
@@ -1210,6 +1297,7 @@ export default function ModulosPage() {
                                 <div className="flex items-center gap-3 cursor-pointer m-0">
                                   <Checkbox
                                     id="titularComoPasajero"
+                                    disabled={!selectedPaqueteID}
                                     checked={field.value}
                                     onCheckedChange={(checked) => field.onChange(!!checked)}
                                     className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
@@ -1253,13 +1341,40 @@ export default function ModulosPage() {
                               </div>
                             </div>
 
+                            {selectedPaqueteData &&
+                              <Card className="space-y-2 md:col-span-2">
+                                <CardHeader>
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
+                                      2
+                                    </div>
+                                    <div>
+                                      <CardTitle className="flex items-center gap-2">
+                                        <CalendarDays className="h-5 w-5" />
+                                        Seleccionar Fecha de Salida
+                                      </CardTitle>
+                                      <CardDescription>Elija la fecha de salida que prefiere el cliente</CardDescription>
+                                    </div>
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  selectedSalidaID: {JSON.stringify(selectedSalidaID)}
+                                  <FechaSalidaSelectorContainer
+                                    fechaSalidasList={selectedPaqueteData?.salidas}
+                                    fechaSeleccionada={selectedSalidaID}
+                                    onFechaSeleccionada={setSelectedSalidaID}
+                                  />
+                                </CardContent>
+                              </Card>
+                            }
+
 
                             <div className="space-y-2 md:col-span-2">
 
                                {/* Mostrar titular como pasajero si está marcado */}
                                     {watch('titularComoPasajero') && selectedTitularData && (
                                       <div className="mb-6">
-                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular 1 (incluido como pasajero)</h3>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
                                         <div className="p-4 bg-blue-50 rounded-lg">
                                           <div className="flex items-center space-x-4">
                                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -1272,7 +1387,7 @@ export default function ModulosPage() {
                                               </p>
                                               <p className="text-sm text-gray-500">
                                                 {/* {DOCUMENT_TYPES[formData.persona.tipo_documento || 'cedula']}: {formData.persona.numero_documento} */}
-                                                asdasdasdsa
+                                                {selectedTitularData.documento}
                                               </p>
                                             </div>
                                           </div>
@@ -1284,13 +1399,13 @@ export default function ModulosPage() {
 
                               <div className="space-y-2 md:col-span-2">
                                   <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                                  Pasajeros ({0 + (watch('titularComoPasajero') ? 1 : selectedPermissions.length)})
+                                  Pasajeros ({0 + (watch('titularComoPasajero') ? 1 + selectedPasajeros.length: selectedPasajeros.length)})
                                 </h2>
 
                                   {selectedPasajerosData && selectedPasajerosData.length > 0 && (
                                       <div className="mb-6">
                                         <h3 className="text-lg font-medium text-gray-900 mb-4">Pasajeros Agregados</h3>
-                                        <div className="space-y-3">
+                                        <div className="space-y-3 max-h-95 overflow-y-auto">
                                           {selectedPasajerosData.map((pasajero: any) => (
                                             <div key={pasajero.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                               <div className="flex items-center space-x-4">
@@ -1324,7 +1439,7 @@ export default function ModulosPage() {
                                      {/* Mostrar titular como pasajero si está marcado */}
                                     {watch('titularComoPasajero') && selectedTitularData && (
                                       <div className="mb-6">
-                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular 2 (incluido como pasajero)</h3>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
                                         <div className="p-4 bg-blue-50 rounded-lg">
                                           <div className="flex items-center space-x-4">
                                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -1333,12 +1448,12 @@ export default function ModulosPage() {
                                             <div>
                                               <p className="font-medium text-gray-900">
                                                 {/* {formData.persona.nombre} {formData.persona.apellido} */}
-                                                Victor Cubas
+                                                {selectedTitularData.nombre}
                                                 <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
                                               </p>
                                               <p className="text-sm text-gray-500">
                                                 {/* {DOCUMENT_TYPES[formData.persona.tipo_documento || 'cedula']}: {formData.persona.numero_documento} */}
-                                                4023123
+                                                {selectedTitularData.documento}
                                               </p>
                                             </div>
                                           </div>
@@ -1350,28 +1465,28 @@ export default function ModulosPage() {
                             <div className="space-y-2 md:col-span-2">
                                 <Label className="text-gray-700 font-medium">Seleccione los pasajeros *</Label>
 
-                                
+                                {/* INPUT DE BUQUEDA DE PASAJERO */}
                                 <div className="relative mb-4">
                                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                   <Input
                                     placeholder="Buscar pasajeros..."
-                                    value={permissionSearchTerm}
-                                    onChange={(e) => setPermissionSearchTerm(e.target.value)}
+                                    value={pasajerosSearchTerm}
+                                    onChange={(e) => setPasajerosSearchTerm(e.target.value)}
                                     className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                   />
                                 </div>
 
-                                
-                                {selectedPermissions.length > 0 && (
+                                {/* PASAJEROS SELECCIONADOS */}
+                                {selectedPasajeros.length > 0 && (
                                   <div className="flex items-center gap-2 mb-3">
                                     <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                                      {selectedPermissions.length} servicios seleccionados
+                                      {selectedPasajeros.length} pasajeros seleccionados
                                     </Badge>
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => setSelectedPermissions([])}
+                                      onClick={() => setSelectedPasajeros([])}
                                       className="text-red-600 border-red-200 hover:bg-red-50"
                                     >
                                       <X className="h-3 w-3 mr-1" />
@@ -1381,15 +1496,17 @@ export default function ModulosPage() {
                                 )}
 
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
-                                  {isFetchingPersonas && <div className="w-full flex items-center justify-center">
+                                <div className={`grid grid-cols-1 ${(pasajerosSearchTerm && (!isFetchingPasajeros && !startDebounce)) ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full`}>
+                                  {(isFetchingPasajeros || startDebounce) && <div className="w-full flex items-center justify-center h-56">
                                     <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
                                   </div>}
 
-                                  {!isFetchingPaquete && dataPersonaList?.results && dataPersonaList.results
-                                      .filter((persona: any) => 
+                                  {pasajerosSearchTerm && (!isFetchingPasajeros && !startDebounce) && dataPasajerosList && 
+                                                      dataPasajerosList?.length && dataPasajerosList
+                                      .filter((persona: any) => {
                                         
-                                        persona.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
+                                        return persona.nombre.toLowerCase().includes(pasajerosSearchTerm.toLowerCase())
+                                      }
                                       
                                       )
                                       .map((persona: any) => (
@@ -1398,7 +1515,7 @@ export default function ModulosPage() {
                                           className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
                                                     items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
                                                     border border-gray-200
-                                                    ${selectedPermissions.includes(persona.id) 
+                                                    ${selectedPasajeros.includes(persona.id) 
                                                       ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
                                                       : ''}`}
                                         >
@@ -1406,7 +1523,7 @@ export default function ModulosPage() {
                                             <div className="flex-shrink-0 mr-3 mt-0.5">
                                               <Checkbox
                                                 id={`servicio-${persona.id}`}
-                                                checked={selectedPermissions.includes(persona.id)}
+                                                checked={selectedPasajeros.includes(persona.id)}
                                                 onCheckedChange={() => handlePermissionToggle(persona.id, persona)}
                                               />
                                             </div>
@@ -1424,31 +1541,46 @@ export default function ModulosPage() {
                                                 >
                                                     {persona.documento}
                                                 </Badge>
-                                                {/* <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                                  {servicio?.moneda?.codigo}{servicio?.precio_habitacion} <span className="text-gray-500 font-normal">/ noche</span>
-                                                </Badge> */}
+                                                
                                               </div>
                                             </div>
                                           </div>
                                         </div>
                                       ))}
+
+                                  {!pasajerosSearchTerm && <div
+                                          className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
+                                                    items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                                    border border-gray-200 w-full text-center`}
+                                        >
+                                          <div className="flex justify-center items-center w-full h-56 text-gray-500">
+                                              Filtre una persona a traves de su nombre
+                                            {/* <div className="flex-shrink-0 mr-3 mt-0.5">
+                                            </div> */}
+                                          </div>
+                                        </div>}
+
                                                             
-                                  {dataServiciosList && dataServiciosList.filter(
-                                    (servicio: any) =>
-                                      servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
+                                  {(!isFetchingPasajeros && !startDebounce) && pasajerosSearchTerm && dataPasajerosList && dataPasajerosList?.filter(
+                                    (servicio: any) =>{
+                                      console.log(pasajerosSearchTerm.toLowerCase())
+                                      console.log(servicio);
+                                      console.log(servicio.nombre.toLowerCase().includes(pasajerosSearchTerm.toLowerCase()))
+                                      return servicio.nombre.toLowerCase().includes(pasajerosSearchTerm.toLowerCase())
+                                    }
                                   ).length === 0 && (
                                     <div className="col-span-2 text-center py-8">
                                       <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                                         <Search className="h-6 w-6 text-gray-400" />
                                       </div>
                                       <p className="text-gray-500 text-sm">
-                                        No se encontraron pasajeros que coincidan con "{permissionSearchTerm}"
+                                        No se encontraron pasajeros que coincidan con "{pasajerosSearchTerm}"
                                       </p>
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => setPermissionSearchTerm("")}
+                                        onClick={() => setPasajerosSearchTerm("")}
                                         className="mt-2"
                                       >
                                         Limpiar búsqueda
@@ -1457,70 +1589,12 @@ export default function ModulosPage() {
                                   )}
 
                                 </div>
-
-                                {/* {onGuardar && selectedPermissions.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un pasajero</span>} */}
-                                
-                                {/* <div className="flex items-center gap-2 pt-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-
-                                      const filteredPermissions = dataServiciosList.filter(
-                                        (servicio: any) =>
-                                          servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
-                                      )
-                                      const allFilteredSelected = filteredPermissions.every((p: any) =>
-                                        selectedPermissions.includes(p.id),
-                                      )
-
-                                      console.log('allFilteredSelected: ', allFilteredSelected )
-
-                                      if (allFilteredSelected) {
-                                        setSelectedPermissions((prev) =>
-                                          prev.filter((id) => !filteredPermissions.map((p: any) => p.id).includes(id)),
-                                        )
-                                      } else {
-                                        const newSelections = filteredPermissions
-                                          .map((p:any) => p.id)
-                                          .filter((id:any) => !selectedPermissions.includes(id))
-                                        setSelectedPermissions((prev) => [...prev, ...newSelections])
-                                      }
-                                    }}
-                                    className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                                  >
-                                    <Check className="h-3 w-3 mr-1" />
-                                    {dataServiciosList && dataServiciosList
-                                      .filter(
-                                        (servicio: any) =>
-                                          servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
-                                      )
-                                      .every((p: any) => selectedPermissions.includes(p.id))
-                                      ? "Deseleccionar todos"
-                                      : "Seleccionar todos"}{" "}
-                                    
-                                  </Button>
-                                </div> */}
                               </div>
 
-                               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Estado de la Reserva</h2>
           
           <div>
-            {/* <label className="block text-sm font-medium text-gray-700 mb-2">
-              Estado *
-            </label>
-            <select
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-
-            >
-              <option value="pendiente">Pendiente</option>
-              <option value="confirmada">Confirmada</option>
-              <option value="incompleta">Incompleta</option>
-              <option value="finalizada">Finalizada</option>
-              <option value="cancelada">Cancelada</option>
-            </select> */}
             <Label htmlFor="estado" className="text-gray-700 font-medium">
               Estado *
             </Label>
@@ -1649,8 +1723,8 @@ export default function ModulosPage() {
                         variant="outline"
                         className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent cursor-pointer"
                         onClick={() => {
-                            setSelectedPermissions([])
-                            setPermissionSearchTerm("")
+                            setSelectedPasajeros([])
+                            setPasajerosSearchTerm("")
                             handleCancel()
                         }}
                       >
