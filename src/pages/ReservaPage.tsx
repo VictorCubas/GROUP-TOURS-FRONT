@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
@@ -67,9 +67,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Distribuidora, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
+import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import {formatearFecha, formatearSeparadorMiles, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos, fetchDataPasajeros, fetchDataPaquetes } from "@/components/utils/httpReservas"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataMonedaTodos, fetchDataPasajeros, fetchDataPaquetes } from "@/components/utils/httpReservas"
 import { fetchData as fetchDataPersona } from "@/components/utils/httpPersona"
 
 import {Controller, useForm } from "react-hook-form"
@@ -117,7 +117,7 @@ let dataPasajerosList: any[] = [];
 // let dataPaquetesList: any[] = [];
 console.log(tipoReservaFilterList);
 
-let paqueteSeleccionado: any = [];
+// let paqueteSeleccionado: any = [];
 
 export default function ModulosPage() {
   const {siTienePermiso} = useSessionStore();
@@ -244,6 +244,8 @@ export default function ModulosPage() {
       queryFn: () => fetchDataMonedaTodos(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
+
+    console.log(dataMonedaList)
 
   // const {data: dataServiciosList, isFetching: isFetchingServicios,} = useQuery({
   //     queryKey: ['servicios-disponibles',], //data cached
@@ -535,7 +537,7 @@ export default function ModulosPage() {
     console.log(selectedPaqueteData)
     
     // paqueteSeleccionado = dataPaquetesList.filter((p: any) => p.id.toString() === selectedPaqueteID.toString())
-    console.log(paqueteSeleccionado)
+    // console.log(paqueteSeleccionado)
   }
 
 
