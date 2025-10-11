@@ -83,7 +83,7 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
             <RadioGroupItem value={departure.id} id={departure.id} className="peer sr-only" />
             <Label
               htmlFor={departure.id}
-              className="flex items-start gap-4 p-4 rounded-lg border-2 border-muted bg-background hover:bg-accent/5 cursor-pointer transition-all peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-50 transition-all"
+              className="flex items-start gap-4 p-4 rounded-lg border-2 border-muted bg-background hover:bg-accent/5 cursor-pointer transition-all peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-50"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 peer-data-[state=checked]:bg-blue-100">
                 <Calendar className="h-5 w-5 text-blue-600" />

@@ -58,6 +58,6 @@ export async function fetchDataZonasGeograficasTodos() {
 }
 
 export async function fetchDataCiudadesTodos(nombre_ciudad: string, pais_id?: string) {
-  const resp = await axiosInstance.get(`/ciudad/?page=${1}&page_size=${10}${nombre_ciudad ? '&nombre=' + nombre_ciudad: ''}&pais_nombre=${pais_id ? '&pais=' + pais_id: ''}`);
+  const resp = await axiosInstance.get(`/ciudad/?all=true&page=${1}&page_size=${10}${nombre_ciudad ? '&nombre=' + nombre_ciudad: ''}&pais_nombre=${pais_id ? '&pais=' + pais_id: ''}`);
   return resp?.data?.results
 }

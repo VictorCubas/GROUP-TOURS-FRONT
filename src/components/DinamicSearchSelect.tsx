@@ -21,6 +21,7 @@ interface GenericSearchSelectProps<T> {
   labelKey?: any; // lo dejamos opcional porque vamos a manejar casos especiales
   valueKey: keyof T;
   secondaryLabelKey?: keyof T;
+  mostrarPreview?: boolean; // 🔹 Nueva bandera
 }
 
 export function DinamicSearchSelect<T extends Record<string, any>>({
@@ -35,7 +36,8 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   labelKey,
   isFetchingPersonas,
   valueKey,
-  secondaryLabelKey
+  secondaryLabelKey,
+  mostrarPreview
 }: GenericSearchSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -208,54 +210,57 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
           </div>
 
           <div className="max-h-64 overflow-y-auto">
-            {isFetchingPersonas && <div className="w-full flex items-center justify-center">
-                                        <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
-                                      </div>}
+            {isFetchingPersonas && (
+              <div className="w-full flex items-center justify-center">
+                <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
+              </div>
+            )}
 
             {!isFetchingPersonas && (
-                <>
-                  {/* 🟢 Caso: no se ha escrito nada aún */}
-                  {!searchTerm ? (
+              <>
+                {filteredItems.length === 0 ? (
+                  !searchTerm && !mostrarPreview ? (
+                    // 🟢 Caso: no se ha escrito nada y no hay preview
                     <div className="p-4 text-center text-gray-500">
                       Comience escribiendo para buscar...
                     </div>
-                  ) : filteredItems.length === 0 ? (
-                    // 🟠 Caso: se escribió algo pero no hay resultados
+                  ) : (
+                    // 🟠 Caso: no hay resultados
                     <div className="p-4 text-center text-gray-500">
                       No se encontraron resultados
                     </div>
-                  ) : (
-                    // 🔵 Caso: hay resultados
-                    filteredItems.map((item) => (
-                      <button
-                        key={String(item[valueKey])}
-                        type="button"
-                        className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between group ${
-                          selectedItem?.[valueKey] === item[valueKey]
-                            ? "bg-blue-50 border-r-2 border-blue-500"
-                            : ""
-                        }`}
-                        onClick={() => handleSelect(item)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2 cursor-pointer">
-                            <span className="font-medium">{getItemLabel(item)}</span>
-                            {secondaryLabelKey && (
-                              <Badge variant="outline" className="text-xs">
-                                {String(item[secondaryLabelKey])}
-                              </Badge>
-                            )}
-                          </div>
+                  )
+                ) : (
+                  // 🔵 Caso: hay resultados
+                  filteredItems.map((item) => (
+                    <button
+                      key={String(item[valueKey])}
+                      type="button"
+                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between group ${
+                        selectedItem?.[valueKey] === item[valueKey]
+                          ? "bg-blue-50 border-r-2 border-blue-500"
+                          : ""
+                      }`}
+                      onClick={() => handleSelect(item)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 cursor-pointer">
+                          <span className="font-medium">{getItemLabel(item)}</span>
+                          {secondaryLabelKey && (
+                            <Badge variant="outline" className="text-xs">
+                              {String(item[secondaryLabelKey])}
+                            </Badge>
+                          )}
                         </div>
-                        {selectedItem?.[valueKey] === item[valueKey] && (
-                          <Check className="h-4 w-4 text-blue-600" />
-                        )}
-                      </button>
-                    ))
-                  )}
-                </>
-              )}
-
+                      </div>
+                      {selectedItem?.[valueKey] === item[valueKey] && (
+                        <Check className="h-4 w-4 text-blue-600" />
+                      )}
+                    </button>
+                  ))
+                )}
+              </>
+            )}
           </div>
         </Card>
       )}

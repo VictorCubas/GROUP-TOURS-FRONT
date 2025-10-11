@@ -229,8 +229,7 @@ export default function HotelPage() {
           }
         }
       }
-    }, [selectedNacionalidadID]);
-
+    }, [dataAEditar, dataNacionalidadList, selectedNacionalidadID]);
 
   useEffect(() => {  
     if(dataCiudadList){
@@ -1119,7 +1118,7 @@ export default function HotelPage() {
                           {onGuardar && nacionalidadNoSeleccionada === undefined && <p className="text-red-400 text-sm">Este campo es requerido</p>}
                       </div>
 
-                     <div className="space-y-2 mi-select-wrapper">
+                      <div className="space-y-2 mi-select-wrapper">
                         <Label htmlFor="ciudad" className="text-gray-700 font-medium">
                           Ciudad *
                         </Label>
