@@ -18,7 +18,7 @@ interface GenericSearchSelectProps<T> {
   disabled?: boolean;
   isFetchingPersonas?: boolean;
   dataList: T[];
-  labelKey?: keyof T; // lo dejamos opcional porque vamos a manejar casos especiales
+  labelKey?: any; // lo dejamos opcional porque vamos a manejar casos especiales
   valueKey: keyof T;
   secondaryLabelKey?: keyof T;
 }
