@@ -181,7 +181,7 @@ export default function HotelPage() {
 
   const {data: dataCiudadList, isFetching: isFetchingCiudad,} = useQuery({
         queryKey: ['ciudades-disponibles', ciudadBusqueda, paisDataSelected?.id], //data cached
-        queryFn: () => fetchDataCiudadesTodos(ciudadBusqueda, paisDataSelected?.id),
+        queryFn: () => fetchDataCiudadesTodos(ciudadBusqueda, paisDataSelected?.id, true),
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
