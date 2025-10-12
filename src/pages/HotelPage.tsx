@@ -1329,7 +1329,7 @@ export default function HotelPage() {
                                           <SelectItem value="doble">Habitación Doble</SelectItem>
                                           <SelectItem value="triple">Habitación Triple</SelectItem>
                                           <SelectItem value="suite">Suite</SelectItem>
-                                          <SelectItem value="standar">Premium</SelectItem>
+                                          <SelectItem value="premium">Premium</SelectItem>
                                           {/* <SelectItem value="Penthouse">Penthouse</SelectItem> */}
                                         </SelectContent>
                                       </Select>
