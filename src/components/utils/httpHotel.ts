@@ -79,5 +79,5 @@ export async function fetchDataHoteles() {
 
 export async function fetchDataServiciosTodos() {
   const resp = await axiosInstance.get(`/servicio/todos/?tipo=hotel`);
-  return resp?.data?.results;
+  return resp?.data;
 }
