@@ -13,15 +13,16 @@ interface GenericSearchSelectProps<T> {
   onValueChange?: (value: number | "") => void;
   handleDataNoSeleccionada?: (value: boolean | undefined) => void;
   setSelectedTitularData?: (value: any) => void;
-  onSearchChange?: (search: string) => void; // 🔹 Nuevo para notificar búsqueda
+  onSearchChange?: (search: string) => void;
   placeholder?: string;
   disabled?: boolean;
   isFetchingPersonas?: boolean;
   dataList: T[];
-  labelKey?: any; // lo dejamos opcional porque vamos a manejar casos especiales
+  labelKey?: any;
   valueKey: keyof T;
-  secondaryLabelKey?: keyof T;
-  mostrarPreview?: boolean; // 🔹 Nueva bandera
+  secondaryLabelKey?: any;
+  thirdLabelKey?: any; // 🆕 agregado
+  mostrarPreview?: boolean;
 }
 
 export function DinamicSearchSelect<T extends Record<string, any>>({
@@ -37,6 +38,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   isFetchingPersonas,
   valueKey,
   secondaryLabelKey,
+  thirdLabelKey, // 🆕 agregado
   mostrarPreview
 }: GenericSearchSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,45 +48,29 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   const inputRef = useRef<HTMLInputElement>(null);
   const primeraVezRef = useRef(true);
 
-  // 🔹 Cuando el usuario escribe, notificamos al padre
   useEffect(() => {
-      const handler = setTimeout(() => {
-        if (onSearchChange) {
-          onSearchChange(searchTerm)
-        }
-      }, 750) // ⏱️ medio segundo de espera
-  
-      return () => {
-        clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+    const handler = setTimeout(() => {
+      if (onSearchChange) {
+        onSearchChange(searchTerm)
       }
-    }, [searchTerm, onSearchChange]);
+    }, 750)
+    return () => clearTimeout(handler)
+  }, [searchTerm, onSearchChange]);
 
-    // 🔹 Función para obtener el label dinámico (razon_social o nombre+apellido)
-    const getItemLabel = (item: T) => {
-      if (item && typeof item === "object") {
-        if ("razon_social" in item && (item as any).razon_social) {
-          return String((item as any).razon_social);
-        }
-        if ("nombre" in item && "apellido" in item) {
-          return `${(item as any).nombre} ${(item as any).apellido}`;
-        }
-        return labelKey ? String((item as any)[labelKey]) : "";
+  const getItemLabel = (item: T) => {
+    if (item && typeof item === "object") {
+      if ("razon_social" in item && (item as any).razon_social) {
+        return String((item as any).razon_social);
       }
-      // Fallback si llega algo que no es objeto
-      return String(item ?? "");
-    };
+      if ("nombre" in item && "apellido" in item) {
+        return `${(item as any).nombre} ${(item as any).apellido}`;
+      }
+      return labelKey ? String((item as any)[labelKey]) : "";
+    }
+    return String(item ?? "");
+  };
 
-
-  // 🔹 Filtro local por razon_social, nombre, apellido o documento
   const filteredItems = dataList;
-  // const filteredItems = dataList.filter((item) => {
-  //   const label = getItemLabel(item).toLowerCase();
-  //   const documento = String(item.documento ?? "").toLowerCase();
-  //   return (
-  //     label.includes(searchTerm.toLowerCase()) ||
-  //     documento.includes(searchTerm.toLowerCase())
-  //   );
-  // });
 
   const handleSelect = (item: T) => {
     setSelectedItem(item);
@@ -113,11 +99,8 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   }, []);
 
   useEffect(() => {
-    console.log('actualizando valor: ', value)
-    console.log('valueKey: ', valueKey)
     if (value) {
       const item = dataList.find((c) => c[valueKey] === value);
-      console.log('item selected: ', item)
       if (item) {
         setSelectedItem(item);
         handleDataNoSeleccionada?.(true);
@@ -145,6 +128,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
+      {/* Contenedor principal */}
       <div
         role="button"
         tabIndex={0}
@@ -155,18 +139,26 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
       >
         <div className="flex items-center gap-2 flex-1 text-left">
           {selectedItem ? (
-            <>
-              <span className="font-medium">{getItemLabel(selectedItem)}</span>
-              {secondaryLabelKey && (
-                <Badge variant="secondary" className="text-xs">
-                  {String(selectedItem[secondaryLabelKey])}
-                </Badge>
-              )}
-            </>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{getItemLabel(selectedItem)}</span>
+                {secondaryLabelKey && (
+                  <Badge variant="secondary" className="text-xs">
+                    {String(selectedItem[secondaryLabelKey])}
+                  </Badge>
+                )}
+                {thirdLabelKey && (
+                  <Badge variant="outline" className="text-xs text-gray-500">
+                    {String(selectedItem[thirdLabelKey])}
+                  </Badge>
+                )}
+              </div>
+            </div>
           ) : (
             <span className="text-gray-500">{placeholder}</span>
           )}
         </div>
+
         <div className="flex items-center gap-1">
           {selectedItem && !disabled && (
             <Button
@@ -190,6 +182,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
         </div>
       </div>
 
+      {/* Dropdown */}
       {isOpen && (
         <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-80 overflow-hidden shadow-lg">
           <div className="p-3 pt-0 mt-0 border-b">
@@ -212,7 +205,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
           <div className="max-h-64 overflow-y-auto">
             {isFetchingPersonas && (
               <div className="w-full flex items-center justify-center">
-                <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
+                <Loader2Icon className="animate-spin w-10 h-10 text-gray-500" />
               </div>
             )}
 
@@ -220,18 +213,15 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
               <>
                 {filteredItems.length === 0 ? (
                   !searchTerm && !mostrarPreview ? (
-                    // 🟢 Caso: no se ha escrito nada y no hay preview
                     <div className="p-4 text-center text-gray-500">
                       Comience escribiendo para buscar...
                     </div>
                   ) : (
-                    // 🟠 Caso: no hay resultados
                     <div className="p-4 text-center text-gray-500">
                       No se encontraron resultados
                     </div>
                   )
                 ) : (
-                  // 🔵 Caso: hay resultados
                   filteredItems.map((item) => (
                     <button
                       key={String(item[valueKey])}
@@ -243,12 +233,17 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
                       }`}
                       onClick={() => handleSelect(item)}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 cursor-pointer">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
                           <span className="font-medium">{getItemLabel(item)}</span>
                           {secondaryLabelKey && (
                             <Badge variant="outline" className="text-xs">
                               {String(item[secondaryLabelKey])}
+                            </Badge>
+                          )}
+                          {thirdLabelKey && (
+                            <Badge variant="outline" className="text-xs text-gray-500">
+                              {String(item[thirdLabelKey])}
                             </Badge>
                           )}
                         </div>
