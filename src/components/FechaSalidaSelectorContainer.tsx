@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 // import type { DepartureDate } from "./package-selector"
 // import { RadioGroup } from "@radix-ui/react-dropdown-menu"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { formatearSeparadorMiles } from "@/helper/formatter"
 
 interface DepartureDateSelectorProps {
   fechaSalidasList: any[]
@@ -23,15 +24,6 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
       day: "numeric",
     })
   }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-ES", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
-  }
-
-
 
   console.log(fechaSalidasList)
 
@@ -77,7 +69,7 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
   return (
     <div className="space-y-4">
       <Label>Fecha de Salida *</Label>
-      <RadioGroup value={fechaSeleccionada} onValueChange={onFechaSeleccionada} className="space-y-3">
+      <RadioGroup value={fechaSeleccionada} onValueChange={onFechaSeleccionada} className="space-y-3 max-h-90 overflow-y-auto">
         {fechaSalidasList.map((departure) => (
           <div key={departure.id} className="relative">
             <RadioGroupItem value={departure.id} id={departure.id} className="peer sr-only" />
@@ -105,7 +97,7 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-lg text-blue-600">{formatCurrency(departure.precio_actual)}</p>
+                    <p className="font-bold text-lg text-blue-600">{departure.moneda.simbolo} {formatearSeparadorMiles.format(departure.precio_actual)}</p>
                     <p className="text-xs text-muted-foreground">por persona</p>
                   </div>
                 </div>
