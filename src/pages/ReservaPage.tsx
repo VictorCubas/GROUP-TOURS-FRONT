@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { startTransition, use, useEffect, useState } from "react"
+import { startTransition, use, useCallback, useEffect, useState } from "react"
 import {
   Search,
   Plus,
@@ -37,6 +37,16 @@ import {
   Crown,
   User,
   CalendarDays,
+  Package,
+  Building,
+  CheckCircle,
+  MapPin,
+  Star,
+  Bed,
+  CheckCircle2,
+  Circle,
+  CirclePlus,
+  Pencil,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -68,9 +78,8 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
-import {formatearFecha, formatearSeparadorMiles, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataMonedaTodos, fetchDataPasajeros, fetchDataPaquetes } from "@/components/utils/httpReservas"
-import { fetchData as fetchDataPersona } from "@/components/utils/httpPersona"
+import {formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataMonedaTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular } from "@/components/utils/httpReservas"
 
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -82,10 +91,11 @@ import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
 import { Checkbox } from "@/components/ui/checkbox"
-import {fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
+import {fetchDataServiciosTodos, fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
 import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
+import { NumericFormat } from "react-number-format"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -114,6 +124,7 @@ import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorCo
 let dataList: Reserva[] = [];
 let tipoReservaFilterList: any[] = [];
 let dataPasajerosList: any[] = [];
+let hotelesPorSalida: any = null;
 // let dataPaquetesList: any[] = [];
 console.log(tipoReservaFilterList);
 
@@ -122,8 +133,10 @@ console.log(tipoReservaFilterList);
 export default function ModulosPage() {
   const {siTienePermiso} = useSessionStore();
   // const [setSearchTerm] = useState("")
+  const [paymentType, setPaymentType] = useState<"minimum" | "total">("minimum")
   const [selectedPaqueteID, setSelectedPaqueteID] = useState<number | "">("");
   const [selectedSalidaID, setSelectedSalidaID] = useState<string>("");
+  const [selectedSalidaData, setSelectedSalidaData] = useState<any>();
   const [paqueteNoSeleccionada, setPaqueteNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
@@ -148,6 +161,19 @@ export default function ModulosPage() {
   const [selectedTitularData, setSelectedTitularData] = useState<any | undefined>();
   const [selectedPaqueteData, setSelectedPaqueteData] = useState<any | undefined>();
   const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
+  const [selectedHotelId, setSelectedHotelId] = useState('');
+  const [selectedHotelData, setSelectedHotelData] = useState<any>();
+  const [selectedTipoHabitacionID, setSelectedTipoHabitacionID] = useState('');
+  const [selectedTipoHabitacionData, setSelectedTipoHabitacionData] = useState<any>();
+  const [habitacionesPorSalida, setHabitacionesPorSalida] = useState<any[]>([]);
+  const [precioFinalPorPersona, setPrecioFinalPorPersona] = useState<number>(0);
+  const [isEditingSena, setIsEditingSena] = useState(false)
+  const [montoAbonado, setMontoAbonado] = useState<number>(0)
+  const [montoAbonadoPorPersona, setMontoAbonadoPorPersona] = useState<number>(0)
+
+  // const [serviciosAdicionalesSearchTerm, setServiciosAdicionalesSearchTerm] = useState("");
+  // const [selectedServiciosAdicionales, setSelectedServiciosAdicionales] = useState<number[]>([])
+
   // const [paqueteNoSeleccionada, setPaqueteNoSeleccionada] = useState<boolean | undefined>();
   const [startDebounce, setStartDebounce] = useState<boolean>(false);
   
@@ -160,15 +186,14 @@ export default function ModulosPage() {
                 });
 
   const [filtrosPasajeros, setFiltrosPasajeros] = useState({
-                  activo: true, tipo: 'fisica', sexo: 'all', nombre: ""
+                  activo: true, tipo: 'fisica', sexo: 'all', busqueda: ""
                 });
   
   // DATOS DEL FORMULARIO 
-  const {control,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
+  const {control,  register, watch, handleSubmit, setValue, getValues, formState: {errors, },clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
-                distribuidora_id: '',
               }
             });
   // DATOS DEL FORMULARIO 
@@ -197,15 +222,15 @@ export default function ModulosPage() {
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
-  // const {data: dataPersonaList, isFetching: isFetchingPersonas,} = useQuery({
-  //     queryKey: ['personas-disponibles', personaBusqueda], //data cached
-  //     queryFn: () => fetchDataPersona(personaBusqueda, 1, 10),
-  //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-  //   });
+  // const {data: dataServiciosList, isFetching: isFetchingServicios,} = useQuery({
+  //       queryKey: ['servicios-disponibles',], //data cached
+  //       queryFn: () => fetchDataServiciosTodos(),
+  //       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  //     });
 
   const {data: dataPersonaList, isFetching: isFetchingPersonas} = useQuery({
-    queryKey: ['personas-disponibles', 1, 10, {activo: true, tipo: 'fisica', sexo: 'all', nombre: personaBusqueda}], //data cached 
-    queryFn: () => fetchDataPersona(1, 10, {activo: true, tipo: 'fisica', sexo: 'all', nombre: personaBusqueda}),
+    queryKey: ['personas-disponibles', 1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}], //data cached 
+    queryFn: () => fetchDataPersonaTitular(1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}),
     staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
     // enabled: !((filtros.fecha_desde && !filtros.fecha_hasta) || (!filtros.fecha_desde && filtros.fecha_hasta))
     enabled: Boolean(personaBusqueda)
@@ -229,7 +254,7 @@ export default function ModulosPage() {
     dataPasajerosList = dataPasajerosListTemp;
 
 
-  console.log(dataPasajerosList)
+  console.log(dataPasajerosList) 
   console.log(dataPaquetesList);
 
   const {data: dataTipoPaqueteList, isFetching: isFetchingTipoPaquetes,} = useQuery({
@@ -245,13 +270,22 @@ export default function ModulosPage() {
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
-    console.log(dataMonedaList)
+    // selectedSalidaID
+  const {data: dataHotelesPorSalidaList, isFetching: isFetchingHotelesList,} = useQuery({
+      queryKey: ['hotel-por-salida', selectedSalidaID], //data cached
+      queryFn: ({signal}) => fetchDataHotelesPorSalida({signal, id: selectedSalidaID}),
+      enabled: Boolean(selectedSalidaID),
+      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
 
-  // const {data: dataServiciosList, isFetching: isFetchingServicios,} = useQuery({
-  //     queryKey: ['servicios-disponibles',], //data cached
-  //     queryFn: () => fetchDataServiciosTodos(),
-  //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-  //   });
+    console.log(dataHotelesPorSalidaList)
+
+    if(dataHotelesPorSalidaList && dataHotelesPorSalidaList?.length){
+      hotelesPorSalida = dataHotelesPorSalidaList;
+
+      console.log(hotelesPorSalida);
+    }
+
 
   const {data: dataDistribuidoraList, isFetching: isFetchingDistribuidora,} = useQuery({
       queryKey: ['distribuidoras-disponibles',], //data cached
@@ -313,17 +347,65 @@ export default function ModulosPage() {
     console.log(watch('titularComoPasajero')); ;
 
 
+  // useEffect(() => {  
+  //   if(dataPersonaList){
+  //     if(dataAEditar){
+  //       setNewDataPersonaList([...dataPersonaList, dataAEditar.titular]);
+  //     }
+  //     else{
+  //       console.log('dataPersonaList: ', dataPersonaList)
+  //       setNewDataPersonaList([...dataPersonaList])
+  //     }
+  //   }
+  // }, [dataAEditar, dataPersonaList]);
+
   useEffect(() => {  
     if(dataPersonaList){
+        console.log(dataPersonaList);
+
+        const dataPersonasTitular = dataPersonaList.map((data: any) => ({
+          ...data, tipo_documento_nombre: data?.tipo_documento?.nombre
+        }))
+
+
       if(dataAEditar){
-        setNewDataPersonaList([...dataPersonaList, dataAEditar.titular]);
+        setNewDataPersonaList([...dataPersonasTitular, dataAEditar.titular]);
       }
       else{
-        console.log('dataPersonaList: ', dataPersonaList)
-        setNewDataPersonaList([...dataPersonaList.results])
+        console.log(dataPersonasTitular)
+        console.log('dataPersonaList: ', dataPersonasTitular)
+        setNewDataPersonaList([...dataPersonasTitular])
       }
     }
-  }, [dataAEditar, dataPersonaList]);
+  }, [dataAEditar, dataPersonaList]); 
+
+
+  useEffect(() => {
+    // setSelectedTipoHabitacionID('')
+
+    if (selectedHotelId) {
+      const hotel = hotelesPorSalida.find(
+        (h: any) => h.id.toString() === selectedHotelId.toString()
+      ); 
+
+      if (hotel) {
+        console.log("Habitaciones encontradas:", hotel.habitaciones);
+        setHabitacionesPorSalida(hotel.habitaciones);
+      } else {
+        setHabitacionesPorSalida([]);
+      }
+    } else {
+      setHabitacionesPorSalida([]);
+    }
+  }, [selectedHotelId]);
+
+  console.log(habitacionesPorSalida)
+
+
+  // if(selectedTipoHabitacionID){
+  //   const habitacion = habitacionesPorSalida.filter((h: any) => h.id.toString() === selectedTipoHabitacionID.toString())
+  //   console.log(habitacion)
+  // }
 
   //BUSCADOR DE PAQUETES
   useEffect(() => {
@@ -334,16 +416,19 @@ export default function ModulosPage() {
 
   useEffect(() => {  
     if(dataPaquetesList){
+      const dataPaquetes = dataPaquetesList.map((data: any) => ({
+        ...data, tipo_paquete_nombre: data?.tipo_paquete?.nombre
+      }))
+
       if(dataAEditar){
-        setNewDataPaqueteList([...dataPaquetesList, dataAEditar.titular]);
+        setNewDataPaqueteList([...dataPaquetes, dataAEditar.titular]);
       }
       else{
-        console.log('dataPersonaList: ', dataPaquetesList)
-        setNewDataPaqueteList([...dataPaquetesList])
+        console.log('dataPersonaList: ', dataPaquetes)
+        setNewDataPaqueteList([...dataPaquetes])
       }
     }
-  }, [dataAEditar, dataPaquetesList]);
-
+  }, [dataAEditar, dataPaquetesList]); 
 
 
   console.log(newDataPaqueteList)
@@ -411,7 +496,6 @@ export default function ModulosPage() {
         handleShowToast('Se ha creado un nuevo reserva satisfactoriamente', 'success');
         reset({
           nombre: '',
-          distribuidora_id: '',
           paquete: '',
         });
 
@@ -483,7 +567,6 @@ export default function ModulosPage() {
         setDataAEditar(undefined);
         reset({
             tipo_paquete: '',
-            distribuidora_id: '',
           });
 
         // setTipoDePersonaCreacion(undefined);
@@ -554,11 +637,13 @@ export default function ModulosPage() {
         handleDataNoSeleccionada(undefined)
         handleDataNoPersonaSeleccionada(undefined)
         handleDataNoPaqueteSeleccionada(undefined)
-        setNewDataPersonaList([...dataPersonaList.results]);
+        setNewDataPersonaList([...dataPersonaList]);
         setNewDataPaqueteList([...dataPaquetesList])
+        // setSelectedServiciosAdicionales([]);
+        // setServiciosAdicionalesSearchTerm("");
         reset({
             nombre: '',
-            distribuidora_id: '',
+            senia: '',
         });
 
 
@@ -571,6 +656,7 @@ export default function ModulosPage() {
 
 
   const handleGuardarNuevaData = async (dataForm: any) => {
+      console.log(dataForm)
       console.log('persona: ', selectedPersonaID);
 
       if (paqueteNoSeleccionada === undefined) {
@@ -579,8 +665,8 @@ export default function ModulosPage() {
       }
 
 
-      const pasajerosIds = selectedPasajerosData.map(p => p.id)
-      console.log(pasajerosIds)
+      const pasajeros_data = selectedPasajerosData.map(p => ({persona_id: p.id}))
+      console.log(pasajeros_data)
       console.log(selectedTitularData);
       console.log(selectedPasajerosData);
       console.log(selectedPaqueteID);
@@ -590,15 +676,18 @@ export default function ModulosPage() {
 
       const payload = {
         ...dataForm,
-        titular_id: selectedTitularData?.id,
         paquete_id: selectedPaqueteID,
-        pasajeros: pasajerosIds, // Array de IDs
+        pasajeros_data: pasajeros_data, // Array de IDs
+        salida_id: selectedSalidaID,
+        habitacion_id: selectedTipoHabitacionID,
         persona: selectedPersonaID,
-        canditidad_pasajeros: dataForm.canditidad_pasajeros,
-        estado: dataForm.estado,
         activo: true,
       };
 
+      console.log(titularComoPasajero)
+      if(titularComoPasajero)
+        payload.titular_id = selectedTitularData?.id;
+      
 //       {
 //   "titular_id": 1,
 //   "paquete_id": 2,
@@ -627,7 +716,25 @@ export default function ModulosPage() {
 
       console.log(payload);
       // Llamada al mutate enviando formData
-      mutate(payload);
+
+
+  //      {
+  //   "titular_id": 1,
+  //   "paquete_id": 2,
+  //   "salida_id": 5,
+  //   "habitacion_id": 12,
+  //   "monto_pagado": 1500.00,
+  //   "observacion": "Reserva familiar",
+  //   "pasajeros_data": [
+  //     {
+  //       "persona_id": 1
+  //     },
+  //     {
+  //       "persona_id": 8
+  //     }
+  //   ]
+  // }
+      // mutate(payload);
     };
 
 
@@ -654,15 +761,12 @@ export default function ModulosPage() {
       delete payload.cantidad_pasajeros;
     }
 
-   
 
     mutateGuardarEditado({
         data: payload,
         paqueteId: payload.id
       });
   };
-
-
 
 
   // function formatearFechaDDMMYY(fecha: string): string {
@@ -779,7 +883,7 @@ export default function ModulosPage() {
     setStartDebounce(true);
     const handler = setTimeout(() => {
       console.log('cambiando nombre')
-      setFiltrosPasajeros(filtroPersona => ({...filtroPersona, nombre: pasajerosSearchTerm}))
+      setFiltrosPasajeros(filtroPersona => ({...filtroPersona, busqueda: pasajerosSearchTerm}))
       setStartDebounce(false);
     }, 750) // ⏱️ medio segundo de espera
 
@@ -787,6 +891,77 @@ export default function ModulosPage() {
       clearTimeout(handler) // limpia el timeout si se sigue escribiendo
     }
   }, [pasajerosSearchTerm]);
+
+
+  useEffect(() => {
+    if(selectedPaqueteID){
+      setSelectedSalidaID("");
+      setSelectedHotelId('');
+      setSelectedHotelData(undefined);
+      setSelectedTipoHabitacionID('');
+      setSelectedPersonaID('')
+      handleDataNoPersonaSeleccionada(undefined)
+      setIsEditingSena(false);
+      setMontoAbonado(0);
+      setMontoAbonadoPorPersona(0);
+      setValue('senia', '');
+    }
+    
+    return () => {
+      
+    };
+  }, [selectedPaqueteID, setValue]);
+  
+  useEffect(() => {
+    if(selectedSalidaID){
+      console.log(selectedSalidaID)
+      console.log(selectedPaqueteData.salidas)
+      const salidas = selectedPaqueteData.salidas;
+      const salida = salidas?.filter((salida: any) => salida.id.toString() === selectedSalidaID.toString())
+      console.log(salida)
+      
+      setSelectedSalidaData(salida.length ? salida[0] : undefined)
+
+      setSelectedHotelId('');
+      setSelectedHotelData(undefined);
+      setSelectedTipoHabitacionID('');
+      setSelectedPersonaID('')
+      handleDataNoPersonaSeleccionada(undefined)
+      setIsEditingSena(false);
+      setMontoAbonado(0);
+      setMontoAbonadoPorPersona(0)
+      setValue('senia', '');
+    }
+    
+    return () => {
+      
+    };
+  }, [selectedPaqueteData?.salidas, selectedSalidaID, setValue]);
+
+  useEffect(() => {
+    if(selectedSalidaID && selectedTipoHabitacionID && selectedHotelId && selectedSalidaData && selectedSalidaData?.senia){
+      setSelectedPasajeros([]);
+      setPasajerosSearchTerm("");;
+      setSelectedPasajerosData([])
+      setIsEditingSena(false);
+      // setMontoAbonado(0);
+
+      console.log(selectedSalidaData?.senia)
+      console.log(selectedTipoHabitacionData?.capacidad)
+
+      const senia = Number(selectedSalidaData?.senia ?? 0)
+      console.log(senia);
+      setMontoAbonado(senia);
+      setMontoAbonadoPorPersona(senia);
+
+      console.log(senia)
+    }
+    
+    return () => {
+      
+    };
+  }, [selectedSalidaID, selectedTipoHabitacionID, selectedHotelId, selectedSalidaData?.senia, 
+    selectedSalidaData, selectedTipoHabitacionData?.capacidad]);
 
   // if(startDebounce)
   //   dataPasajerosList = []
@@ -823,7 +998,7 @@ export default function ModulosPage() {
   }, [tipoPaqueteSelected, setValue, clearErrors]);
 
 
-  const handlePermissionToggle = (permissionId: number, pasajero: any) => {
+  const handlePasajeroToggle = (permissionId: number, pasajero: any) => {
     // 🔹 Primero actualizamos los ids seleccionados
     setSelectedPasajeros((prev) => {
       let updated;
@@ -854,10 +1029,119 @@ export default function ModulosPage() {
   };
 
 
+    const handlePaymentTypeChange = useCallback((type: 'minimum' | 'total') => {
+      if (paymentType !== type) setPaymentType(type);
+    }, [paymentType]);
+
+
+  const renderStars = (rating: number) => {
+      return (
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Star
+              key={index}
+              className={`h-3 w-3 ${
+                index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+              }`}
+            />
+          ))}
+          <span className="ml-1 text-sm text-gray-600">({rating})</span>
+        </div>
+      );
+    };
+
+
+
+    useEffect(() => {
+
+      if(!selectedSalidaData || !selectedTipoHabitacionData || !selectedHotelData)
+        return;
+
+      const precioNoche = Number(selectedTipoHabitacionData.precio_noche ?? 0);
+
+    // Calcular la cantidad de noches usando las fechas de salida y regreso
+      const cantidadNoches = getDaysBetweenDates(
+        selectedSalidaData.fecha_salida,
+        selectedSalidaData.fecha_regreso
+      );
+
+
+      // Obtener la capacidad de la habitación (cantidad de personas)
+      // const capacidad = Number(selectedTipoHabitacionData.capacidad ?? 0);
+
+      console.log(precioNoche);
+      const precioServicios = calcularTotalServicios(selectedPaqueteData?.servicios ?? []);
+      console.log(precioServicios)
+
+      // Calcular el precio final: precio_noche * cantidad_noches * capacidad
+      const precioFinalPorPersona = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
+
+      // console.log(selectedPaqueteData.servicios)
+
+      console.log(precioFinalPorPersona);
+
+      setPrecioFinalPorPersona(precioFinalPorPersona)
+      
+      return () => {
+        
+      };
+    }, [selectedSalidaData, selectedTipoHabitacionData, selectedHotelData, selectedPaqueteData?.servicios]);
+
+
+  const calcularTotalServicios = (servicios: any[]) => {
+    return servicios.reduce((total, servicio) => {
+      const precioFinalPorPersona = servicio.precio ?? servicio.precio_base;
+      return total + precioFinalPorPersona;
+    }, 0);
+  }
+    
+
+  const senia = watch('senia');
+  console.log(senia)
+
+
+  const titularComoPasajero = watch('titularComoPasajero');
+
+  console.log(titularComoPasajero)
+
+  const cantidadActualPasajeros = selectedHotelId && selectedTipoHabitacionID && selectedPersonaID ? (watch('titularComoPasajero') ? selectedPasajerosData?.length + 1: selectedPasajerosData?.length) : 0;
+
+  useEffect(() => {
+    console.log('El valor de titularComoPasajero cambió:', titularComoPasajero);
+    setSelectedPasajeros([]);
+    setPasajerosSearchTerm("");;
+    setSelectedPasajerosData([])
+
+    // if(!titularComoPasajero){
+    //   setSelectedTitularData(undefined)
+    // }
+        
+  // acá ponés lo que querés ejecutar cuando cambie
+  }, [titularComoPasajero]);
+
+
+  // const handleServicioToggle = (permissionId: number, precio: number) => {
+  //   console.log(precio); 
+  //   console.log(permissionId)
+  //   setSelectedServiciosAdicionales((prev) => {
+  //     const updated =
+  //       prev.includes(permissionId)
+  //         ? prev.filter((p) => p !== permissionId) // quitar
+  //         : [...prev, permissionId];              // agregar
+
+
+      
+  //     // if(!prev.includes(permissionId))
+  //     //   handleShowToast('Los servicios adicionales tiene un costo extra', 'warning');
+
+  //     return updated;
+  //   });
+  // };
+
 
   return (
     <>
-       {/* {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
+      {/* {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="bg-white/95 rounded-xl shadow-xl max-w-5xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
               <div className="relative">
@@ -1140,30 +1424,29 @@ export default function ModulosPage() {
 
         </Modal>} */}
 
-       {onDesactivarData && <Modal onClose={handleCloseModal} claseCss="modal">
+      {onDesactivarData && <Modal onClose={handleCloseModal} claseCss="modal">
               <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
                   {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
                   {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
-                   
-               </div>
+              </div>
               <h2 className='text-center'>Confirmacion de operación</h2>
-             <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al reserva  
-               <b>
+            <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
+              ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al reserva  
+              <b>
                   {/* {' ' + capitalizePrimeraLetra((dataADesactivar?.nombre) ?? '')} */}
                   sadasdasd
               </b>? 
-             </p>
+            </p>
 
-             <div className='modal-actions'>
-                   <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
-                   <Button 
-                    disabled={isPendingDesactivar}
-                    className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
-                                 items-center shadow-none hover:shadow-none`}
-                                 onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
-                                   {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
-                   </Button>
+            <div className='modal-actions'>
+                <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
+                <Button 
+                disabled={isPendingDesactivar}
+                className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
+                  items-center shadow-none hover:shadow-none`}
+                  onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
+                    {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
+                </Button>
             </div>
         </Modal>}
 
@@ -1173,7 +1456,7 @@ export default function ModulosPage() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center">
-                   <Bus className="h-5 w-5 text-white" />
+                  <Bus className="h-5 w-5 text-white" />
                 </div>
                 <h1 className="text-3xl font-semibold text-gray-900">Reservas</h1>
               </div>
@@ -1235,42 +1518,283 @@ export default function ModulosPage() {
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-
-                        {/* PAQUETE */}
-                          <div className="space-y-2 mi-select-wrapper">
-                            <Label htmlFor="paquete" className="text-gray-700 font-medium">
-                              Paquete *
-                            </Label>
-
-                            <div className="space-y-2">
-                              <DinamicSearchSelect
-                                  disabled={!!dataAEditar}
-                                  dataList={newDataPaqueteList || []}
-                                  value={selectedPaqueteID}
-                                  onValueChange={setSelectedPaqueteID}
-                                  setSelectedTitularData={setSelectedPaqueteData}
-                                  handleDataNoSeleccionada={handleDataNoPaqueteSeleccionada}
-                                  onSearchChange={setPaqueteBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
-                                  isFetchingPersonas={isFetchingPaquete}
-                                  placeholder="Buscar paquete..."
-                                  labelKey="nombre"
-                                  valueKey="id"
-                                />
+                        {/* SELECCION DE PAQUETES */}
+                        <Card className="space-y-2 md:col-span-2">
+                          <CardHeader>
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
+                                1
+                              </div>
+                              <div>
+                                <CardTitle className="flex items-center gap-2">
+                                  <Package className="h-5 w-5" />
+                                  Seleccionar Paquete
+                                </CardTitle>
+                                <CardDescription>Elija el paquete turístico para la reserva</CardDescription>
+                              </div>
                             </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  {/* PAQUETE */}
+                                <div className="space-y-2 mi-select-wrapper">
+                                  <Label htmlFor="paquete" className="text-gray-700 font-medium">
+                                    Paquete *
+                                  </Label>
 
-                              {(paqueteNoSeleccionada === false || (onGuardar === true && paqueteNoSeleccionada === undefined)) && (
-                                <p className="text-red-400 text-sm">Este campo es requerido</p>
-                              )}
-                          </div>
+                                  <div className="space-y-2">
+                                    <DinamicSearchSelect
+                                        disabled={!!dataAEditar}
+                                        dataList={newDataPaqueteList || []}
+                                        value={selectedPaqueteID}
+                                        onValueChange={setSelectedPaqueteID}
+                                        setSelectedTitularData={setSelectedPaqueteData}
+                                        handleDataNoSeleccionada={handleDataNoPaqueteSeleccionada}
+                                        onSearchChange={setPaqueteBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                        isFetchingPersonas={isFetchingPaquete}
+                                        placeholder="Buscar paquete..."
+                                        labelKey="nombre"
+                                        secondaryLabelKey="modalidad"
+                                        thirdLabelKey="tipo_paquete_nombre"
+                                        valueKey="id"
+                                      />
+                                  </div>
 
+                                    {(paqueteNoSeleccionada === false || (onGuardar === true && paqueteNoSeleccionada === undefined)) && (
+                                      <p className="text-red-400 text-sm">Este campo es requerido</p>
+                                    )}
+                                </div>
 
-                          <div className="space-y-2 mi-select-wrapper">
-                              <Label htmlFor="persona" className="text-gray-700 font-medium">
-                                Titular *
-                              </Label>
+                                {/* CANTIDAD DE PASAJEROS */}
+                                  {/* <div className="space-y-2">
+                                    <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
+                                      Cantidad de pasajeros *
+                                    </Label>
+                                    <Input
+                                      id="cantidad_pasajeros"
+                                      autoComplete="cantidad_pasajeros"
+                                      placeholder="Ingrese la cantidad de pasajeros"
+                                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                      {...register('cantidad_pasajeros', {
+                                        required: {
+                                          value: true,
+                                          message: 'Este campo es requerido'
+                                        }
+                                      })}
+                                    />
+                                    <div>
+                                      {errors.cantidad_pasajeros && (
+                                        <span className="text-red-400 text-sm">
+                                          {errors.cantidad_pasajeros.message as string}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div> */}
+                            </div>     
+                          </CardContent>
                             
-                              <div className="space-y-2">
+                        </Card>
+
+                        {/* SELECCTOR DE SALIDAS */}
+                        {selectedPaqueteData &&
+                          <Card className="space-y-2 md:col-span-2">
+                            <CardHeader>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
+                                  2
+                                </div>
+                                <div>
+                                  <CardTitle className="flex items-center gap-2">
+                                    <CalendarDays className="h-5 w-5" />
+                                    Seleccionar Fecha de Salida
+                                  </CardTitle>
+                                  <CardDescription>Elija la fecha de salida que prefiere el cliente</CardDescription>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              {/* selectedSalidaID: {JSON.stringify(selectedSalidaID)} */}
+                              <FechaSalidaSelectorContainer
+                                fechaSalidasList={selectedPaqueteData?.salidas}
+                                fechaSeleccionada={selectedSalidaID}
+                                onFechaSeleccionada={setSelectedSalidaID}
+                              />
+                            </CardContent>
+                          </Card>
+                        }
+
+
+                        {/* HOTEL Y HABIRACIONES */}
+                        {selectedPaqueteData && selectedSalidaID &&
+                          <Card className="space-y-2 md:col-span-2">
+                            <CardHeader>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
+                                  3
+                                </div>
+                                <div>
+                                  <CardTitle className="flex items-center gap-2">
+                                    <CalendarDays className="h-5 w-5" />
+                                    Seleccionar Hotel y Habitación
+                                  </CardTitle>
+                                  <CardDescription>Este paquete es flexible, seleccione el hotel y tipo de habitación</CardDescription>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="h-[70vh] flex flex-col">
+                                <div className="space-y-3 overflow-y-auto flex-1 p-2 rounded-lg">
+                                  {hotelesPorSalida && hotelesPorSalida
+                                    .map((hotel: any) => {
+                                      const isSelected = selectedHotelId === hotel.id;
+
+                                      return (
+                                        <div key={hotel.id} className="bg-white border-2 rounded-lg overflow-hidden transition-all">
+                                          {/* 🔹 Cabecera del hotel */}
+                                          <div
+                                            onClick={() => {
+                                              setSelectedHotelId(hotel.id);
+                                              setSelectedHotelData(hotel);
+                                              setSelectedTipoHabitacionID(''); // resetea selección de habitación
+                                            }}
+                                            className={`p-5 cursor-pointer transition-all ${
+                                              isSelected
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                          >
+                                            <div className="flex items-start gap-4">
+                                              <div
+                                                className={`flex-shrink-0 w-16 h-16 rounded-lg flex items-center justify-center ${
+                                                  isSelected ? 'bg-blue-200' : 'bg-gray-200'
+                                                }`}
+                                              >
+                                                <Building
+                                                  className={`w-8 h-8 ${
+                                                    isSelected ? 'text-blue-700' : 'text-gray-600'
+                                                  }`}
+                                                />
+                                              </div>
+                                              <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between mb-2">
+                                                  <h3 className="text-lg font-bold text-gray-900">{hotel.nombre}</h3>
+                                                  {isSelected && (
+                                                    <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                                                  )}
+                                                </div>
+                                                <div className="flex items-center text-sm text-gray-600 mb-2">
+                                                  <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                                                  <span>{hotel.ciudad_nombre} {hotel.pais_nombre}</span>
+                                                </div>
+                                                <p className="text-sm text-gray-600 line-clamp-2">{hotel.descripcion}</p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                  <div className="flex items-center">
+                                                    {renderStars(hotel.estrellas)}
+                                                  </div>
+                                                  <span className="text-xs text-gray-500">
+                                                    {habitacionesPorSalida?.length || 0} tipos de habitación
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* 🔹 Si el hotel está seleccionado → mostramos sus habitaciones */}
+                                          {isSelected && (
+                                            <div className="p-5 bg-gradient-to-b from-blue-50 to-white border-t-2 border-blue-200">
+                                              <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                                                <Bed className="w-5 h-5 mr-2 text-blue-600" />
+                                                Seleccionar tipo de habitación:
+                                              </h4>
+
+                                              <div className="grid md:grid-cols-3 gap-3">
+                                                {habitacionesPorSalida?.map((roomType: any) => {
+                                                  const isRoomSelected = selectedTipoHabitacionID === roomType.id;
+
+                                                  return (
+                                                    <div
+                                                      key={roomType.id}
+                                                      onClick={() => {
+                                                        setSelectedTipoHabitacionID(roomType.id)
+                                                        setSelectedTipoHabitacionData(roomType)
+                                                      }}
+                                                      className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                                                        isRoomSelected
+                                                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                                                          : 'border-gray-300 bg-white hover:border-blue-300 hover:shadow-sm'
+                                                      }`}
+                                                    >
+                                                      {isRoomSelected && (
+                                                        <div className="absolute top-2 right-2">
+                                                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                                                        </div>
+                                                      )}
+                                                      <div
+                                                        className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
+                                                          isRoomSelected ? 'bg-blue-200' : 'bg-gray-200'
+                                                        }`}
+                                                      >
+                                                        <Bed
+                                                          className={`w-6 h-6 ${
+                                                            isRoomSelected ? 'text-blue-700' : 'text-gray-600'
+                                                          }`}
+                                                        />
+                                                      </div>
+                                                      <h5 className="font-bold text-gray-900 mb-2">
+                                                        {roomType.tipo}
+                                                      </h5>
+                                                      <div className="flex items-center text-xs text-gray-600 mb-3">
+                                                        <Users className="w-3 h-3 mr-1" />
+                                                        <span>Hasta {roomType.capacidad} personas</span>
+                                                      </div>
+                                                      <div className="pt-3 border-t border-gray-200">
+                                                        <div className="text-xs text-gray-600 mb-1">Precio por noche</div>
+                                                        <div className="text-lg font-bold text-blue-600">
+                                                          {roomType.moneda_simbolo} {formatearSeparadorMiles.format(roomType.precio_noche)}
+                                                          {/* 123123 */}
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                            </CardContent>
+                          </Card>
+                        }
+
+                        {/* PASO 4 INFORMACION DEL TITULAR */}
+                        {selectedTipoHabitacionID &&
+                          <Card className="space-y-2 md:col-span-2">
+                            <CardHeader>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
+                                  4
+                                </div>
+                                <div>
+                                  <CardTitle className="flex items-center gap-2">
+                                    <CalendarDays className="h-5 w-5" />
+                                    Información del Titular
+                                  </CardTitle>
+                                  <CardDescription>
+                                    Seleccione o ingrese los datos de la persona responsable de la reserva
+                                  </CardDescription>
+                                </div>
+                              </div>
+                            </CardHeader>
+
+                            <CardContent>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Columna izquierda: Titular */}
+                                <div className="space-y-2 mi-select-wrapper">
+                                  <Label htmlFor="persona" className="text-gray-700 font-medium">
+                                    Titular *
+                                  </Label>
+
                                   <DinamicSearchSelect
                                     disabled={!!dataAEditar}
                                     dataList={newDataPersonaList || []}
@@ -1278,404 +1802,938 @@ export default function ModulosPage() {
                                     onValueChange={setSelectedPersonaID}
                                     setSelectedTitularData={setSelectedTitularData}
                                     handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
-                                    onSearchChange={setPersonaBusqueda} // 🔹 Aquí se notifica el cambio de búsqueda
+                                    onSearchChange={setPersonaBusqueda}
                                     isFetchingPersonas={isFetchingPersonas}
-                                    placeholder="Buscar titular..."
+                                    placeholder="Buscar titular por documento o nombre..."
+                                    labelKey='documento'
+                                    secondaryLabelKey='documento'
+                                    thirdLabelKey='tipo_documento_nombre'
                                     valueKey="id"
                                   />
-                              </div>
-  
-                                {(personaNoSeleccionada === false || (onGuardar === true && personaNoSeleccionada === undefined)) && (
-                                  <p className="text-red-400 text-sm">Este campo es requerido</p>
-                                )}
-                            </div>
 
-                          <div className="space-y-2 flex items-center justify-center gap-20">
-                            <Controller
-                              name="titularComoPasajero"
-                              control={control}
-                              defaultValue={false}
-                              render={({ field }) => (
-                                <div className="flex items-center gap-3 cursor-pointer m-0">
-                                  <Checkbox
-                                    id="titularComoPasajero"
-                                    disabled={!selectedPaqueteID}
-                                    checked={field.value}
-                                    onCheckedChange={(checked) => field.onChange(!!checked)}
-                                    className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
-                                  />
-                                  <Label
-                                    htmlFor="titularComoPasajero"
-                                    className="cursor-pointer"
-                                  >
-                                    El titular también viaja (incluir como pasajero)
-                                  </Label>
+                                  {(personaNoSeleccionada === false ||
+                                    (onGuardar === true && personaNoSeleccionada === undefined)) && (
+                                    <p className="text-red-400 text-sm">Este campo es requerido</p>
+                                  )}
                                 </div>
-                              )}
-                            />
-                          </div>
 
+                                {/* Columna derecha: Checkbox */}
+                                <div className="flex items-center justify-center">
+                                  <Controller
+                                    name="titularComoPasajero"
+                                    control={control}
+                                    defaultValue={false}
+                                    render={({ field }) => (
+                                      <div className="flex items-center gap-3 cursor-pointer">
+                                        <Checkbox
+                                          id="titularComoPasajero"
+                                          // disabled={!selectedPaqueteID}
+                                          checked={field.value}
+                                          onCheckedChange={(checked) => field.onChange(!!checked)}
+                                          className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
+                                        />
+                                        <Label
+                                          htmlFor="titularComoPasajero"
+                                          className="cursor-pointer text-gray-700"
+                                        >
+                                          El titular también viaja (incluir como pasajero)
+                                        </Label>
+                                      </div>
+                                    )}
+                                  />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        }
 
-
-                          {/* CANTIDAD DE PASAJEROS */}
-                            <div className="space-y-2">
-                              <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
-                                Cantidad de pasajeros *
-                              </Label>
-                              <Input
-                                id="cantidad_pasajeros"
-                                autoComplete="cantidad_pasajeros"
-                                placeholder="Ingrese la cantidad de pasajeros"
-                                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                                {...register('cantidad_pasajeros', {
-                                  required: {
-                                    value: true,
-                                    message: 'Este campo es requerido'
-                                  }
-                                })}
-                              />
+                      
+                      {/* PASO 5 SELECCION DE PASAJEROS */}
+                      {selectedTipoHabitacionID && selectedPersonaID && 
+                        <Card className="space-y-2 md:col-span-2">
+                          <CardHeader>
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
+                                5
+                              </div>
                               <div>
-                                {errors.cantidad_pasajeros && (
-                                  <span className="text-red-400 text-sm">
-                                    {errors.cantidad_pasajeros.message as string}
-                                  </span>
-                                )}
+                                <CardTitle className="flex items-center gap-2">
+                                  <CalendarDays className="h-5 w-5" />
+                                  Pasajeros
+                                </CardTitle>
+                                <CardDescription>
+                                  Gestione la lista de pasajeros para esta reserva
+                                </CardDescription>
                               </div>
                             </div>
+                          </CardHeader>
 
-                            {selectedPaqueteData &&
-                              <Card className="space-y-2 md:col-span-2">
-                                <CardHeader>
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
-                                      2
-                                    </div>
-                                    <div>
-                                      <CardTitle className="flex items-center gap-2">
-                                        <CalendarDays className="h-5 w-5" />
-                                        Seleccionar Fecha de Salida
-                                      </CardTitle>
-                                      <CardDescription>Elija la fecha de salida que prefiere el cliente</CardDescription>
-                                    </div>
-                                  </div>
-                                </CardHeader>
-                                <CardContent>
-                                  selectedSalidaID: {JSON.stringify(selectedSalidaID)}
-                                  <FechaSalidaSelectorContainer
-                                    fechaSalidasList={selectedPaqueteData?.salidas}
-                                    fechaSeleccionada={selectedSalidaID}
-                                    onFechaSeleccionada={setSelectedSalidaID}
-                                  />
-                                </CardContent>
-                              </Card>
-                            }
+                          <CardContent>
+                              <div className="space-y-2 md:col-span-2">
+                                {/* selectedTipoHabitacionData: {JSON.stringify(selectedTipoHabitacionData)}<br/> */}
+                                {/* selectedTipoHabitacionID: {JSON.stringify(selectedTipoHabitacionID)} 
+                                
+                                habitacionesPorSalida */}
+                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    {habitacionesPorSalida.filter((h: any) => (h.id.toString() === selectedTipoHabitacionID.toString()))
+                                      .map((h: any) => <p className="text-sm font-medium text-blue-900">
+                                        Capacidad requerida: {h.capacidad} {h.capacidad === 1 ? "pasajero" : "pasajeros"}
+                                      </p>)
+                                    }
+                                    <p className="text-xs text-blue-700 mt-0">
+                                      {selectedPaqueteData.modalidad === "flexible" && selectedTipoHabitacionID
+                                        ? "Establecido automáticamente según la habitación seleccionada"
+                                        : "Cantidad de pasajeros para esta reserva"}
+                                    </p>
+                                </div>
 
+                                <div className="pl-2">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    Pasajeros Seleccionados:  
+                                      <span className="pl-1">{cantidadActualPasajeros} de {selectedTipoHabitacionData.capacidad}</span>
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {cantidadActualPasajeros === selectedTipoHabitacionData.capacidad ? (
+                                      <span className="text-green-600 font-medium flex items-center gap-1">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        Todos los pasajeros han sido seleccionados
+                                      </span>
+                                    ) : (
+                                      `Faltan ${selectedTipoHabitacionData.capacidad - cantidadActualPasajeros} 
+                                      ${cantidadActualPasajeros === 1 ? "pasajero" : "pasajeros"} por seleccionar`
+                                    )}
+                                  </p>
+                                </div>
 
-                            <div className="space-y-2 md:col-span-2">
-
-                               {/* Mostrar titular como pasajero si está marcado */}
-                                    {watch('titularComoPasajero') && selectedTitularData && (
-                                      <div className="mb-6">
-                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
-                                        <div className="p-4 bg-blue-50 rounded-lg">
-                                          <div className="flex items-center space-x-4">
-                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                              <Crown className="w-5 h-5 text-blue-600" />
-                                            </div>
-                                            <div>
-                                              <p className="font-medium text-gray-900">
-                                                {selectedTitularData.nombre}
-                                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
-                                              </p>
-                                              <p className="text-sm text-gray-500">
-                                                {/* {DOCUMENT_TYPES[formData.persona.tipo_documento || 'cedula']}: {formData.persona.numero_documento} */}
-                                                {selectedTitularData.documento}
-                                              </p>
+                                {/* Mostrar titular como pasajero si está marcado */}
+                                      {titularComoPasajero && selectedTitularData && (
+                                        <div className="mb-6 mt-6">
+                                          <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
+                                          <div className="p-4 bg-blue-50 rounded-lg">
+                                            <div className="flex items-center space-x-4">
+                                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <Crown className="w-5 h-5 text-blue-600" />
+                                              </div>
+                                              <div>
+                                                <p className="font-medium text-gray-900">
+                                                  {selectedTitularData.nombre}
+                                                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
+                                                </p>
+                                                <p className="text-sm text-gray-500">
+                                                  {/* {DOCUMENT_TYPES[formData.persona.tipo_documento || 'cedula']}: {formData.persona.numero_documento} */}
+                                                  {selectedTitularData.documento}
+                                                </p>
+                                              </div>
                                             </div>
                                           </div>
                                         </div>
+                                      )}
+
+                              </div>
+
+                                <div className="space-y-2 md:col-span-2">
+                                  <div className="flex gap-2 flex-wrap mt-8">
+                                      {Array.from({ length: selectedTipoHabitacionData.capacidad }).map((_, index) => {
+                                        const cantidad = Number(cantidadActualPasajeros ?? 0);
+
+                                        let isFilled = false;
+
+                                        if (titularComoPasajero) {
+                                          // Si hay titular incluido:
+                                          // - el slot 0 es siempre el titular (ocupado)
+                                          // - los pasajeros adicionales ocupan los índices 1..cantidad
+                                          if (index === 0) {
+                                            isFilled = true;
+                                          } else {
+                                            // índices 1..cantidad deben marcarse si cantidad >= 1
+                                            // isFilled = false;
+                                            isFilled = index < cantidad;
+                                          }
+                                        } else {
+                                          // Si no hay titular incluido:
+                                          // - ocupados son índices 0..cantidad-1 (cantidad pasajeros)
+                                          isFilled = index < cantidad;
+                                        }
+
+                                        const isHolderSlot = titularComoPasajero && index === 0;
+                                        const passengerNumber = titularComoPasajero ? index : index + 1;
+                                        const label = isHolderSlot ? "Titular" : `Pasajero ${passengerNumber}`;
+
+                                        return (
+                                          <div
+                                            key={index}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                                              isFilled
+                                                ? "border-blue-200 bg-blue-50"
+                                                : "border-dashed border-gray-300 bg-gray-50"
+                                            }`}
+                                          >
+                                            {isFilled ? (
+                                              <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                                            ) : (
+                                              <Circle className="h-4 w-4 text-gray-400" />
+                                            )}
+                                            <span className="text-sm font-medium text-gray-700">{label}</span>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+
+                                    {selectedPasajerosData && selectedPasajerosData.length > 0 && (
+                                        <div className="mb-6">
+                                          <h3 className="text-lg font-medium text-gray-900 mb-4">Pasajeros Agregados</h3>
+                                          <div className="space-y-3 max-h-95 overflow-y-auto">
+                                            {selectedPasajerosData.map((pasajero: any) => (
+                                              <div key={pasajero.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                                <div className="flex items-center space-x-4">
+                                                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                    <User className="w-5 h-5 text-blue-600" />
+                                                  </div>
+                                                  <div>
+                                                    <p className="font-medium text-gray-900">
+                                                      {/* {getPrimerNombreApellido(pasajero.nombre, pasajero.apellido)} */}
+                                                      {pasajero.nombre} {pasajero.apellido}
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">
+                                                      {pasajero.tipo_documento.nombre}: {pasajero.documento}
+                                                    </p>
+                                                  </div>
+                                                </div>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      handlePasajeroToggle(pasajero.id, pasajero)
+                                                    }}
+                                                    className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                                                  >
+                                                    <X className="w-4 h-4" />
+                                                  </button>
+                                                {/* )} */}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                </div>
+
+
+                                {/* cantidadActualPasajeros: {JSON.stringify(cantidadActualPasajeros)}<br/>
+                                selectedTipoHabitacionData: {JSON.stringify(selectedTipoHabitacionData)}<br/>
+                                selectedTipoHabitacionData.capacidad: {JSON.stringify(selectedTipoHabitacionData.capacidad)}<br/>
+                                cantidadActualPasajeros !== selectedTipoHabitacionData.capacidad: {JSON.stringify(cantidadActualPasajeros !== selectedTipoHabitacionData.capacidad)}<br/> */}
+
+                              {selectedTipoHabitacionData && 
+                                cantidadActualPasajeros !== selectedTipoHabitacionData.capacidad &&
+                                <div className={`space-y-2 md:col-span-2 ${(cantidadActualPasajeros === 0 || cantidadActualPasajeros === 1 && titularComoPasajero) ? 'mt-8' : ''}`}>
+                                    <Label className="text-gray-700 font-medium">Seleccione los pasajeros *</Label>
+
+                                    {/* INPUT DE BUQUEDA DE PASAJERO */}
+                                    <div className="relative mb-4">
+                                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                      <Input
+                                        placeholder="Buscar pasajeros por documento o nombre..."
+                                        disabled={cantidadActualPasajeros === selectedTipoHabitacionData.capacidad}
+                                        value={pasajerosSearchTerm}
+                                        onChange={(e) => setPasajerosSearchTerm(e.target.value)}
+                                        className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                      />
+                                    </div>
+
+                                    {/* PASAJEROS SELECCIONADOS */}
+                                    {selectedPasajeros.length > 0 && (
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                          {selectedPasajeros.length} pasajeros seleccionados
+                                        </Badge>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setSelectedPasajeros([])}
+                                          className="text-red-600 border-red-200 hover:bg-red-50"
+                                        >
+                                          <X className="h-3 w-3 mr-1" />
+                                          Limpiar selección
+                                        </Button>
                                       </div>
                                     )}
 
-                            </div>
+                                    {/* <div>
+                                      dataPasajerosList: {JSON.stringify(dataPasajerosList)}
+                                    </div> */}
+                                    
+                                    <div
+                                        className={`grid grid-cols-1 ${
+                                          pasajerosSearchTerm && (!isFetchingPasajeros && !startDebounce)
+                                            ? 'md:grid-cols-2'
+                                            : 'md:grid-cols-1'
+                                        } gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full`}
+                                      >
+                                        {/* Loader */}
+                                        {(isFetchingPasajeros || startDebounce) && (
+                                          <div className="w-full flex items-center justify-center h-56">
+                                            <Loader2Icon className="animate-spin w-10 h-10 text-gray-300" />
+                                          </div>
+                                        )}
 
-                              <div className="space-y-2 md:col-span-2">
-                                  <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                                  Pasajeros ({0 + (watch('titularComoPasajero') ? 1 + selectedPasajeros.length: selectedPasajeros.length)})
-                                </h2>
-
-                                  {selectedPasajerosData && selectedPasajerosData.length > 0 && (
-                                      <div className="mb-6">
-                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Pasajeros Agregados</h3>
-                                        <div className="space-y-3 max-h-95 overflow-y-auto">
-                                          {selectedPasajerosData.map((pasajero: any) => (
-                                            <div key={pasajero.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                              <div className="flex items-center space-x-4">
-                                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                  <User className="w-5 h-5 text-blue-600" />
-                                                </div>
-                                                <div>
-                                                  <p className="font-medium text-gray-900">
-                                                    {/* {getPrimerNombreApellido(pasajero.nombre, pasajero.apellido)} */}
-                                                    {pasajero.nombre} {pasajero.apellido}
-                                                  </p>
-                                                  <p className="text-sm text-gray-500">
-                                                    {pasajero.tipo_documento.nombre}: {pasajero.documento}
-                                                  </p>
+                                        {/* Lista de resultados */}
+                                        {pasajerosSearchTerm &&
+                                          !isFetchingPasajeros &&
+                                          !startDebounce &&
+                                          dataPasajerosList &&
+                                          dataPasajerosList.length > 0 &&
+                                          dataPasajerosList
+                                      
+                                            .map((persona: any) => (
+                                              <div
+                                                key={persona.id}
+                                                className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
+                                                  items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                                  border border-gray-200
+                                                  ${
+                                                    selectedPasajeros.includes(persona.id)
+                                                      ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200'
+                                                      : ''
+                                                  }`}
+                                              >
+                                                <div className="flex items-start w-full">
+                                                  <div className="flex-shrink-0 mr-3 mt-0.5">
+                                                    <Checkbox
+                                                      id={`servicio-${persona.id}`}
+                                                      checked={selectedPasajeros.includes(persona.id)}
+                                                      onCheckedChange={() => handlePasajeroToggle(persona.id, persona)}
+                                                    />
+                                                  </div>
+                                                  <div className="flex-1 min-w-0">
+                                                    <Label
+                                                      htmlFor={`servicio-${persona.id}`}
+                                                      className="text-sm font-medium text-gray-900 cursor-pointer block"
+                                                    >
+                                                      {persona.nombre} {persona.apellido}
+                                                    </Label>
+                                                    <p className="text-xs text-gray-500 mt-1">{persona.descripcion}</p>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                      <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                                        {persona.documento}
+                                                      </Badge>
+                                                    </div>
+                                                  </div>
                                                 </div>
                                               </div>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handlePermissionToggle(pasajero.id, pasajero)}
-                                                  className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                                                >
-                                                  <X className="w-4 h-4" />
-                                                </button>
-                                              {/* )} */}
+                                            ))}
+
+                                        {/* Mensaje inicial */}
+                                        {!pasajerosSearchTerm && (
+                                          <div
+                                            className={`relative flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                              border border-gray-200 w-full text-center`}
+                                          >
+                                            <div className="flex justify-center items-center w-full h-56 text-gray-500">
+                                              Filtre una persona a través de su nombre o documento
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Sin resultados */}
+                                        {!isFetchingPasajeros &&
+                                          !startDebounce &&
+                                          pasajerosSearchTerm &&
+                                          dataPasajerosList &&
+                                          dataPasajerosList.length === 0 && ( 
+                                            <div className="col-span-2 text-center py-8">
+                                              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                                <Search className="h-6 w-6 text-gray-400" />
+                                              </div>
+                                              <p className="text-gray-500 text-sm">
+                                                No se encontraron pasajeros que coincidan con "{pasajerosSearchTerm}"
+                                              </p>
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setPasajerosSearchTerm('')}
+                                                className="mt-2"
+                                              >
+                                                Limpiar búsqueda
+                                              </Button>
+                                            </div>
+                                          )}
+                                      </div>
+
+                                </div>
+                              } 
+                          </CardContent>
+                        </Card>
+                      }
+
+
+                      <div>
+                        {/* cantidadActualPasajeros: {JSON.stringify(cantidadActualPasajeros)}<br/> */}
+                        {/* selectedTipoHabitacionData: {JSON.stringify(selectedTipoHabitacionData)}<br/> */}
+                        {/* SelectedSalidaData: {JSON.stringify(selectedSalidaData)}<br/>
+                        SelectedSalidaData: {JSON.stringify(selectedSalidaData?.fecha_salida)}<br/>
+                        SelectedSalidaData: {JSON.stringify(selectedSalidaData?.fecha_regreso)}<br/> */}
+                        {/* selectedPaqueteData: {JSON.stringify(selectedPaqueteData)}<br/> */}
+                      </div>
+
+
+                       {/* PASO 6 INFORMACION DEL TITULAR */}
+                        {selectedPaqueteID && selectedTipoHabitacionID && selectedPersonaID &&
+                          <Card className="space-y-2 md:col-span-2">
+                            <CardHeader>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
+                                  6
+                                </div>
+                                <div>
+                                  <CardTitle className="flex items-center gap-2">
+                                    <CalendarDays className="h-5 w-5" />
+                                    Servicios
+                                  </CardTitle>
+                                  <CardDescription>
+                                    Revise los servicios incluidos. Puedes agregar servicios opcionales si posterior a la reservacíon
+                                  </CardDescription>
+                                </div>
+                              </div>
+                            </CardHeader>
+
+                            <CardContent>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                  {selectedPaqueteData.servicios.map((service: any) => (
+                                    <div
+                                      key={service.servicio_id}
+                                      className="bg-green-50 border border-green-200 rounded-lg p-3"
+                                    >
+
+                                      <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-200 flex items-center justify-center">
+                                          <CheckCircle className="w-5 h-5 text-green-700" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-semibold text-gray-900 text-sm mb-1">
+                                            {service.nombre_servicio}
+                                          </h4>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded">
+                                              Incluido
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* <div className="space-y-2 md:col-span-2 mt-6"> */}
+                                    {/* 
+                                    <Label className="text-gray-700 font-medium">Servicios Adicionales Opcionales</Label>
+    
+                                    
+                                    <div className="relative mb-4">
+                                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                      <Input
+                                        placeholder="Buscar servicios..."
+                                        value={serviciosAdicionalesSearchTerm}
+                                        onChange={(e) => setServiciosAdicionalesSearchTerm(e.target.value)}
+                                        className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                      />
+                                    </div> */}
+    
+                                    
+                                    {/* {selectedServiciosAdicionales.length > 0 && (
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                          {selectedServiciosAdicionales.length} servicios seleccionados
+                                        </Badge>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setSelectedServiciosAdicionales([])}
+                                          className="text-red-600 border-red-200 hover:bg-red-50"
+                                        >
+                                          <X className="h-3 w-3 mr-1" />
+                                          Limpiar selección
+                                        </Button>
+                                      </div>
+                                    )} */}
+    
+                                    
+                                    {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
+                                      {isFetchingServicios && <div className="w-full flex items-center justify-center">
+                                        <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                                      </div>}
+    
+                                      {!isFetchingServicios && dataServiciosList && dataServiciosList
+                                          .filter((servicio: any) => 
+                                            
+                                            servicio.nombre.toLowerCase().includes(serviciosAdicionalesSearchTerm.toLowerCase())
+                                          
+                                          )
+                                          .map((servicio: any) => (
+                                            <div
+                                              key={servicio.id}
+                                              className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
+                                                        items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
+                                                        border border-gray-200
+                                                        ${selectedServiciosAdicionales.includes(servicio.id) 
+                                                          ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
+                                                          : ''}`}
+                                            >
+                                              <div className="flex items-center justify-center w-full">
+                                                  <div className="flex items-start w-full">
+                                                    <div className="flex-shrink-0 mr-3 mt-0.5">
+                                                      <Checkbox
+                                                        id={`servicio-${servicio.id}`}
+                                                        checked={selectedServiciosAdicionales.includes(servicio.id)}
+                                                        onCheckedChange={() => handleServicioToggle(servicio.id)}
+                                                      />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                      <Label
+                                                        htmlFor={`servicio-${servicio.id}`}
+                                                        className="text-sm font-medium text-gray-900 cursor-pointer block"
+                                                      >
+                                                        {servicio.nombre}
+                                                        {selectedServiciosAdicionales.includes(servicio.id) && selectedPaqueteData.propio &&
+                                                          <div className="col-span-2 flex gap-2 mt-2">  
+                                                            <div>
+                                                              <Input
+                                                                  id="precio_base"
+                                                                  type="text"
+                                                                  value={servicio?.precio}
+                                                                  disabled
+                                                                  {...register('precio_base', )
+                                                                    }
+                                                                    placeholder="150"
+                                                                    className={`h-8 flex-1 border-2 border-blue-200 focus:border-blue-500
+                                                                      disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed`}
+                                                                />
+                                                                <Label className="block text-xs font-light text-gray-700 mb-1">
+                                                                  Precio por defecto
+                                                                </Label>
+                                                            </div>
+                                                                
+                                                            <div>
+                                                              <Controller
+                                                                name={`precio_personalizado_servicio_${servicio.id}`}   // 🔹 campo único por servicio
+                                                                control={control}
+                                                                defaultValue={''}
+                                                                rules={{
+                                                                  validate: (value) => {
+                                                                    // ⚡ Solo validamos si tiene un valor
+                                                                    if (value !== null && value !== undefined && value !== '' && isNaN(Number(value))) {
+                                                                      return 'Valor inválido';
+                                                                    }
+                                                                    return true;
+                                                                  },
+                                                                }}
+                                                                render={({ field, fieldState: { error } }) => (
+                                                                  <div className="flex flex-col">
+                                                                    <NumericFormat
+                                                                      value={field.value ?? ''} 
+                                                                      onValueChange={(values) => {
+                                                                        field.onChange(values.floatValue ?? null);
+                                                                      }}
+                                                                      onBlur={field.onBlur}
+                                                                      thousandSeparator="."
+                                                                      decimalSeparator=","
+                                                                      placeholder="50 $"
+                                                                      className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                        error
+                                                                          ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                          : 'border-blue-200 focus:border-blue-500'
+                                                                      }`}
+                                                                    />
+                                                                    {error && (
+                                                                      <span className="text-red-400 text-xs mt-1">{error.message}</span>
+                                                                    )}
+                                                                  </div>
+                                                                )}
+                                                              />
+    
+    
+                                                              <Label className="block text-xs font-light text-gray-700 mb-1">
+                                                                Precio personalizado
+                                                              </Label>
+                                                            </div>
+                                                          </div>
+                                                        }
+                                                      </Label>
+                                                    </div>
+    
+                                                  </div>
+                                                  <span onClick={() => handleServicioToggle(servicio.id, servicio?.precio ?? 0)}>
+                                                    {selectedServiciosAdicionales.includes(servicio.id) ?
+                                                      <Trash2 className="text-red-400 w-7 h-7 hover:bg-red-100 rounded-sm p-1" /> :
+                                                      <CirclePlus className="text-blue-400 w-7 h-7 hover:bg-blue-100 rounded-sm p-1" />
+                                                    }
+                                                  </span>
+                                              </div>
                                             </div>
                                           ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                     {/* Mostrar titular como pasajero si está marcado */}
-                                    {watch('titularComoPasajero') && selectedTitularData && (
-                                      <div className="mb-6">
-                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
-                                        <div className="p-4 bg-blue-50 rounded-lg">
-                                          <div className="flex items-center space-x-4">
-                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                              <Crown className="w-5 h-5 text-blue-600" />
-                                            </div>
-                                            <div>
-                                              <p className="font-medium text-gray-900">
-                                                {/* {formData.persona.nombre} {formData.persona.apellido} */}
-                                                {selectedTitularData.nombre}
-                                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
-                                              </p>
-                                              <p className="text-sm text-gray-500">
-                                                {/* {DOCUMENT_TYPES[formData.persona.tipo_documento || 'cedula']}: {formData.persona.numero_documento} */}
-                                                {selectedTitularData.documento}
-                                              </p>
-                                            </div>
+                                                                
+                                      {dataServiciosList && dataServiciosList.filter(
+                                        (servicio: any) =>
+                                          servicio.nombre.toLowerCase().includes(serviciosAdicionalesSearchTerm.toLowerCase())
+                                      ).length === 0 && (
+                                        <div className="col-span-2 text-center py-8">
+                                          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                            <Search className="h-6 w-6 text-gray-400" />
                                           </div>
+                                          <p className="text-gray-500 text-sm">
+                                            No se encontraron servicios que coincidan con "{serviciosAdicionalesSearchTerm}"
+                                          </p>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setServiciosAdicionalesSearchTerm("")}
+                                            className="mt-2"
+                                          >
+                                            Limpiar búsqueda
+                                          </Button>
                                         </div>
-                                      </div>
-                                    )}
-                              </div>
-
-                            <div className="space-y-2 md:col-span-2">
-                                <Label className="text-gray-700 font-medium">Seleccione los pasajeros *</Label>
-
-                                {/* INPUT DE BUQUEDA DE PASAJERO */}
-                                <div className="relative mb-4">
-                                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                  <Input
-                                    placeholder="Buscar pasajeros..."
-                                    value={pasajerosSearchTerm}
-                                    onChange={(e) => setPasajerosSearchTerm(e.target.value)}
-                                    className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                                  />
-                                </div>
-
-                                {/* PASAJEROS SELECCIONADOS */}
-                                {selectedPasajeros.length > 0 && (
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                                      {selectedPasajeros.length} pasajeros seleccionados
-                                    </Badge>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setSelectedPasajeros([])}
-                                      className="text-red-600 border-red-200 hover:bg-red-50"
-                                    >
-                                      <X className="h-3 w-3 mr-1" />
-                                      Limpiar selección
-                                    </Button>
-                                  </div>
-                                )}
-
-                                
-                                <div className={`grid grid-cols-1 ${(pasajerosSearchTerm && (!isFetchingPasajeros && !startDebounce)) ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full`}>
-                                  {(isFetchingPasajeros || startDebounce) && <div className="w-full flex items-center justify-center h-56">
-                                    <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
-                                  </div>}
-
-                                  {pasajerosSearchTerm && (!isFetchingPasajeros && !startDebounce) && dataPasajerosList && 
-                                                      dataPasajerosList?.length && dataPasajerosList
-                                      .filter((persona: any) => {
-                                        
-                                        return persona.nombre.toLowerCase().includes(pasajerosSearchTerm.toLowerCase())
-                                      }
-                                      
-                                      )
-                                      .map((persona: any) => (
-                                        <div
-                                          key={persona.id}
-                                          className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
-                                                    items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
-                                                    border border-gray-200
-                                                    ${selectedPasajeros.includes(persona.id) 
-                                                      ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
-                                                      : ''}`}
-                                        >
-                                          <div className="flex items-start w-full">
-                                            <div className="flex-shrink-0 mr-3 mt-0.5">
-                                              <Checkbox
-                                                id={`servicio-${persona.id}`}
-                                                checked={selectedPasajeros.includes(persona.id)}
-                                                onCheckedChange={() => handlePermissionToggle(persona.id, persona)}
-                                              />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                              <Label
-                                                htmlFor={`servicio-${persona.id}`}
-                                                className="text-sm font-medium text-gray-900 cursor-pointer block"
-                                              >
-                                                {persona.nombre} {persona.apellido}
-                                              </Label>
-                                              <p className="text-xs text-gray-500 mt-1">{persona.descripcion}</p>
-                                              <div className="flex items-center gap-2 mt-2">
-                                                <Badge
-                                                  className='bg-blue-100 text-blue-700 border-blue-200'
-                                                >
-                                                    {persona.documento}
-                                                </Badge>
-                                                
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ))}
-
-                                  {!pasajerosSearchTerm && <div
-                                          className={`relative cursor-pointer duration-200 hover:shadow-sm flex 
-                                                    items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
-                                                    border border-gray-200 w-full text-center`}
-                                        >
-                                          <div className="flex justify-center items-center w-full h-56 text-gray-500">
-                                              Filtre una persona a traves de su nombre
-                                            {/* <div className="flex-shrink-0 mr-3 mt-0.5">
-                                            </div> */}
-                                          </div>
-                                        </div>}
-
-                                                            
-                                  {(!isFetchingPasajeros && !startDebounce) && pasajerosSearchTerm && dataPasajerosList && dataPasajerosList?.filter(
-                                    (servicio: any) =>{
-                                      console.log(pasajerosSearchTerm.toLowerCase())
-                                      console.log(servicio);
-                                      console.log(servicio.nombre.toLowerCase().includes(pasajerosSearchTerm.toLowerCase()))
-                                      return servicio.nombre.toLowerCase().includes(pasajerosSearchTerm.toLowerCase())
-                                    }
-                                  ).length === 0 && (
-                                    <div className="col-span-2 text-center py-8">
-                                      <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                        <Search className="h-6 w-6 text-gray-400" />
-                                      </div>
-                                      <p className="text-gray-500 text-sm">
-                                        No se encontraron pasajeros que coincidan con "{pasajerosSearchTerm}"
-                                      </p>
+                                      )}
+      
+                                    </div> */}
+    
+                                    {/* <div className="flex items-center gap-2 pt-2">
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => setPasajerosSearchTerm("")}
-                                        className="mt-2"
+                                        onClick={() => {
+    
+                                          const filteredPermissions = dataServiciosList.filter(
+                                            (servicio: any) =>
+                                              servicio.nombre.toLowerCase().includes(serviciosAdicionalesSearchTerm.toLowerCase())
+                                          )
+                                          const allFilteredSelected = filteredPermissions.every((p: any) =>
+                                            selectedServiciosAdicionales.includes(p.id),
+                                          )
+    
+                                          console.log('allFilteredSelected: ', allFilteredSelected )
+    
+                                          if (allFilteredSelected) {
+                                            setSelectedServiciosAdicionales((prev) =>
+                                              prev.filter((id) => !filteredPermissions.map((p: any) => p.id).includes(id)),
+                                            )
+                                          } else {
+                                            const newSelections = filteredPermissions
+                                              .map((p:any) => p.id)
+                                              .filter((id:any) => !selectedServiciosAdicionales.includes(id))
+                                            setSelectedServiciosAdicionales((prev) => [...prev, ...newSelections])
+                                          }
+                                        }}
+                                        className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                                       >
-                                        Limpiar búsqueda
+                                        <Check className="h-3 w-3 mr-1" />
+                                        {dataServiciosList && dataServiciosList
+                                          .filter(
+                                            (servicio: any) =>
+                                              servicio.nombre.toLowerCase().includes(serviciosAdicionalesSearchTerm.toLowerCase())
+                                          )
+                                          .every((p: any) => selectedServiciosAdicionales.includes(p.id))
+                                          ? "Deseleccionar todos"
+                                          : "Seleccionar todos"}{" "}
+                                        
                                       </Button>
-                                    </div>
-                                  )}
+  
+                                      {onGuardar && selectedServiciosAdicionales.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
+                                    </div> */}
+    
+                                  
+                                {/* </div> */}
+                            </CardContent>
+                          </Card>
+                        }
 
+
+                      {/* RESUMEN DE LOS PRECIOS */}
+                      {cantidadActualPasajeros && cantidadActualPasajeros === selectedTipoHabitacionData?.capacidad && (
+                        <div className="space-y-2 md:col-span-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border-2 border-blue-300">
+                          <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-gray-900">Resumen de Reserva</h2>
+                            {/* <DollarSign className="w-8 h-8 text-blue-600" /> */}
+                            <span className="text-blue-600 font-bold text-2xl">{selectedSalidaData.moneda.simbolo} {selectedSalidaData.moneda.nombre}</span>
+                          </div>
+
+                          <div className="space-y-2 mb-4">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Paquete:</span>
+                              <span className="font-medium">{selectedPaqueteData?.nombre}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Duración:</span>
+                              <span className="font-medium">{getDaysBetweenDates(selectedSalidaData?.fecha_salida, selectedSalidaData?.fecha_regreso)} días</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Fecha de salida:</span>
+                              <span className="font-medium">{formatearFecha(selectedSalidaData?.fecha_salida, false)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Fecha de regreso:</span>
+                              <span className="font-medium">{formatearFecha(selectedSalidaData?.fecha_regreso, false)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Número de personas:</span>
+                              <span className="font-medium">{selectedTipoHabitacionData?.capacidad}</span>
+                            </div>
+                            {/* {selectedHotel && selectedRoomType && ( */}
+                            {selectedHotelId && selectedTipoHabitacionID && (
+                              <>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-700">Hotel:</span>
+                                  {/* <span className="font-medium">{selectedHotel.name}</span> */}
+                                  <span className="font-medium">{selectedHotelData.nombre}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-700">Habitación:</span>
+                                  <span className="font-medium">{selectedTipoHabitacionData.tipo}</span>
+                                </div>
+                              </>
+                            )}
+                            {/* {selectedPackage?.includedServices.length > 0 && ( */}
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-700">Servicios incluidos:</span>
+                                {/* <span className="font-medium">{selectedPackage.includedServices.length}</span> */}
+                                <span className="font-medium">{selectedPaqueteData?.servicios.length}</span>
+                              </div>
+                            {/* )} */}
+                          </div>
+
+                          <div className="border-t-2 border-blue-300 pt-4">
+                            <div className="flex justify-between items-center">
+                              {/* Título y selector */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg font-bold text-gray-900">Seña:</span>
+
+                                {/* Selector de tipo de pago */}
+                                <div className="flex rounded-lg border border-gray-300 bg-white overflow-hidden">
+                                  {['minimum', 'total'].map((type: any) => (
+                                    <button
+                                      key={type}
+                                      onClick={() => handlePaymentTypeChange(type)}
+                                      className={`px-3 py-1 text-sm font-medium transition-colors ${
+                                        paymentType === type
+                                          ? type === 'minimum'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-green-600 text-white'
+                                          : 'text-gray-600 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      {type === 'minimum' ? 'Mínima' : 'Total'}
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
 
-                              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Estado de la Reserva</h2>
-          
-          <div>
-            <Label htmlFor="estado" className="text-gray-700 font-medium">
-              Estado *
-            </Label>
-            <Controller
-                name="estado"
-                control={control}
-                rules={{ required: "Este campo es requerido" }}
-                render={({ field }) => (
-                  <div className="w-full min-w-0 select-container">
-                    <Select
-                      value={field.value}
-                      onValueChange={(value) => {
-                                field.onChange(value)
-                                if (value) {
-                                  clearErrors("estado") // Limpia el error cuando selecciona un valor
-                                }
-                              }}
-                      onOpenChange={(open) => {
-                          if (!open && !field.value) {
-                            field.onBlur(); 
-                          }
-                        }}
-                    >
-                      <SelectTrigger 
-                        className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                        <SelectValue placeholder="Selecciona el tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pendiente">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                            Pendiente
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="confirmada">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                            Confirmada
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="incompleta">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                            Incompleta
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="finalizada">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                            Finalizada
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="cancelada">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                            Cancelada
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              />
-              {errors.estado && (
-                <p className="text-red-400 text-sm">{errors.estado.message as string}</p>
-              )}
+                              {/* Bloque de monto */}
+                              <div className="flex items-center justify-end gap-1 w-40">
+                                {/* Mostrar input editable solo si: no es TOTAL y está en modo edición */}
+                                {paymentType !== 'total' && isEditingSena ? (
+                                  <>
+                                    <Controller
+                                      name="senia"
+                                      control={control}
+                                      rules={{
+                                        validate: (value) => {
+                                          if (!value) return true;
+                                          if (isNaN(Number(value))) return false;
+                                          if (Number(value) <= 0) return false;
+                                          return true;
+                                        },
+                                      }}
+                                      render={({ field, fieldState: { error } }) => (
+                                        <NumericFormat
+                                          value={field.value ?? ''}
+                                          onValueChange={(values) => field.onChange(values.floatValue ?? null)}
+                                          onBlur={field.onBlur}
+                                          thousandSeparator="."
+                                          decimalSeparator=","
+                                          allowNegative={false}
+                                          decimalScale={0}
+                                          allowLeadingZeros={false}
+                                          placeholder="ej: 250"
+                                          className={`flex-1 p-1 pl-2.5 rounded-md border-2 transition-all duration-150 ${
+                                            error
+                                              ? '!border-red-400 text-red-500 font-bold'
+                                              : 'border-blue-200 focus:border-blue-600 text-blue-600 font-bold'
+                                          } text-xl leading-tight`}
+                                        />
+                                      )}
+                                    />
 
-            <p className="text-sm text-gray-500 mt-2">
-              <strong>Estados:</strong><br/>
-              • <strong>Pendiente:</strong> Reserva creada, sin pago<br/>
-              • <strong>Confirmada:</strong> Pago realizado, cupo asegurado<br/>
-              • <strong>Incompleta:</strong> Confirmada pero faltan datos de pasajeros<br/>
-              • <strong>Finalizada:</strong> Todo completo: pasajeros + pago<br/>
-              • <strong>Cancelada:</strong> Reserva cancelada
-            </p>
-          </div>
-        </div>
+                                    <Button
+                                      variant="default"
+                                      size="icon"
+                                      onClick={() => {
+                                        const nuevaSeña = getValues('senia');
+                                        if (nuevaSeña && Number(nuevaSeña) > 0) {
+                                          const seniaPorPersona =
+                                            Number(nuevaSeña) / Number(selectedTipoHabitacionData?.capacidad ?? 1);
+                                          setMontoAbonado(seniaPorPersona);
+                                        }
+                                        setIsEditingSena(false);
+                                        setValue('senia', '');
+                                      }}
+                                      className="h-8 w-8 bg-green-600 hover:bg-green-700 cursor-pointer"
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    {/* Si paymentType = total, se muestra el monto total bloqueado */}
+                                    <span
+                                      className={`text-3xl font-bold ${
+                                        paymentType === 'total' ? 'text-green-600' : 'text-blue-600'
+                                      }`}
+                                    >
+                                      {formatearSeparadorMiles.format(
+                                        paymentType === 'total'
+                                          ? Number(precioFinalPorPersona ?? 0) *
+                                            Number(selectedTipoHabitacionData?.capacidad ?? 0)
+                                          : Number(montoAbonado ?? 0) *
+                                            Number(selectedTipoHabitacionData?.capacidad ?? 0)
+                                      )}
+                                    </span>
+
+                                    {/* Solo mostrar el botón de edición si NO es total */}
+                                    {paymentType !== 'total' && (
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                          setIsEditingSena(true);
+                                          setValue(
+                                            'senia',
+                                            (montoAbonado ?? 0) *
+                                              Number(selectedTipoHabitacionData?.capacidad ?? 0)
+                                          );
+                                        }}
+                                        className="h-8 w-8 bg-blue-400 cursor-pointer"
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-gray-600 text-right mt-1">
+                              {formatearSeparadorMiles.format(
+                                (Number(selectedSalidaData?.senia ?? 0) *
+                                  Number(selectedTipoHabitacionData?.capacidad ?? 0))
+                              )}{' '}
+                              por persona
+                            </p>
+                          </div>
+
+
+                          <div className="border-t-2 border-blue-300 pt-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-lg font-bold text-gray-900">Precio Total:</span>
+                              <span className="text-3xl font-bold text-green-600">
+                                {formatearSeparadorMiles.format(
+                                  precioFinalPorPersona * Number(selectedTipoHabitacionData?.capacidad ?? 0)
+                                )}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 text-right mt-1">
+                              {formatearSeparadorMiles.format(precioFinalPorPersona)} por persona
+                            </p>
+                          </div>
+
+                        </div>
+                      )}
+
+                      {/* <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-6">Estado de la Reserva</h2>
+                      
+                        <div>
+                          <Label htmlFor="estado" className="text-gray-700 font-medium">
+                            Estado *
+                          </Label>
+                          <Controller
+                              name="estado"
+                              control={control}
+                              rules={{ required: "Este campo es requerido" }}
+                              render={({ field }) => (
+                                <div className="w-full min-w-0 select-container">
+                                  <Select
+                                    value={field.value}
+                                    onValueChange={(value) => {
+                                              field.onChange(value)
+                                              if (value) {
+                                                clearErrors("estado") // Limpia el error cuando selecciona un valor
+                                              }
+                                            }}
+                                    onOpenChange={(open) => {
+                                        if (!open && !field.value) {
+                                          field.onBlur(); 
+                                        }
+                                      }}
+                                  >
+                                    <SelectTrigger 
+                                      className="cursor-pointer border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                                      <SelectValue placeholder="Selecciona el tipo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="pendiente">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
+                                          Pendiente
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="confirmada">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                          Confirmada
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="incompleta">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                          Incompleta
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="finalizada">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                          Finalizada
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="cancelada">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                          Cancelada
+                                        </div>
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            />
+                            {errors.estado && (
+                              <p className="text-red-400 text-sm">{errors.estado.message as string}</p>
+                            )}
+
+                          <p className="text-sm text-gray-500 mt-2">
+                            <strong>Estados:</strong><br/>
+                            • <strong>Pendiente:</strong> Reserva creada, sin pago<br/>
+                            • <strong>Confirmada:</strong> Pago realizado, cupo asegurado<br/>
+                            • <strong>Incompleta:</strong> Confirmada pero faltan datos de pasajeros<br/>
+                            • <strong>Finalizada:</strong> Todo completo: pasajeros + pago<br/>
+                            • <strong>Cancelada:</strong> Reserva cancelada
+                          </p>
+                        </div>
+                      </div> */}
                     </div>
 
+                    {/* CONTROLES DE BOTONES */}
                     <div className="flex gap-3">
                       {/* {isPendingMutation && <>
                       </>} */}
@@ -1876,7 +2934,7 @@ export default function ModulosPage() {
                         Limpiar filtros 
                       </Button>
                     </div>
-                   </div>
+                  </div>
                 </CardHeader>
 
                 <CardContent className="p-0">
@@ -1921,7 +2979,7 @@ export default function ModulosPage() {
                               </div>
                             </TableCell>
 
-                             <TableCell>
+                            <TableCell>
                               <div>
                                 <div className="font-medium text-gray-900 truncate max-w-xs">{data.titular.nombre}</div>
                                 <div className="text-sm text-gray-500 truncate max-w-xs">{data.titular.documento}</div>
@@ -2117,9 +3175,16 @@ export default function ModulosPage() {
                                     <div className="font-semibold text-emerald-600 text-lg font-sans">
                                       {formatearSeparadorMiles.format(pkg?.paquete?.precio ?? 0)}
                                     </div>
-                                    {pkg.paquete.sena > 0 && (
-                                      <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.paquete?.sena ?? 0)}</div>
+                                    {pkg.paquete.sena > 0 
+                                    &&  (
+                                      <>
+                                        <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.paquete?.sena ?? 0)}</div>
+                                        {/* <Button variant="outline" size="icon" onClick={() => setIsEditingSena(true)} className="h-10 w-10">
+                                          <Pencil className="h-4 w-4" />
+                                        </Button> */}
+                                      </>
                                     )}
+
                                   </div>
                                   <Badge
                                     className={`${
