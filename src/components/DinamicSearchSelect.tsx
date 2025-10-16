@@ -13,15 +13,17 @@ interface GenericSearchSelectProps<T> {
   onValueChange?: (value: number | "") => void;
   handleDataNoSeleccionada?: (value: boolean | undefined) => void;
   setSelectedTitularData?: (value: any) => void;
-  onSearchChange?: (search: string) => void; // 🔹 Nuevo para notificar búsqueda
+  onSearchChange?: (search: string) => void;
   placeholder?: string;
   disabled?: boolean;
   isFetchingPersonas?: boolean;
   dataList: T[];
-  labelKey?: any; // lo dejamos opcional porque vamos a manejar casos especiales
+  labelKey?: any;
   valueKey: keyof T;
-  secondaryLabelKey?: keyof T;
-  mostrarPreview?: boolean; // 🔹 Nueva bandera
+  secondaryLabelKey?: any;
+  thirdLabelKey?: any;
+  fourthLabelKey?: any; // ✅ nuevo campo agregado
+  mostrarPreview?: boolean;
 }
 
 export function DinamicSearchSelect<T extends Record<string, any>>({
@@ -37,6 +39,8 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   isFetchingPersonas,
   valueKey,
   secondaryLabelKey,
+  thirdLabelKey,
+  fourthLabelKey, // ✅ agregado aquí
   mostrarPreview
 }: GenericSearchSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,45 +50,29 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
   const inputRef = useRef<HTMLInputElement>(null);
   const primeraVezRef = useRef(true);
 
-  // 🔹 Cuando el usuario escribe, notificamos al padre
+  // 🔍 Manejo de búsqueda con debounce
   useEffect(() => {
-      const handler = setTimeout(() => {
-        if (onSearchChange) {
-          onSearchChange(searchTerm)
-        }
-      }, 750) // ⏱️ medio segundo de espera
-  
-      return () => {
-        clearTimeout(handler) // limpia el timeout si se sigue escribiendo
+    const handler = setTimeout(() => {
+      if (onSearchChange) onSearchChange(searchTerm);
+    }, 750);
+    return () => clearTimeout(handler);
+  }, [searchTerm, onSearchChange]);
+
+  // 🏷️ Función para obtener el label principal
+  const getItemLabel = (item: T) => {
+    if (item && typeof item === "object") {
+      if ("razon_social" in item && (item as any).razon_social) {
+        return String((item as any).razon_social);
       }
-    }, [searchTerm, onSearchChange]);
-
-    // 🔹 Función para obtener el label dinámico (razon_social o nombre+apellido)
-    const getItemLabel = (item: T) => {
-      if (item && typeof item === "object") {
-        if ("razon_social" in item && (item as any).razon_social) {
-          return String((item as any).razon_social);
-        }
-        if ("nombre" in item && "apellido" in item) {
-          return `${(item as any).nombre} ${(item as any).apellido}`;
-        }
-        return labelKey ? String((item as any)[labelKey]) : "";
+      if ("nombre" in item && "apellido" in item) {
+        return `${(item as any).nombre} ${(item as any).apellido}`;
       }
-      // Fallback si llega algo que no es objeto
-      return String(item ?? "");
-    };
+      return labelKey ? String((item as any)[labelKey]) : "";
+    }
+    return String(item ?? "");
+  };
 
-
-  // 🔹 Filtro local por razon_social, nombre, apellido o documento
   const filteredItems = dataList;
-  // const filteredItems = dataList.filter((item) => {
-  //   const label = getItemLabel(item).toLowerCase();
-  //   const documento = String(item.documento ?? "").toLowerCase();
-  //   return (
-  //     label.includes(searchTerm.toLowerCase()) ||
-  //     documento.includes(searchTerm.toLowerCase())
-  //   );
-  // });
 
   const handleSelect = (item: T) => {
     setSelectedItem(item);
@@ -101,6 +89,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
     setSearchTerm("");
   };
 
+  // 🧭 Cierra el dropdown al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -112,12 +101,10 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // 🔄 Sincroniza el valor externo con el seleccionado
   useEffect(() => {
-    console.log('actualizando valor: ', value)
-    console.log('valueKey: ', valueKey)
     if (value) {
       const item = dataList.find((c) => c[valueKey] === value);
-      console.log('item selected: ', item)
       if (item) {
         setSelectedItem(item);
         handleDataNoSeleccionada?.(true);
@@ -127,6 +114,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
     }
   }, [value, dataList, valueKey, handleDataNoSeleccionada]);
 
+  // 📌 Marca cuando no hay selección
   useEffect(() => {
     if (primeraVezRef.current) {
       primeraVezRef.current = false;
@@ -137,14 +125,14 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
     }
   }, [isOpen, selectedItem]);
 
+  // 📍 Enfoca el input al abrir el dropdown
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
+    if (isOpen && inputRef.current) inputRef.current.focus();
   }, [isOpen]);
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
+      {/* Contenedor principal */}
       <div
         role="button"
         tabIndex={0}
@@ -155,18 +143,35 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
       >
         <div className="flex items-center gap-2 flex-1 text-left">
           {selectedItem ? (
-            <>
-              <span className="font-medium">{getItemLabel(selectedItem)}</span>
-              {secondaryLabelKey && (
-                <Badge variant="secondary" className="text-xs">
-                  {String(selectedItem[secondaryLabelKey])}
-                </Badge>
-              )}
-            </>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium">{getItemLabel(selectedItem)}</span>
+
+                {secondaryLabelKey && (
+                  <Badge variant="secondary" className="text-xs">
+                    {String(selectedItem[secondaryLabelKey])}
+                  </Badge>
+                )}
+
+                {thirdLabelKey && (
+                  <Badge variant="outline" className="text-xs text-gray-500">
+                    {String(selectedItem[thirdLabelKey])}
+                  </Badge>
+                )}
+
+                {/* ✅ Nuevo fourth label */}
+                {fourthLabelKey && (
+                  <Badge variant="outline" className="text-xs text-gray-400">
+                    {String(selectedItem[fourthLabelKey])}
+                  </Badge>
+                )}
+              </div>
+            </div>
           ) : (
             <span className="text-gray-500">{placeholder}</span>
           )}
         </div>
+
         <div className="flex items-center gap-1">
           {selectedItem && !disabled && (
             <Button
@@ -190,6 +195,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
         </div>
       </div>
 
+      {/* Dropdown */}
       {isOpen && (
         <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-80 overflow-hidden shadow-lg">
           <div className="p-3 pt-0 mt-0 border-b">
@@ -210,56 +216,57 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
           </div>
 
           <div className="max-h-64 overflow-y-auto">
-            {isFetchingPersonas && (
-              <div className="w-full flex items-center justify-center">
-                <Loader2Icon className="animate-spin w-10 h-10 text-gray-500"/>
+            {isFetchingPersonas ? (
+              <div className="w-full flex items-center justify-center py-4">
+                <Loader2Icon className="animate-spin w-8 h-8 text-gray-500" />
               </div>
-            )}
+            ) : filteredItems.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                {(!searchTerm && !mostrarPreview)
+                  ? "Comience escribiendo para buscar..."
+                  : "No se encontraron resultados"}
+              </div>
+            ) : (
+              filteredItems.map((item) => (
+                <button
+                  key={String(item[valueKey])}
+                  type="button"
+                  className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between group ${
+                    selectedItem?.[valueKey] === item[valueKey]
+                      ? "bg-blue-50 border-r-2 border-blue-500"
+                      : ""
+                  }`}
+                  onClick={() => handleSelect(item)}
+                >
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">{getItemLabel(item)}</span>
 
-            {!isFetchingPersonas && (
-              <>
-                {filteredItems.length === 0 ? (
-                  !searchTerm && !mostrarPreview ? (
-                    // 🟢 Caso: no se ha escrito nada y no hay preview
-                    <div className="p-4 text-center text-gray-500">
-                      Comience escribiendo para buscar...
-                    </div>
-                  ) : (
-                    // 🟠 Caso: no hay resultados
-                    <div className="p-4 text-center text-gray-500">
-                      No se encontraron resultados
-                    </div>
-                  )
-                ) : (
-                  // 🔵 Caso: hay resultados
-                  filteredItems.map((item) => (
-                    <button
-                      key={String(item[valueKey])}
-                      type="button"
-                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between group ${
-                        selectedItem?.[valueKey] === item[valueKey]
-                          ? "bg-blue-50 border-r-2 border-blue-500"
-                          : ""
-                      }`}
-                      onClick={() => handleSelect(item)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 cursor-pointer">
-                          <span className="font-medium">{getItemLabel(item)}</span>
-                          {secondaryLabelKey && (
-                            <Badge variant="outline" className="text-xs">
-                              {String(item[secondaryLabelKey])}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      {selectedItem?.[valueKey] === item[valueKey] && (
-                        <Check className="h-4 w-4 text-blue-600" />
+                      {secondaryLabelKey && (
+                        <Badge variant="outline" className="text-xs">
+                          {String(item[secondaryLabelKey])}
+                        </Badge>
                       )}
-                    </button>
-                  ))
-                )}
-              </>
+
+                      {thirdLabelKey && (
+                        <Badge variant="outline" className="text-xs text-gray-500">
+                          {String(item[thirdLabelKey])}
+                        </Badge>
+                      )}
+
+                      {/* ✅ Nuevo fourth label */}
+                      {fourthLabelKey && (
+                        <Badge variant="outline" className="text-xs text-gray-400">
+                          {String(item[fourthLabelKey])}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  {selectedItem?.[valueKey] === item[valueKey] && (
+                    <Check className="h-4 w-4 text-blue-600" />
+                  )}
+                </button>
+              ))
             )}
           </div>
         </Card>

@@ -372,3 +372,8 @@ input[aria-hidden="true"] {
 .select-trigger{
   height: 3rem !important;
 }
+
+
+html{
+  overflow: hidden;
+}

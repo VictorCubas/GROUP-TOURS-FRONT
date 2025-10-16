@@ -18,9 +18,9 @@ import { useSessionStore } from '@/store/sessionStore';
 const sidebarItems = [
   { icon: Plane, label: "Paquetes de viajes", href: "#", color: "text-purple-400" ,
     submenu: [
-      { label: "Paquetes", href: "/paquetes_viajes/paquetes", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Reservas", href: "/paquetes_viajes/reservas", color: "text-orange-400", bgcolor: "bg-orange-400" },
-      { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      { label: "Paquetes", href: "/paquetes_viajes/paquetes", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      // { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
       // { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
       { label: "Destinos", href: "/paquetes_viajes/destinos", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
       { label: "Hoteles", href: "/paquetes_viajes/hoteles", color: "text-blue-400", bgcolor: "bg-blue-400" },
