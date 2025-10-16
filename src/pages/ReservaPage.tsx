@@ -45,7 +45,6 @@ import {
   Bed,
   CheckCircle2,
   Circle,
-  CirclePlus,
   Pencil,
 } from "lucide-react"
 
@@ -79,7 +78,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import {formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataMonedaTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular } from "@/components/utils/httpReservas"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular } from "@/components/utils/httpReservas"
 
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -91,7 +90,7 @@ import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { useSessionStore } from "@/store/sessionStore"
 import placeholderViaje from "@/assets/paquete_default.png";
 import { Checkbox } from "@/components/ui/checkbox"
-import {fetchDataServiciosTodos, fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
+import { fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
 import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
@@ -171,6 +170,7 @@ export default function ModulosPage() {
   const [montoAbonado, setMontoAbonado] = useState<number>(0)
   const [montoAbonadoPorPersona, setMontoAbonadoPorPersona] = useState<number>(0)
   const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
+  console.log(montoAbonadoPorPersona)
 
   // const [serviciosAdicionalesSearchTerm, setServiciosAdicionalesSearchTerm] = useState("");
   // const [selectedServiciosAdicionales, setSelectedServiciosAdicionales] = useState<number[]>([])
@@ -191,7 +191,7 @@ export default function ModulosPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {control,  register, watch, handleSubmit, setValue, getValues, formState: {errors, },clearErrors, reset} = 
+  const {control, watch, handleSubmit, setValue, getValues, clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -265,11 +265,13 @@ export default function ModulosPage() {
     });
     
 
-  const {data: dataMonedaList, isFetching: isFetchingMoneda,} = useQuery({
-      queryKey: ['monedas-disponibles',], //data cached
-      queryFn: () => fetchDataMonedaTodos(),
-      staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-    });
+  // const {data: dataMonedaList, isFetching: isFetchingMoneda,} = useQuery({
+  //     queryKey: ['monedas-disponibles',], //data cached
+  //     queryFn: () => fetchDataMonedaTodos(),
+  //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  //   });
+
+  //   console.log(dataMonedaList)
 
     // selectedSalidaID
   const {data: dataHotelesPorSalidaList, isFetching: isFetchingHotelesList,} = useQuery({
@@ -288,6 +290,8 @@ export default function ModulosPage() {
     }
 
 
+    console.log(isFetchingHotelesList);
+
   const {data: dataDistribuidoraList, isFetching: isFetchingDistribuidora,} = useQuery({
       queryKey: ['distribuidoras-disponibles',], //data cached
       queryFn: () => fetchDataDistribuidoraTodos(),
@@ -297,7 +301,7 @@ export default function ModulosPage() {
 
   console.log(isFetchingTipoPaquetes);
   // console.log(dataMonedaList, isFetchingServicios);
-  console.log( isFetchingMoneda);
+  // console.log( isFetchingMoneda);
   console.log(dataDistribuidoraList, isFetchingDistribuidora);
   // console.log(dataMonedaList, isFetchingServicios);
 

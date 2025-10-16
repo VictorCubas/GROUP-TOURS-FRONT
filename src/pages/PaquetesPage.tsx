@@ -1739,7 +1739,7 @@ const handleSubmitClick = useCallback(async () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-5xl font-bold text-white mb-1">{dataDetalle?.moneda.simbolo}{formatearSeparadorMiles.format(dataDetalle?.precio ?? 0)}</div>
+                      <div className="text-5xl font-bold text-white mb-1">{dataDetalle?.moneda.simbolo}{formatearSeparadorMiles.format(dataDetalle?.precio_venta_desde ?? 0)}</div>
                       <div className="text-white/80">por persona</div>
                     </div>
                   </div>
@@ -4238,7 +4238,7 @@ const handleSubmitClick = useCallback(async () => {
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <div className="font-semibold text-emerald-600 text-lg font-sans">
-                                      {formatearSeparadorMiles.format(pkg?.precio ?? 0)}
+                                      {formatearSeparadorMiles.format(pkg?.precio_venta_desde ?? 0)}
                                     </div>
                                     {pkg.senia > 0 && (
                                       <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.senia ?? 0)}</div>
