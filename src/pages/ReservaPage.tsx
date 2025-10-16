@@ -170,6 +170,7 @@ export default function ModulosPage() {
   const [isEditingSena, setIsEditingSena] = useState(false)
   const [montoAbonado, setMontoAbonado] = useState<number>(0)
   const [montoAbonadoPorPersona, setMontoAbonadoPorPersona] = useState<number>(0)
+  const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
 
   // const [serviciosAdicionalesSearchTerm, setServiciosAdicionalesSearchTerm] = useState("");
   // const [selectedServiciosAdicionales, setSelectedServiciosAdicionales] = useState<number[]>([])
@@ -414,11 +415,16 @@ export default function ModulosPage() {
     }
   }, [isFetchingPaquete]);
 
+
   useEffect(() => {  
     if(dataPaquetesList){
       const dataPaquetes = dataPaquetesList.map((data: any) => ({
-        ...data, tipo_paquete_nombre: data?.tipo_paquete?.nombre
+        ...data, 
+        tipo_paquete_nombre: data?.tipo_paquete?.nombre,
+        destino_nombre: data?.destino?.ciudad,
       }))
+
+      //destino.ciuida
 
       if(dataAEditar){
         setNewDataPaqueteList([...dataPaquetes, dataAEditar.titular]);
@@ -508,7 +514,6 @@ export default function ModulosPage() {
         // setDistribuidoraSelected(undefined);
         handlePaqueteNoSeleccionada(undefined);
         setSelectedTitularData(undefined)
-        setSelectedPaqueteData(undefined)
         
         setActiveTab('list');
         queryClient.invalidateQueries({
@@ -531,7 +536,15 @@ export default function ModulosPage() {
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['usuarios-resumen'],
+          queryKey: ['paquetes-disponibles'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['pasajeros-disponibles'],
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: ['personas-disponibles'],
         });
 
 
@@ -576,8 +589,17 @@ export default function ModulosPage() {
         queryClient.invalidateQueries({ queryKey: ['reservas'], exact: false });
         queryClient.invalidateQueries({ queryKey: ['reservas-resumen'] });
         queryClient.invalidateQueries({ queryKey: ['reservas-disponibles'] });
-        queryClient.invalidateQueries({ queryKey: ['usuarios'], exact: false });
-        queryClient.invalidateQueries({ queryKey: ['usuarios-resumen'] });
+        queryClient.invalidateQueries({
+          queryKey: ['paquetes-disponibles'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['pasajeros-disponibles'],
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: ['personas-disponibles'],
+        });
     },
   });
 
@@ -637,8 +659,16 @@ export default function ModulosPage() {
         handleDataNoSeleccionada(undefined)
         handleDataNoPersonaSeleccionada(undefined)
         handleDataNoPaqueteSeleccionada(undefined)
-        setNewDataPersonaList([...dataPersonaList]);
-        setNewDataPaqueteList([...dataPaquetesList])
+        setNewDataPersonaList([]);
+        setNewDataPaqueteList([])
+        setImagePreview(placeholderViaje);
+        setSelectedSalidaID("");
+        setSelectedHotelId('');
+        setSelectedHotelData(undefined);
+        setSelectedTipoHabitacionID('');
+        setIsEditingSena(false);
+        setMontoAbonado(0);
+        setMontoAbonadoPorPersona(0);
         // setSelectedServiciosAdicionales([]);
         // setServiciosAdicionalesSearchTerm("");
         reset({
@@ -687,6 +717,22 @@ export default function ModulosPage() {
       console.log(titularComoPasajero)
       if(titularComoPasajero)
         payload.titular_id = selectedTitularData?.id;
+
+      // paymentType === 'total'
+      //                                     ? Number(precioFinalPorPersona ?? 0) *
+      //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
+      //                                     : Number(montoAbonado ?? 0) *
+      //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
+
+
+      if(paymentType === 'total'){
+        payload.monto_pagado = Number(precioFinalPorPersona ?? 0) *
+                                            Number(selectedTipoHabitacionData?.capacidad ?? 0);
+      }
+      else{
+        payload.monto_pagado = Number(montoAbonado ?? 0) *
+                                            Number(selectedTipoHabitacionData?.capacidad ?? 0)
+      }
       
 //       {
 //   "titular_id": 1,
@@ -699,6 +745,7 @@ export default function ModulosPage() {
 
       // Eliminar campos que no se envían
       delete payload.numero;
+      delete payload.senia;
       delete payload.tipo_paquete;
       delete payload.destino;
       delete payload.distribuidora;
@@ -718,23 +765,20 @@ export default function ModulosPage() {
       // Llamada al mutate enviando formData
 
 
-  //      {
-  //   "titular_id": 1,
-  //   "paquete_id": 2,
-  //   "salida_id": 5,
-  //   "habitacion_id": 12,
-  //   "monto_pagado": 1500.00,
-  //   "observacion": "Reserva familiar",
+  // //  {
+  //   "paquete_id": 5,
+  //   "titular_id": 10,
+  //   "salida_id": 3,
+  //   "habitacion_id": 8,
+  //   "monto_pagado": 2000.00,
   //   "pasajeros_data": [
-  //     {
-  //       "persona_id": 1
-  //     },
-  //     {
-  //       "persona_id": 8
-  //     }
-  //   ]
+  //     {"persona_id": 15},
+  //     {"persona_id": 18},
+  //     {"persona_id": 22}
+  //   ],
+  //   "observacion": "Grupo de amigos - viaje corporativo"
   // }
-      // mutate(payload);
+      mutate(payload);
     };
 
 
@@ -896,6 +940,7 @@ export default function ModulosPage() {
   useEffect(() => {
     if(selectedPaqueteID){
       setSelectedSalidaID("");
+      setSelectedSalidaData(undefined);
       setSelectedHotelId('');
       setSelectedHotelData(undefined);
       setSelectedTipoHabitacionID('');
@@ -913,10 +958,13 @@ export default function ModulosPage() {
   }, [selectedPaqueteID, setValue]);
   
   useEffect(() => {
-    if(selectedSalidaID){
-      console.log(selectedSalidaID)
-      console.log(selectedPaqueteData.salidas)
-      const salidas = selectedPaqueteData.salidas;
+    console.log(selectedSalidaID)
+    console.log(selectedPaqueteData)
+    console.log(selectedPaqueteData?.salidas)
+
+    if(selectedSalidaID && selectedPaqueteData){ 
+      const salidas = selectedPaqueteData?.salidas;
+      console.log(salidas);
       const salida = salidas?.filter((salida: any) => salida.id.toString() === selectedSalidaID.toString())
       console.log(salida)
       
@@ -936,7 +984,7 @@ export default function ModulosPage() {
     return () => {
       
     };
-  }, [selectedPaqueteData?.salidas, selectedSalidaID, setValue]);
+  }, [selectedPaqueteData, selectedPaqueteData?.salidas, selectedSalidaID, setValue]);
 
   useEffect(() => {
     if(selectedSalidaID && selectedTipoHabitacionID && selectedHotelId && selectedSalidaData && selectedSalidaData?.senia){
@@ -1069,28 +1117,35 @@ export default function ModulosPage() {
       // Obtener la capacidad de la habitación (cantidad de personas)
       // const capacidad = Number(selectedTipoHabitacionData.capacidad ?? 0);
 
-      console.log(precioNoche);
       const precioServicios = calcularTotalServicios(selectedPaqueteData?.servicios ?? []);
+      console.log(selectedSalidaData);
+
+      console.log(cantidadNoches);
+      console.log(precioNoche);
       console.log(precioServicios)
 
+      const costoBase = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
+
+      console.log(costoBase)
+
+      const factorGanancia = selectedSalidaData?.ganancia ?? selectedSalidaData?.comision ?? 0;
+
+      console.log(factorGanancia);
+
       // Calcular el precio final: precio_noche * cantidad_noches * capacidad
-      const precioFinalPorPersona = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
+      const precioFinalPorPersona = costoBase * (1 + Number(factorGanancia / 100));
 
       // console.log(selectedPaqueteData.servicios)
 
       console.log(precioFinalPorPersona);
 
       setPrecioFinalPorPersona(precioFinalPorPersona)
-      
-      return () => {
-        
-      };
     }, [selectedSalidaData, selectedTipoHabitacionData, selectedHotelData, selectedPaqueteData?.servicios]);
 
 
   const calcularTotalServicios = (servicios: any[]) => {
     return servicios.reduce((total, servicio) => {
-      const precioFinalPorPersona = servicio.precio ?? servicio.precio_base;
+      const precioFinalPorPersona = servicio.precio ?? servicio.precio_base ?? 0;
       return total + precioFinalPorPersona;
     }, 0);
   }
@@ -1530,7 +1585,7 @@ export default function ModulosPage() {
                                   <Package className="h-5 w-5" />
                                   Seleccionar Paquete
                                 </CardTitle>
-                                <CardDescription>Elija el paquete turístico para la reserva</CardDescription>
+                                <CardDescription>Elija el paquete turístico para la reserva. Filtra por nombre del paquete o destino</CardDescription>
                               </div>
                             </div>
                           </CardHeader>
@@ -1554,8 +1609,10 @@ export default function ModulosPage() {
                                         isFetchingPersonas={isFetchingPaquete}
                                         placeholder="Buscar paquete..."
                                         labelKey="nombre"
-                                        secondaryLabelKey="modalidad"
-                                        thirdLabelKey="tipo_paquete_nombre"
+                                        //
+                                        secondaryLabelKey="destino_nombre"
+                                        thirdLabelKey="modalidad"
+                                        fourthLabelKey="tipo_paquete_nombre"
                                         valueKey="id"
                                       />
                                   </div>
@@ -2514,8 +2571,11 @@ export default function ModulosPage() {
                                   {['minimum', 'total'].map((type: any) => (
                                     <button
                                       key={type}
-                                      onClick={() => handlePaymentTypeChange(type)}
-                                      className={`px-3 py-1 text-sm font-medium transition-colors ${
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        handlePaymentTypeChange(type)
+                                      }}
+                                      className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${
                                         paymentType === type
                                           ? type === 'minimum'
                                             ? 'bg-blue-600 text-white'
@@ -2568,7 +2628,9 @@ export default function ModulosPage() {
                                     <Button
                                       variant="default"
                                       size="icon"
-                                      onClick={() => {
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
                                         const nuevaSeña = getValues('senia');
                                         if (nuevaSeña && Number(nuevaSeña) > 0) {
                                           const seniaPorPersona =
@@ -2597,15 +2659,17 @@ export default function ModulosPage() {
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
                                           : Number(montoAbonado ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
-                                      )}
+                                      )} 
                                     </span>
 
                                     {/* Solo mostrar el botón de edición si NO es total */}
                                     {paymentType !== 'total' && (
                                       <Button
+                                        type="button"
                                         variant="outline"
                                         size="icon"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.preventDefault();
                                           setIsEditingSena(true);
                                           setValue(
                                             'senia',
@@ -2625,8 +2689,8 @@ export default function ModulosPage() {
 
                             <p className="text-xs text-gray-600 text-right mt-1">
                               {formatearSeparadorMiles.format(
-                                (Number(selectedSalidaData?.senia ?? 0) *
-                                  Number(selectedTipoHabitacionData?.capacidad ?? 0))
+                                (Number(selectedSalidaData?.senia ?? 0) 
+                                  )
                               )}{' '}
                               por persona
                             </p>
@@ -2815,83 +2879,83 @@ export default function ModulosPage() {
                       </div>
 
                       <div className="flex flex-wrap items-center justify-between gap-4 w-4/6">
-                      <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                          <Button
-                            variant={viewMode === "table" ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => setViewMode("table")}
-                            className={`${viewMode === "table" ? "bg-emerald-500 text-white" : "text-gray-600"} font-sans`}
-                          >
-                            <Table2 className="h-4 w-4 mr-1" />
-                            Tabla
-                          </Button>
-                          <Button
-                            variant={viewMode === "cards" ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => setViewMode("cards")}
-                            className={`${viewMode === "cards" ? "bg-emerald-500 text-white" : "text-gray-600"} font-sans`}
-                          >
-                            <Grid3X3 className="h-4 w-4 mr-1" />
-                            Cards
-                          </Button>
-                        </div>
+                        <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                            <Button
+                              variant={viewMode === "table" ? "default" : "ghost"}
+                              size="sm"
+                              onClick={() => setViewMode("table")}
+                              className={`${viewMode === "table" ? "bg-emerald-500 text-white" : "text-gray-600"} font-sans`}
+                            >
+                              <Table2 className="h-4 w-4 mr-1" />
+                              Tabla
+                            </Button>
+                            <Button
+                              variant={viewMode === "cards" ? "default" : "ghost"}
+                              size="sm"
+                              onClick={() => setViewMode("cards")}
+                              className={`${viewMode === "cards" ? "bg-emerald-500 text-white" : "text-gray-600"} font-sans`}
+                            >
+                              <Grid3X3 className="h-4 w-4 mr-1" />
+                              Cards
+                            </Button>
+                          </div>
 
-                        <div className="flex items-center gap-2 bg-emerald-50 rounded-full px-3 py-2 border border-emerald-200">
-                          <Switch
-                            checked={showActiveOnly}
-                            onCheckedChange={handleActiveOnly}
-                            id="active-filter"
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                          <Label htmlFor="active-filter" className="text-sm text-emerald-700 font-medium">
-                            Solo activos
-                          </Label>
-                        </div>
+                          <div className="flex items-center gap-2 bg-emerald-50 rounded-full px-3 py-2 border border-emerald-200">
+                            <Switch
+                              checked={showActiveOnly}
+                              onCheckedChange={handleActiveOnly}
+                              id="active-filter"
+                              className="data-[state=checked]:bg-emerald-500"
+                            />
+                            <Label htmlFor="active-filter" className="text-sm text-emerald-700 font-medium">
+                              Solo activos
+                            </Label>
+                          </div>
 
 
-                         {/* <Select 
-                            value={filtros.tipo_paquete}
-                            onValueChange={(val) => setFiltros({ ...filtros, tipo_paquete: val })}>
-                            <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
-                              <SelectValue placeholder="Tipo Persona" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Todos</SelectItem>
-                              {tipoReservaFilterList && 
-                                tipoReservaFilterList.map((tipoPaquete: any) => 
-                                <SelectItem key={tipoPaquete.nombre} value={tipoPaquete.nombre}>{tipoPaquete.nombre}</SelectItem>
-                                )}
-                            </SelectContent>
-                          </Select>  */}
-                        
-                            <Select 
-                              value={filtros.estado}
-                              onValueChange={(val) => setFiltros({ ...filtros, estado: val })}>
+                          {/* <Select 
+                              value={filtros.tipo_paquete}
+                              onValueChange={(val) => setFiltros({ ...filtros, tipo_paquete: val })}>
                               <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
-                                <SelectValue placeholder="Propiedad" />
+                                <SelectValue placeholder="Tipo Persona" />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="pendiente">Pendiente</SelectItem>
-                                <SelectItem value="confirmada">Confirmada</SelectItem>
-                                <SelectItem value="incompleta">Incompleta</SelectItem>
-                                <SelectItem value="finalizada">Finalizada</SelectItem>
-                                <SelectItem value="cancelada">Cancelada</SelectItem>
+                                {tipoReservaFilterList && 
+                                  tipoReservaFilterList.map((tipoPaquete: any) => 
+                                  <SelectItem key={tipoPaquete.nombre} value={tipoPaquete.nombre}>{tipoPaquete.nombre}</SelectItem>
+                                  )}
                               </SelectContent>
-                            </Select> 
+                            </Select>  */}
+                          
+                              <Select 
+                                value={filtros.estado}
+                                onValueChange={(val) => setFiltros({ ...filtros, estado: val })}>
+                                <SelectTrigger className="cursor-pointer w-40 border-blue-200 focus:border-blue-500">
+                                  <SelectValue placeholder="Propiedad" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos</SelectItem>
+                                  <SelectItem value="pendiente">Pendiente</SelectItem>
+                                  <SelectItem value="confirmada">Confirmada</SelectItem>
+                                  <SelectItem value="incompleta">Incompleta</SelectItem>
+                                  <SelectItem value="finalizada">Finalizada</SelectItem>
+                                  <SelectItem value="cancelada">Cancelada</SelectItem>
+                                </SelectContent>
+                              </Select> 
 
 
-                        <div className="relative w-6/8">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input
-                            placeholder="Buscar por nombre del titular, nombre de paquete..."
-                            value={nombreABuscar}
-                            onChange={(e) => setNombreABuscar(e.target.value)}
-                            className="pl-10 w-full border-gray-300 focus:border-blue-500"
-                          />
+                          <div className="relative w-6/8">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              placeholder="Buscar por nombre del titular, nombre de paquete..."
+                              value={nombreABuscar}
+                              onChange={(e) => setNombreABuscar(e.target.value)}
+                              className="pl-10 w-full border-gray-300 focus:border-blue-500"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
                     <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-blue-200 w-full flex-wrap">
 
@@ -2981,15 +3045,15 @@ export default function ModulosPage() {
 
                             <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.titular.nombre}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">{data.titular.documento}</div>
+                                <div className="font-medium text-gray-900 truncate max-w-xs">{data?.titular?.nombre}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">{data?.titular?.documento}</div>
                               </div>
                             </TableCell>
 
                             <TableCell>
                               <div className="flex items-center space-x-3">
                                 <img
-                                  src={data.paquete.imagen ?? ''}
+                                  src={data.paquete.imagen ?? imagePreview}
                                   alt={data.paquete.nombre}
                                   className="w-10 h-10 rounded-lg object-cover"
                                 />

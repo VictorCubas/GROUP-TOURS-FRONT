@@ -97,7 +97,7 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-lg text-blue-600">{departure.moneda.simbolo} {formatearSeparadorMiles.format(departure.precio_actual)}</p>
+                    <p className="font-bold text-lg text-blue-600">Desde {departure.moneda.simbolo}{formatearSeparadorMiles.format(departure.precio_venta_total_min)}</p>
                     <p className="text-xs text-muted-foreground">por persona</p>
                   </div>
                 </div>

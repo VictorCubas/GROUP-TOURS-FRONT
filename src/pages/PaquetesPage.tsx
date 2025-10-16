@@ -3933,7 +3933,7 @@ const handleSubmitClick = useCallback(async () => {
                           <TableHead className="font-semibold text-gray-700">Información</TableHead>
                           <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
                           <TableHead className="font-semibold text-gray-700">Destino</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Precio</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Precio Desde</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Tipo</TableHead> */}
                           <TableHead className="font-semibold text-gray-700">Fechas</TableHead>
                           <TableHead className="font-semibold text-gray-700">Propiedad</TableHead>
@@ -4018,7 +4018,8 @@ const handleSubmitClick = useCallback(async () => {
 
                             <TableCell>
                               <div>
-                                <div className="font-medium text-green-600 truncate max-w-xs">{data.moneda.simbolo} {formatearSeparadorMiles.format(data.precio)}</div>
+                                <div className="font-medium text-green-600 truncate max-w-xs">{data.moneda.simbolo} 
+                                                  {formatearSeparadorMiles.format(data.precio_venta_desde)}</div>
                                 <div className="text-sm text-gray-500 truncate max-w-xs">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.senia)}</div>
                               </div>
                             </TableCell>

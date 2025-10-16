@@ -65,7 +65,7 @@ export interface Paquete {
   destino: Destino;
   zona_geografica?: ZonaGeografica;
   distribuidora?: Distribuidora;
-  precio: number;
+  precio_venta_desde: number;
   senia: number;
   moneda: Moneda;
   modalidad: 'flexible' | 'fijo';
