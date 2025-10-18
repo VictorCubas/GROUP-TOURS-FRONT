@@ -159,7 +159,8 @@ export interface Reserva {
   fecha_reserva: string; // ISO datetime string
   cantidad_pasajeros: number;
   monto_pagado: number;
-  estado: "pendiente" | "confirmada" | "incompleta" | "finalizada" | "cancelada";
+  estado: "pendiente" | "confirmada" |  "finalizada" | "cancelada";
+  estado_display: string;
   pasajeros: Pasajero[];
   activo: boolean;
   fecha_modificacion: string; // ISO datetime

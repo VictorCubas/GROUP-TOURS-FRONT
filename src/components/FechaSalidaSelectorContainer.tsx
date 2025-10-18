@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge"
 // import type { DepartureDate } from "./package-selector"
 // import { RadioGroup } from "@radix-ui/react-dropdown-menu"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { formatearSeparadorMiles } from "@/helper/formatter"
+import { formatearSeparadorMiles, getDaysBetweenDates } from "@/helper/formatter";
+import { cn } from "@/lib/utils"
 
 interface DepartureDateSelectorProps {
   fechaSalidasList: any[]
@@ -17,12 +18,20 @@ interface DepartureDateSelectorProps {
 
 export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSeleccionada, onFechaSeleccionada }: DepartureDateSelectorProps) {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
+
+    if (!dateString) return "";
+
+    // Evita el desfase UTC creando la fecha en zona local
+    const [year, month, day] = dateString.split("-").map(Number);
+    const localDate = new Date(year, month - 1, day);
+
+    // Devuelve la fecha en formato español
+    return localDate.toLocaleDateString("es-ES", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
-    })
+    });
   }
 
   console.log(fechaSalidasList)
@@ -66,16 +75,28 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
   //     ]
   //   }
 
+  const getDaysRemainingStyle = (days: number) => {
+    if (days <= 7) return { text: "text-red-600", weight: "font-semibold" }
+    if (days <= 14) return { text: "text-orange-600", weight: "font-medium" }
+    if (days <= 30) return { text: "text-amber-600", weight: "font-medium" }
+    return { text: "text-gray-600", weight: "font-normal" }
+  }
+
   return (
     <div className="space-y-4">
       <Label>Fecha de Salida *</Label>
       <RadioGroup value={fechaSeleccionada} onValueChange={onFechaSeleccionada} className="space-y-3 max-h-90 overflow-y-auto">
-        {fechaSalidasList.map((departure) => (
-          <div key={departure.id} className="relative">
+        {fechaSalidasList.map((departure) => { 
+          const hoyLocal = new Date().toLocaleDateString('sv-SE'); 
+          const cantDias = getDaysBetweenDates(hoyLocal, departure?.fecha_salida)
+          const style = getDaysRemainingStyle(cantDias);
+
+          return <div key={departure.id} className="relative">
             <RadioGroupItem value={departure.id} id={departure.id} className="peer sr-only" />
             <Label
               htmlFor={departure.id}
-              className="flex items-start gap-4 p-4 rounded-lg border-2 border-muted bg-background hover:bg-accent/5 cursor-pointer transition-all peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-50"
+              className="flex items-start gap-4 p-4 rounded-lg border-2 border-muted bg-background hover:bg-accent/5 cursor-pointer transition-all 
+                              peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-50"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 peer-data-[state=checked]:bg-blue-100">
                 <Calendar className="h-5 w-5 text-blue-600" />
@@ -84,12 +105,15 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-foreground capitalize">{formatDate(departure.fecha_salida)}</p>
+                    <p className={cn("text-sm mt-3", style.text, style.weight)}>
+                          Faltan {cantDias} días para la salida
+                    </p>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Users className="h-3 w-3" />
                         <span>{departure.cupo} cupos disponibles</span>
                       </div>
-                      {departure.availableSeats <= 5 && (
+                      {departure.cupo <= 5 && (
                         <Badge variant="destructive" className="text-xs">
                           Últimos cupos
                         </Badge>
@@ -103,8 +127,8 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
                 </div>
               </div>
             </Label>
-          </div>
-        ))}
+          </div>}
+        )}
       </RadioGroup>
     </div>
   )
