@@ -38,11 +38,7 @@ import {
   User,
   CalendarDays,
   Package,
-  Building,
   CheckCircle,
-  MapPin,
-  Star,
-  Bed,
   CheckCircle2,
   Circle,
   Pencil,
@@ -95,6 +91,7 @@ import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
 import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
 import { NumericFormat } from "react-number-format"
+import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -271,7 +268,7 @@ export default function ModulosPage() {
   //     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   //   });
 
-  //   console.log(dataMonedaList)
+    console.log('selectedSalidaID: ', selectedSalidaID)
 
     // selectedSalidaID
   const {data: dataHotelesPorSalidaList, isFetching: isFetchingHotelesList,} = useQuery({
@@ -518,8 +515,9 @@ export default function ModulosPage() {
         // setDistribuidoraSelected(undefined);
         handlePaqueteNoSeleccionada(undefined);
         setSelectedTitularData(undefined)
+
+        handleCancel(); 
         
-        setActiveTab('list');
         queryClient.invalidateQueries({
           queryKey: ['reservas'],
           exact: false
@@ -543,6 +541,7 @@ export default function ModulosPage() {
           queryKey: ['paquetes-disponibles'],
         });
 
+        
         queryClient.invalidateQueries({
           queryKey: ['pasajeros-disponibles'],
         });
@@ -551,29 +550,11 @@ export default function ModulosPage() {
           queryKey: ['personas-disponibles'],
         });
 
+        queryClient.removeQueries({
+          queryKey: ['hotel-por-salida'],
+        });
 
-        handleCancel();
-
-
-        // setSelectedPersonaID("");
-        // setSelectedPaqueteID("");
-        // setPersonaNoSeleccionada(undefined);
-        // setPaqueteNoSeleccionada(undefined);
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['permisos'],
-        //   exact: false
-        // });
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['roles'],
-        //   exact: false
-        // });
-
-        // queryClient.invalidateQueries({
-        //   queryKey: ['tipo-documentos-de-personas'],
-        //   exact: false
-        // });
+        setActiveTab('list');
     },
   });
 
@@ -589,7 +570,7 @@ export default function ModulosPage() {
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
-        setActiveTab('list');
+        handleCancel();
         queryClient.invalidateQueries({ queryKey: ['reservas'], exact: false });
         queryClient.invalidateQueries({ queryKey: ['reservas-resumen'] });
         queryClient.invalidateQueries({ queryKey: ['reservas-disponibles'] });
@@ -604,6 +585,12 @@ export default function ModulosPage() {
         queryClient.invalidateQueries({
           queryKey: ['personas-disponibles'],
         });
+        
+        queryClient.removeQueries({
+          queryKey: ['hotel-por-salida'],
+        });
+
+        setActiveTab('list');
     },
   });
 
@@ -698,7 +685,17 @@ export default function ModulosPage() {
         return;
       }
 
-
+      
+      if(!selectedPaqueteData || !selectedSalidaID || !selectedTipoHabitacionID || !selectedPersonaID || !selectedTitularData){
+        handleShowToast('Debes completar todos los pasos para registrar la reserva', 'error');
+        return;
+      }
+      
+      if(selectedSalidaData.cupo < selectedTipoHabitacionData.capacidad){
+        handleShowToast('No hay suficientes lugares disponibles para esta habitacion', 'error');
+        return;
+      }
+      
       const pasajeros_data = selectedPasajerosData.map(p => ({persona_id: p.id}))
       console.log(pasajeros_data)
       console.log(selectedTitularData);
@@ -719,8 +716,7 @@ export default function ModulosPage() {
       };
 
       console.log(titularComoPasajero)
-      if(titularComoPasajero)
-        payload.titular_id = selectedTitularData?.id;
+      payload.titular_id = selectedTitularData?.id;
 
       // paymentType === 'total'
       //                                     ? Number(precioFinalPorPersona ?? 0) *
@@ -737,15 +733,6 @@ export default function ModulosPage() {
         payload.monto_pagado = Number(montoAbonado ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
       }
-      
-//       {
-//   "titular_id": 1,
-//   "paquete_id": 2,
-//   "cantidad_pasajeros": 2,
-//   "monto_pagado": 0,
-//   "estado": "cancelada"
-// "pasajeros": [3, 4] 
-// }
 
       // Eliminar campos que no se envían
       delete payload.numero;
@@ -756,14 +743,6 @@ export default function ModulosPage() {
       delete payload.moneda;
       delete payload.persona;
       delete payload.titularComoPasajero;
-
-      // if (watch("titularComoPasajero")) {
-      //   delete payload.distribuidora;
-      //   delete payload.distribuidora_id;
-      // } else {
-      //   delete payload.cantidad_pasajeros;
-      // }
-
 
       console.log(payload);
       // Llamada al mutate enviando formData
@@ -1084,24 +1063,6 @@ export default function ModulosPage() {
     const handlePaymentTypeChange = useCallback((type: 'minimum' | 'total') => {
       if (paymentType !== type) setPaymentType(type);
     }, [paymentType]);
-
-
-  const renderStars = (rating: number) => {
-      return (
-        <div className="flex items-center gap-1">
-          {Array.from({ length: 5 }, (_, index) => (
-            <Star
-              key={index}
-              className={`h-3 w-3 ${
-                index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-              }`}
-            />
-          ))}
-          <span className="ml-1 text-sm text-gray-600">({rating})</span>
-        </div>
-      );
-    };
-
 
 
     useEffect(() => {
@@ -1577,7 +1538,7 @@ export default function ModulosPage() {
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* SELECCION DE PAQUETES */}
+                        {/* PASO 1 SELECCION DE PAQUETES */}
                         <Card className="space-y-2 md:col-span-2">
                           <CardHeader>
                             <div className="flex items-center gap-3">
@@ -1625,38 +1586,12 @@ export default function ModulosPage() {
                                       <p className="text-red-400 text-sm">Este campo es requerido</p>
                                     )}
                                 </div>
-
-                                {/* CANTIDAD DE PASAJEROS */}
-                                  {/* <div className="space-y-2">
-                                    <Label htmlFor="cantidad_pasajeros" className="text-gray-700 font-medium">
-                                      Cantidad de pasajeros *
-                                    </Label>
-                                    <Input
-                                      id="cantidad_pasajeros"
-                                      autoComplete="cantidad_pasajeros"
-                                      placeholder="Ingrese la cantidad de pasajeros"
-                                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                                      {...register('cantidad_pasajeros', {
-                                        required: {
-                                          value: true,
-                                          message: 'Este campo es requerido'
-                                        }
-                                      })}
-                                    />
-                                    <div>
-                                      {errors.cantidad_pasajeros && (
-                                        <span className="text-red-400 text-sm">
-                                          {errors.cantidad_pasajeros.message as string}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div> */}
                             </div>     
                           </CardContent>
                             
                         </Card>
 
-                        {/* SELECCTOR DE SALIDAS */}
+                        {/* PASO 2 SELECCTOR DE SALIDAS */}
                         {selectedPaqueteData &&
                           <Card className="space-y-2 md:col-span-2">
                             <CardHeader>
@@ -1685,7 +1620,7 @@ export default function ModulosPage() {
                         }
 
 
-                        {/* HOTEL Y HABIRACIONES */}
+                        {/* PASO 3 HOTEL Y HABIRACIONES */}
                         {selectedPaqueteData && selectedSalidaID &&
                           <Card className="space-y-2 md:col-span-2">
                             <CardHeader>
@@ -1703,127 +1638,23 @@ export default function ModulosPage() {
                               </div>
                             </CardHeader>
                             <CardContent className="h-[70vh] flex flex-col">
-                                <div className="space-y-3 overflow-y-auto flex-1 p-2 rounded-lg">
-                                  {hotelesPorSalida && hotelesPorSalida
-                                    .map((hotel: any) => {
-                                      const isSelected = selectedHotelId === hotel.id;
-
-                                      return (
-                                        <div key={hotel.id} className="bg-white border-2 rounded-lg overflow-hidden transition-all">
-                                          {/* 🔹 Cabecera del hotel */}
-                                          <div
-                                            onClick={() => {
-                                              setSelectedHotelId(hotel.id);
-                                              setSelectedHotelData(hotel);
-                                              setSelectedTipoHabitacionID(''); // resetea selección de habitación
-                                            }}
-                                            className={`p-5 cursor-pointer transition-all ${
-                                              isSelected
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:bg-gray-50'
-                                            }`}
-                                          >
-                                            <div className="flex items-start gap-4">
-                                              <div
-                                                className={`flex-shrink-0 w-16 h-16 rounded-lg flex items-center justify-center ${
-                                                  isSelected ? 'bg-blue-200' : 'bg-gray-200'
-                                                }`}
-                                              >
-                                                <Building
-                                                  className={`w-8 h-8 ${
-                                                    isSelected ? 'text-blue-700' : 'text-gray-600'
-                                                  }`}
-                                                />
-                                              </div>
-                                              <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between mb-2">
-                                                  <h3 className="text-lg font-bold text-gray-900">{hotel.nombre}</h3>
-                                                  {isSelected && (
-                                                    <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
-                                                  )}
-                                                </div>
-                                                <div className="flex items-center text-sm text-gray-600 mb-2">
-                                                  <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                                                  <span>{hotel.ciudad_nombre} {hotel.pais_nombre}</span>
-                                                </div>
-                                                <p className="text-sm text-gray-600 line-clamp-2">{hotel.descripcion}</p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                  <div className="flex items-center">
-                                                    {renderStars(hotel.estrellas)}
-                                                  </div>
-                                                  <span className="text-xs text-gray-500">
-                                                    {habitacionesPorSalida?.length || 0} tipos de habitación
-                                                  </span>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* 🔹 Si el hotel está seleccionado → mostramos sus habitaciones */}
-                                          {isSelected && (
-                                            <div className="p-5 bg-gradient-to-b from-blue-50 to-white border-t-2 border-blue-200">
-                                              <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                                                <Bed className="w-5 h-5 mr-2 text-blue-600" />
-                                                Seleccionar tipo de habitación:
-                                              </h4>
-
-                                              <div className="grid md:grid-cols-3 gap-3">
-                                                {habitacionesPorSalida?.map((roomType: any) => {
-                                                  const isRoomSelected = selectedTipoHabitacionID === roomType.id;
-
-                                                  return (
-                                                    <div
-                                                      key={roomType.id}
-                                                      onClick={() => {
-                                                        setSelectedTipoHabitacionID(roomType.id)
-                                                        setSelectedTipoHabitacionData(roomType)
-                                                      }}
-                                                      className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                                                        isRoomSelected
-                                                          ? 'border-blue-500 bg-blue-50 shadow-md'
-                                                          : 'border-gray-300 bg-white hover:border-blue-300 hover:shadow-sm'
-                                                      }`}
-                                                    >
-                                                      {isRoomSelected && (
-                                                        <div className="absolute top-2 right-2">
-                                                          <CheckCircle className="w-5 h-5 text-blue-600" />
-                                                        </div>
-                                                      )}
-                                                      <div
-                                                        className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
-                                                          isRoomSelected ? 'bg-blue-200' : 'bg-gray-200'
-                                                        }`}
-                                                      >
-                                                        <Bed
-                                                          className={`w-6 h-6 ${
-                                                            isRoomSelected ? 'text-blue-700' : 'text-gray-600'
-                                                          }`}
-                                                        />
-                                                      </div>
-                                                      <h5 className="font-bold text-gray-900 mb-2">
-                                                        {roomType.tipo}
-                                                      </h5>
-                                                      <div className="flex items-center text-xs text-gray-600 mb-3">
-                                                        <Users className="w-3 h-3 mr-1" />
-                                                        <span>Hasta {roomType.capacidad} personas</span>
-                                                      </div>
-                                                      <div className="pt-3 border-t border-gray-200">
-                                                        <div className="text-xs text-gray-600 mb-1">Precio por noche</div>
-                                                        <div className="text-lg font-bold text-blue-600">
-                                                          {roomType.moneda_simbolo} {formatearSeparadorMiles.format(roomType.precio_noche)}
-                                                          {/* 123123 */}
-                                                        </div>
-                                                      </div>
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                </div>
+                                <HotelHabitacionSelector
+                                  hoteles={hotelesPorSalida}
+                                  habitaciones={habitacionesPorSalida}
+                                  selectedHotelId={selectedHotelId}
+                                  selectedHabitacionId={selectedTipoHabitacionID}
+                                  selectedSalidaCupo={selectedSalidaData?.cupo ?? 0}
+                                  isLoading={isFetchingHotelesList}
+                                  onSelectHotel={(hotel) => {
+                                    setSelectedHotelId(hotel.id);
+                                    setSelectedHotelData(hotel);
+                                    setSelectedTipoHabitacionID("");
+                                  }}
+                                  onSelectHabitacion={(habitacion) => {
+                                    setSelectedTipoHabitacionID(habitacion.id);
+                                    setSelectedTipoHabitacionData(habitacion);
+                                  }}
+                                />
                             </CardContent>
                           </Card>
                         }
@@ -2511,8 +2342,9 @@ export default function ModulosPage() {
                         }
 
 
-                      {/* RESUMEN DE LOS PRECIOS */}
-                      {cantidadActualPasajeros && cantidadActualPasajeros === selectedTipoHabitacionData?.capacidad && (
+                      {/* PASO 7 RESUMEN DE LOS PRECIOS */}
+                      {/* {cantidadActualPasajeros && cantidadActualPasajeros === selectedTipoHabitacionData?.capacidad && ( */}
+                      {selectedPaqueteID && selectedTipoHabitacionID && selectedPersonaID && (
                         <div className="space-y-2 md:col-span-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border-2 border-blue-300">
                           <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-gray-900">Resumen de Reserva</h2>
@@ -2575,10 +2407,8 @@ export default function ModulosPage() {
                                   {['minimum', 'total'].map((type: any) => (
                                     <button
                                       key={type}
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        handlePaymentTypeChange(type)
-                                      }}
+                                      type="button" // ✅ evita enviar el form
+                                      onClick={() => handlePaymentTypeChange(type)}
                                       className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${
                                         paymentType === type
                                           ? type === 'minimum'
@@ -2603,16 +2433,17 @@ export default function ModulosPage() {
                                       control={control}
                                       rules={{
                                         validate: (value) => {
-                                          if (!value) return true;
+                                          // ✅ Acepta vacío o 0 sin marcar error
+                                          if (value === '' || value === null || value === undefined) return true;
                                           if (isNaN(Number(value))) return false;
-                                          if (Number(value) <= 0) return false;
+                                          if (Number(value) < 0) return false;
                                           return true;
                                         },
                                       }}
                                       render={({ field, fieldState: { error } }) => (
                                         <NumericFormat
                                           value={field.value ?? ''}
-                                          onValueChange={(values) => field.onChange(values.floatValue ?? null)}
+                                          onValueChange={(values) => field.onChange(values.floatValue ?? '')}
                                           onBlur={field.onBlur}
                                           thousandSeparator="."
                                           decimalSeparator=","
@@ -2636,11 +2467,17 @@ export default function ModulosPage() {
                                       onClick={(e) => {
                                         e.preventDefault();
                                         const nuevaSeña = getValues('senia');
-                                        if (nuevaSeña && Number(nuevaSeña) > 0) {
+
+                                        // ✅ Permite guardar 0 o vacío
+                                        if (nuevaSeña === '' || nuevaSeña === null || nuevaSeña === undefined) {
+                                          setMontoAbonado(0);
+                                        } else {
+                                          const valorNumerico = Number(nuevaSeña);
                                           const seniaPorPersona =
-                                            Number(nuevaSeña) / Number(selectedTipoHabitacionData?.capacidad ?? 1);
+                                            valorNumerico / Number(selectedTipoHabitacionData?.capacidad ?? 1);
                                           setMontoAbonado(seniaPorPersona);
                                         }
+
                                         setIsEditingSena(false);
                                         setValue('senia', '');
                                       }}
@@ -2663,7 +2500,7 @@ export default function ModulosPage() {
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
                                           : Number(montoAbonado ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
-                                      )} 
+                                      )}
                                     </span>
 
                                     {/* Solo mostrar el botón de edición si NO es total */}
@@ -2692,13 +2529,11 @@ export default function ModulosPage() {
                             </div>
 
                             <p className="text-xs text-gray-600 text-right mt-1">
-                              {formatearSeparadorMiles.format(
-                                (Number(selectedSalidaData?.senia ?? 0) 
-                                  )
-                              )}{' '}
+                              {formatearSeparadorMiles.format(Number(selectedSalidaData?.senia ?? 0))}{' '}
                               por persona
                             </p>
                           </div>
+
 
 
                           <div className="border-t-2 border-blue-300 pt-4">
@@ -2942,7 +2777,7 @@ export default function ModulosPage() {
                                   <SelectItem value="all">Todos</SelectItem>
                                   <SelectItem value="pendiente">Pendiente</SelectItem>
                                   <SelectItem value="confirmada">Confirmada</SelectItem>
-                                  <SelectItem value="incompleta">Incompleta</SelectItem>
+                                  {/* <SelectItem value="incompleta">Incompleta</SelectItem> */}
                                   <SelectItem value="finalizada">Finalizada</SelectItem>
                                   <SelectItem value="cancelada">Cancelada</SelectItem>
                                 </SelectContent>
@@ -3083,9 +2918,12 @@ export default function ModulosPage() {
 
                             <TableCell>
                               <div>
-                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${RESERVATION_STATES[data.estado].color}`}>
-                                    {RESERVATION_STATES[data.estado].icon} {RESERVATION_STATES[data.estado].label}
-                                  </span>
+                                <span
+                                    className={`px-2 py-1 text-xs font-medium rounded-full ${RESERVATION_STATES[data.estado]?.color || 'bg-gray-100 text-gray-800'}`}
+                                >
+                                  {RESERVATION_STATES[data.estado]?.icon || '❔'} {data.estado_display || RESERVATION_STATES[data.estado]?.label}
+                                </span>
+                                {/* {RESERVATION_STATES[data.estado].icon} {RESERVATION_STATES[data.estado].label} */}
                               </div>
                             </TableCell>
 
