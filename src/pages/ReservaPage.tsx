@@ -42,6 +42,8 @@ import {
   CheckCircle2,
   Circle,
   Pencil,
+  // LayoutGrid,
+  // List,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -147,6 +149,7 @@ export default function ModulosPage() {
   const [selectedPasajerosData, setSelectedPasajerosData] = useState<any[]>([])
   const [dataDetalle, setDataDetalle] = useState<Reserva>();
   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
+  // const [viewModeHabitacionList, setViewModeHabitacionList] = useState<"grouped" | "detailed">('grouped');
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
   const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
@@ -280,8 +283,8 @@ export default function ModulosPage() {
 
     console.log(dataHotelesPorSalidaList)
 
-    if(dataHotelesPorSalidaList && dataHotelesPorSalidaList?.length){
-      hotelesPorSalida = dataHotelesPorSalidaList;
+    if(dataHotelesPorSalidaList){
+      hotelesPorSalida = dataHotelesPorSalidaList.hoteles;
 
       console.log(hotelesPorSalida);
     }
@@ -747,6 +750,25 @@ export default function ModulosPage() {
       console.log(payload);
       // Llamada al mutate enviando formData
 
+  // {
+  //   paquete_id: 120,
+  //   pasajeros_data: [],
+  //   salida_id: 213,
+  //   habitacion_id: 3,
+  //   activo: true,
+  //   titular_id: 15,
+  //   monto_pagado: 600
+  // }
+  //       {
+  //   nombre: '',
+  //   paquete_id: 120,
+  //   pasajeros_data: [],
+  //   salida_id: 213,
+  //   habitacion_id: 18,
+  //   activo: true,
+  //   titular_id: 15,
+  //   monto_pagado: 400
+  // }
 
   // //  {
   //   "paquete_id": 5,
@@ -1081,13 +1103,13 @@ export default function ModulosPage() {
 
       // Obtener la capacidad de la habitación (cantidad de personas)
       // const capacidad = Number(selectedTipoHabitacionData.capacidad ?? 0);
-
+      console.log(selectedPaqueteData?.servicios)
       const precioServicios = calcularTotalServicios(selectedPaqueteData?.servicios ?? []);
       console.log(selectedSalidaData);
 
       console.log(cantidadNoches);
       console.log(precioNoche);
-      console.log(precioServicios)
+      console.log(precioServicios) 
 
       const costoBase = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
 
@@ -1110,7 +1132,13 @@ export default function ModulosPage() {
 
   const calcularTotalServicios = (servicios: any[]) => {
     return servicios.reduce((total, servicio) => {
-      const precioFinalPorPersona = servicio.precio ?? servicio.precio_base ?? 0;
+      let precioFinalPorPersona = 0;
+
+      if(servicio.precio)
+        precioFinalPorPersona = servicio.precio;
+      else
+        precioFinalPorPersona = servicio.precio_base;
+
       return total + precioFinalPorPersona;
     }, 0);
   }
@@ -1638,6 +1666,43 @@ export default function ModulosPage() {
                               </div>
                             </CardHeader>
                             <CardContent className="h-[70vh] flex flex-col">
+                                {/* <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg w-fit mb-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setViewModeHabitacionList('grouped')
+                                    }}
+                                    className={`
+                                      flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all cursor-pointer
+                                      ${viewModeHabitacionList === 'grouped'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                      }
+                                    `}
+                                  >
+                                    <LayoutGrid className="w-4 h-4" />
+                                    Por tipo
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setViewModeHabitacionList('detailed')
+                                    }}
+                                    className={`
+                                      flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all cursor-pointer
+                                      ${viewModeHabitacionList === 'detailed'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                      }
+                                    `}
+                                  >
+                                    <List className="w-4 h-4" />
+                                    Por habitación
+                                  </button>
+                                </div> */}
+                                  
                                 <HotelHabitacionSelector
                                   hoteles={hotelesPorSalida}
                                   habitaciones={habitacionesPorSalida}

@@ -9,7 +9,7 @@ import {
   Loader2,
   Star,
 } from "lucide-react";
-import { formatearSeparadorMiles } from "@/helper/formatter";
+import { capitalizePrimeraLetra, formatearSeparadorMiles } from "@/helper/formatter";
 
 interface Habitacion {
   id: string;
@@ -21,6 +21,7 @@ interface Habitacion {
 }
 
 interface Hotel {
+  habitaciones: any;
   id: string;
   nombre: string;
   ciudad_nombre: string;
@@ -87,6 +88,16 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
         );
       };
 
+
+  const getStyleCuposDisponiblePorHabitacion = (cupos: number) => {
+    console.log(cupos)
+    if (cupos === 0) return "bg-red-600 text-white text-red-600 font-semibold rounded-xl px-2 py-0";
+    if (cupos <= 3) return "text-red-600 font-semibold ";
+    if (cupos <= 7) return "text-orange-600 font-medium" ;
+    if (cupos <= 12) return "text-amber-600 font-medium";
+    return "text-gray-600 font-normal";
+  }
+
   return (
     <div className="space-y-3 overflow-y-auto flex-1 p-2 rounded-lg">
       {hoteles.map((hotel) => {
@@ -99,7 +110,10 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
           >
             {/* 🔹 Cabecera del hotel */}
             <div
-              onClick={() => onSelectHotel(hotel)}
+              onClick={() => {
+                console.log(hotel)
+                onSelectHotel(hotel)
+              }}
               className={`p-5 cursor-pointer transition-all ${
                 isSelected
                   ? "border-blue-500 bg-blue-50"
@@ -133,13 +147,10 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
                       {hotel.ciudad_nombre}, {hotel.pais_nombre}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {hotel.descripcion}
-                  </p>
                   <div className="flex items-center gap-2 mt-2">
                     <div className="flex items-center">{renderStars(hotel.estrellas)}</div>
                     <span className="text-xs text-gray-500">
-                      {habitaciones?.length || 0} tipos de habitación
+                      {hotel?.habitaciones?.length || 0} tipos de habitación
                     </span>
                   </div>
                 </div>
@@ -159,20 +170,29 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
                     <div className="grid md:grid-cols-3 gap-3">
                       {habitaciones.map((habitacion) => {
                         const isRoomSelected = selectedHabitacionId === habitacion.id;
-                        const cuposInsuficientes =
-                          selectedSalidaCupo < habitacion.capacidad;
+                        const cuposInsuficientes = selectedSalidaCupo < habitacion.capacidad;
+                        const isAgotado = habitacion.cupo === 0;
 
                         return (
                           <div
                             key={habitacion.id}
-                            onClick={() => onSelectHabitacion(habitacion)}
-                            className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                            onClick={() => {
+                              // Evitar selección si no hay cupos
+                              if (!isAgotado) {
+                                onSelectHabitacion(habitacion);
+                              }
+                            }}
+                            className={`relative border-2 rounded-lg p-4 transition-all ${
+                              isAgotado
+                                ? "cursor-not-allowed opacity-50 bg-gray-100"
+                                : "cursor-pointer hover:border-blue-300 hover:shadow-sm"
+                            } ${
                               isRoomSelected
                                 ? "border-blue-500 bg-blue-50 shadow-md"
-                                : "border-gray-300 bg-white hover:border-blue-300 hover:shadow-sm"
+                                : "border-gray-300 bg-white"
                             }`}
                           >
-                            {isRoomSelected && (
+                            {isRoomSelected && !isAgotado && (
                               <div className="absolute top-2 right-2">
                                 <CheckCircle className="w-5 h-5 text-blue-600" />
                               </div>
@@ -191,7 +211,7 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
                             </div>
 
                             <h5 className="font-bold text-gray-900 mb-2">
-                              {habitacion.tipo}
+                              {capitalizePrimeraLetra(habitacion.tipo)}
                             </h5>
                             <div className="flex items-center text-xs text-gray-600 mb-3">
                               <Users className="w-3 h-3 mr-1" />
@@ -207,18 +227,16 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
                               </div>
                             ) : (
                               <div className="flex items-center gap-1 mt-2 text-sm">
-                                <span className="text-gray-600 font-medium">
-                                  {habitacion.cupo > 1
-                                    ? `${habitacion.cupo} habitaciones disponibles`
-                                    : "1 habitación disponible"}
+                                <span className={`${getStyleCuposDisponiblePorHabitacion(habitacion.cupo)}`}>
+                                  {habitacion.cupo > 1 && `${habitacion.cupo} habitaciones disponibles`}
+                                  {habitacion.cupo === 1 && "1 habitación disponible"}
+                                  {habitacion.cupo === 0 && "Agotado"}
                                 </span>
                               </div>
                             )}
 
                             <div className="pt-3 border-t border-gray-200">
-                              <div className="text-xs text-gray-600 mb-1">
-                                Precio por noche
-                              </div>
+                              <div className="text-xs text-gray-600 mb-1">Precio por noche</div>
                               <div className="text-lg font-bold text-blue-600">
                                 {habitacion.moneda_simbolo}{" "}
                                 {formatearSeparadorMiles.format(habitacion.precio_noche)}
