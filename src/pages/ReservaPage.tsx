@@ -1683,7 +1683,7 @@ export default function ModulosPage() {
                                     `}
                                   >
                                     <LayoutGrid className="w-4 h-4" />
-                                    Por tipo
+                                    Vista por Hotel
                                   </button>
                                   <button
                                     type="button"
@@ -1700,7 +1700,7 @@ export default function ModulosPage() {
                                     `}
                                   >
                                     <List className="w-4 h-4" />
-                                    Por habitación
+                                    Lista Compelta
                                   </button>
                                 </div>
                                   
