@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { type FC, memo, useMemo } from "react";
 import {
@@ -61,9 +60,7 @@ interface HotelHabitacionSelectorListModeProps {
 
 const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListModeProps> = ({
   hoteles,
-  habitaciones,
   habitacionesResumenPrecios,
-  selectedHotelId,
   selectedHabitacionId,
   selectedSalidaCupo,
   isLoading = false,
