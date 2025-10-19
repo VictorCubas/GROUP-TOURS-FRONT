@@ -43,6 +43,11 @@ interface HabitacionListItem {
   cupo: number;
 }
 
+interface SelectedHotelHabitacion {
+  hotel: Hotel;
+  habitacion: HabitacionListItem;
+}
+
 interface HotelHabitacionSelectorListModeProps {
   hoteles: Hotel[];
   habitaciones: Habitacion[];
@@ -51,8 +56,7 @@ interface HotelHabitacionSelectorListModeProps {
   selectedHabitacionId: string | number;
   selectedSalidaCupo: number;
   isLoading?: boolean;
-  onSelectHotel: (hotelId: number, hotelNombre: string) => void;
-  onSelectHabitacion: (habitacion: HabitacionListItem) => void;
+  onSelectItem: (selection: SelectedHotelHabitacion) => void;
 }
 
 const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListModeProps> = ({
@@ -63,8 +67,7 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
   selectedHabitacionId,
   selectedSalidaCupo,
   isLoading = false,
-  onSelectHotel,
-  onSelectHabitacion,
+  onSelectItem,
 }) => {
   // 🔄 Ordenar habitaciones por precio de venta final de menor a mayor
   const habitacionesOrdenadas = useMemo(() => {
@@ -77,8 +80,6 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
     });
   }, [habitacionesResumenPrecios]);
 
-  console.log(hoteles)
-  console.log(habitacionesResumenPrecios);
 
   // 🎨 Estilos dinámicos según cupos disponibles
   const getStyleCuposDisponiblePorHabitacion = (cupos: number) => {
@@ -139,24 +140,25 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
 
       <div className="grid gap-4">
         {habitacionesOrdenadas.map((habitacion) => {
-          const isRoomSelected = selectedHabitacionId === habitacion.habitacion_id;
+          const isRoomSelected = selectedHabitacionId?.toString() === habitacion?.habitacion_id?.toString();
           const cuposInsuficientes = selectedSalidaCupo < habitacion.capacidad;
           const isAgotado = habitacion.cupo === 0;
-          const h = hoteles.filter((hotel: any) => hotel.id.toString() === habitacion.hotel_id.toString())
-          console.log(h);
+          const h = hoteles.filter((hotel: any) => hotel?.id?.toString() === habitacion?.hotel_id?.toString())
           const estrellas = h.length ? h[0].estrellas : 0;
 
           return (
             <div
               key={habitacion.habitacion_id}
               onClick={() => {
-                // Primero seleccionar el hotel
-                if (selectedHotelId !== habitacion.hotel_id) {
-                  onSelectHotel(habitacion.hotel_id, habitacion.hotel_nombre);
-                }
-                // Luego seleccionar la habitación si hay cupos
                 if (!isAgotado) {
-                  onSelectHabitacion(habitacion);
+                  const hotelSeleccionado = hoteles.find((hotel: Hotel) => hotel.id.toString() === habitacion.hotel_id.toString());
+
+                  if (hotelSeleccionado) {
+                    onSelectItem({
+                      hotel: hotelSeleccionado,
+                      habitacion: habitacion
+                    });
+                  }
                 }
               }}
               className={`border-2 rounded-lg p-5 transition-all ${

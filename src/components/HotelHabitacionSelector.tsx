@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { type FC, memo } from "react";
 import {
   Building,
@@ -90,7 +91,6 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
 
 
   const getStyleCuposDisponiblePorHabitacion = (cupos: number) => {
-    console.log(cupos)
     if (cupos === 0) return "bg-red-600 text-white text-red-600 font-semibold rounded-xl px-2 py-0";
     if (cupos <= 3) return "text-red-600 font-semibold ";
     if (cupos <= 7) return "text-orange-600 font-medium" ;
@@ -110,10 +110,7 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
           >
             {/* 🔹 Cabecera del hotel */}
             <div
-              onClick={() => {
-                console.log(hotel)
-                onSelectHotel(hotel)
-              }}
+              onClick={() => onSelectHotel(hotel)}
               className={`p-5 cursor-pointer transition-all ${
                 isSelected
                   ? "border-blue-500 bg-blue-50"
@@ -169,7 +166,7 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
 
                     <div className="grid md:grid-cols-3 gap-3">
                       {habitaciones.map((habitacion) => {
-                        const isRoomSelected = selectedHabitacionId === habitacion.id;
+                        const isRoomSelected = selectedHabitacionId.toString() === habitacion.id.toString();
                         const cuposInsuficientes = selectedSalidaCupo < habitacion.capacidad;
                         const isAgotado = habitacion.cupo === 0;
 
