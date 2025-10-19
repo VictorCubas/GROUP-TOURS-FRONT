@@ -42,6 +42,8 @@ import {
   CheckCircle2,
   Circle,
   Pencil,
+  LayoutGrid,
+  List,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -91,7 +93,8 @@ import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
 import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
 import { NumericFormat } from "react-number-format"
-import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector"
+import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector";
+import { HotelHabitacionSelectorListMode } from "@/components/HotelHabitacionSelectorListMode";
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -147,6 +150,7 @@ export default function ModulosPage() {
   const [selectedPasajerosData, setSelectedPasajerosData] = useState<any[]>([])
   const [dataDetalle, setDataDetalle] = useState<Reserva>();
   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
+  const [viewModeHabitacionList, setViewModeHabitacionList] = useState<"grouped" | "detailed">('grouped');
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
   const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
@@ -162,6 +166,7 @@ export default function ModulosPage() {
   const [selectedTipoHabitacionID, setSelectedTipoHabitacionID] = useState('');
   const [selectedTipoHabitacionData, setSelectedTipoHabitacionData] = useState<any>();
   const [habitacionesPorSalida, setHabitacionesPorSalida] = useState<any[]>([]);
+  const [habitacionesResumenPrecios, setHabitacionesResumenPrecios] = useState<any[]>([]);
   const [precioFinalPorPersona, setPrecioFinalPorPersona] = useState<number>(0);
   const [isEditingSena, setIsEditingSena] = useState(false)
   const [montoAbonado, setMontoAbonado] = useState<number>(0)
@@ -188,7 +193,7 @@ export default function ModulosPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {control, watch, handleSubmit, setValue, getValues, clearErrors, reset} = 
+  const {control, watch, handleSubmit, setValue, getValues, clearErrors, reset, trigger} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -280,8 +285,8 @@ export default function ModulosPage() {
 
     console.log(dataHotelesPorSalidaList)
 
-    if(dataHotelesPorSalidaList && dataHotelesPorSalidaList?.length){
-      hotelesPorSalida = dataHotelesPorSalidaList;
+    if(dataHotelesPorSalidaList){
+      hotelesPorSalida = dataHotelesPorSalidaList.hoteles;
 
       console.log(hotelesPorSalida);
     }
@@ -334,6 +339,15 @@ export default function ModulosPage() {
   }
 
 
+  useEffect(() => {
+    if(!dataHotelesPorSalidaList)
+      return;
+    
+    setHabitacionesResumenPrecios(dataHotelesPorSalidaList?.resumen_precios?.habitaciones_ordenadas ?? [])
+
+
+  }, [dataHotelesPorSalidaList]);
+
   // if(!isFetchingPersonas){
   //   console.log('dataListPersonas: ', dataPersonaList)
   // }
@@ -348,18 +362,6 @@ export default function ModulosPage() {
     console.log(selectedTitularData); 
     console.log(watch('titularComoPasajero')); ;
 
-
-  // useEffect(() => {  
-  //   if(dataPersonaList){
-  //     if(dataAEditar){
-  //       setNewDataPersonaList([...dataPersonaList, dataAEditar.titular]);
-  //     }
-  //     else{
-  //       console.log('dataPersonaList: ', dataPersonaList)
-  //       setNewDataPersonaList([...dataPersonaList])
-  //     }
-  //   }
-  // }, [dataAEditar, dataPersonaList]);
 
   useEffect(() => {  
     if(dataPersonaList){
@@ -747,6 +749,25 @@ export default function ModulosPage() {
       console.log(payload);
       // Llamada al mutate enviando formData
 
+  // {
+  //   paquete_id: 120,
+  //   pasajeros_data: [],
+  //   salida_id: 213,
+  //   habitacion_id: 3,
+  //   activo: true,
+  //   titular_id: 15,
+  //   monto_pagado: 600
+  // }
+  //       {
+  //   nombre: '',
+  //   paquete_id: 120,
+  //   pasajeros_data: [],
+  //   salida_id: 213,
+  //   habitacion_id: 18,
+  //   activo: true,
+  //   titular_id: 15,
+  //   monto_pagado: 400
+  // }
 
   // //  {
   //   "paquete_id": 5,
@@ -953,6 +974,8 @@ export default function ModulosPage() {
       
       setSelectedSalidaData(salida.length ? salida[0] : undefined)
 
+      // setHabitacionesResumenPrecios(hotel.resumen_precios);
+
       setSelectedHotelId('');
       setSelectedHotelData(undefined);
       setSelectedTipoHabitacionID('');
@@ -1081,13 +1104,13 @@ export default function ModulosPage() {
 
       // Obtener la capacidad de la habitación (cantidad de personas)
       // const capacidad = Number(selectedTipoHabitacionData.capacidad ?? 0);
-
+      console.log(selectedPaqueteData?.servicios)
       const precioServicios = calcularTotalServicios(selectedPaqueteData?.servicios ?? []);
       console.log(selectedSalidaData);
 
       console.log(cantidadNoches);
       console.log(precioNoche);
-      console.log(precioServicios)
+      console.log(precioServicios) 
 
       const costoBase = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
 
@@ -1110,7 +1133,13 @@ export default function ModulosPage() {
 
   const calcularTotalServicios = (servicios: any[]) => {
     return servicios.reduce((total, servicio) => {
-      const precioFinalPorPersona = servicio.precio ?? servicio.precio_base ?? 0;
+      let precioFinalPorPersona = 0;
+
+      if(servicio.precio)
+        precioFinalPorPersona = servicio.precio;
+      else
+        precioFinalPorPersona = servicio.precio_base;
+
       return total + precioFinalPorPersona;
     }, 0);
   }
@@ -1638,23 +1667,98 @@ export default function ModulosPage() {
                               </div>
                             </CardHeader>
                             <CardContent className="h-[70vh] flex flex-col">
-                                <HotelHabitacionSelector
-                                  hoteles={hotelesPorSalida}
-                                  habitaciones={habitacionesPorSalida}
-                                  selectedHotelId={selectedHotelId}
-                                  selectedHabitacionId={selectedTipoHabitacionID}
-                                  selectedSalidaCupo={selectedSalidaData?.cupo ?? 0}
-                                  isLoading={isFetchingHotelesList}
-                                  onSelectHotel={(hotel) => {
-                                    setSelectedHotelId(hotel.id);
-                                    setSelectedHotelData(hotel);
-                                    setSelectedTipoHabitacionID("");
-                                  }}
-                                  onSelectHabitacion={(habitacion) => {
-                                    setSelectedTipoHabitacionID(habitacion.id);
-                                    setSelectedTipoHabitacionData(habitacion);
-                                  }}
-                                />
+                                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg w-fit mb-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setViewModeHabitacionList('grouped')
+                                    }}
+                                    className={`
+                                      flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all cursor-pointer
+                                      ${viewModeHabitacionList === 'grouped'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                      }
+                                    `}
+                                  >
+                                    <LayoutGrid className="w-4 h-4" />
+                                    Vista por Hotel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setViewModeHabitacionList('detailed')
+                                    }}
+                                    className={`
+                                      flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all cursor-pointer
+                                      ${viewModeHabitacionList === 'detailed'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                      }
+                                    `}
+                                  >
+                                    <List className="w-4 h-4" />
+                                    Lista Compelta
+                                  </button>
+                                </div>
+                                  
+
+                                  {viewModeHabitacionList === 'grouped' ? 
+                                    <HotelHabitacionSelector
+                                      hoteles={hotelesPorSalida}
+                                      habitaciones={habitacionesPorSalida}
+                                      selectedHotelId={selectedHotelId}
+                                      selectedHabitacionId={selectedTipoHabitacionID}
+                                      selectedSalidaCupo={selectedSalidaData?.cupo ?? 0}
+                                      isLoading={isFetchingHotelesList}
+                                      onSelectHotel={(hotel) => {
+                                        setSelectedHotelId(hotel.id);
+                                        setSelectedHotelData(hotel);
+                                        setSelectedTipoHabitacionID("");
+                                      }}
+                                      onSelectHabitacion={(habitacion) => {
+                                        setSelectedTipoHabitacionID(habitacion.id);
+                                        setSelectedTipoHabitacionData(habitacion);
+                                      }}
+                                    />
+                                  :
+
+                                  // <p></p>
+
+                                  <>
+                                  {/* <p>SelectedTipoHabitacionID: {JSON.stringify(selectedTipoHabitacionID)}</p>
+                                  <p>SelectedHotelData: {JSON.stringify(selectedHotelData)}</p>
+                                  <p>SelectedTipoHabitacionID: {JSON.stringify(selectedTipoHabitacionID)}</p>
+                                  <p>SelectedTipoHabitacionData: {JSON.stringify(selectedTipoHabitacionData)}</p> */}
+                                  <HotelHabitacionSelectorListMode
+                                      hoteles={hotelesPorSalida}
+                                      habitaciones={habitacionesPorSalida}
+                                      habitacionesResumenPrecios={habitacionesResumenPrecios}
+                                      selectedHotelId={selectedHotelId}
+                                      selectedHabitacionId={selectedTipoHabitacionID}
+                                      selectedSalidaCupo={selectedSalidaData?.cupo ?? 0}
+                                      isLoading={isFetchingHotelesList}
+                                      onSelectItem={({ hotel, habitacion }) => {
+                                        setSelectedHotelId(hotel.id);
+                                        setSelectedHotelData(hotel);
+
+                                        // Buscar la habitación correspondiente en habitacionesPorSalida del hotel seleccionado
+                                        const habitacionEnHotel = hotel.habitaciones?.find(
+                                          (h: any) => h.id.toString() === habitacion.habitacion_id.toString()
+                                        );
+
+                                        if (habitacionEnHotel) {
+                                          setSelectedTipoHabitacionID(habitacionEnHotel.id.toString());
+                                          setSelectedTipoHabitacionData(habitacionEnHotel);
+                                        }
+                                      }}
+                                    />
+                                  </>
+
+                                    
+                                  }
                             </CardContent>
                           </Card>
                         }
@@ -2437,26 +2541,43 @@ export default function ModulosPage() {
                                           if (value === '' || value === null || value === undefined) return true;
                                           if (isNaN(Number(value))) return false;
                                           if (Number(value) < 0) return false;
+
+                                          // ✅ Validar que no sea menor a la seña mínima * capacidad de habitación
+                                          const seniaMinima = Number(selectedSalidaData?.senia ?? 0);
+                                          const capacidad = Number(selectedTipoHabitacionData?.capacidad ?? 1);
+                                          const montoMinimo = seniaMinima * capacidad;
+
+                                          if (Number(value) < montoMinimo) {
+                                            return false;
+                                          }
+
                                           return true;
                                         },
                                       }}
                                       render={({ field, fieldState: { error } }) => (
-                                        <NumericFormat
-                                          value={field.value ?? ''}
-                                          onValueChange={(values) => field.onChange(values.floatValue ?? '')}
-                                          onBlur={field.onBlur}
-                                          thousandSeparator="."
-                                          decimalSeparator=","
-                                          allowNegative={false}
-                                          decimalScale={0}
-                                          allowLeadingZeros={false}
-                                          placeholder="ej: 250"
-                                          className={`flex-1 p-1 pl-2.5 rounded-md border-2 transition-all duration-150 ${
-                                            error
-                                              ? '!border-red-400 text-red-500 font-bold'
-                                              : 'border-blue-200 focus:border-blue-600 text-blue-600 font-bold'
-                                          } text-xl leading-tight`}
-                                        />
+                                        <div className="flex-1 relative">
+                                          <NumericFormat
+                                            value={field.value ?? ''}
+                                            onValueChange={(values) => field.onChange(values.floatValue ?? '')}
+                                            onBlur={field.onBlur}
+                                            thousandSeparator="."
+                                            decimalSeparator=","
+                                            allowNegative={false}
+                                            decimalScale={0}
+                                            allowLeadingZeros={false}
+                                            placeholder="ej: 250"
+                                            className={`w-full p-1 pl-2.5 rounded-md border-2 transition-all duration-150 ${
+                                              error
+                                                ? '!border-red-400 text-red-500 font-bold'
+                                                : 'border-blue-200 focus:border-blue-600 text-blue-600 font-bold'
+                                            } text-xl leading-tight`}
+                                          />
+                                          {error && (
+                                            <div className="absolute -bottom-5 -left-3 text-xs text-red-500 font-medium whitespace-nowrap">
+                                              Mínimo: ${formatearSeparadorMiles.format(Number(selectedSalidaData?.senia ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 1))}
+                                            </div>
+                                          )}
+                                        </div>
                                       )}
                                     />
 
@@ -2464,8 +2585,18 @@ export default function ModulosPage() {
                                       variant="default"
                                       size="icon"
                                       type="button"
-                                      onClick={(e) => {
+                                      onClick={async (e) => {
                                         e.preventDefault();
+
+                                        // ✅ Validar el campo antes de guardar
+                                        const isValid = await trigger('senia');
+                                        console.log(isValid)
+
+                                        if (!isValid) {
+                                          // Si no es válido, no hacer nada
+                                          return;
+                                        }
+
                                         const nuevaSeña = getValues('senia');
 
                                         // ✅ Permite guardar 0 o vacío
@@ -2484,6 +2615,32 @@ export default function ModulosPage() {
                                       className="h-8 w-8 bg-green-600 hover:bg-green-700 cursor-pointer"
                                     >
                                       <Check className="h-4 w-4" />
+                                    </Button>
+
+                                    <Button
+                                      variant="default"
+                                      size="icon"
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+
+                                        // ✅ Resetear al valor inicial (seña mínima)
+                                        const seniaInicial = Number(selectedSalidaData?.senia ?? 0);
+                                        setMontoAbonado(seniaInicial);
+                                        setMontoAbonadoPorPersona(seniaInicial);
+
+                                        // ✅ Limpiar el campo del formulario
+                                        setValue('senia', '');
+
+                                        // ✅ Limpiar errores de validación
+                                        clearErrors('senia');
+
+                                        // ✅ Salir del modo edición
+                                        setIsEditingSena(false);
+                                      }}
+                                      className="h-8 w-8 bg-gray-100 hover:bg-gray-200 cursor-pointer text-gray-500"
+                                    >
+                                      <X className="h-4 w-4 text-gray-500" />
                                     </Button>
                                   </>
                                 ) : (
