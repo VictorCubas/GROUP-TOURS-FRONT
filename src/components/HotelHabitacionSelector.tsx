@@ -11,6 +11,7 @@ import {
   Star,
 } from "lucide-react";
 import { capitalizePrimeraLetra, formatearSeparadorMiles } from "@/helper/formatter";
+import { Badge } from "./ui/badge";
 
 interface Habitacion {
   id: string;
@@ -32,6 +33,7 @@ interface Hotel {
 }
 
 interface HotelHabitacionSelectorProps {
+  esDistribuidor: boolean;
   hoteles: Hotel[];
   habitaciones: Habitacion[];
   selectedHotelId: string;
@@ -43,6 +45,7 @@ interface HotelHabitacionSelectorProps {
 }
 
 const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
+  esDistribuidor,
   hoteles,
   habitaciones,
   selectedHotelId,
@@ -168,8 +171,11 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
                       {habitaciones.map((habitacion) => {
                         const isRoomSelected = selectedHabitacionId.toString() === habitacion.id.toString();
                         const cuposInsuficientes = selectedSalidaCupo < habitacion.capacidad;
-                        const isAgotado = habitacion.cupo === 0;
+                        const isAgotado = !esDistribuidor ? habitacion.cupo === 0 : false;
 
+
+                        console.log(cuposInsuficientes)
+                        console.log(isAgotado);
                         return (
                           <div
                             key={habitacion.id}
@@ -215,14 +221,18 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
                               <span>Hasta {habitacion.capacidad} personas</span>
                             </div>
 
-                            {cuposInsuficientes ? (
+
+                            {/* {!esDistribuidor && cuposInsuficientes} */}
+
+                            {!esDistribuidor && cuposInsuficientes && (
                               <div className="flex items-center gap-1 mt-2 text-sm">
                                 <AlertCircle className="w-4 h-4 text-orange-500" />
                                 <span className="text-orange-600 font-medium">
                                   Cupos insuficientes (disponible: {selectedSalidaCupo})
                                 </span>
                               </div>
-                            ) : (
+                            )}
+                            {!esDistribuidor && !cuposInsuficientes && (
                               <div className="flex items-center gap-1 mt-2 text-sm">
                                 <span className={`${getStyleCuposDisponiblePorHabitacion(habitacion.cupo)}`}>
                                   {habitacion.cupo > 1 && `${habitacion.cupo} habitaciones disponibles`}
@@ -232,13 +242,39 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
                               </div>
                             )}
 
-                            <div className="pt-3 border-t border-gray-200">
-                              <div className="text-xs text-gray-600 mb-1">Precio por noche</div>
-                              <div className="text-lg font-bold text-blue-600">
-                                {habitacion.moneda_simbolo}{" "}
-                                {formatearSeparadorMiles.format(habitacion.precio_noche)}
+
+                            {esDistribuidor && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
+                              Sujeto a disponibilidad
+                            </Badge>}
+
+                            {esDistribuidor &&  <div className="flex items-center justify-center gap-2 rounded-lg bg-green-50 dark:bg-green-900/20 p-1 mt-2 border border-green-200 dark:border-green-800">
+                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600 dark:bg-green-500">
+                                <svg
+                                  className="h-3 w-3 text-white"
+                                  fill="none"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path d="M5 13l4 4L19 7" />
+                                </svg>
                               </div>
-                            </div>
+                              <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                                Incluido en tu paquete
+                              </span>
+                            </div>} 
+
+                            {!esDistribuidor && 
+                              <div className="pt-3 border-t border-gray-200">
+                                <div className="text-xs text-gray-600 mb-1">Precio por noche</div>
+                                <div className="text-lg font-bold text-blue-600">
+                                  {habitacion.moneda_simbolo}{" "}
+                                  {formatearSeparadorMiles.format(habitacion.precio_noche)}
+                                </div>
+                              </div>
+                            }
                           </div>
                         );
                       })}

@@ -11,12 +11,17 @@ import { formatearSeparadorMiles, getDaysBetweenDates } from "@/helper/formatter
 import { cn } from "@/lib/utils"
 
 interface DepartureDateSelectorProps {
-  fechaSalidasList: any[]
-  fechaSeleccionada: string
-  onFechaSeleccionada: (dateId: string) => void
+  esDistribuidor: boolean;
+  fechaSalidasList: any[];
+  fechaSeleccionada: string;
+  onFechaSeleccionada: (dateId: string) => void;
 }
 
-export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSeleccionada, onFechaSeleccionada }: DepartureDateSelectorProps) {
+export function FechaSalidaSelectorContainer({ 
+  esDistribuidor,
+  fechaSalidasList, 
+  fechaSeleccionada, 
+  onFechaSeleccionada }: DepartureDateSelectorProps) {
   const formatDate = (dateString: string) => {
 
     if (!dateString) return "";
@@ -110,10 +115,18 @@ export function FechaSalidaSelectorContainer({ fechaSalidasList, fechaSelecciona
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        <span>{departure.cupo} cupos disponibles</span>
+                        {esDistribuidor ?
+                            <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
+                              Sujeto a disponibilidad
+                            </Badge>
+                        :
+                          <>
+                            <Users className="h-3 w-3" />
+                            <span>{departure.cupo} cupos disponibles</span>
+                          </> 
+                        }
                       </div>
-                      {departure.cupo <= 5 && (
+                      {!esDistribuidor && departure.cupo <= 5 && (
                         <Badge variant="destructive" className="text-xs">
                           Últimos cupos
                         </Badge>

@@ -10,6 +10,7 @@ import {
   Star,
 } from "lucide-react";
 import { capitalizePrimeraLetra, formatearSeparadorMiles } from "@/helper/formatter";
+import { Badge } from "./ui/badge";
 
 interface Habitacion {
   id: string;
@@ -48,6 +49,7 @@ interface SelectedHotelHabitacion {
 }
 
 interface HotelHabitacionSelectorListModeProps {
+  esDistribuidor: boolean;
   hoteles: Hotel[];
   habitaciones: Habitacion[];
   habitacionesResumenPrecios: HabitacionListItem[];
@@ -59,6 +61,7 @@ interface HotelHabitacionSelectorListModeProps {
 }
 
 const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListModeProps> = ({
+  esDistribuidor,
   hoteles,
   habitacionesResumenPrecios,
   selectedHabitacionId,
@@ -86,6 +89,9 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
     if (cupos <= 12) return "text-amber-600 font-medium";
     return "text-gray-600 font-normal";
   };
+
+
+  console.log(esDistribuidor)
 
   // 🌀 Estado de carga
   if (isLoading) {
@@ -158,7 +164,7 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
                   }
                 }
               }}
-              className={`border-2 rounded-lg p-5 transition-all ${
+              className={`border-2 rounded-lg px-5 pt-3 pb-1 transition-all ${
                 isAgotado
                   ? "cursor-not-allowed opacity-50 bg-gray-100"
                   : "cursor-pointer hover:border-blue-300 hover:shadow-md"
@@ -203,19 +209,19 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
                 {/* 🛏️ Información de la Habitación */}
                 <div className="flex-1 border-l-0 md:border-l-2 border-gray-200 md:pl-5">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-start gap-3">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
                           isRoomSelected ? "bg-blue-200" : "bg-gray-200"
                         }`}
                       >
                         <Bed
-                          className={`w-5 h-5 ${
+                          className={`w-6 h-6 ${
                             isRoomSelected ? "text-blue-700" : "text-gray-600"
                           }`}
                         />
                       </div>
-                      <div>
+                      <div className="flex-col">
                         <h5 className="text-base font-semibold text-gray-700 capitalize">
                             {capitalizePrimeraLetra(habitacion.habitacion_tipo)}
                         </h5>
@@ -223,19 +229,58 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
                           <Users className="w-4 h-4 mr-1" />
                           <span>Hasta {habitacion.capacidad} personas</span>
                         </div>
+                        <div className="relative top-1">
+                          {cuposInsuficientes ? (
+                            <div className="flex items-center gap-1 text-sm">
+                              {esDistribuidor ? 
+                                // <div className="text-xs text-gray-600 mb-1">Sujeto a disponibilidad del proveedor</div>
+                                <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
+                                  Sujeto a disponibilidad
+                                </Badge>
+                              :
+                                <>
+                                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                                  <span className="text-orange-600 font-medium">
+                                    Cupos insuficientes (disponible: {selectedSalidaCupo})
+                                  </span>
+                                </>
+                              }
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-sm"> 
+                              <span className={`${getStyleCuposDisponiblePorHabitacion(habitacion.cupo)}`}>
+                                {habitacion.cupo > 1 && `${habitacion.cupo} habitaciones disponibles`}
+                                {habitacion.cupo === 1 && "1 habitación disponible"}
+                                {habitacion.cupo === 0 && "Agotado"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                      {/* Precio */}
                     <div className="flex flex-row gap-5 items-center">
-                        <div className="text-right">
-                          <div className="text-xs text-gray-600 mb-1">Precio total</div>
-                          <div className="text-2xl font-bold text-blue-600">
-                            ${" "}
-                            {formatearSeparadorMiles.format(parseFloat(habitacion.precio_venta_final))}
+                        {/* {esDistribuidor &&
+                          <div className="text-right">
+                            <div className="text-xs text-blue-600 mb-1 uppercase">Cotización</div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              A consultar
+                            </div>
+                            <div className="text-xs text-gray-600 mb-1">Sujeto a disponibilidad del proveedor</div>
                           </div>
-                          <div className="text-xs text-gray-600 mb-1">Por persona</div>
-                        </div>
+                        } */}
+
+                        
+                          <div className="text-right">
+                            <div className="text-xs text-gray-600 mb-1">Precio total</div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              ${" "}
+                              {formatearSeparadorMiles.format(parseFloat(habitacion.precio_venta_final))}
+                            </div>
+                            <div className="text-xs text-gray-600 mb-1">Por persona</div>
+                          </div>
+                        
 
                         {isRoomSelected && !isAgotado && (
                           <CheckCircle className="w-6 h-6 text-blue-600 flex-shrink-0" />
@@ -243,27 +288,7 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    {/* Estado de disponibilidad */}
-                    <div className="flex-1">
-                      {cuposInsuficientes ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <AlertCircle className="w-4 h-4 text-orange-500" />
-                          <span className="text-orange-600 font-medium">
-                            Cupos insuficientes (disponible: {selectedSalidaCupo})
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-sm">
-                          <span className={`${getStyleCuposDisponiblePorHabitacion(habitacion.cupo)}`}>
-                            {habitacion.cupo > 1 && `${habitacion.cupo} habitaciones disponibles`}
-                            {habitacion.cupo === 1 && "1 habitación disponible"}
-                            {habitacion.cupo === 0 && "Agotado"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  
                 </div>
               </div>
             </div>

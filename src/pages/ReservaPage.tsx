@@ -44,6 +44,7 @@ import {
   Pencil,
   LayoutGrid,
   List,
+  Building2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -150,7 +151,7 @@ export default function ModulosPage() {
   const [selectedPasajerosData, setSelectedPasajerosData] = useState<any[]>([])
   const [dataDetalle, setDataDetalle] = useState<Reserva>();
   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
-  const [viewModeHabitacionList, setViewModeHabitacionList] = useState<"grouped" | "detailed">('grouped');
+  const [viewModeHabitacionList, setViewModeHabitacionList] = useState<"grouped" | "detailed">('detailed');
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
   const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
@@ -693,7 +694,7 @@ export default function ModulosPage() {
         return;
       }
       
-      if(selectedSalidaData.cupo < selectedTipoHabitacionData.capacidad){
+      if(selectedPaqueteData.propio && selectedSalidaData.cupo < selectedTipoHabitacionData.capacidad){
         handleShowToast('No hay suficientes lugares disponibles para esta habitacion', 'error');
         return;
       }
@@ -1093,56 +1094,60 @@ export default function ModulosPage() {
       if(!selectedSalidaData || !selectedTipoHabitacionData || !selectedHotelData)
         return;
 
-      const precioNoche = Number(selectedTipoHabitacionData.precio_noche ?? 0);
 
-    // Calcular la cantidad de noches usando las fechas de salida y regreso
-      const cantidadNoches = getDaysBetweenDates(
-        selectedSalidaData.fecha_salida,
-        selectedSalidaData.fecha_regreso
-      );
+      console.log(selectedTipoHabitacionData)
+      console.log(selectedTipoHabitacionData?.precio_calculado?.precio_venta_final);
+
+    //   const precioNoche = Number(selectedTipoHabitacionData.precio_noche ?? 0);
+
+    // // Calcular la cantidad de noches usando las fechas de salida y regreso
+    //   const cantidadNoches = getDaysBetweenDates(
+    //     selectedSalidaData.fecha_salida,
+    //     selectedSalidaData.fecha_regreso
+    //   );
 
 
-      // Obtener la capacidad de la habitación (cantidad de personas)
-      // const capacidad = Number(selectedTipoHabitacionData.capacidad ?? 0);
-      console.log(selectedPaqueteData?.servicios)
-      const precioServicios = calcularTotalServicios(selectedPaqueteData?.servicios ?? []);
-      console.log(selectedSalidaData);
+    //   // Obtener la capacidad de la habitación (cantidad de personas)
+    //   // const capacidad = Number(selectedTipoHabitacionData.capacidad ?? 0);
+    //   console.log(selectedPaqueteData?.servicios)
+    //   const precioServicios = selectedPaqueteData?.propio ? calcularTotalServicios(selectedPaqueteData?.servicios ?? []) : 0;
+    //   console.log(selectedSalidaData);
 
-      console.log(cantidadNoches);
-      console.log(precioNoche);
-      console.log(precioServicios) 
+    //   console.log(cantidadNoches);
+    //   console.log(precioNoche);
+    //   console.log(precioServicios) 
 
-      const costoBase = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
+    //   const costoBase = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
 
-      console.log(costoBase)
+    //   console.log(costoBase)
 
-      const factorGanancia = selectedSalidaData?.ganancia ?? selectedSalidaData?.comision ?? 0;
+    //   const factorGanancia = selectedSalidaData?.ganancia ?? selectedSalidaData?.comision ?? 0;
 
-      console.log(factorGanancia);
+    //   console.log(factorGanancia);
 
-      // Calcular el precio final: precio_noche * cantidad_noches * capacidad
-      const precioFinalPorPersona = costoBase * (1 + Number(factorGanancia / 100));
+    //   // Calcular el precio final: precio_noche * cantidad_noches * capacidad
+    //   const precioFinalPorPersona = costoBase * (1 + Number(factorGanancia / 100));
 
-      // console.log(selectedPaqueteData.servicios)
+    //   // console.log(selectedPaqueteData.servicios)
 
-      console.log(precioFinalPorPersona);
+    //   console.log(precioFinalPorPersona);
 
-      setPrecioFinalPorPersona(precioFinalPorPersona)
+      setPrecioFinalPorPersona(selectedTipoHabitacionData?.precio_calculado?.precio_venta_final ?? 0)
     }, [selectedSalidaData, selectedTipoHabitacionData, selectedHotelData, selectedPaqueteData?.servicios]);
 
 
-  const calcularTotalServicios = (servicios: any[]) => {
-    return servicios.reduce((total, servicio) => {
-      let precioFinalPorPersona = 0;
+  // const calcularTotalServicios = (servicios: any[]) => {
+  //   return servicios.reduce((total, servicio) => {
+  //     let precioFinalPorPersona = 0;
 
-      if(servicio.precio)
-        precioFinalPorPersona = servicio.precio;
-      else
-        precioFinalPorPersona = servicio.precio_base;
+  //     if(servicio.precio)
+  //       precioFinalPorPersona = servicio.precio;
+  //     else
+  //       precioFinalPorPersona = servicio.precio_base;
 
-      return total + precioFinalPorPersona;
-    }, 0);
-  }
+  //     return total + precioFinalPorPersona;
+  //   }, 0);
+  // }
     
 
   const senia = watch('senia');
@@ -1640,6 +1645,7 @@ export default function ModulosPage() {
                             <CardContent>
                               {/* selectedSalidaID: {JSON.stringify(selectedSalidaID)} */}
                               <FechaSalidaSelectorContainer
+                                esDistribuidor={!selectedPaqueteData.propio}
                                 fechaSalidasList={selectedPaqueteData?.salidas}
                                 fechaSeleccionada={selectedSalidaID}
                                 onFechaSeleccionada={setSelectedSalidaID}
@@ -1665,26 +1671,28 @@ export default function ModulosPage() {
                                   <CardDescription>Este paquete es flexible, seleccione el hotel y tipo de habitación</CardDescription>
                                 </div>
                               </div>
+
+                              {!selectedPaqueteData.propio && 
+                                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-1 border-amber-300 rounded-lg p-3 shadow-md">
+                                    <div className="flex items-start gap-4">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 flex-shrink-0">
+                                        <Building2 className="h-5 w-5 text-amber-700" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <h3 className="font-bold text-base text-amber-900 mb-1">Paquete de Distribuidora</h3>
+                                        <p className="text-sm text-amber-800 leading-relaxed">
+                                          Este es un paquete de distribuidora. Los lugares están sujetos a confirmación y
+                                          disponibilidad por parte de la agencia. Los cupos se verificarán al momento de la
+                                          reserva.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                }
                             </CardHeader>
                             <CardContent className="h-[70vh] flex flex-col">
+
                                 <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg w-fit mb-2">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      setViewModeHabitacionList('grouped')
-                                    }}
-                                    className={`
-                                      flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all cursor-pointer
-                                      ${viewModeHabitacionList === 'grouped'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                      }
-                                    `}
-                                  >
-                                    <LayoutGrid className="w-4 h-4" />
-                                    Vista por Hotel
-                                  </button>
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -1702,11 +1710,30 @@ export default function ModulosPage() {
                                     <List className="w-4 h-4" />
                                     Lista Compelta
                                   </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setViewModeHabitacionList('grouped')
+                                    }}
+                                    className={`
+                                      flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all cursor-pointer
+                                      ${viewModeHabitacionList === 'grouped'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                      }
+                                    `}
+                                  >
+                                    <LayoutGrid className="w-4 h-4" />
+                                    Vista por Hotel
+                                  </button>
                                 </div>
                                   
 
                                   {viewModeHabitacionList === 'grouped' ? 
                                     <HotelHabitacionSelector
+                                      esDistribuidor={!selectedPaqueteData.propio}
                                       hoteles={hotelesPorSalida}
                                       habitaciones={habitacionesPorSalida}
                                       selectedHotelId={selectedHotelId}
@@ -1734,6 +1761,7 @@ export default function ModulosPage() {
                                   <p>SelectedTipoHabitacionData: {JSON.stringify(selectedTipoHabitacionData)}</p> */}
                                   <HotelHabitacionSelectorListMode
                                       hoteles={hotelesPorSalida}
+                                      esDistribuidor={!selectedPaqueteData.propio}
                                       habitaciones={habitacionesPorSalida}
                                       habitacionesResumenPrecios={habitacionesResumenPrecios}
                                       selectedHotelId={selectedHotelId}
@@ -3009,7 +3037,7 @@ export default function ModulosPage() {
                           <TableHead className="font-semibold text-gray-700">Pasajeros</TableHead>
                           <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                           <TableHead className="font-semibold text-gray-700">Pago</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Total</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Precio Unitario</TableHead>
                           <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3108,7 +3136,7 @@ export default function ModulosPage() {
                            
                             <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.paquete.moneda.simbolo}{formatearSeparadorMiles.format(data.paquete.precio * data.cantidad_pasajeros)}</div>
+                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.paquete.moneda.simbolo}{formatearSeparadorMiles.format(data?.precio_unitario ?? 0)}</div>
                                 {/* <div className="text-sm text-gray-500 truncate max-w-xs">{data.titular.telefono}</div> */}
                               </div>
                             </TableCell>     

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
+import { cn } from "@/lib/utils"
 import { startTransition, use, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Search,
@@ -52,6 +53,7 @@ import {
   AlertCircle,
   CirclePlus,
   Info,
+  DoorOpen,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -84,7 +86,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Distribuidora, Moneda, Paquete, RespuestaPaginada, SalidaPaquete, TipoPaquete, } from "@/types/paquetes"
+import type { Distribuidora, Moneda, Paquete, PriceMode, RespuestaPaginada, SalidaPaquete, TipoPaquete, } from "@/types/paquetes"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
 import {Controller, useForm, useWatch } from "react-hook-form"
@@ -100,7 +102,7 @@ import { fetchDataDestinosTodos, fetchDataHoteles } from "@/components/utils/htt
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { calcularCostoPaquete, calcularRangoPrecio, calculateNoches, getPayload } from "@/helper/paquete";
+import { calcularCostoPaquete, calcularRangoPrecio, calculateNoches, getPayload, normalizarPreciosCatalogo, normalizarPreciosCatalogoHoteles } from "@/helper/paquete";
 import { NumericFormat } from 'react-number-format';
 import { fetchDataZonasGeograficasTodos } from "@/components/utils/httpNacionalidades"
 
@@ -158,7 +160,7 @@ export default function ModulosPage() {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
-
+  const [modoPrecio, setModoPrecio] = useState<Record<string, PriceMode>>({})
   const [totalPrecioServiciosEdicion, setTotalPrecioServiciosEdicion] = useState<number | null>(null);
 
 
@@ -606,7 +608,7 @@ export default function ModulosPage() {
   
 
   const handleGuardarNuevaData = async (dataForm: any) => {
-    console.log(selectedServicios)
+    console.log(selectedServicios) 
 
     const serviciosListSelected = selectedServicios.map(s => {
       return {
@@ -616,7 +618,7 @@ export default function ModulosPage() {
     })
 
 
-    console.log(serviciosListSelected); 
+    console.log(serviciosListSelected);  
     console.log(salidas);
     console.log(dataServiciosList);
     const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, serviciosListSelected, paqueteModalidad);
@@ -632,8 +634,8 @@ export default function ModulosPage() {
       handleShowToast('Debes agregar al menos un servicio', 'error');
       return;
     }
-
-    console.log(prePayload);
+ 
+    console.log(prePayload); 
 
     const formData = new FormData();
 
@@ -669,7 +671,7 @@ export default function ModulosPage() {
     });
 
     console.log("FormData listo:", [...formData.entries()]); 
-    mutate(formData);
+    mutate(formData);  
   };
 
 
@@ -702,10 +704,21 @@ export default function ModulosPage() {
         
       // }
 
-      if(propio)
+      if(propio){
         salActualizada.ganancia = salida.ganancia;
-      else
+        salActualizada.cupos_habitaciones = salida.cupos_habitaciones;
+      }
+      else{
+        // Normalizar las estructuras de precios para asegurar formato consistente
+        // y filtrar habitaciones que pertenecen a hoteles en precios_catalogo_hoteles
+        salActualizada.precios_catalogo = normalizarPreciosCatalogo(
+          salida.precios_catalogo,
+          salida.precios_catalogo_hoteles,
+          dataHotelesList || []
+        );
         salActualizada.comision = salida.comision;
+        salActualizada.precios_catalogo_hoteles = normalizarPreciosCatalogoHoteles(salida.precios_catalogo_hoteles);
+      }
 
       return salActualizada;
     });
@@ -717,7 +730,7 @@ export default function ModulosPage() {
     const serviciosListSelected = selectedServicios.map(s => {
       return {
         servicio_id: s,
-        precio: watch(`precio_personalizado_servicio_${s}`) ?? ''
+        precio: propio ? (watch(`precio_personalizado_servicio_${s}`) ?? '') : ''
       }
     })
 
@@ -758,7 +771,7 @@ export default function ModulosPage() {
       return;
     }
 
-    console.log(payload)
+    console.log(payload); 
     const formData = new FormData();
 
     // ✅ Agregar imagen solo si es nueva (File)
@@ -912,7 +925,7 @@ export default function ModulosPage() {
    */
   useEffect(() => {
     console.log(dataAEditar)
-    if (dataAEditar?.servicios?.length) {
+    if (dataAEditar?.propio && dataAEditar?.servicios?.length) {
       dataAEditar.servicios.forEach((servicio: any) => { 
         setValue(`precio_personalizado_servicio_${servicio.servicio_id}`, servicio.precio ?? '');
       });
@@ -941,6 +954,34 @@ export default function ModulosPage() {
       setPaqueteModalidad(data.modalidad)
 
     const salidas = data.salidas.map((salida: SalidaPaquete) => {
+      // let precios_catalogo_hoteles: any[] = [];
+
+      // if(!data.propio && salida?.precios_catalogo_hoteles){
+      //   precios_catalogo_hoteles = salida?.precios_catalogo_hoteles.map((precio: any) => {
+      //       console.log(precio);
+      //       return {
+      //         hotel_id: precio.hotel.id,
+      //         precio_catalogo: precio.precio_catalogo 
+      //       }
+      //   })
+
+      //   console.log(precios_catalogo_hoteles);
+      // }
+      
+      // let precios_catalogo: any[] = [];
+
+      // if(!data.propio && salida?.precios_catalogo){
+      //   precios_catalogo = salida?.precios_catalogo.map((precio: any) => {
+      //       console.log(precio);
+      //       return {
+      //         habitacion_id: precio.habitacion.id,
+      //         precio_catalogo: precio.precio_catalogo 
+      //       }
+      //   })
+
+      //   console.log(precios_catalogo);
+      // }
+
       const sal: any =  {
         id: salida.id,
         fecha_salida_v2: salida.fecha_salida,
@@ -949,8 +990,10 @@ export default function ModulosPage() {
         precio: salida.precio_actual,
         precio_final: salida.precio_final,
         senia: salida.senia,
-        cupo: salida.cupo,
+        cupo: data.propio ? salida.cupo : null,
         cupos_habitaciones: salida.cupos_habitaciones,
+        precios_catalogo: salida.precios_catalogo,
+        precios_catalogo_hoteles: salida.precios_catalogo_hoteles,
         hoteles_ids: salida.hoteles.map((hotel: any) => hotel?.id), 
       }
 
@@ -962,10 +1005,11 @@ export default function ModulosPage() {
         // sal.ganancia = salida.ganancia;
       }
       
-      if(propio)
+      if(data.propio)
         sal.ganancia = salida.ganancia;
-      else
+      else{
         sal.comision = salida.comision;
+      }
       
 
       return sal;
@@ -988,7 +1032,7 @@ export default function ModulosPage() {
   }
 
   const handleConfirmActivo = (activo=true) => {
-    mutateDesactivar({ dataId: dataADesactivar!.id, activo, })
+    mutateDesactivar({ dataId: dataADesactivar!.id, activo, }) 
   }
 
   const handleVerDetalles = (data: Paquete) => {
@@ -1242,6 +1286,10 @@ useEffect(() => {
     console.log(fixedRoomTypeIdRef.current);
     console.log(selectedHotelsRef);
 
+
+    console.log(salidas)
+    console.log(hotelesIds)
+
     if(paqueteModalidad === 'fijo'){
       if(!fixedRoomTypeIdRef.current || !hotelesIds.length){ 
         handleShowToast('Debes seleccionar un hotel y una habitación', 'error');
@@ -1268,7 +1316,57 @@ useEffect(() => {
           return { habitacion_id, cupo };
         });
 
-      console.log(habitacionesCuposList); 
+    // Primero recolectar precios por hotel (precio_habitacion_por_hotel_${hotel_id})
+    const preciosCatalogoHoteles = Object.entries(dataForm)
+        .filter(([key, value]) => key.startsWith('precio_habitacion_por_hotel_') && value != null)
+        .map(([key, value]) => {
+          // 🔹 Guardamos el valor
+          const hotel_id = Number(key.replace('precio_habitacion_por_hotel_', ''));
+          const precio_catalogo = Number(value);
+
+          // 🔹 Eliminamos la propiedad del dataForm
+          delete dataForm[key];
+
+          return { hotel_id, precio_catalogo };
+      });
+
+    // Obtener IDs de hoteles que están en modo "hotel" (para excluir sus habitaciones)
+    const hotelesEnModoHotel = preciosCatalogoHoteles.map(p => p.hotel_id);
+
+    // Crear un Set de habitacion_ids que pertenecen a hoteles en modo "hotel"
+    const habitacionesExcluidas = new Set<number>();
+    dataHotelesList?.forEach((hotel: any) => {
+      if (hotelesEnModoHotel.includes(hotel.id)) {
+        hotel?.habitaciones?.forEach((habitacion: any) => {
+          habitacionesExcluidas.add(habitacion.id);
+        });
+      }
+    });
+
+    // Recolectar precios por habitación (precio_proveedor_*)
+    // SOLO de habitaciones que NO pertenecen a hoteles en modo "hotel"
+    let precioCatalogoDistribuidora = Object.entries(dataForm)
+        .filter(([key, value]) => key.startsWith('precio_proveedor_') && value != null)
+        .map(([key, value]) => {
+          // 🔹 Guardamos el valor
+          const habitacion_id = Number(key.replace('precio_proveedor_', ''));
+          const precio_catalogo = Number(value);
+
+          // 🔹 Eliminamos la propiedad del dataForm
+          delete dataForm[key];
+
+          return { habitacion_id, precio_catalogo };
+      })
+      .filter(item => !habitacionesExcluidas.has(item.habitacion_id)); // Excluir habitaciones de hoteles en modo "hotel"
+
+      console.log('Precios por habitación (solo modo room):', precioCatalogoDistribuidora);
+      console.log('Precios por hotel (modo hotel):', preciosCatalogoHoteles); 
+      console.log('Habitaciones excluidas:', Array.from(habitacionesExcluidas));
+ 
+
+        // precio_proveedor_ precio_habitacion_por_hotel
+
+      console.log(precioCatalogoDistribuidora); 
       console.log(dataForm); // 
 
 
@@ -1286,12 +1384,24 @@ useEffect(() => {
           habitacionesCuposList = [...rooms];
         }
 
+        if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current){
+          const rooms = precioCatalogoDistribuidora.filter((hab: any) => hab.habitacion_id.toString() === fixedRoomTypeIdRef.current.toString())
+          precioCatalogoDistribuidora = [...rooms];
+        }
+
+
+        console.log(precioCatalogoDistribuidora)
+        console.log(preciosCatalogoHoteles)
+ 
+
       // 🔹 Editando habitación existente
-      const salidaEdited: any = {...dataForm, 
+      const salidaEdited: any = {...dataForm,
         precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
         precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
-        hoteles_ids:hotelesIds, 
+        hoteles_ids:hotelesIds,
         cupos_habitaciones: habitacionesCuposList,
+        precios_catalogo: precioCatalogoDistribuidora,
+        precios_catalogo_hoteles: preciosCatalogoHoteles,
         currency: watch('moneda')};
 
       if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current)
@@ -1308,18 +1418,28 @@ useEffect(() => {
         delete salidaEdited.precio_final;
       }
 
+      console.log(salidas)
       console.log(salidaEdited)
+      console.log(editingSalidaId)
 
       setSalidas((prev) =>
-        prev.map((salida) =>
-          salida.id === editingSalidaId
-            ? { 
+        prev.map((salida) => {
+          console.log(salida)
+          console.log(editingSalidaId)
+          if(salida.id === editingSalidaId){
+            console.log('iguales');
+            return { 
               // ...salida,
               ...salidaEdited, 
-              senia: salidaEdited.senia 
-            } // Reemplazamos los valores con los del formulario
-            : salida
-        )
+              senia: salidaEdited.senia  
+            };
+          }
+            // Reemplazamos los valores con los del formulario
+          else{
+            console.log('no iguales');
+            return salida;
+          }
+        })
       );
     } else {
       console.log(nuevaSalida);
@@ -1331,6 +1451,8 @@ useEffect(() => {
         precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
         // precio_final: dataForm.precio_hasta,
         cupos_habitaciones: habitacionesCuposList,
+        precios_catalogo: precioCatalogoDistribuidora,
+        precios_catalogo_hoteles: preciosCatalogoHoteles,
         hoteles_ids: hotelesIds,
         currency: watch('moneda'), // o nuevaSalida.currency
       };
@@ -1447,6 +1569,25 @@ const handleSubmitClick = useCallback(async () => {
   /**
    * RESETEO DE LOS CAMPOS DEL FORMULARIO SALIDA
    */
+  // useEffect(() => {
+  //   if (!editingSalidaId || !isAddSalidaOpen) return;
+
+  //   const salida = dataAEditar?.salidas?.find(
+  //     (s: any) => s.id.toString() === editingSalidaId.toString()
+  //   );
+
+  //   if (!salida) return;
+
+  //   salida.cupos_habitaciones?.forEach((habitacion: any) => {
+  //     const fieldName = `cupo_habitacion_${habitacion.habitacion.id}`;
+  //     const value = habitacion.cupo ?? '';
+  //     setValueSalida(fieldName, value);
+  //   });
+  // }, [editingSalidaId, selectedHotels, isAddSalidaOpen, dataAEditar?.salidas, setValueSalida]);
+
+  /**
+   * RESETEO DE LOS CAMPOS DEL FORMULARIO SALIDA
+   */
   useEffect(() => {
     if (!editingSalidaId || !isAddSalidaOpen) return;
 
@@ -1461,7 +1602,20 @@ const handleSubmitClick = useCallback(async () => {
       const value = habitacion.cupo ?? '';
       setValueSalida(fieldName, value);
     });
-  }, [editingSalidaId, selectedHotels, isAddSalidaOpen, dataAEditar?.salidas, setValueSalida]);
+
+    salida.precios_catalogo?.forEach((habitacion: any) => {
+      const fieldName = `precio_proveedor_${habitacion.habitacion.id}`;
+      const value = habitacion.precio_catalogo ?? '';
+      setValueSalida(fieldName, value);
+    });
+
+    // Setear precios por hotel (precio_habitacion_por_hotel_)
+    salida.precios_catalogo_hoteles?.forEach((hotel: any) => {
+      const fieldName = `precio_habitacion_por_hotel_${hotel.hotel.id}`;
+      const value = hotel.precio_catalogo ?? '';
+      setValueSalida(fieldName, value);
+    });
+  }, [editingSalidaId, selectedHotels, isAddSalidaOpen, dataAEditar?.salidas, setValueSalida, propio]);
 
 
 
@@ -1473,7 +1627,7 @@ const handleSubmitClick = useCallback(async () => {
       ...salida,
       precio_desde_editable: salida.precio ?? salida.precio_actual,
       precio_hasta_editable: salida?.precio_final,
-      precio_hasta: salida?.precio_final ?? '', 
+      precio_hasta: salida?.precio_final ?? '',
       precio_desde: salida.precio ?? salida.precio_actual
     })
 
@@ -1482,7 +1636,7 @@ const handleSubmitClick = useCallback(async () => {
     setIsAddSalidaOpen(true);
 
     console.log(salidas);
-    console.log(salida.hoteles_ids) 
+    console.log(salida.hoteles_ids)
     // const hotelesIds = salida.hoteles_ids.map((hotel: any) => hotel.id);
     console.log(salida.hoteles_ids);
 
@@ -1490,12 +1644,52 @@ const handleSubmitClick = useCallback(async () => {
 
     console.log(salida);
     console.log(salida.moneda);
-    console.log(salida.currency); 
+    console.log(salida.currency);
     // Si usas react-hook-form u otro Controller, setea también el value del select/Controller
     setValue('moneda', salida?.moneda?.toString() ?? salida?.currency?.toString());
 
     if(paqueteModalidad === 'fijo')
       setFixedRoomTypeId(salida?.habitacion_fija ?? '');
+
+    // Determinar el modo de precio para cada hotel basado en los datos guardados
+    const nuevoModoPrecio: Record<string, PriceMode> = {};
+
+    salida.hoteles_ids.forEach((hotelId: number) => {
+      // Si el hotel aparece en precios_catalogo_hoteles, está en modo "hotel"
+      const precioHotel = salida.precios_catalogo_hoteles?.find((ph: any) => ph.hotel.id === hotelId);
+
+      if (precioHotel) {
+        nuevoModoPrecio[hotelId] = 'hotel';
+      } else {
+        // Si no está en precios_catalogo_hoteles, está en modo "habitacion"
+        nuevoModoPrecio[hotelId] = 'room';
+      }
+    });
+
+    setModoPrecio(nuevoModoPrecio);
+
+    // Si es distribuidor y hay hoteles en modo "hotel", setear automáticamente precio_proveedor_ con el valor de precio_habitacion_por_hotel_
+    if (!propio) {
+      // Esperar a que se actualice el estado antes de setear los precios
+      setTimeout(() => {
+        salida.hoteles_ids.forEach((hotelId: number) => {
+          const precioHotel = salida.precios_catalogo_hoteles?.find((ph: any) => ph.hotel.id === hotelId);
+
+          if (precioHotel) {
+            // Este hotel está en modo "hotel", obtener sus habitaciones
+            const hotel = dataHotelesList?.find((h: any) => h.id === hotelId);
+
+            if (hotel?.habitaciones) {
+              const precioHotelValor = precioHotel.precio_catalogo ?? '';
+
+              hotel.habitaciones.forEach((habitacion: any) => {
+                setValueSalida(`precio_proveedor_${habitacion.id}`, precioHotelValor);
+              });
+            }
+          }
+        });
+      }, 100);
+    }
   };
 
     // FUNCIONES DE SALIDAS
@@ -1610,6 +1804,24 @@ const handleSubmitClick = useCallback(async () => {
       setHotelPrices({
         [hotelId]: { single: 0, doble: 0, triple: 0 },
       });
+
+      // Inicializar modo de precio si no existe
+      if (!modoPrecio[hotelId]) {
+        setModoPrecio(prev => ({
+          ...prev,
+          [hotelId]: 'hotel'
+        }));
+      }
+
+      // Si modoPrecio de este hotel === 'hotel', asignar el valor de precio_habitacion_por_hotel_${hotelId} a los campos precio_proveedor_*
+      if (modoPrecio[hotelId] === 'hotel') {
+        const precioHotel = getValuesSalida(`precio_habitacion_por_hotel_${hotelId}`);
+        if (precioHotel && precioHotel > 0) {
+          hotel?.habitaciones?.forEach((habitacion: any) => {
+            setValueSalida(`precio_proveedor_${habitacion.id}`, precioHotel);
+          });
+        }
+      }
     } else {
       // Modo flexible: selección múltiple
       const newSelected = new Set(selectedHotels);
@@ -1643,6 +1855,24 @@ const handleSubmitClick = useCallback(async () => {
 
         newSelected.add(hotelId);
         newPrices[hotelId] = { single: 0, doble: 0, triple: 0 };
+
+        // Inicializar modo de precio si no existe
+        if (!modoPrecio[hotelId]) {
+          setModoPrecio(prev => ({
+            ...prev,
+            [hotelId]: 'hotel'
+          }));
+        }
+
+        // Si modoPrecio de este hotel === 'hotel', asignar el valor de precio_habitacion_por_hotel_${hotelId} a los campos precio_proveedor_*
+        if (modoPrecio[hotelId] === 'hotel') {
+          const precioHotel = getValuesSalida(`precio_habitacion_por_hotel_${hotelId}`);
+          if (precioHotel && precioHotel > 0) {
+            hotel?.habitaciones?.forEach((habitacion: any) => {
+              setValueSalida(`precio_proveedor_${habitacion.id}`, precioHotel);
+            });
+          }
+        }
       }
 
       setSelectedHotels(newSelected);
@@ -1669,6 +1899,32 @@ const handleSubmitClick = useCallback(async () => {
         </div>
       );
     };
+
+
+
+  const handleModeChange = (hotelId: string, newMode: PriceMode) => {
+    setModoPrecio(prev => ({
+      ...prev,
+      [hotelId]: newMode
+    }))
+
+    // Si se cambia a modo 'hotel', resetear los campos precio_proveedor_* de este hotel con el valor de precio_habitacion_por_hotel
+    if (newMode === 'hotel') {
+      const hotel = dataHotelesList?.find((h: any) => h.id === hotelId);
+      if (hotel) {
+        const precioHotel = getValuesSalida(`precio_habitacion_por_hotel_${hotelId}`);
+        if (precioHotel && precioHotel > 0) {
+          hotel?.habitaciones?.forEach((habitacion: any) => {
+            setValueSalida(`precio_proveedor_${habitacion.id}`, precioHotel);
+          });
+        }
+      }
+    }
+
+    // if (onPriceChange && price) {
+    //   onPriceChange(Number.parseFloat(price), newMode)
+    // }
+  }
 
 
   return (
@@ -2269,10 +2525,11 @@ const handleSubmitClick = useCallback(async () => {
                             }
                             {!isFetchingDestino && 
                               <>
-                                <div className="space-y-2">
+                                <div className="space-y-2 ">
                                   <GenericSearchSelect
                                     dataList={dataDestinoList}
                                     value={selectedDestinoID}
+                                    disabled={!!dataAEditar}
                                     onValueChange={setSelectedDestinoID}
                                     handleDataNoSeleccionada={handleDestinoNoSeleccionada}
                                     placeholder="Selecciona el destino..."
@@ -2309,11 +2566,11 @@ const handleSubmitClick = useCallback(async () => {
                                 disabled
                                 autoComplete="zona_geografica"
                                 placeholder="Se determinará según el destino seleccionado"
-                                className={`border-gray-300 focus:border-blue-500 focus:ring-blue-500
-                                    w-full px-3 py-4 border-2 border-dashed rounded-lg bg-gradient-to-r from-gray-50 to-teal-50 text-gray-900 cursor-not-allowed font-medium
-                                    !text-lg placeholder:text-lg`}
+                                className={` border-gray-300 focus:border-blue-500 focus:ring-blue-500
+                                    w-full px-3 py-4 border-2 border-dashed rounded-lg bg-gradient-to-r from-gray-50 to-teal-50 text-gray-900 font-medium
+                                    !text-lg placeholder:text-lg disabled:pointer-events-auto disabled:cursor-not-allowed`}
                                 {...register('zona_geografica', {
-                                // required: true, 
+                                // required: true,
                                 // validate: {blankSpace: (value) => !!value.trim()},
                                 // minLength: 3
                                 })}
@@ -2390,7 +2647,8 @@ const handleSubmitClick = useCallback(async () => {
                                 id="cantidad_pasajeros"
                                 autoComplete="cantidad_pasajeros"
                                 placeholder="Ingrese la cantidad de pasajeros"
-                                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                disabled={!!dataAEditar}
+                                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 disabled:pointer-events-auto disabled:cursor-not-allowed"
                                 {...register('cantidad_pasajeros', {
                                   required: {
                                     value: true,
@@ -3432,6 +3690,20 @@ const handleSubmitClick = useCallback(async () => {
                                                                   Selecciona los hoteles disponibles y configura los precios por tipo de habitación
                                                                 </p>
 
+                                                                {!propio && <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-1 border-amber-300 rounded-lg p-3 shadow-md">
+                                                                  <div className="flex items-start gap-4">
+                                                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 flex-shrink-0">
+                                                                      <Building2 className="h-5 w-5 text-amber-700" />
+                                                                    </div>
+                                                                    <div className="flex-1">
+                                                                      <h3 className="font-bold text-base text-amber-900 mb-1">Paquete de Distribuidora</h3>
+                                                                      <p className="text-sm text-amber-800 leading-relaxed mt-2">
+                                                                        El precio puede ser único por hotel o variar según la habitación.
+                                                                      </p>
+                                                                    </div>
+                                                                  </div>
+                                                                </div>}
+
                                                                 {paqueteModalidad === 'fijo' && 
                                                                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                                                                   <div className="flex items-center text-orange-800">
@@ -3452,29 +3724,135 @@ const handleSubmitClick = useCallback(async () => {
                                                                       {/* bg-primary/5 border-primary/30" : "bg-background */}
                                                                     <CardContent className="">
                                                                       <div className="space-y-4">
-                                                                        <div className="flex items-center space-x-3 ">
-                                                                          <Checkbox
-                                                                            
-                                                                            id={hotel.id}
-                                                                            checked={selectedHotels.has(hotel.id)}
-                                                                            onCheckedChange={() => handleHotelToggle(hotel.id, hotel)}
-                                                                          />
-                                                                          <div className="flex-1">
-                                                                            <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
-                                                                              {hotel.nombre}
-                                                                            </Label>
-                                                                            <div className="flex items-center gap-4 mt-1">
-                                                                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
-                                                                                {renderStars(hotel.estrellas)}
-                                                                              </Badge>
-                                                                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                                <MapPin className="w-3 h-3" />
-                                                                                {/* <span>{hotel.ubicacion}</span> */}
-                                                                                <span>{hotel.direccion}</span>
+                                                                        <div className="flex">
+                                                                          <div className="flex items-center space-x-3 ">
+                                                                            <Checkbox
+                                                                              
+                                                                              id={hotel.id}
+                                                                              checked={selectedHotels.has(hotel.id)}
+                                                                              onCheckedChange={() => handleHotelToggle(hotel.id, hotel)}
+                                                                            />
+                                                                            <div className="flex-1">
+                                                                              <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
+                                                                                {hotel.nombre}
+                                                                              </Label>
+                                                                              <div className="flex items-center gap-4 mt-1">
+                                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
+                                                                                  {renderStars(hotel.estrellas)}
+                                                                                </Badge>
+                                                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                                                  <MapPin className="w-3 h-3" />
+                                                                                  <span>{hotel.direccion}</span>
+                                                                                </div>
                                                                               </div>
                                                                             </div>
                                                                           </div>
+
+                                                                          {!propio &&
+                                                                            <div className="space-y-4 mt-4 px-3  flex items-center gap-4 w-fit">
+                                                                                <div className="">
+                                                                                  <Label className="text-sm font-medium text-gray-700">Modo de precio</Label>
+
+                                                                                  <div className="inline-flex rounded-xl bg-gray-100 p-1">
+                                                                                    <button
+                                                                                      type="button"
+                                                                                      onClick={(e) => {
+                                                                                        e.preventDefault()
+                                                                                        handleModeChange(hotel.id, "hotel")
+                                                                                      }}
+                                                                                      className={cn(
+                                                                                        "whitespace-nowrap flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-medium transition-all duration-200 cursor-pointer p-2",
+                                                                                        modoPrecio[hotel.id] === "hotel" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900",
+                                                                                      )}
+                                                                                    >
+                                                                                      <Building2 className="h-4 w-4" />
+                                                                                      Por Hotel
+                                                                                    </button>
+
+                                                                                    <button
+                                                                                      onClick={(e) => {
+                                                                                        e.preventDefault();
+                                                                                        handleModeChange(hotel.id, "room");
+                                                                                      }}
+                                                                                      className={cn(
+                                                                                        "whitespace-nowrap flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-all duration-200 cursor-pointer p-2",
+                                                                                        modoPrecio[hotel.id] === "room" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-600 hover:text-gray-900",
+                                                                                      )}
+                                                                                    >
+                                                                                      <DoorOpen className="h-4 w-4" />
+                                                                                      Por Habitación
+                                                                                    </button>
+                                                                                  </div>
+                                                                                </div>
+
+                                                                                {modoPrecio[hotel.id] === 'hotel' &&
+                                                                                  <div className="gap-4 pt-0">
+                                                                                      {/* PRECIO HABITACION POR HOTEL */}
+                                                                                      <div className="grid grid-cols-4 items-center gap-4">
+                                                                                        <Label htmlFor={`precio_habitacion_por_hotel_${hotel.id}`} className="text-gray-700 font-medium">
+                                                                                          Precio *
+                                                                                        </Label>
+
+                                                                                        <div className="col-span-3 flex gap-2">
+                                                                                          <Controller
+                                                                                            name={`precio_habitacion_por_hotel_${hotel.id}`}
+                                                                                            control={controlSalida}
+                                                                                            rules={{
+                                                                                              required: 'Debes completar este campo',
+                                                                                              validate: (value) => {
+                                                                                                if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                                                  return 'Valor inválido';
+                                                                                                }
+                                                                                                if (Number(value) <= 0) {
+                                                                                                  return 'El valor debe ser mayor que cero';
+                                                                                                }
+                                                                                                return true;
+                                                                                              },
+                                                                                            }}
+                                                                                            render={({ field, fieldState: { error } }) => (
+                                                                                              <div className="flex flex-col w-full">
+                                                                                                <NumericFormat
+                                                                                                  value={field.value ?? ''}
+                                                                                                  onValueChange={(values) => {
+                                                                                                    const val = values.floatValue ?? null;
+                                                                                                    if (val === null || val <= 0) {
+                                                                                                      field.onChange(null);
+                                                                                                    } else {
+                                                                                                      field.onChange(val);
+
+                                                                                                      // Actualizar solo los campos precio_proveedor_* de este hotel específico
+                                                                                                      if (modoPrecio[hotel.id] === 'hotel') {
+                                                                                                        hotel?.habitaciones?.forEach((habitacion: any) => {
+                                                                                                          setValueSalida(`precio_proveedor_${habitacion.id}`, val);
+                                                                                                        });
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }}
+                                                                                                  onBlur={field.onBlur}
+                                                                                                  thousandSeparator="."
+                                                                                                  decimalSeparator=","
+                                                                                                  allowNegative={false}          // ❌ no permite números negativos
+                                                                                                  decimalScale={0}               // ❌ sin decimales
+                                                                                                  allowLeadingZeros={false}      // evita números tipo 0001
+                                                                                                  placeholder="ej: 250"
+                                                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                                                    error
+                                                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                                                      : 'border-blue-200 focus:border-blue-500'
+                                                                                                  }`}
+                                                                                                />
+                                                                                              </div>
+                                                                                            )}
+                                                                                          />
+                                                                                        </div>
+                                                                                      </div>
+                                                                                  </div>
+                                                                                }
+                                                                            </div>
+                                                                          }
                                                                         </div>
+
+                                                                        
 
                                                                         {selectedHotels.has(hotel.id) && (
                                                                           <div className="pl-6 border-l-2 border-emerald-200">
@@ -3482,7 +3860,8 @@ const handleSubmitClick = useCallback(async () => {
                                                                               Precios por tipo de habitación:
                                                                             </h4>
 
-                                                                            <div className={`grid grid-cols-2 ${propio ? 'md:grid-cols-2': 'md:grid-cols-3'} gap-4`}>
+                                                                            {/* <div className={`grid grid-cols-2 ${propio ? 'md:grid-cols-2': 'md:grid-cols-3'} gap-4`}> */}
+                                                                            <div className={`grid grid-cols-2 md:grid-cols-2 gap-4`}>
                                                                               {hotel?.habitaciones?.length === 0 && 
                                                                                   <p className="text-sm font-medium text-red-400">
                                                                                     No tiene habitaciones asignadas
@@ -3554,6 +3933,70 @@ const handleSubmitClick = useCallback(async () => {
                                                                                                             ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
                                                                                                             : 'border-blue-200 focus:border-blue-500'
                                                                                                         }`}
+                                                                                                      />
+                                                                                                    </div>
+                                                                                                  )}
+                                                                                                />
+                                                                                              </div>
+                                                                                            </div>
+                                                                                          }
+                                                                                        {/* Cupo */}
+                                                                                      </div> 
+                                                                                    }
+
+                                                                                    {!propio &&
+                                                                                      <div className="flex flex-col md:flex-row md:items-center md:gap-8 w-full">
+                                                                                        {/* Precio por noche */}
+                                                                                        {/* <div className="relative right-[0.4rem] p-1 rounded-md w-full md:w-auto justify-between md:justify-start hidden">
+                                                                                          <DollarSign className="w-4 h-4 text-muted-foreground mr-1" />
+                                                                                          <span className="text-muted-foreground">{habitacion?.precio_noche ?? ''}</span>
+                                                                                        </div> */}
+
+                                                                                          {(paqueteModalidad === 'flexible' || paqueteModalidad === 'fijo' && fixedRoomTypeId === habitacion.id) && 
+                                                                                            <div className="grid grid-cols-1 sm:grid-cols-5 items-center gap-2 w-full md:w-auto">
+                                                                                              <Label htmlFor="cupo" className="text-righ col-span-2 p-1 rounded-md">
+                                                                                                Precio Final:
+                                                                                              </Label>
+                                                                                              <div className="col-span-3 sm:col-span-3">
+                                                                                                <Controller
+                                                                                                  name={`precio_proveedor_${habitacion.id}`}
+                                                                                                  control={controlSalida}
+                                                                                                  rules={{
+                                                                                                    required: modoPrecio[hotel.id] === 'hotel' ? false : 'Debes completar este campo',
+                                                                                                    validate: (value) => {
+                                                                                                      if (modoPrecio[hotel.id] === 'hotel') {
+                                                                                                        return true;
+                                                                                                      }
+                                                                                                      if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                                                                                        return 'Valor inválido';
+                                                                                                      }
+                                                                                                      if (Number(value) <= 0) {
+                                                                                                        return 'El valor debe ser mayor que cero';
+                                                                                                      }
+                                                                                                      return true;
+                                                                                                    },
+                                                                                                  }}
+                                                                                                  render={({ field, fieldState: { error } }) => (
+                                                                                                    <div className="flex flex-col w-full">
+                                                                                                      <NumericFormat
+                                                                                                        value={field.value ?? ''}
+                                                                                                        onValueChange={(values) => {
+                                                                                                          const val = values.floatValue ?? null;
+                                                                                                          field.onChange(val && val > 0 ? val : null);
+                                                                                                        }}
+                                                                                                        onBlur={field.onBlur}
+                                                                                                        thousandSeparator="."
+                                                                                                        decimalSeparator=","
+                                                                                                        allowNegative={false}
+                                                                                                        decimalScale={0}
+                                                                                                        allowLeadingZeros={false}
+                                                                                                        placeholder="ej: 200"
+                                                                                                        disabled={modoPrecio[hotel.id] === 'hotel'}
+                                                                                                        className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                                                                                          error
+                                                                                                            ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                                                                                            : 'border-blue-200 focus:border-blue-500'
+                                                                                                        } ${modoPrecio[hotel.id] === 'hotel' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                                                                       />
                                                                                                     </div>
                                                                                                   )}

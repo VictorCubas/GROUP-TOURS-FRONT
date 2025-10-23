@@ -1,4 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+export type PriceMode = "hotel" | "room"
+export interface TipoPaquete{
+  id: number;
+  nombre: string;
+}
+
 export interface TipoPaquete{
   id: number;
   nombre: string;
@@ -39,6 +46,12 @@ export interface Moneda{
   codigo: string;
 }
 
+
+export interface PrecioCatalogo{
+  id: number;
+  nombre: string;
+}
+
 export interface SalidaPaquete {
   id: number;
   fecha_salida: string;      // ISO date en formato 'YYYY-MM-DD'
@@ -55,6 +68,8 @@ export interface SalidaPaquete {
   ganancia?: any;
   comision?: any;
   cupos_habitaciones?: any[];
+  precios_catalogo?: any[];
+  precios_catalogo_hoteles?: any[];
 }
 
 export interface Paquete {

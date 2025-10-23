@@ -157,6 +157,7 @@ export interface Reserva {
   titular: Persona;
   paquete: Paquete;
   fecha_reserva: string; // ISO datetime string
+  precio_unitario: number;
   cantidad_pasajeros: number;
   monto_pagado: number;
   estado: "pendiente" | "confirmada" |  "finalizada" | "cancelada";
