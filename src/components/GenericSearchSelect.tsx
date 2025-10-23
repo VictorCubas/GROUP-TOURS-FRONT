@@ -105,8 +105,8 @@ export function GenericSearchSelect<T extends Record<string, any>>({
       <div
         role="button"
         tabIndex={0}
-        className={`w-full justify-between h-10 px-3 bg-white border rounded-md flex items-center cursor-pointer ${
-          disabled ? "opacity-50 cursor-not-allowed" : ""
+        className={`w-full justify-between h-10 px-3 bg-white border rounded-md flex items-center ${
+          disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         }`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
