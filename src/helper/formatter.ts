@@ -30,6 +30,17 @@ export const formatearFecha = (fechaString: string | Date, mostrarMinuto: boolea
   return fechaResult;
 };
 
+
+export const getHoraDesdeFecha = (fecha: string): string => {
+  const date = new Date(fecha);
+  const horas = date.getHours().toString().padStart(2, '0');
+  const minutos = date.getMinutes().toString().padStart(2, '0');
+  const segundos = date.getSeconds().toString().padStart(2, '0');
+  return `${horas}:${minutos}:${segundos}`;
+}
+
+
+
 export const formatearMoneda = new Intl.NumberFormat('es-PY', {
     style: 'currency',
     currency: 'PYG'

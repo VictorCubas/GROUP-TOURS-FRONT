@@ -77,7 +77,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import {formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular } from "@/components/utils/httpReservas"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular, descargarComprobantePDF } from "@/components/utils/httpReservas"
 
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -96,6 +96,9 @@ import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorCo
 import { NumericFormat } from "react-number-format"
 import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector";
 import { HotelHabitacionSelectorListMode } from "@/components/HotelHabitacionSelectorListMode";
+import ReservationConfirmModal from "@/components/ReservationConfirmModal"
+import PaymentReceiptModal from "@/components/PaymentReceiptModal"
+import {useGenerarYDescargarComprobante } from "@/components/hooks/useDescargarPDF"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -145,6 +148,8 @@ export default function ModulosPage() {
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
   const [tipoPaqueteSelected, setTipoPaqueteSelected] = useState<TipoPaquete>();
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [reservaRealizada, setReservaRealizada] = useState<any>(null);
   // const [distribuidoraSelected, setDistribuidoraSelected] = useState<Distribuidora>();
   const [pasajerosSearchTerm, setPasajerosSearchTerm] = useState("");
   const [selectedPasajeros, setSelectedPasajeros] = useState<number[]>([])
@@ -173,6 +178,8 @@ export default function ModulosPage() {
   const [montoAbonado, setMontoAbonado] = useState<number>(0)
   const [montoAbonadoPorPersona, setMontoAbonadoPorPersona] = useState<number>(0)
   const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [pendingReservationData, setPendingReservationData] = useState<any>(null);
   console.log(montoAbonadoPorPersona)
 
   // const [serviciosAdicionalesSearchTerm, setServiciosAdicionalesSearchTerm] = useState("");
@@ -283,6 +290,27 @@ export default function ModulosPage() {
       enabled: Boolean(selectedSalidaID),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
+
+
+  //FETCH PARA DESCARGAR EL COMPROBANTE EN FORMATO PDF
+  const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useGenerarYDescargarComprobante();
+
+  console.log(isPendingDescargaComprobante);
+
+  function handleDescargarPDF(id: number) {
+    generarYDescargar(id, {
+      onSuccess: () => {
+        console.log('✅ PDF descargado correctamente');
+        handleShowToast('Comprobante descargado correctamente', 'success');
+        setIsReceiptModalOpen(false);
+        setReservaRealizada(null);
+      },
+      onError: (error) => {
+        console.error('❌ Error al descargar el PDF', error);
+        handleShowToast('Error al descargar el comprobante', 'error');
+      },
+    });
+  }
 
     console.log(dataHotelesPorSalidaList)
 
@@ -502,16 +530,25 @@ export default function ModulosPage() {
 
   const {mutate, isPending: isPendingMutation} = useMutation({
     mutationFn: nuevoDataFetch,
-    onSuccess: () => {
-        handleShowToast('Se ha creado un nuevo reserva satisfactoriamente', 'success');
+    onSuccess: (data) => {
+        handleShowToast('Se ha creado una nueva reserva satisfactoriamente', 'success');
         reset({
           nombre: '',
           paquete: '',
         });
 
+        console.log(data)
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
+        
+        // Cerrar modal de confirmación
+        setIsConfirmModalOpen(false);
+        setPendingReservationData(null);
+        // Abrir modal de recibo de pago
+        setReservaRealizada(data)
+        setIsReceiptModalOpen(true);
+
         setSelectedPasajeros([])
         setSelectedPaqueteID("");
         setTipoPaqueteSelected(undefined);
@@ -783,7 +820,30 @@ export default function ModulosPage() {
   //   ],
   //   "observacion": "Grupo de amigos - viaje corporativo"
   // }
-      mutate(payload);
+
+      // Preparar datos para el modal de confirmación
+      const modalData = {
+        package: selectedPaqueteData?.nombre || '',
+        duration: `${getDaysBetweenDates(selectedSalidaData?.fecha_salida, selectedSalidaData?.fecha_regreso)} días`,
+        departureDate: formatearFecha(selectedSalidaData?.fecha_salida),
+        returnDate: formatearFecha(selectedSalidaData?.fecha_regreso),
+        numberOfPeople: selectedTipoHabitacionData?.capacidad || 0,
+        hotel: selectedHotelData?.nombre || '',
+        hotelRating: selectedHotelData?.estrellas || 0,
+        roomType: selectedTipoHabitacionData?.tipo || '',
+        servicesIncluded: selectedPasajerosData?.length || 0,
+        deposit: Number(montoAbonado ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
+        depositPerPerson: Number(montoAbonado ?? 0),
+        totalPrice: Number(precioFinalPorPersona ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
+        pricePerPerson: Number(precioFinalPorPersona ?? 0),
+        currency: selectedPaqueteData?.moneda || 'USD',
+      };
+
+      // Guardar payload y datos del modal
+      setPendingReservationData({ payload, modalData });
+
+      // Mostrar modal de confirmación
+      setIsConfirmModalOpen(true);
     };
 
 
@@ -817,21 +877,19 @@ export default function ModulosPage() {
       });
   };
 
+  // Manejar la confirmación del modal
+  const handleConfirmReservation = () => {
+    if (pendingReservationData?.payload) {
+      // Ejecutar la mutación para crear la reserva
+      mutate(pendingReservationData.payload);
+    }
+  };
 
-  // function formatearFechaDDMMYY(fecha: string): string {
-  //   // Verifica si la fecha contiene "/" y coincide con el patrón DD/MM/YYYY
-  //   const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-
-  //   if (regex.test(fecha)) {
-  //     const [dia, mes, anio] = fecha.split("/");
-  //     // Retorna en formato YYYY-MM-D (quitando ceros a la izquierda del día)
-  //     return `${anio}-${mes}-${parseInt(dia, 10)}`;
-  //   }
-
-  //   // Si no cumple el formato esperado, devuelve la misma fecha
-  //   return fecha;
-  // }
-  
+  // Manejar el cierre del modal
+  const handleCloseConfirmModal = () => {
+    setIsConfirmModalOpen(false);
+    // setPendingReservationData(null);
+  };
   
   useEffect(() => {
     if (dataAEditar) {
@@ -1094,62 +1152,10 @@ export default function ModulosPage() {
       if(!selectedSalidaData || !selectedTipoHabitacionData || !selectedHotelData)
         return;
 
-
-      console.log(selectedTipoHabitacionData)
-      console.log(selectedTipoHabitacionData?.precio_calculado?.precio_venta_final);
-
-    //   const precioNoche = Number(selectedTipoHabitacionData.precio_noche ?? 0);
-
-    // // Calcular la cantidad de noches usando las fechas de salida y regreso
-    //   const cantidadNoches = getDaysBetweenDates(
-    //     selectedSalidaData.fecha_salida,
-    //     selectedSalidaData.fecha_regreso
-    //   );
-
-
-    //   // Obtener la capacidad de la habitación (cantidad de personas)
-    //   // const capacidad = Number(selectedTipoHabitacionData.capacidad ?? 0);
-    //   console.log(selectedPaqueteData?.servicios)
-    //   const precioServicios = selectedPaqueteData?.propio ? calcularTotalServicios(selectedPaqueteData?.servicios ?? []) : 0;
-    //   console.log(selectedSalidaData);
-
-    //   console.log(cantidadNoches);
-    //   console.log(precioNoche);
-    //   console.log(precioServicios) 
-
-    //   const costoBase = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
-
-    //   console.log(costoBase)
-
-    //   const factorGanancia = selectedSalidaData?.ganancia ?? selectedSalidaData?.comision ?? 0;
-
-    //   console.log(factorGanancia);
-
-    //   // Calcular el precio final: precio_noche * cantidad_noches * capacidad
-    //   const precioFinalPorPersona = costoBase * (1 + Number(factorGanancia / 100));
-
-    //   // console.log(selectedPaqueteData.servicios)
-
-    //   console.log(precioFinalPorPersona);
-
       setPrecioFinalPorPersona(selectedTipoHabitacionData?.precio_calculado?.precio_venta_final ?? 0)
     }, [selectedSalidaData, selectedTipoHabitacionData, selectedHotelData, selectedPaqueteData?.servicios]);
 
-
-  // const calcularTotalServicios = (servicios: any[]) => {
-  //   return servicios.reduce((total, servicio) => {
-  //     let precioFinalPorPersona = 0;
-
-  //     if(servicio.precio)
-  //       precioFinalPorPersona = servicio.precio;
-  //     else
-  //       precioFinalPorPersona = servicio.precio_base;
-
-  //     return total + precioFinalPorPersona;
-  //   }, 0);
-  // }
     
-
   const senia = watch('senia');
   console.log(senia)
 
@@ -1191,6 +1197,31 @@ export default function ModulosPage() {
   //     return updated;
   //   });
   // };
+
+
+
+  // const handleCloseConfirm = () => {
+  //   console.log('Modal de confirmación cerrado');
+  //   setIsConfirmModalOpen(false);
+  // };
+
+  const handleCloseReceipt = () => {
+    console.log('Modal de comprobante cerrado');
+    setIsReceiptModalOpen(false);
+    setReservaRealizada(null);
+  };
+
+  const handleBackToConfirm = () => {
+     
+  // disabled={isPending}
+  
+    // setIsReceiptModalOpen(false);
+    // setIsConfirmModalOpen(true);
+  }
+
+  // const handleDescargar = () => {
+  //    handleDescargarPDF(reservaRealizada?.id)
+  // }
 
 
   return (
@@ -1708,7 +1739,7 @@ export default function ModulosPage() {
                                     `}
                                   >
                                     <List className="w-4 h-4" />
-                                    Lista Compelta
+                                    Lista Completa
                                   </button>
 
                                   <button
@@ -3437,7 +3468,26 @@ export default function ModulosPage() {
             </TabsContent>
           </Tabs>
       </div>
-    </>
 
+      {/* Modal de Confirmación de Reserva */}
+      {pendingReservationData?.modalData && (
+        <ReservationConfirmModal
+          isOpen={isConfirmModalOpen}
+          onClose={handleCloseConfirmModal}
+          onConfirm={handleConfirmReservation}
+          reservationData={pendingReservationData.modalData}
+          // reservationData={sampleReservation}
+        />
+      )}
+
+    {isReceiptModalOpen && <PaymentReceiptModal
+      isOpen={isReceiptModalOpen}
+      onClose={handleCloseReceipt}
+      onBack={handleBackToConfirm}
+      receiptData={reservaRealizada}
+      handleDescargarPDF={() => handleDescargarPDF(reservaRealizada?.id)}
+      />}
+
+    </>
   )
 }
