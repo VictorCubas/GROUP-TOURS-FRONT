@@ -41,7 +41,6 @@ import {
   CheckCircle,
   CheckCircle2,
   Circle,
-  Pencil,
   LayoutGrid,
   List,
   Building2,
@@ -93,9 +92,13 @@ import { fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
 import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
-import { NumericFormat } from "react-number-format"
+// import { NumericFormat } from "react-number-format"
 import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector";
 import { HotelHabitacionSelectorListMode } from "@/components/HotelHabitacionSelectorListMode";
+import ReservationConfirmModal from "@/components/ReservationConfirmModal"
+import PaymentReceiptModal from "@/components/PaymentReceiptModal"
+import { useDescargarComprobante, usePagarSenia } from "@/components/hooks/useDescargarPDF"
+import PagoSeniaModal from "@/components/PagoSeniaModal"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -145,6 +148,9 @@ export default function ModulosPage() {
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
   const [tipoPaqueteSelected, setTipoPaqueteSelected] = useState<TipoPaquete>();
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [reservaRealizadaResponse, setReservaRealizadaResponse] = useState<any>(null);
+  const [pagoSeniaRealizadaResponse, setPagoSeniaRealizadaResponse] = useState<any>(null);
   // const [distribuidoraSelected, setDistribuidoraSelected] = useState<Distribuidora>();
   const [pasajerosSearchTerm, setPasajerosSearchTerm] = useState("");
   const [selectedPasajeros, setSelectedPasajeros] = useState<number[]>([])
@@ -170,10 +176,13 @@ export default function ModulosPage() {
   const [habitacionesResumenPrecios, setHabitacionesResumenPrecios] = useState<any[]>([]);
   const [precioFinalPorPersona, setPrecioFinalPorPersona] = useState<number>(0);
   const [isEditingSena, setIsEditingSena] = useState(false)
-  const [montoAbonado, setMontoAbonado] = useState<number>(0)
-  const [montoAbonadoPorPersona, setMontoAbonadoPorPersona] = useState<number>(0)
+  const [montoInicialAAbonar, setMontoInicialAAbonar] = useState<number>(0)
+  const [seniaPorPersona, setSeniaPorPersona] = useState<number>(0)
   const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
-  console.log(montoAbonadoPorPersona)
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isSenialModalOpen, setIsSenialModalOpen] = useState(false);
+  const [payloadReservationData, setPayloadReservationData] = useState<any>(null);
+  console.log(seniaPorPersona)
 
   // const [serviciosAdicionalesSearchTerm, setServiciosAdicionalesSearchTerm] = useState("");
   // const [selectedServiciosAdicionales, setSelectedServiciosAdicionales] = useState<number[]>([])
@@ -194,12 +203,12 @@ export default function ModulosPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {control, watch, handleSubmit, setValue, getValues, clearErrors, reset, trigger} = 
+  const {control, watch, handleSubmit, setValue, clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
               }
-            });
+        });
   // DATOS DEL FORMULARIO 
   // console.log(tipoReservaFilterList)
 
@@ -283,6 +292,63 @@ export default function ModulosPage() {
       enabled: Boolean(selectedSalidaID),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
+
+
+  //FETCH PARA DESCARGAR EL COMPROBANTE EN FORMATO PDF
+  const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useDescargarComprobante();
+  //FETCH PARA REALIZAR EL PAGO DE LA SEÑA
+  const { mutate: fetchPagarSenia, isPending: isPendingPagarSenia } = usePagarSenia();
+
+  console.log(isPendingDescargaComprobante);
+
+  function handleDescargarPDF(id: number) {
+    generarYDescargar(id, {
+      onSuccess: () => {
+        console.log('✅ PDF descargado correctamente');
+        handleShowToast('Comprobante descargado correctamente', 'success');
+        // setIsReceiptModalOpen(false);
+        // setReservaRealizadaResponse(null);
+      },
+      onError: (error) => {
+        console.error('❌ Error al descargar el PDF', error);
+        handleShowToast('Error al descargar el comprobante', 'error');
+      },
+    });
+  }
+
+  const handlePagarSenia = (id: number, payload: any) => {
+    console.log('📦 Payload enviado al backend:', JSON.stringify(payload, null, 2));
+
+    fetchPagarSenia(
+      { reservaId: id, payload },
+      {
+        onSuccess: (data) => {
+          console.log('✅ Se ha realizado la seña correctamente');
+          console.log('📄 Respuesta del servidor:', data);
+          handleShowToast('Se ha pagado la seña correctamente', 'success');
+
+          // Cerrar modal y limpiar estado
+          setIsSenialModalOpen(false);
+          // setReservaRealizadaResponse(null);
+          setIsReceiptModalOpen(true);
+          setPagoSeniaRealizadaResponse(data); 
+
+          // Refrescar la lista de reservas para ver el estado actualizado
+          queryClient.invalidateQueries({ queryKey: ['reservas'] });
+        },
+        onError: (error: any) => {
+          console.error('❌ Error al realizar la seña:', error);
+          console.error('📋 Detalles del error:', error.response?.data);
+
+          const errorMessage = error.response?.data?.message
+            || error.response?.data?.error
+            || 'Error al generar la seña';
+
+          handleShowToast(errorMessage, 'error');
+        },
+      }
+    );
+  }
 
     console.log(dataHotelesPorSalidaList)
 
@@ -500,18 +566,28 @@ export default function ModulosPage() {
   }
 
 
-  const {mutate, isPending: isPendingMutation} = useMutation({
+  const {mutate, isPending: isPendingReservation} = useMutation({
     mutationFn: nuevoDataFetch,
-    onSuccess: () => {
-        handleShowToast('Se ha creado un nuevo reserva satisfactoriamente', 'success');
+    onSuccess: (data) => {
+        handleShowToast('Se ha creado una nueva reserva satisfactoriamente', 'success');
         reset({
           nombre: '',
           paquete: '',
         });
 
+        console.log(data)
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
+        
+        // Cerrar modal de confirmación
+        setIsConfirmModalOpen(false);
+        setPayloadReservationData(null);
+        // Abrir modal de recibo de pago
+        setReservaRealizadaResponse(data)
+        //setIsReceiptModalOpen(true);
+        setIsSenialModalOpen(true)
+
         setSelectedPasajeros([])
         setSelectedPaqueteID("");
         setTipoPaqueteSelected(undefined);
@@ -519,7 +595,7 @@ export default function ModulosPage() {
         handlePaqueteNoSeleccionada(undefined);
         setSelectedTitularData(undefined)
 
-        handleCancel(); 
+        // handleCancel(); 
         
         queryClient.invalidateQueries({
           queryKey: ['reservas'],
@@ -655,14 +731,28 @@ export default function ModulosPage() {
         handleDataNoPaqueteSeleccionada(undefined)
         setNewDataPersonaList([]);
         setNewDataPaqueteList([])
+        setSelectedPasajerosData([]);
+        setSelectedPasajeros([]);
         setImagePreview(placeholderViaje);
         setSelectedSalidaID("");
         setSelectedHotelId('');
         setSelectedHotelData(undefined);
         setSelectedTipoHabitacionID('');
         setIsEditingSena(false);
-        setMontoAbonado(0);
-        setMontoAbonadoPorPersona(0);
+        setMontoInicialAAbonar(0);
+        setSeniaPorPersona(0);
+
+        setIsReceiptModalOpen(false);
+        setReservaRealizadaResponse(null);
+
+
+        setIsConfirmModalOpen(false);
+        setPayloadReservationData(null);
+        // Abrir modal de recibo de pago
+        setReservaRealizadaResponse(null)
+        //setIsReceiptModalOpen(true);
+        setIsSenialModalOpen(false)
+        // setDistribuidoraSelected(undefined);
         // setSelectedServiciosAdicionales([]);
         // setServiciosAdicionalesSearchTerm("");
         reset({
@@ -715,6 +805,7 @@ export default function ModulosPage() {
         salida_id: selectedSalidaID,
         habitacion_id: selectedTipoHabitacionID,
         persona: selectedPersonaID,
+        titular_como_pasajero: dataForm.titularComoPasajero,
         activo: true,
       };
 
@@ -724,18 +815,20 @@ export default function ModulosPage() {
       // paymentType === 'total'
       //                                     ? Number(precioFinalPorPersona ?? 0) *
       //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
-      //                                     : Number(montoAbonado ?? 0) *
+      //                                     : Number(montoInicialAAbonar ?? 0) *
       //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
 
 
-      if(paymentType === 'total'){
-        payload.monto_pagado = Number(precioFinalPorPersona ?? 0) *
-                                            Number(selectedTipoHabitacionData?.capacidad ?? 0);
-      }
-      else{
-        payload.monto_pagado = Number(montoAbonado ?? 0) *
-                                            Number(selectedTipoHabitacionData?.capacidad ?? 0)
-      }
+      // if(paymentType === 'total'){
+      //   payload.monto_pagado = Number(precioFinalPorPersona ?? 0) *
+      //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0);
+      // }
+      // else{
+      //   payload.monto_pagado = Number(montoInicialAAbonar ?? 0) *
+      //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
+      // }
+
+      payload.monto_pagado = 0;
 
       // Eliminar campos que no se envían
       delete payload.numero;
@@ -783,7 +876,30 @@ export default function ModulosPage() {
   //   ],
   //   "observacion": "Grupo de amigos - viaje corporativo"
   // }
-      mutate(payload);
+
+      // Preparar datos para el modal de confirmación
+      const modalData = {
+        package: selectedPaqueteData?.nombre || '',
+        duration: `${getDaysBetweenDates(selectedSalidaData?.fecha_salida, selectedSalidaData?.fecha_regreso)} días`,
+        departureDate: formatearFecha(selectedSalidaData?.fecha_salida),
+        returnDate: formatearFecha(selectedSalidaData?.fecha_regreso),
+        numberOfPeople: selectedTipoHabitacionData?.capacidad || 0,
+        hotel: selectedHotelData?.nombre || '',
+        hotelRating: selectedHotelData?.estrellas || 0,
+        roomType: selectedTipoHabitacionData?.tipo || '',
+        servicesIncluded: selectedPasajerosData?.length || 0,
+        deposit: Number(montoInicialAAbonar ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
+        depositPerPerson: Number(montoInicialAAbonar ?? 0),
+        totalPrice: Number(precioFinalPorPersona ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
+        pricePerPerson: Number(precioFinalPorPersona ?? 0),
+        currency: selectedPaqueteData?.moneda || 'USD',
+      };
+
+      // Guardar payload y datos del modal
+      setPayloadReservationData({ payload, modalData });
+
+      // Mostrar modal de confirmación
+      setIsConfirmModalOpen(true);
     };
 
 
@@ -817,21 +933,37 @@ export default function ModulosPage() {
       });
   };
 
+  // Manejar la confirmación del modal
+  const handleConfirmReservation = () => {
+    if (payloadReservationData?.payload) {
+      // Ejecutar la mutación para crear la reserva
 
-  // function formatearFechaDDMMYY(fecha: string): string {
-  //   // Verifica si la fecha contiene "/" y coincide con el patrón DD/MM/YYYY
-  //   const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+      console.log(payloadReservationData?.payload)
+      mutate(payloadReservationData.payload);
+    }
+  };
 
-  //   if (regex.test(fecha)) {
-  //     const [dia, mes, anio] = fecha.split("/");
-  //     // Retorna en formato YYYY-MM-D (quitando ceros a la izquierda del día)
-  //     return `${anio}-${mes}-${parseInt(dia, 10)}`;
-  //   }
+  // Manejar la confirmación del modal
+  const handleConfirmSeniaPago = (payload: any) => {
+    if (payload) {
+      console.log(reservaRealizadaResponse)
+      // console.log(pagoSeniaRealizadaResponse)
+      console.log(payload)
+      handlePagarSenia(reservaRealizadaResponse.id, payload)
+    }
+  };
 
-  //   // Si no cumple el formato esperado, devuelve la misma fecha
-  //   return fecha;
-  // }
-  
+  // Manejar el cierre del modal
+  const handleCloseConfirmModal = () => {
+    setIsConfirmModalOpen(false);
+    // setPayloadReservationData(null);
+  };
+
+  const handleCloseSeniaModal = () => {
+    setIsSenialModalOpen(false);
+    handleCancel()
+    // setPayloadReservationData(null);
+  };
   
   useEffect(() => {
     if (dataAEditar) {
@@ -952,8 +1084,8 @@ export default function ModulosPage() {
       setSelectedPersonaID('')
       handleDataNoPersonaSeleccionada(undefined)
       setIsEditingSena(false);
-      setMontoAbonado(0);
-      setMontoAbonadoPorPersona(0);
+      setMontoInicialAAbonar(0);
+      setSeniaPorPersona(0);
       setValue('senia', '');
     }
     
@@ -983,8 +1115,8 @@ export default function ModulosPage() {
       setSelectedPersonaID('')
       handleDataNoPersonaSeleccionada(undefined)
       setIsEditingSena(false);
-      setMontoAbonado(0);
-      setMontoAbonadoPorPersona(0)
+      setMontoInicialAAbonar(0);
+      setSeniaPorPersona(0)
       setValue('senia', '');
     }
     
@@ -999,15 +1131,15 @@ export default function ModulosPage() {
       setPasajerosSearchTerm("");;
       setSelectedPasajerosData([])
       setIsEditingSena(false);
-      // setMontoAbonado(0);
+      // setMontoInicialAAbonar(0);
 
       console.log(selectedSalidaData?.senia)
       console.log(selectedTipoHabitacionData?.capacidad)
 
       const senia = Number(selectedSalidaData?.senia ?? 0)
       console.log(senia);
-      setMontoAbonado(senia);
-      setMontoAbonadoPorPersona(senia);
+      setMontoInicialAAbonar(senia);
+      setSeniaPorPersona(senia);
 
       console.log(senia)
     }
@@ -1088,68 +1220,18 @@ export default function ModulosPage() {
       if (paymentType !== type) setPaymentType(type);
     }, [paymentType]);
 
+    console.log(handlePaymentTypeChange);
+
 
     useEffect(() => {
 
       if(!selectedSalidaData || !selectedTipoHabitacionData || !selectedHotelData)
         return;
 
-
-      console.log(selectedTipoHabitacionData)
-      console.log(selectedTipoHabitacionData?.precio_calculado?.precio_venta_final);
-
-    //   const precioNoche = Number(selectedTipoHabitacionData.precio_noche ?? 0);
-
-    // // Calcular la cantidad de noches usando las fechas de salida y regreso
-    //   const cantidadNoches = getDaysBetweenDates(
-    //     selectedSalidaData.fecha_salida,
-    //     selectedSalidaData.fecha_regreso
-    //   );
-
-
-    //   // Obtener la capacidad de la habitación (cantidad de personas)
-    //   // const capacidad = Number(selectedTipoHabitacionData.capacidad ?? 0);
-    //   console.log(selectedPaqueteData?.servicios)
-    //   const precioServicios = selectedPaqueteData?.propio ? calcularTotalServicios(selectedPaqueteData?.servicios ?? []) : 0;
-    //   console.log(selectedSalidaData);
-
-    //   console.log(cantidadNoches);
-    //   console.log(precioNoche);
-    //   console.log(precioServicios) 
-
-    //   const costoBase = Number(precioNoche) * Number(cantidadNoches) + Number(precioServicios);
-
-    //   console.log(costoBase)
-
-    //   const factorGanancia = selectedSalidaData?.ganancia ?? selectedSalidaData?.comision ?? 0;
-
-    //   console.log(factorGanancia);
-
-    //   // Calcular el precio final: precio_noche * cantidad_noches * capacidad
-    //   const precioFinalPorPersona = costoBase * (1 + Number(factorGanancia / 100));
-
-    //   // console.log(selectedPaqueteData.servicios)
-
-    //   console.log(precioFinalPorPersona);
-
       setPrecioFinalPorPersona(selectedTipoHabitacionData?.precio_calculado?.precio_venta_final ?? 0)
     }, [selectedSalidaData, selectedTipoHabitacionData, selectedHotelData, selectedPaqueteData?.servicios]);
 
-
-  // const calcularTotalServicios = (servicios: any[]) => {
-  //   return servicios.reduce((total, servicio) => {
-  //     let precioFinalPorPersona = 0;
-
-  //     if(servicio.precio)
-  //       precioFinalPorPersona = servicio.precio;
-  //     else
-  //       precioFinalPorPersona = servicio.precio_base;
-
-  //     return total + precioFinalPorPersona;
-  //   }, 0);
-  // }
     
-
   const senia = watch('senia');
   console.log(senia)
 
@@ -1191,6 +1273,170 @@ export default function ModulosPage() {
   //     return updated;
   //   });
   // };
+
+
+
+  // const handleCloseConfirm = () => {
+  //   console.log('Modal de confirmación cerrado');
+  //   setIsConfirmModalOpen(false);
+  // };
+
+  const handleCloseReceipt = () => {
+    console.log('Modal de comprobante cerrado');
+    handleCancel();
+  };
+
+
+  // const handleDescargar = () => {
+  //    handleDescargarPDF(reservaRealizadaResponse?.id)
+  // }
+
+  const sampleReservation =  {
+    "id": 15,
+    "codigo": "RSV-2025-0015",
+    "observacion": "Reserva para grupo familiar",
+    "titular": {
+      "id": 8,
+      "nombre": "María",
+      "apellido": "González",
+      "documento": "4567890",
+      "email": "maria.gonzalez@example.com",
+      "telefono": "0981234567"
+    },
+    "paquete": {
+      "id": 3,
+      "nombre": "Tour a Encarnación - 3 días",
+      "descripcion": "Paquete turístico completo a la ciudad de Encarnación",
+      "duracion_dias": 3,
+      "duracion_noches": 2,
+      "tipo_transporte": "terrestre",
+      "incluye_almuerzo": true,
+      "incluye_cena": true,
+      "imagen": "/media/paquetes/encarnacion.jpg",
+      "tipo_paquete": {
+        "id": 1,
+        "nombre": "Nacional"
+      },
+      "destino": {
+        "id": 5,
+        "ciudad": {
+          "id": 10,
+          "nombre": "Encarnación"
+        }
+      },
+      "moneda": {
+        "id": 1,
+        "nombre": "Guaraníes",
+        "codigo": "PYG",
+        "simbolo": "₲"
+      },
+      "modalidad": "flexible",
+      "es_propio": true,
+      "activo": true
+    },
+    "salida": {
+      "id": 12,
+      "fecha_salida": "2025-11-15T08:00:00Z",
+      "fecha_regreso": "2025-11-17T18:00:00Z",
+      "precio_actual": 1500000.00,
+      "precio_final": 2000000.00,
+      "senia": 500000.00
+    },
+    "hotel": {
+      "id": 7,
+      "nombre": "Hotel Plaza Encarnación",
+      "direccion": "Av. Mariscal López 1234",
+      "estrellas": 4
+    },
+    "habitacion": {
+      "id": 22,
+      "numero": "305",
+      "tipo": "doble",
+      "capacidad": 2,
+      "precio_noche": 350000.00,
+      "hotel_nombre": "Hotel Plaza Encarnación"
+    },
+    "fecha_reserva": "2025-10-25T14:30:45.123456Z",
+    "cantidad_pasajeros": 3,
+    "precio_unitario": 1750000.00,
+    "precio_base_paquete": 1750000.00,
+    "costo_total_estimado": 5250000.00,
+    "seña_total": 1500000.00,
+    "monto_pagado": 0.00,
+    "estado": "pendiente",
+    "datos_completos": false,
+    "estado_display": "Pendiente",
+    "pasajeros": [
+      {
+        "id": 45,
+        "persona": {
+          "id": 8,
+          "nombre": "María",
+          "apellido": "González",
+          "documento": "4567890",
+          "email": "maria.gonzalez@example.com",
+          "telefono": "0981234567"
+        },
+        "es_titular": true,
+        "precio_asignado": 1750000.00,
+        "monto_pagado": 0.00,
+        "saldo_pendiente": 1750000.00,
+        "porcentaje_pagado": 0.00,
+        "seña_requerida": 500000.00,
+        "tiene_sena_pagada": false,
+        "esta_totalmente_pagado": false,
+        "ticket_numero": null,
+        "voucher_codigo": null,
+        "fecha_registro": "2025-10-25T14:30:45.234567Z"
+      },
+      {
+        "id": 46,
+        "persona": {
+          "id": 12,
+          "nombre": "Juan",
+          "apellido": "González",
+          "documento": "5678901",
+          "email": "juan.gonzalez@example.com",
+          "telefono": "0987654321"
+        },
+        "es_titular": false,
+        "precio_asignado": 1750000.00,
+        "monto_pagado": 0.00,
+        "saldo_pendiente": 1750000.00,
+        "porcentaje_pagado": 0.00,
+        "seña_requerida": 500000.00,
+        "tiene_sena_pagada": false,
+        "esta_totalmente_pagado": false,
+        "ticket_numero": null,
+        "voucher_codigo": null,
+        "fecha_registro": "2025-10-25T14:30:45.345678Z"
+      },
+      {
+        "id": 47,
+        "persona": {
+          "id": 15,
+          "nombre": "Ana",
+          "apellido": "González",
+          "documento": "6789012",
+          "email": "ana.gonzalez@example.com",
+          "telefono": "0976543210"
+        },
+        "es_titular": false,
+        "precio_asignado": 1750000.00,
+        "monto_pagado": 0.00,
+        "saldo_pendiente": 1750000.00,
+        "porcentaje_pagado": 0.00,
+        "seña_requerida": 500000.00,
+        "tiene_sena_pagada": false,
+        "esta_totalmente_pagado": false,
+        "ticket_numero": null,
+        "voucher_codigo": null,
+        "fecha_registro": "2025-10-25T14:30:45.456789Z"
+      }
+    ],
+    "activo": true,
+    "fecha_modificacion": "2025-10-25T14:30:45.567890Z"
+  }
 
 
   return (
@@ -1708,7 +1954,7 @@ export default function ModulosPage() {
                                     `}
                                   >
                                     <List className="w-4 h-4" />
-                                    Lista Compelta
+                                    Lista Completa
                                   </button>
 
                                   <button
@@ -2532,10 +2778,10 @@ export default function ModulosPage() {
                             <div className="flex justify-between items-center">
                               {/* Título y selector */}
                               <div className="flex items-center gap-2">
-                                <span className="text-lg font-bold text-gray-900">Seña:</span>
+                                <span className="text-lg font-bold text-gray-900">Seña Mínima:</span>
 
                                 {/* Selector de tipo de pago */}
-                                <div className="flex rounded-lg border border-gray-300 bg-white overflow-hidden">
+                                {/* <div className="flex rounded-lg border border-gray-300 bg-white overflow-hidden">
                                   {['minimum', 'total'].map((type: any) => (
                                     <button
                                       key={type}
@@ -2552,7 +2798,7 @@ export default function ModulosPage() {
                                       {type === 'minimum' ? 'Mínima' : 'Total'}
                                     </button>
                                   ))}
-                                </div>
+                                </div> */}
                               </div>
 
                               {/* Bloque de monto */}
@@ -2560,116 +2806,7 @@ export default function ModulosPage() {
                                 {/* Mostrar input editable solo si: no es TOTAL y está en modo edición */}
                                 {paymentType !== 'total' && isEditingSena ? (
                                   <>
-                                    <Controller
-                                      name="senia"
-                                      control={control}
-                                      rules={{
-                                        validate: (value) => {
-                                          // ✅ Acepta vacío o 0 sin marcar error
-                                          if (value === '' || value === null || value === undefined) return true;
-                                          if (isNaN(Number(value))) return false;
-                                          if (Number(value) < 0) return false;
-
-                                          // ✅ Validar que no sea menor a la seña mínima * capacidad de habitación
-                                          const seniaMinima = Number(selectedSalidaData?.senia ?? 0);
-                                          const capacidad = Number(selectedTipoHabitacionData?.capacidad ?? 1);
-                                          const montoMinimo = seniaMinima * capacidad;
-
-                                          if (Number(value) < montoMinimo) {
-                                            return false;
-                                          }
-
-                                          return true;
-                                        },
-                                      }}
-                                      render={({ field, fieldState: { error } }) => (
-                                        <div className="flex-1 relative">
-                                          <NumericFormat
-                                            value={field.value ?? ''}
-                                            onValueChange={(values) => field.onChange(values.floatValue ?? '')}
-                                            onBlur={field.onBlur}
-                                            thousandSeparator="."
-                                            decimalSeparator=","
-                                            allowNegative={false}
-                                            decimalScale={0}
-                                            allowLeadingZeros={false}
-                                            placeholder="ej: 250"
-                                            className={`w-full p-1 pl-2.5 rounded-md border-2 transition-all duration-150 ${
-                                              error
-                                                ? '!border-red-400 text-red-500 font-bold'
-                                                : 'border-blue-200 focus:border-blue-600 text-blue-600 font-bold'
-                                            } text-xl leading-tight`}
-                                          />
-                                          {error && (
-                                            <div className="absolute -bottom-5 -left-3 text-xs text-red-500 font-medium whitespace-nowrap">
-                                              Mínimo: ${formatearSeparadorMiles.format(Number(selectedSalidaData?.senia ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 1))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    />
-
-                                    <Button
-                                      variant="default"
-                                      size="icon"
-                                      type="button"
-                                      onClick={async (e) => {
-                                        e.preventDefault();
-
-                                        // ✅ Validar el campo antes de guardar
-                                        const isValid = await trigger('senia');
-                                        console.log(isValid)
-
-                                        if (!isValid) {
-                                          // Si no es válido, no hacer nada
-                                          return;
-                                        }
-
-                                        const nuevaSeña = getValues('senia');
-
-                                        // ✅ Permite guardar 0 o vacío
-                                        if (nuevaSeña === '' || nuevaSeña === null || nuevaSeña === undefined) {
-                                          setMontoAbonado(0);
-                                        } else {
-                                          const valorNumerico = Number(nuevaSeña);
-                                          const seniaPorPersona =
-                                            valorNumerico / Number(selectedTipoHabitacionData?.capacidad ?? 1);
-                                          setMontoAbonado(seniaPorPersona);
-                                        }
-
-                                        setIsEditingSena(false);
-                                        setValue('senia', '');
-                                      }}
-                                      className="h-8 w-8 bg-green-600 hover:bg-green-700 cursor-pointer"
-                                    >
-                                      <Check className="h-4 w-4" />
-                                    </Button>
-
-                                    <Button
-                                      variant="default"
-                                      size="icon"
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-
-                                        // ✅ Resetear al valor inicial (seña mínima)
-                                        const seniaInicial = Number(selectedSalidaData?.senia ?? 0);
-                                        setMontoAbonado(seniaInicial);
-                                        setMontoAbonadoPorPersona(seniaInicial);
-
-                                        // ✅ Limpiar el campo del formulario
-                                        setValue('senia', '');
-
-                                        // ✅ Limpiar errores de validación
-                                        clearErrors('senia');
-
-                                        // ✅ Salir del modo edición
-                                        setIsEditingSena(false);
-                                      }}
-                                      className="h-8 w-8 bg-gray-100 hover:bg-gray-200 cursor-pointer text-gray-500"
-                                    >
-                                      <X className="h-4 w-4 text-gray-500" />
-                                    </Button>
+                                    
                                   </>
                                 ) : (
                                   <>
@@ -2683,13 +2820,13 @@ export default function ModulosPage() {
                                         paymentType === 'total'
                                           ? Number(precioFinalPorPersona ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
-                                          : Number(montoAbonado ?? 0) *
+                                          : Number(montoInicialAAbonar ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
                                       )}
                                     </span>
 
                                     {/* Solo mostrar el botón de edición si NO es total */}
-                                    {paymentType !== 'total' && (
+                                    {/* {paymentType !== 'total' && (
                                       <Button
                                         type="button"
                                         variant="outline"
@@ -2699,7 +2836,7 @@ export default function ModulosPage() {
                                           setIsEditingSena(true);
                                           setValue(
                                             'senia',
-                                            (montoAbonado ?? 0) *
+                                            (montoInicialAAbonar ?? 0) *
                                               Number(selectedTipoHabitacionData?.capacidad ?? 0)
                                           );
                                         }}
@@ -2707,7 +2844,7 @@ export default function ModulosPage() {
                                       >
                                         <Pencil className="h-4 w-4" />
                                       </Button>
-                                    )}
+                                    )} */}
                                   </>
                                 )}
                               </div>
@@ -2735,6 +2872,12 @@ export default function ModulosPage() {
                             </p>
                           </div>
 
+                          <div className="mt-5 bg-gradient-to-r from-amber-50 to-orange-50 border-1 border-amber-300 rounded-lg p-3 shadow-md">
+                            <p className="text-balance text-sm text-amber-900 mb-1">
+                              <strong>Nota:</strong> Al crear la reserva, esta quedará en estado pendiente de seña. En el siguiente paso
+                              podrás optar por pagar la seña, pagar el total, o dejar la reserva pendiente para pagar más tarde.
+                            </p>
+                          </div>
                         </div>
                       )}
 
@@ -2823,7 +2966,7 @@ export default function ModulosPage() {
 
                     {/* CONTROLES DE BOTONES */}
                     <div className="flex gap-3">
-                      {/* {isPendingMutation && <>
+                      {/* {isPendingReservation && <>
                       </>} */}
 
                       {!dataAEditar &&
@@ -2837,10 +2980,10 @@ export default function ModulosPage() {
                                   setPaqueteNoSeleccionada(false);
                                 }
                             }}
-                            disabled={isPendingMutation}
+                            disabled={isPendingReservation}
                             type="submit"
                             className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
-                          {isPendingMutation ? 
+                          {isPendingReservation ? 
                               <>
                                   <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
                                   Creando...
@@ -3270,9 +3413,6 @@ export default function ModulosPage() {
                                     &&  (
                                       <>
                                         <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.paquete?.sena ?? 0)}</div>
-                                        {/* <Button variant="outline" size="icon" onClick={() => setIsEditingSena(true)} className="h-10 w-10">
-                                          <Pencil className="h-4 w-4" />
-                                        </Button> */}
                                       </>
                                     )}
 
@@ -3437,7 +3577,45 @@ export default function ModulosPage() {
             </TabsContent>
           </Tabs>
       </div>
-    </>
 
+      {/* Modal de Confirmación de Reserva */}
+      {payloadReservationData?.modalData && (
+        <ReservationConfirmModal
+          isOpen={isConfirmModalOpen}
+          onClose={handleCloseConfirmModal}
+          onConfirm={handleConfirmReservation}
+          reservationData={payloadReservationData.modalData}
+          isPendingReservation={isPendingReservation}
+          // reservationData={sampleReservation}
+        />
+      )}
+
+      {/* Modal de Pago de seña */}
+      {isSenialModalOpen && (
+        <PagoSeniaModal
+          isOpen={isSenialModalOpen}
+          onClose={handleCloseSeniaModal}
+          onConfirm={handleConfirmSeniaPago}
+          isPendingPagarSenia={isPendingPagarSenia}
+          reservationData={sampleReservation}
+          reservationResponse={reservaRealizadaResponse}
+          seniaPorPersona={reservaRealizadaResponse?.pasajeros?.[0]?.seña_requerida || seniaPorPersona}
+          cantidadActualPasajeros={reservaRealizadaResponse?.cantidad_pasajeros || reservaRealizadaResponse?.habitacion?.capacidad || cantidadActualPasajeros}
+          precioFinalPorPersona={reservaRealizadaResponse?.pasajeros?.[0]?.precio_asignado || precioFinalPorPersona}
+          selectedPasajerosData={reservaRealizadaResponse?.pasajeros?.filter((p: any) => !p.es_titular).map((p: any) => p.persona) || []}
+          titular={reservaRealizadaResponse?.pasajeros?.find((p: any) => p.es_titular)?.persona || reservaRealizadaResponse?.titular}
+        />
+      )}
+
+    {isReceiptModalOpen && <PaymentReceiptModal
+      isOpen={isReceiptModalOpen}
+      onClose={handleCloseReceipt}
+      // onBack={handleBackToConfirm}
+      isPendingDescargaComprobante={isPendingDescargaComprobante}
+      receiptData={pagoSeniaRealizadaResponse}
+      handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
+      />}
+
+    </>
   )
 }

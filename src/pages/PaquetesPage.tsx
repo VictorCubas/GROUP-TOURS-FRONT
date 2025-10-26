@@ -1557,10 +1557,22 @@ const handleSubmitClick = useCallback(async () => {
 
       setTimeout(() => {
         handleSubmitSalida(handleAddSalida)();
-        
       }, 0);
     } else {
-      handleShowToast('Debes completar los campos requeridos', 'error');
+      // Verificar si el error es de fecha específicamente
+      if (errorsSalida?.fecha_salida_v2) {
+        const errorMessage = typeof errorsSalida.fecha_salida_v2.message === 'string'
+          ? errorsSalida.fecha_salida_v2.message
+          : 'La fecha de salida es inválida';
+        handleShowToast(errorMessage, 'error');
+      } else if (errorsSalida?.fecha_regreso_v2) {
+        const errorMessage = typeof errorsSalida.fecha_regreso_v2.message === 'string'
+          ? errorsSalida.fecha_regreso_v2.message
+          : 'La fecha de regreso es inválida';
+        handleShowToast(errorMessage, 'error');
+      } else {
+        handleShowToast('Debes completar los campos requeridos', 'error');
+      }
       setValidando(false); // 🔹 Rehabilitar si falla
     }
   }, [trigger, propio, getValuesSalida, errorsSalida, isValidSalida, validando, handleSubmitSalida, handleShowToast]);
@@ -1710,10 +1722,34 @@ const handleSubmitClick = useCallback(async () => {
       console.log(fixedRoomTypeId);
       console.log([...selectedHotels].length);  
 
+
+      if(fechaSalida){
+          const selectedDate = new Date(fechaSalida);
+          console.log(selectedDate)
+          const today = new Date();
+          console.log(today)
+          today.setHours(0, 0, 0, 0); 
+
+          if (selectedDate < today) {
+            handleShowToast('La fecha de salida no puede ser anterior a hoy', 'error');
+          }
+      }
+
+      if(fechaRegreso){
+          const selectedDate = new Date(fechaRegreso);
+          console.log(selectedDate)
+          const today = new Date();
+          console.log(today)
+          today.setHours(0, 0, 0, 0); 
+
+          if (selectedDate < today) {
+            handleShowToast('La fecha de regreso no puede ser anterior a hoy', 'error');
+          }
+      }
+
       // const idsSeleccionados = Array.from(selectedHotels).map(id => Number(id));
 
       if (selectedHotels && [...selectedHotels].length && fechaSalida && fechaRegreso && dataHotelesList) {
-
         if(fechaRegreso < fechaSalida){
           handleShowToast('La fecha de regreso debe ser mayor a la fecha de salida', 'error');
           return;
@@ -1755,7 +1791,7 @@ const handleSubmitClick = useCallback(async () => {
           }
         }
 
-      }
+      } 
 
       if(fechaSalida && fechaRegreso){
         if(fechaRegreso < fechaSalida){
@@ -3344,8 +3380,39 @@ const handleSubmitClick = useCallback(async () => {
                                                                     <Input
                                                                       type="date"
                                                                       id="fecha_salida_v2"
-                                                                      {...registerSalida('fecha_salida_v2', { required: true })}
-                                                                      className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2?.type === 'required' ? 
+                                                                      min={new Date().toISOString().split('T')[0]}
+                                                                      {...registerSalida('fecha_salida_v2', {
+                                                                        required: 'La fecha de salida es requerida',
+                                                                        validate: (value) => {
+                                                                            const selectedDate = new Date(value);
+                                                                            const today = new Date();
+                                                                            today.setHours(0, 0, 0, 0);
+
+                                                                            if (selectedDate < today) {
+                                                                              return 'La fecha de salida no puede ser anterior a hoy';
+                                                                            }
+
+                                                                            // Validar que la fecha de salida sea menor a la de regreso
+                                                                            const fechaRegreso = getValuesSalida('fecha_regreso_v2');
+                                                                            if (fechaRegreso) {
+                                                                              const regresoDate = new Date(fechaRegreso);
+                                                                              if (selectedDate >= regresoDate) {
+                                                                                return 'La fecha de salida debe ser menor a la fecha de regreso';
+                                                                              }
+                                                                            }
+
+                                                                            return true;
+                                                                          }
+                                                                      })}
+                                                                      onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        setValueSalida('fecha_salida_v2', value);
+                                                                        // Revalidar fecha_regreso_v2 cuando cambie fecha_salida_v2
+                                                                        if (getValuesSalida('fecha_regreso_v2')) {
+                                                                          trigger('fecha_regreso_v2');
+                                                                        }
+                                                                      }}
+                                                                      className={`flex-1 w-40 ${errorsSalida?.fecha_salida_v2 ?
                                                                           'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
                                                                           'border-2 border-blue-200 focus:border-blue-500'}`}
                                                                     />
@@ -3355,12 +3422,40 @@ const handleSubmitClick = useCallback(async () => {
                                                                     <Input
                                                                       type="date"
                                                                       id="fecha_regreso_v2"
+                                                                      min={new Date().toISOString().split('T')[0]}
                                                                       {...registerSalida('fecha_regreso_v2', {
-                                                                        required: true, 
-                                                                      })
-                                                                      }
-                                                                      className={`flex-1 w-40  ${errorsSalida?.fecha_regreso_v2?.type === 'required' ? 
-                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none': 
+                                                                        required: 'La fecha de regreso es requerida',
+                                                                        validate: (value) => {
+                                                                            const selectedDate = new Date(value);
+                                                                            const today = new Date();
+                                                                            today.setHours(0, 0, 0, 0);
+
+                                                                            if (selectedDate < today) {
+                                                                              return 'La fecha de regreso no puede ser anterior a hoy';
+                                                                            }
+
+                                                                            // Validar que la fecha de regreso sea mayor a la de salida
+                                                                            const fechaSalida = getValuesSalida('fecha_salida_v2');
+                                                                            if (fechaSalida) {
+                                                                              const salidaDate = new Date(fechaSalida);
+                                                                              if (selectedDate <= salidaDate) {
+                                                                                return 'La fecha de regreso debe ser mayor a la fecha de salida';
+                                                                              }
+                                                                            }
+
+                                                                            return true;
+                                                                          }
+                                                                      })}
+                                                                      onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        setValueSalida('fecha_regreso_v2', value);
+                                                                        // Revalidar fecha_salida_v2 cuando cambie fecha_regreso_v2
+                                                                        if (getValuesSalida('fecha_salida_v2')) {
+                                                                          trigger('fecha_salida_v2');
+                                                                        }
+                                                                      }}
+                                                                      className={`flex-1 w-40 ${errorsSalida?.fecha_regreso_v2 ?
+                                                                          'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none':
                                                                           'border-2 border-blue-200 focus:border-blue-500'}`}
                                                                     />
                                                               </div>
