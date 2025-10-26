@@ -41,7 +41,6 @@ import {
   CheckCircle,
   CheckCircle2,
   Circle,
-  Pencil,
   LayoutGrid,
   List,
   Building2,
@@ -77,7 +76,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import {formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular, descargarComprobantePDF } from "@/components/utils/httpReservas"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular } from "@/components/utils/httpReservas"
 
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -93,12 +92,13 @@ import { fetchDataTiposPaquetesTodos } from "@/components/utils/httpPaquete"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
 import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
-import { NumericFormat } from "react-number-format"
+// import { NumericFormat } from "react-number-format"
 import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector";
 import { HotelHabitacionSelectorListMode } from "@/components/HotelHabitacionSelectorListMode";
 import ReservationConfirmModal from "@/components/ReservationConfirmModal"
 import PaymentReceiptModal from "@/components/PaymentReceiptModal"
 import {useGenerarYDescargarComprobante } from "@/components/hooks/useDescargarPDF"
+import PagoSeniaModal from "@/components/PagoSeniaModal"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -175,12 +175,13 @@ export default function ModulosPage() {
   const [habitacionesResumenPrecios, setHabitacionesResumenPrecios] = useState<any[]>([]);
   const [precioFinalPorPersona, setPrecioFinalPorPersona] = useState<number>(0);
   const [isEditingSena, setIsEditingSena] = useState(false)
-  const [montoAbonado, setMontoAbonado] = useState<number>(0)
-  const [montoAbonadoPorPersona, setMontoAbonadoPorPersona] = useState<number>(0)
+  const [montoInicialAAbonar, setMontoInicialAAbonar] = useState<number>(0)
+  const [seniaPorPersona, setSeniaPorPersona] = useState<number>(0)
   const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [pendingReservationData, setPendingReservationData] = useState<any>(null);
-  console.log(montoAbonadoPorPersona)
+  const [isSenialModalOpen, setIsSenialModalOpen] = useState(true);
+  const [payloadReservationData, setPayloadReservationData] = useState<any>(null);
+  console.log(seniaPorPersona)
 
   // const [serviciosAdicionalesSearchTerm, setServiciosAdicionalesSearchTerm] = useState("");
   // const [selectedServiciosAdicionales, setSelectedServiciosAdicionales] = useState<number[]>([])
@@ -206,7 +207,9 @@ export default function ModulosPage() {
               mode: "onBlur",
               defaultValues: {
               }
-            });
+        });
+
+    console.log(getValues, trigger)
   // DATOS DEL FORMULARIO 
   // console.log(tipoReservaFilterList)
 
@@ -528,7 +531,7 @@ export default function ModulosPage() {
   }
 
 
-  const {mutate, isPending: isPendingMutation} = useMutation({
+  const {mutate, isPending: isPendingReservation} = useMutation({
     mutationFn: nuevoDataFetch,
     onSuccess: (data) => {
         handleShowToast('Se ha creado una nueva reserva satisfactoriamente', 'success');
@@ -544,10 +547,11 @@ export default function ModulosPage() {
         
         // Cerrar modal de confirmación
         setIsConfirmModalOpen(false);
-        setPendingReservationData(null);
+        setPayloadReservationData(null);
         // Abrir modal de recibo de pago
         setReservaRealizada(data)
-        setIsReceiptModalOpen(true);
+        //setIsReceiptModalOpen(true);
+        setIsSenialModalOpen(true)
 
         setSelectedPasajeros([])
         setSelectedPaqueteID("");
@@ -556,7 +560,7 @@ export default function ModulosPage() {
         handlePaqueteNoSeleccionada(undefined);
         setSelectedTitularData(undefined)
 
-        handleCancel(); 
+        // handleCancel(); 
         
         queryClient.invalidateQueries({
           queryKey: ['reservas'],
@@ -692,14 +696,16 @@ export default function ModulosPage() {
         handleDataNoPaqueteSeleccionada(undefined)
         setNewDataPersonaList([]);
         setNewDataPaqueteList([])
+        setSelectedPasajerosData([]);
+        setSelectedPasajeros([]);
         setImagePreview(placeholderViaje);
         setSelectedSalidaID("");
         setSelectedHotelId('');
         setSelectedHotelData(undefined);
         setSelectedTipoHabitacionID('');
         setIsEditingSena(false);
-        setMontoAbonado(0);
-        setMontoAbonadoPorPersona(0);
+        setMontoInicialAAbonar(0);
+        setSeniaPorPersona(0);
         // setSelectedServiciosAdicionales([]);
         // setServiciosAdicionalesSearchTerm("");
         reset({
@@ -761,7 +767,7 @@ export default function ModulosPage() {
       // paymentType === 'total'
       //                                     ? Number(precioFinalPorPersona ?? 0) *
       //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
-      //                                     : Number(montoAbonado ?? 0) *
+      //                                     : Number(montoInicialAAbonar ?? 0) *
       //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
 
 
@@ -770,7 +776,7 @@ export default function ModulosPage() {
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0);
       }
       else{
-        payload.monto_pagado = Number(montoAbonado ?? 0) *
+        payload.monto_pagado = Number(montoInicialAAbonar ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
       }
 
@@ -832,15 +838,15 @@ export default function ModulosPage() {
         hotelRating: selectedHotelData?.estrellas || 0,
         roomType: selectedTipoHabitacionData?.tipo || '',
         servicesIncluded: selectedPasajerosData?.length || 0,
-        deposit: Number(montoAbonado ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
-        depositPerPerson: Number(montoAbonado ?? 0),
+        deposit: Number(montoInicialAAbonar ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
+        depositPerPerson: Number(montoInicialAAbonar ?? 0),
         totalPrice: Number(precioFinalPorPersona ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
         pricePerPerson: Number(precioFinalPorPersona ?? 0),
         currency: selectedPaqueteData?.moneda || 'USD',
       };
 
       // Guardar payload y datos del modal
-      setPendingReservationData({ payload, modalData });
+      setPayloadReservationData({ payload, modalData });
 
       // Mostrar modal de confirmación
       setIsConfirmModalOpen(true);
@@ -879,16 +885,22 @@ export default function ModulosPage() {
 
   // Manejar la confirmación del modal
   const handleConfirmReservation = () => {
-    if (pendingReservationData?.payload) {
+    if (payloadReservationData?.payload) {
       // Ejecutar la mutación para crear la reserva
-      mutate(pendingReservationData.payload);
+      mutate(payloadReservationData.payload);
     }
   };
 
   // Manejar el cierre del modal
   const handleCloseConfirmModal = () => {
     setIsConfirmModalOpen(false);
-    // setPendingReservationData(null);
+    // setPayloadReservationData(null);
+  };
+
+  const handleCloseSeniaModal = () => {
+    setIsSenialModalOpen(false);
+    handleCancel()
+    // setPayloadReservationData(null);
   };
   
   useEffect(() => {
@@ -1010,8 +1022,8 @@ export default function ModulosPage() {
       setSelectedPersonaID('')
       handleDataNoPersonaSeleccionada(undefined)
       setIsEditingSena(false);
-      setMontoAbonado(0);
-      setMontoAbonadoPorPersona(0);
+      setMontoInicialAAbonar(0);
+      setSeniaPorPersona(0);
       setValue('senia', '');
     }
     
@@ -1041,8 +1053,8 @@ export default function ModulosPage() {
       setSelectedPersonaID('')
       handleDataNoPersonaSeleccionada(undefined)
       setIsEditingSena(false);
-      setMontoAbonado(0);
-      setMontoAbonadoPorPersona(0)
+      setMontoInicialAAbonar(0);
+      setSeniaPorPersona(0)
       setValue('senia', '');
     }
     
@@ -1057,15 +1069,15 @@ export default function ModulosPage() {
       setPasajerosSearchTerm("");;
       setSelectedPasajerosData([])
       setIsEditingSena(false);
-      // setMontoAbonado(0);
+      // setMontoInicialAAbonar(0);
 
       console.log(selectedSalidaData?.senia)
       console.log(selectedTipoHabitacionData?.capacidad)
 
       const senia = Number(selectedSalidaData?.senia ?? 0)
       console.log(senia);
-      setMontoAbonado(senia);
-      setMontoAbonadoPorPersona(senia);
+      setMontoInicialAAbonar(senia);
+      setSeniaPorPersona(senia);
 
       console.log(senia)
     }
@@ -1147,6 +1159,9 @@ export default function ModulosPage() {
     }, [paymentType]);
 
 
+    console.log(handlePaymentTypeChange)
+
+
     useEffect(() => {
 
       if(!selectedSalidaData || !selectedTipoHabitacionData || !selectedHotelData)
@@ -1222,6 +1237,153 @@ export default function ModulosPage() {
   // const handleDescargar = () => {
   //    handleDescargarPDF(reservaRealizada?.id)
   // }
+
+  const sampleReservation =  {
+    "id": 15,
+    "codigo": "RSV-2025-0015",
+    "observacion": "Reserva para grupo familiar",
+    "titular": {
+      "id": 8,
+      "nombre": "María",
+      "apellido": "González",
+      "documento": "4567890",
+      "email": "maria.gonzalez@example.com",
+      "telefono": "0981234567"
+    },
+    "paquete": {
+      "id": 3,
+      "nombre": "Tour a Encarnación - 3 días",
+      "descripcion": "Paquete turístico completo a la ciudad de Encarnación",
+      "duracion_dias": 3,
+      "duracion_noches": 2,
+      "tipo_transporte": "terrestre",
+      "incluye_almuerzo": true,
+      "incluye_cena": true,
+      "imagen": "/media/paquetes/encarnacion.jpg",
+      "tipo_paquete": {
+        "id": 1,
+        "nombre": "Nacional"
+      },
+      "destino": {
+        "id": 5,
+        "ciudad": {
+          "id": 10,
+          "nombre": "Encarnación"
+        }
+      },
+      "moneda": {
+        "id": 1,
+        "nombre": "Guaraníes",
+        "codigo": "PYG",
+        "simbolo": "₲"
+      },
+      "modalidad": "flexible",
+      "es_propio": true,
+      "activo": true
+    },
+    "salida": {
+      "id": 12,
+      "fecha_salida": "2025-11-15T08:00:00Z",
+      "fecha_regreso": "2025-11-17T18:00:00Z",
+      "precio_actual": 1500000.00,
+      "precio_final": 2000000.00,
+      "senia": 500000.00
+    },
+    "hotel": {
+      "id": 7,
+      "nombre": "Hotel Plaza Encarnación",
+      "direccion": "Av. Mariscal López 1234",
+      "estrellas": 4
+    },
+    "habitacion": {
+      "id": 22,
+      "numero": "305",
+      "tipo": "doble",
+      "capacidad": 2,
+      "precio_noche": 350000.00,
+      "hotel_nombre": "Hotel Plaza Encarnación"
+    },
+    "fecha_reserva": "2025-10-25T14:30:45.123456Z",
+    "cantidad_pasajeros": 3,
+    "precio_unitario": 1750000.00,
+    "precio_base_paquete": 1750000.00,
+    "costo_total_estimado": 5250000.00,
+    "seña_total": 1500000.00,
+    "monto_pagado": 0.00,
+    "estado": "pendiente",
+    "datos_completos": false,
+    "estado_display": "Pendiente",
+    "pasajeros": [
+      {
+        "id": 45,
+        "persona": {
+          "id": 8,
+          "nombre": "María",
+          "apellido": "González",
+          "documento": "4567890",
+          "email": "maria.gonzalez@example.com",
+          "telefono": "0981234567"
+        },
+        "es_titular": true,
+        "precio_asignado": 1750000.00,
+        "monto_pagado": 0.00,
+        "saldo_pendiente": 1750000.00,
+        "porcentaje_pagado": 0.00,
+        "seña_requerida": 500000.00,
+        "tiene_sena_pagada": false,
+        "esta_totalmente_pagado": false,
+        "ticket_numero": null,
+        "voucher_codigo": null,
+        "fecha_registro": "2025-10-25T14:30:45.234567Z"
+      },
+      {
+        "id": 46,
+        "persona": {
+          "id": 12,
+          "nombre": "Juan",
+          "apellido": "González",
+          "documento": "5678901",
+          "email": "juan.gonzalez@example.com",
+          "telefono": "0987654321"
+        },
+        "es_titular": false,
+        "precio_asignado": 1750000.00,
+        "monto_pagado": 0.00,
+        "saldo_pendiente": 1750000.00,
+        "porcentaje_pagado": 0.00,
+        "seña_requerida": 500000.00,
+        "tiene_sena_pagada": false,
+        "esta_totalmente_pagado": false,
+        "ticket_numero": null,
+        "voucher_codigo": null,
+        "fecha_registro": "2025-10-25T14:30:45.345678Z"
+      },
+      {
+        "id": 47,
+        "persona": {
+          "id": 15,
+          "nombre": "Ana",
+          "apellido": "González",
+          "documento": "6789012",
+          "email": "ana.gonzalez@example.com",
+          "telefono": "0976543210"
+        },
+        "es_titular": false,
+        "precio_asignado": 1750000.00,
+        "monto_pagado": 0.00,
+        "saldo_pendiente": 1750000.00,
+        "porcentaje_pagado": 0.00,
+        "seña_requerida": 500000.00,
+        "tiene_sena_pagada": false,
+        "esta_totalmente_pagado": false,
+        "ticket_numero": null,
+        "voucher_codigo": null,
+        "fecha_registro": "2025-10-25T14:30:45.456789Z"
+      }
+    ],
+    "activo": true,
+    "fecha_modificacion": "2025-10-25T14:30:45.567890Z"
+  }
 
 
   return (
@@ -2563,10 +2725,10 @@ export default function ModulosPage() {
                             <div className="flex justify-between items-center">
                               {/* Título y selector */}
                               <div className="flex items-center gap-2">
-                                <span className="text-lg font-bold text-gray-900">Seña:</span>
+                                <span className="text-lg font-bold text-gray-900">Seña Mínima:</span>
 
                                 {/* Selector de tipo de pago */}
-                                <div className="flex rounded-lg border border-gray-300 bg-white overflow-hidden">
+                                {/* <div className="flex rounded-lg border border-gray-300 bg-white overflow-hidden">
                                   {['minimum', 'total'].map((type: any) => (
                                     <button
                                       key={type}
@@ -2583,7 +2745,7 @@ export default function ModulosPage() {
                                       {type === 'minimum' ? 'Mínima' : 'Total'}
                                     </button>
                                   ))}
-                                </div>
+                                </div> */}
                               </div>
 
                               {/* Bloque de monto */}
@@ -2591,116 +2753,7 @@ export default function ModulosPage() {
                                 {/* Mostrar input editable solo si: no es TOTAL y está en modo edición */}
                                 {paymentType !== 'total' && isEditingSena ? (
                                   <>
-                                    <Controller
-                                      name="senia"
-                                      control={control}
-                                      rules={{
-                                        validate: (value) => {
-                                          // ✅ Acepta vacío o 0 sin marcar error
-                                          if (value === '' || value === null || value === undefined) return true;
-                                          if (isNaN(Number(value))) return false;
-                                          if (Number(value) < 0) return false;
-
-                                          // ✅ Validar que no sea menor a la seña mínima * capacidad de habitación
-                                          const seniaMinima = Number(selectedSalidaData?.senia ?? 0);
-                                          const capacidad = Number(selectedTipoHabitacionData?.capacidad ?? 1);
-                                          const montoMinimo = seniaMinima * capacidad;
-
-                                          if (Number(value) < montoMinimo) {
-                                            return false;
-                                          }
-
-                                          return true;
-                                        },
-                                      }}
-                                      render={({ field, fieldState: { error } }) => (
-                                        <div className="flex-1 relative">
-                                          <NumericFormat
-                                            value={field.value ?? ''}
-                                            onValueChange={(values) => field.onChange(values.floatValue ?? '')}
-                                            onBlur={field.onBlur}
-                                            thousandSeparator="."
-                                            decimalSeparator=","
-                                            allowNegative={false}
-                                            decimalScale={0}
-                                            allowLeadingZeros={false}
-                                            placeholder="ej: 250"
-                                            className={`w-full p-1 pl-2.5 rounded-md border-2 transition-all duration-150 ${
-                                              error
-                                                ? '!border-red-400 text-red-500 font-bold'
-                                                : 'border-blue-200 focus:border-blue-600 text-blue-600 font-bold'
-                                            } text-xl leading-tight`}
-                                          />
-                                          {error && (
-                                            <div className="absolute -bottom-5 -left-3 text-xs text-red-500 font-medium whitespace-nowrap">
-                                              Mínimo: ${formatearSeparadorMiles.format(Number(selectedSalidaData?.senia ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 1))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    />
-
-                                    <Button
-                                      variant="default"
-                                      size="icon"
-                                      type="button"
-                                      onClick={async (e) => {
-                                        e.preventDefault();
-
-                                        // ✅ Validar el campo antes de guardar
-                                        const isValid = await trigger('senia');
-                                        console.log(isValid)
-
-                                        if (!isValid) {
-                                          // Si no es válido, no hacer nada
-                                          return;
-                                        }
-
-                                        const nuevaSeña = getValues('senia');
-
-                                        // ✅ Permite guardar 0 o vacío
-                                        if (nuevaSeña === '' || nuevaSeña === null || nuevaSeña === undefined) {
-                                          setMontoAbonado(0);
-                                        } else {
-                                          const valorNumerico = Number(nuevaSeña);
-                                          const seniaPorPersona =
-                                            valorNumerico / Number(selectedTipoHabitacionData?.capacidad ?? 1);
-                                          setMontoAbonado(seniaPorPersona);
-                                        }
-
-                                        setIsEditingSena(false);
-                                        setValue('senia', '');
-                                      }}
-                                      className="h-8 w-8 bg-green-600 hover:bg-green-700 cursor-pointer"
-                                    >
-                                      <Check className="h-4 w-4" />
-                                    </Button>
-
-                                    <Button
-                                      variant="default"
-                                      size="icon"
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-
-                                        // ✅ Resetear al valor inicial (seña mínima)
-                                        const seniaInicial = Number(selectedSalidaData?.senia ?? 0);
-                                        setMontoAbonado(seniaInicial);
-                                        setMontoAbonadoPorPersona(seniaInicial);
-
-                                        // ✅ Limpiar el campo del formulario
-                                        setValue('senia', '');
-
-                                        // ✅ Limpiar errores de validación
-                                        clearErrors('senia');
-
-                                        // ✅ Salir del modo edición
-                                        setIsEditingSena(false);
-                                      }}
-                                      className="h-8 w-8 bg-gray-100 hover:bg-gray-200 cursor-pointer text-gray-500"
-                                    >
-                                      <X className="h-4 w-4 text-gray-500" />
-                                    </Button>
+                                    
                                   </>
                                 ) : (
                                   <>
@@ -2714,13 +2767,13 @@ export default function ModulosPage() {
                                         paymentType === 'total'
                                           ? Number(precioFinalPorPersona ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
-                                          : Number(montoAbonado ?? 0) *
+                                          : Number(montoInicialAAbonar ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
                                       )}
                                     </span>
 
                                     {/* Solo mostrar el botón de edición si NO es total */}
-                                    {paymentType !== 'total' && (
+                                    {/* {paymentType !== 'total' && (
                                       <Button
                                         type="button"
                                         variant="outline"
@@ -2730,7 +2783,7 @@ export default function ModulosPage() {
                                           setIsEditingSena(true);
                                           setValue(
                                             'senia',
-                                            (montoAbonado ?? 0) *
+                                            (montoInicialAAbonar ?? 0) *
                                               Number(selectedTipoHabitacionData?.capacidad ?? 0)
                                           );
                                         }}
@@ -2738,7 +2791,7 @@ export default function ModulosPage() {
                                       >
                                         <Pencil className="h-4 w-4" />
                                       </Button>
-                                    )}
+                                    )} */}
                                   </>
                                 )}
                               </div>
@@ -2766,6 +2819,12 @@ export default function ModulosPage() {
                             </p>
                           </div>
 
+                          <div className="mt-5 bg-gradient-to-r from-amber-50 to-orange-50 border-1 border-amber-300 rounded-lg p-3 shadow-md">
+                            <p className="text-balance text-sm text-amber-900 mb-1">
+                              <strong>Nota:</strong> Al crear la reserva, esta quedará en estado pendiente de seña. En el siguiente paso
+                              podrás optar por pagar la seña, pagar el total, o dejar la reserva pendiente para pagar más tarde.
+                            </p>
+                          </div>
                         </div>
                       )}
 
@@ -2854,7 +2913,7 @@ export default function ModulosPage() {
 
                     {/* CONTROLES DE BOTONES */}
                     <div className="flex gap-3">
-                      {/* {isPendingMutation && <>
+                      {/* {isPendingReservation && <>
                       </>} */}
 
                       {!dataAEditar &&
@@ -2868,10 +2927,10 @@ export default function ModulosPage() {
                                   setPaqueteNoSeleccionada(false);
                                 }
                             }}
-                            disabled={isPendingMutation}
+                            disabled={isPendingReservation}
                             type="submit"
                             className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer">
-                          {isPendingMutation ? 
+                          {isPendingReservation ? 
                               <>
                                   <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
                                   Creando...
@@ -3301,9 +3360,6 @@ export default function ModulosPage() {
                                     &&  (
                                       <>
                                         <div className="text-sm text-gray-500 font-sans">Seña: {formatearSeparadorMiles.format(pkg?.paquete?.sena ?? 0)}</div>
-                                        {/* <Button variant="outline" size="icon" onClick={() => setIsEditingSena(true)} className="h-10 w-10">
-                                          <Pencil className="h-4 w-4" />
-                                        </Button> */}
                                       </>
                                     )}
 
@@ -3470,13 +3526,267 @@ export default function ModulosPage() {
       </div>
 
       {/* Modal de Confirmación de Reserva */}
-      {pendingReservationData?.modalData && (
+      {payloadReservationData?.modalData && (
         <ReservationConfirmModal
           isOpen={isConfirmModalOpen}
           onClose={handleCloseConfirmModal}
           onConfirm={handleConfirmReservation}
-          reservationData={pendingReservationData.modalData}
+          reservationData={payloadReservationData.modalData}
+          isPendingReservation={isPendingReservation}
           // reservationData={sampleReservation}
+        />
+      )}
+
+      {/* Modal de Pago de seña */}
+      {isSenialModalOpen && (
+        // <PagoSeniaModal
+        //   isOpen={isSenialModalOpen}
+        //   onClose={handleCloseConfirmModal}
+        //   onConfirm={handleConfirmReservation}
+        //   // reservationData={reservaRealizada}
+        //   isPendingReservation={isPendingReservation}
+        //   reservationData={sampleReservation}
+        //   reservationResponse={reservaRealizada}
+        //   seniaPorPersona={seniaPorPersona}
+        //   cantidadActualPasajeros={selectedTipoHabitacionData.capacidad}
+        //   precioFinalPorPersona={precioFinalPorPersona}
+        // />
+        <PagoSeniaModal
+          isOpen={isSenialModalOpen}
+          onClose={handleCloseSeniaModal}
+          onConfirm={handleConfirmReservation}
+          // reservationData={reservaRealizada}
+          isPendingReservation={isPendingReservation}
+          reservationData={sampleReservation}
+          reservationResponse={({
+    id: 93,
+    codigo: 'RSV-2025-0093',
+    observacion: null,
+    titular: {
+      id: 15,
+      nombre: 'KENZO',
+      apellido: 'Escurra',
+      documento: '778341234',
+      email: 'kenzo@gmail.com',
+      telefono: '09875436788'
+    },
+    paquete: {
+      id: 139,
+      nombre: 'Rio De Janeiro x8 Distribuidora',
+      tipo_paquete: { id: 2, nombre: 'Aereo' },
+      destino: { id: 4, ciudad: 'Rio de Janeiro', pais: 'Brasil' },
+      zona_geografica: {
+        id: 1,
+        nombre: 'America del Sur',
+        descripcion: 
+          'Región compuesta por países ubicados al sur del continente americano, conocida por su diversidad cultural, paisajes naturales únicos y destinos turísticos como Machu Picchu, las Cataratas del Iguazú y la Patagonia.'
+      },
+      distribuidora: { id: 1, nombre: 'Consorcio Travel' },
+      moneda: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' },
+      servicios: [
+        {
+          servicio_id: 9,
+          nombre_servicio: 'Actividades Recreativas',
+          precio: 0,
+          precio_base: 100
+        },
+        {
+          servicio_id: 6,
+          nombre_servicio: 'City Tour',
+          precio: 0,
+          precio_base: 100
+        }
+      ],
+      modalidad: 'flexible',
+      precio: 1200,
+      precio_venta_desde: 1760,
+      senia: 220,
+      fecha_inicio: '2025-11-01',
+      fecha_fin: '2025-11-15',
+      personalizado: false,
+      cantidad_pasajeros: null,
+      propio: false,
+      activo: true,
+      imagen: null,
+      imagen_url: null,
+      fecha_creacion: '2025-10-24T21:48:26+0000',
+      fecha_modificacion: '2025-10-24T21:48:26+0000',
+      salidas: [
+        {
+          id: 247,
+          fecha_salida: '2025-11-01',
+          fecha_regreso: '2025-11-08',
+          moneda: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' },
+          temporada: null,
+          precio_actual: 1200,
+          precio_final: 1620,
+          ganancia: null,
+          comision: 30,
+          precio_venta_sugerido_min: 1560,
+          precio_venta_sugerido_max: 2106,
+          precio_venta_total_min: 1560,
+          precio_venta_total_max: 2106,
+          cupo: null,
+          senia: 220,
+          activo: true,
+          hoteles: [
+            { id: 14, nombre: 'Hard Rock Rio' },
+            { id: 21, nombre: 'Hotel Prueba 3' },
+            { id: 24, nombre: 'VICTOR HUGO' }
+          ],
+          habitacion_fija: null,
+          cupos_habitaciones: [],
+          precios_catalogo_hoteles: [
+            {
+              hotel: { id: 24, nombre: 'VICTOR HUGO' },
+              precio_catalogo: 1200
+            },
+            {
+              hotel: { id: 21, nombre: 'Hotel Prueba 3' },
+              precio_catalogo: 1300
+            }
+          ],
+          precios_catalogo: [
+            {
+              habitacion: { id: 18, tipo: 'doble', hotel: 'VICTOR HUGO' },
+              precio_catalogo: 1200
+            },
+            {
+              habitacion: { id: 12, tipo: 'doble', hotel: 'Hotel Prueba 3' },
+              precio_catalogo: 1300
+            },
+            {
+              habitacion: { id: 1, tipo: 'single', hotel: 'Hard Rock Rio' },
+              precio_catalogo: 1400
+            },
+            {
+              habitacion: { id: 2, tipo: 'doble', hotel: 'Hard Rock Rio' },
+              precio_catalogo: 1500
+            },
+            {
+              habitacion: { id: 3, tipo: 'triple', hotel: 'Hard Rock Rio' },
+              precio_catalogo: 1620
+            }
+          ]
+        },
+        {
+          id: 248,
+          fecha_salida: '2025-11-08',
+          fecha_regreso: '2025-11-15',
+          moneda: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' },
+          temporada: null,
+          precio_actual: 1250,
+          precio_final: 1800,
+          ganancia: null,
+          comision: 30,
+          precio_venta_sugerido_min: 1625,
+          precio_venta_sugerido_max: 2340,
+          precio_venta_total_min: 1625,
+          precio_venta_total_max: 2340,
+          cupo: null,
+          senia: 240,
+          activo: true,
+          hoteles: [
+            { id: 14, nombre: 'Hard Rock Rio' },
+            { id: 21, nombre: 'Hotel Prueba 3' },
+            { id: 24, nombre: 'VICTOR HUGO' }
+          ],
+          habitacion_fija: null,
+          cupos_habitaciones: [],
+          precios_catalogo_hoteles: [
+            {
+              hotel: { id: 24, nombre: 'VICTOR HUGO' },
+              precio_catalogo: 1250
+            },
+            {
+              hotel: { id: 21, nombre: 'Hotel Prueba 3' },
+              precio_catalogo: 1350
+            }
+          ],
+          precios_catalogo: [
+            {
+              habitacion: { id: 12, tipo: 'doble', hotel: 'Hotel Prueba 3' },
+              precio_catalogo: 1350
+            },
+            {
+              habitacion: { id: 1, tipo: 'single', hotel: 'Hard Rock Rio' },
+              precio_catalogo: 1500
+            },
+            {
+              habitacion: { id: 2, tipo: 'doble', hotel: 'Hard Rock Rio' },
+              precio_catalogo: 1630
+            },
+            {
+              habitacion: { id: 3, tipo: 'triple', hotel: 'Hard Rock Rio' },
+              precio_catalogo: 1800
+            },
+            {
+              habitacion: { id: 18, tipo: 'doble', hotel: 'VICTOR HUGO' },
+              precio_catalogo: 1250
+            }
+          ]
+        }
+      ]
+    },
+    salida: {
+      id: 248,
+      fecha_salida: '2025-11-08',
+      fecha_regreso: '2025-11-15',
+      precio_actual: 1250,
+      precio_final: 1800,
+      senia: 240
+    },
+    hotel: { id: 14, nombre: 'Hard Rock Rio', direccion: null, estrellas: 4 },
+    habitacion: {
+      id: 2,
+      numero: '101',
+      tipo: 'doble',
+      capacidad: 2,
+      precio_noche: 170,
+      hotel_nombre: 'Hard Rock Rio'
+    },
+    fecha_reserva: '2025-10-25T23:10:28+0000',
+    cantidad_pasajeros: 2,
+    precio_unitario: 2119,
+    precio_base_paquete: 2119,
+    costo_total_estimado: 4238,
+    'seña_total': 480,
+    monto_pagado: 480,
+    estado: 'confirmada',
+    datos_completos: false,
+    estado_display: 'Confirmada Incompleto',
+    pasajeros: [
+      {
+        id: 97,
+        persona: {
+          id: 15,
+          nombre: 'KENZO',
+          apellido: 'Escurra',
+          documento: '778341234',
+          email: 'kenzo@gmail.com',
+          telefono: '09875436788'
+        },
+        es_titular: true,
+        precio_asignado: 2119,
+        monto_pagado: 0,
+        saldo_pendiente: 2119,
+        porcentaje_pagado: 0,
+        'seña_requerida': 240,
+        tiene_sena_pagada: false,
+        esta_totalmente_pagado: false,
+        ticket_numero: null,
+        voucher_codigo: null,
+        fecha_registro: '2025-10-25T23:10:28+0000'
+      }
+    ],
+    activo: true,
+    fecha_modificacion: '2025-10-25T23:10:28+0000'
+  })}
+          seniaPorPersona={reservaRealizada?.pasajeros?.[0]?.seña_requerida || 240}
+          cantidadActualPasajeros={reservaRealizada?.pasajeros?.length || 2}
+          precioFinalPorPersona={reservaRealizada?.pasajeros?.[0]?.precio_asignado || 2119.0000}
+          selectedPasajerosData={reservaRealizada?.pasajeros?.filter((p: any) => !p.es_titular).map((p: any) => p.persona) || []}
+          titular={reservaRealizada?.pasajeros?.find((p: any) => p.es_titular)?.persona || reservaRealizada?.titular}
         />
       )}
 
@@ -3484,7 +3794,7 @@ export default function ModulosPage() {
       isOpen={isReceiptModalOpen}
       onClose={handleCloseReceipt}
       onBack={handleBackToConfirm}
-      receiptData={reservaRealizada}
+      receiptData={{reservaRealizada}}
       handleDescargarPDF={() => handleDescargarPDF(reservaRealizada?.id)}
       />}
 
