@@ -1295,7 +1295,7 @@ export default function HotelPage() {
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[425px]">
                                   <DialogHeader>
-                                    <DialogTitle>Agregar Nueva Habitación</DialogTitle>
+                                    <DialogTitle>Agregar Tipo de Habitación</DialogTitle>
                                     <DialogDescription>
                                       Complete los datos de la nueva habitación para agregarla al hotel.
                                     </DialogDescription>
@@ -1303,7 +1303,7 @@ export default function HotelPage() {
                                   <div className="grid gap-4 py-4">
                                     <div className="grid grid-cols-4 items-center gap-4">
                                       <Label htmlFor="room-number" className="text-right">
-                                        Número *
+                                        Codigo *
                                       </Label>
                                       <Input
                                         id="room-number"
@@ -1315,7 +1315,7 @@ export default function HotelPage() {
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                       <Label htmlFor="room-type" className="text-right">
-                                        Tipo *
+                                        Base *
                                       </Label>
                                       <Select
                                         value={newRoom.type}
@@ -1431,7 +1431,7 @@ export default function HotelPage() {
                                     <Button type="button" variant="outline" className="cursor-pointer" onClick={resetRoomForm}>
                                       Cancelar
                                     </Button>
-                                    <Button type="button" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer" onClick={handleAddRoom}>Agregar Habitación</Button>
+                                    <Button type="button" className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer" onClick={handleAddRoom}>Agregar Tipo Habitación</Button>
                                   </DialogFooter>
                                 </DialogContent>
                               </Dialog>
