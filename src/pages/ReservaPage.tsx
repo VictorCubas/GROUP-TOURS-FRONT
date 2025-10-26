@@ -97,7 +97,7 @@ import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector";
 import { HotelHabitacionSelectorListMode } from "@/components/HotelHabitacionSelectorListMode";
 import ReservationConfirmModal from "@/components/ReservationConfirmModal"
 import PaymentReceiptModal from "@/components/PaymentReceiptModal"
-import {useGenerarYDescargarComprobante } from "@/components/hooks/useDescargarPDF"
+import { useDescargarComprobante, usePagarSenia } from "@/components/hooks/useDescargarPDF"
 import PagoSeniaModal from "@/components/PagoSeniaModal"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
@@ -149,7 +149,8 @@ export default function ModulosPage() {
   const [onVerDetalles, setOnVerDetalles] = useState(false);
   const [tipoPaqueteSelected, setTipoPaqueteSelected] = useState<TipoPaquete>();
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
-  const [reservaRealizada, setReservaRealizada] = useState<any>(null);
+  const [reservaRealizadaResponse, setReservaRealizadaResponse] = useState<any>(null);
+  const [pagoSeniaRealizadaResponse, setPagoSeniaRealizadaResponse] = useState<any>(null);
   // const [distribuidoraSelected, setDistribuidoraSelected] = useState<Distribuidora>();
   const [pasajerosSearchTerm, setPasajerosSearchTerm] = useState("");
   const [selectedPasajeros, setSelectedPasajeros] = useState<number[]>([])
@@ -179,7 +180,7 @@ export default function ModulosPage() {
   const [seniaPorPersona, setSeniaPorPersona] = useState<number>(0)
   const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [isSenialModalOpen, setIsSenialModalOpen] = useState(true);
+  const [isSenialModalOpen, setIsSenialModalOpen] = useState(false);
   const [payloadReservationData, setPayloadReservationData] = useState<any>(null);
   console.log(seniaPorPersona)
 
@@ -202,14 +203,12 @@ export default function ModulosPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {control, watch, handleSubmit, setValue, getValues, clearErrors, reset, trigger} = 
+  const {control, watch, handleSubmit, setValue, clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
               }
         });
-
-    console.log(getValues, trigger)
   // DATOS DEL FORMULARIO 
   // console.log(tipoReservaFilterList)
 
@@ -296,7 +295,9 @@ export default function ModulosPage() {
 
 
   //FETCH PARA DESCARGAR EL COMPROBANTE EN FORMATO PDF
-  const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useGenerarYDescargarComprobante();
+  const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useDescargarComprobante();
+  //FETCH PARA REALIZAR EL PAGO DE LA SEÑA
+  const { mutate: fetchPagarSenia, isPending: isPendingPagarSenia } = usePagarSenia();
 
   console.log(isPendingDescargaComprobante);
 
@@ -305,14 +306,48 @@ export default function ModulosPage() {
       onSuccess: () => {
         console.log('✅ PDF descargado correctamente');
         handleShowToast('Comprobante descargado correctamente', 'success');
-        setIsReceiptModalOpen(false);
-        setReservaRealizada(null);
+        // setIsReceiptModalOpen(false);
+        // setReservaRealizadaResponse(null);
       },
       onError: (error) => {
         console.error('❌ Error al descargar el PDF', error);
         handleShowToast('Error al descargar el comprobante', 'error');
       },
     });
+  }
+
+  const handlePagarSenia = (id: number, payload: any) => {
+    console.log('📦 Payload enviado al backend:', JSON.stringify(payload, null, 2));
+
+    fetchPagarSenia(
+      { reservaId: id, payload },
+      {
+        onSuccess: (data) => {
+          console.log('✅ Se ha realizado la seña correctamente');
+          console.log('📄 Respuesta del servidor:', data);
+          handleShowToast('Se ha pagado la seña correctamente', 'success');
+
+          // Cerrar modal y limpiar estado
+          setIsSenialModalOpen(false);
+          // setReservaRealizadaResponse(null);
+          setIsReceiptModalOpen(true);
+          setPagoSeniaRealizadaResponse(data); 
+
+          // Refrescar la lista de reservas para ver el estado actualizado
+          queryClient.invalidateQueries({ queryKey: ['reservas'] });
+        },
+        onError: (error: any) => {
+          console.error('❌ Error al realizar la seña:', error);
+          console.error('📋 Detalles del error:', error.response?.data);
+
+          const errorMessage = error.response?.data?.message
+            || error.response?.data?.error
+            || 'Error al generar la seña';
+
+          handleShowToast(errorMessage, 'error');
+        },
+      }
+    );
   }
 
     console.log(dataHotelesPorSalidaList)
@@ -549,7 +584,7 @@ export default function ModulosPage() {
         setIsConfirmModalOpen(false);
         setPayloadReservationData(null);
         // Abrir modal de recibo de pago
-        setReservaRealizada(data)
+        setReservaRealizadaResponse(data)
         //setIsReceiptModalOpen(true);
         setIsSenialModalOpen(true)
 
@@ -706,6 +741,18 @@ export default function ModulosPage() {
         setIsEditingSena(false);
         setMontoInicialAAbonar(0);
         setSeniaPorPersona(0);
+
+        setIsReceiptModalOpen(false);
+        setReservaRealizadaResponse(null);
+
+
+        setIsConfirmModalOpen(false);
+        setPayloadReservationData(null);
+        // Abrir modal de recibo de pago
+        setReservaRealizadaResponse(null)
+        //setIsReceiptModalOpen(true);
+        setIsSenialModalOpen(false)
+        // setDistribuidoraSelected(undefined);
         // setSelectedServiciosAdicionales([]);
         // setServiciosAdicionalesSearchTerm("");
         reset({
@@ -758,6 +805,7 @@ export default function ModulosPage() {
         salida_id: selectedSalidaID,
         habitacion_id: selectedTipoHabitacionID,
         persona: selectedPersonaID,
+        titular_como_pasajero: dataForm.titularComoPasajero,
         activo: true,
       };
 
@@ -771,14 +819,16 @@ export default function ModulosPage() {
       //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
 
 
-      if(paymentType === 'total'){
-        payload.monto_pagado = Number(precioFinalPorPersona ?? 0) *
-                                            Number(selectedTipoHabitacionData?.capacidad ?? 0);
-      }
-      else{
-        payload.monto_pagado = Number(montoInicialAAbonar ?? 0) *
-                                            Number(selectedTipoHabitacionData?.capacidad ?? 0)
-      }
+      // if(paymentType === 'total'){
+      //   payload.monto_pagado = Number(precioFinalPorPersona ?? 0) *
+      //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0);
+      // }
+      // else{
+      //   payload.monto_pagado = Number(montoInicialAAbonar ?? 0) *
+      //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
+      // }
+
+      payload.monto_pagado = 0;
 
       // Eliminar campos que no se envían
       delete payload.numero;
@@ -887,7 +937,19 @@ export default function ModulosPage() {
   const handleConfirmReservation = () => {
     if (payloadReservationData?.payload) {
       // Ejecutar la mutación para crear la reserva
+
+      console.log(payloadReservationData?.payload)
       mutate(payloadReservationData.payload);
+    }
+  };
+
+  // Manejar la confirmación del modal
+  const handleConfirmSeniaPago = (payload: any) => {
+    if (payload) {
+      console.log(reservaRealizadaResponse)
+      // console.log(pagoSeniaRealizadaResponse)
+      console.log(payload)
+      handlePagarSenia(reservaRealizadaResponse.id, payload)
     }
   };
 
@@ -1158,8 +1220,7 @@ export default function ModulosPage() {
       if (paymentType !== type) setPaymentType(type);
     }, [paymentType]);
 
-
-    console.log(handlePaymentTypeChange)
+    console.log(handlePaymentTypeChange);
 
 
     useEffect(() => {
@@ -1222,20 +1283,12 @@ export default function ModulosPage() {
 
   const handleCloseReceipt = () => {
     console.log('Modal de comprobante cerrado');
-    setIsReceiptModalOpen(false);
-    setReservaRealizada(null);
+    handleCancel();
   };
 
-  const handleBackToConfirm = () => {
-     
-  // disabled={isPending}
-  
-    // setIsReceiptModalOpen(false);
-    // setIsConfirmModalOpen(true);
-  }
 
   // const handleDescargar = () => {
-  //    handleDescargarPDF(reservaRealizada?.id)
+  //    handleDescargarPDF(reservaRealizadaResponse?.id)
   // }
 
   const sampleReservation =  {
@@ -3539,263 +3592,28 @@ export default function ModulosPage() {
 
       {/* Modal de Pago de seña */}
       {isSenialModalOpen && (
-        // <PagoSeniaModal
-        //   isOpen={isSenialModalOpen}
-        //   onClose={handleCloseConfirmModal}
-        //   onConfirm={handleConfirmReservation}
-        //   // reservationData={reservaRealizada}
-        //   isPendingReservation={isPendingReservation}
-        //   reservationData={sampleReservation}
-        //   reservationResponse={reservaRealizada}
-        //   seniaPorPersona={seniaPorPersona}
-        //   cantidadActualPasajeros={selectedTipoHabitacionData.capacidad}
-        //   precioFinalPorPersona={precioFinalPorPersona}
-        // />
         <PagoSeniaModal
           isOpen={isSenialModalOpen}
           onClose={handleCloseSeniaModal}
-          onConfirm={handleConfirmReservation}
-          // reservationData={reservaRealizada}
-          isPendingReservation={isPendingReservation}
+          onConfirm={handleConfirmSeniaPago}
+          isPendingPagarSenia={isPendingPagarSenia}
           reservationData={sampleReservation}
-          reservationResponse={({
-    id: 93,
-    codigo: 'RSV-2025-0093',
-    observacion: null,
-    titular: {
-      id: 15,
-      nombre: 'KENZO',
-      apellido: 'Escurra',
-      documento: '778341234',
-      email: 'kenzo@gmail.com',
-      telefono: '09875436788'
-    },
-    paquete: {
-      id: 139,
-      nombre: 'Rio De Janeiro x8 Distribuidora',
-      tipo_paquete: { id: 2, nombre: 'Aereo' },
-      destino: { id: 4, ciudad: 'Rio de Janeiro', pais: 'Brasil' },
-      zona_geografica: {
-        id: 1,
-        nombre: 'America del Sur',
-        descripcion: 
-          'Región compuesta por países ubicados al sur del continente americano, conocida por su diversidad cultural, paisajes naturales únicos y destinos turísticos como Machu Picchu, las Cataratas del Iguazú y la Patagonia.'
-      },
-      distribuidora: { id: 1, nombre: 'Consorcio Travel' },
-      moneda: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' },
-      servicios: [
-        {
-          servicio_id: 9,
-          nombre_servicio: 'Actividades Recreativas',
-          precio: 0,
-          precio_base: 100
-        },
-        {
-          servicio_id: 6,
-          nombre_servicio: 'City Tour',
-          precio: 0,
-          precio_base: 100
-        }
-      ],
-      modalidad: 'flexible',
-      precio: 1200,
-      precio_venta_desde: 1760,
-      senia: 220,
-      fecha_inicio: '2025-11-01',
-      fecha_fin: '2025-11-15',
-      personalizado: false,
-      cantidad_pasajeros: null,
-      propio: false,
-      activo: true,
-      imagen: null,
-      imagen_url: null,
-      fecha_creacion: '2025-10-24T21:48:26+0000',
-      fecha_modificacion: '2025-10-24T21:48:26+0000',
-      salidas: [
-        {
-          id: 247,
-          fecha_salida: '2025-11-01',
-          fecha_regreso: '2025-11-08',
-          moneda: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' },
-          temporada: null,
-          precio_actual: 1200,
-          precio_final: 1620,
-          ganancia: null,
-          comision: 30,
-          precio_venta_sugerido_min: 1560,
-          precio_venta_sugerido_max: 2106,
-          precio_venta_total_min: 1560,
-          precio_venta_total_max: 2106,
-          cupo: null,
-          senia: 220,
-          activo: true,
-          hoteles: [
-            { id: 14, nombre: 'Hard Rock Rio' },
-            { id: 21, nombre: 'Hotel Prueba 3' },
-            { id: 24, nombre: 'VICTOR HUGO' }
-          ],
-          habitacion_fija: null,
-          cupos_habitaciones: [],
-          precios_catalogo_hoteles: [
-            {
-              hotel: { id: 24, nombre: 'VICTOR HUGO' },
-              precio_catalogo: 1200
-            },
-            {
-              hotel: { id: 21, nombre: 'Hotel Prueba 3' },
-              precio_catalogo: 1300
-            }
-          ],
-          precios_catalogo: [
-            {
-              habitacion: { id: 18, tipo: 'doble', hotel: 'VICTOR HUGO' },
-              precio_catalogo: 1200
-            },
-            {
-              habitacion: { id: 12, tipo: 'doble', hotel: 'Hotel Prueba 3' },
-              precio_catalogo: 1300
-            },
-            {
-              habitacion: { id: 1, tipo: 'single', hotel: 'Hard Rock Rio' },
-              precio_catalogo: 1400
-            },
-            {
-              habitacion: { id: 2, tipo: 'doble', hotel: 'Hard Rock Rio' },
-              precio_catalogo: 1500
-            },
-            {
-              habitacion: { id: 3, tipo: 'triple', hotel: 'Hard Rock Rio' },
-              precio_catalogo: 1620
-            }
-          ]
-        },
-        {
-          id: 248,
-          fecha_salida: '2025-11-08',
-          fecha_regreso: '2025-11-15',
-          moneda: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' },
-          temporada: null,
-          precio_actual: 1250,
-          precio_final: 1800,
-          ganancia: null,
-          comision: 30,
-          precio_venta_sugerido_min: 1625,
-          precio_venta_sugerido_max: 2340,
-          precio_venta_total_min: 1625,
-          precio_venta_total_max: 2340,
-          cupo: null,
-          senia: 240,
-          activo: true,
-          hoteles: [
-            { id: 14, nombre: 'Hard Rock Rio' },
-            { id: 21, nombre: 'Hotel Prueba 3' },
-            { id: 24, nombre: 'VICTOR HUGO' }
-          ],
-          habitacion_fija: null,
-          cupos_habitaciones: [],
-          precios_catalogo_hoteles: [
-            {
-              hotel: { id: 24, nombre: 'VICTOR HUGO' },
-              precio_catalogo: 1250
-            },
-            {
-              hotel: { id: 21, nombre: 'Hotel Prueba 3' },
-              precio_catalogo: 1350
-            }
-          ],
-          precios_catalogo: [
-            {
-              habitacion: { id: 12, tipo: 'doble', hotel: 'Hotel Prueba 3' },
-              precio_catalogo: 1350
-            },
-            {
-              habitacion: { id: 1, tipo: 'single', hotel: 'Hard Rock Rio' },
-              precio_catalogo: 1500
-            },
-            {
-              habitacion: { id: 2, tipo: 'doble', hotel: 'Hard Rock Rio' },
-              precio_catalogo: 1630
-            },
-            {
-              habitacion: { id: 3, tipo: 'triple', hotel: 'Hard Rock Rio' },
-              precio_catalogo: 1800
-            },
-            {
-              habitacion: { id: 18, tipo: 'doble', hotel: 'VICTOR HUGO' },
-              precio_catalogo: 1250
-            }
-          ]
-        }
-      ]
-    },
-    salida: {
-      id: 248,
-      fecha_salida: '2025-11-08',
-      fecha_regreso: '2025-11-15',
-      precio_actual: 1250,
-      precio_final: 1800,
-      senia: 240
-    },
-    hotel: { id: 14, nombre: 'Hard Rock Rio', direccion: null, estrellas: 4 },
-    habitacion: {
-      id: 2,
-      numero: '101',
-      tipo: 'doble',
-      capacidad: 2,
-      precio_noche: 170,
-      hotel_nombre: 'Hard Rock Rio'
-    },
-    fecha_reserva: '2025-10-25T23:10:28+0000',
-    cantidad_pasajeros: 2,
-    precio_unitario: 2119,
-    precio_base_paquete: 2119,
-    costo_total_estimado: 4238,
-    'seña_total': 480,
-    monto_pagado: 480,
-    estado: 'confirmada',
-    datos_completos: false,
-    estado_display: 'Confirmada Incompleto',
-    pasajeros: [
-      {
-        id: 97,
-        persona: {
-          id: 15,
-          nombre: 'KENZO',
-          apellido: 'Escurra',
-          documento: '778341234',
-          email: 'kenzo@gmail.com',
-          telefono: '09875436788'
-        },
-        es_titular: true,
-        precio_asignado: 2119,
-        monto_pagado: 0,
-        saldo_pendiente: 2119,
-        porcentaje_pagado: 0,
-        'seña_requerida': 240,
-        tiene_sena_pagada: false,
-        esta_totalmente_pagado: false,
-        ticket_numero: null,
-        voucher_codigo: null,
-        fecha_registro: '2025-10-25T23:10:28+0000'
-      }
-    ],
-    activo: true,
-    fecha_modificacion: '2025-10-25T23:10:28+0000'
-  })}
-          seniaPorPersona={reservaRealizada?.pasajeros?.[0]?.seña_requerida || 240}
-          cantidadActualPasajeros={reservaRealizada?.pasajeros?.length || 2}
-          precioFinalPorPersona={reservaRealizada?.pasajeros?.[0]?.precio_asignado || 2119.0000}
-          selectedPasajerosData={reservaRealizada?.pasajeros?.filter((p: any) => !p.es_titular).map((p: any) => p.persona) || []}
-          titular={reservaRealizada?.pasajeros?.find((p: any) => p.es_titular)?.persona || reservaRealizada?.titular}
+          reservationResponse={reservaRealizadaResponse}
+          seniaPorPersona={reservaRealizadaResponse?.pasajeros?.[0]?.seña_requerida || seniaPorPersona}
+          cantidadActualPasajeros={reservaRealizadaResponse?.cantidad_pasajeros || reservaRealizadaResponse?.habitacion?.capacidad || cantidadActualPasajeros}
+          precioFinalPorPersona={reservaRealizadaResponse?.pasajeros?.[0]?.precio_asignado || precioFinalPorPersona}
+          selectedPasajerosData={reservaRealizadaResponse?.pasajeros?.filter((p: any) => !p.es_titular).map((p: any) => p.persona) || []}
+          titular={reservaRealizadaResponse?.pasajeros?.find((p: any) => p.es_titular)?.persona || reservaRealizadaResponse?.titular}
         />
       )}
 
     {isReceiptModalOpen && <PaymentReceiptModal
       isOpen={isReceiptModalOpen}
       onClose={handleCloseReceipt}
-      onBack={handleBackToConfirm}
-      receiptData={{reservaRealizada}}
-      handleDescargarPDF={() => handleDescargarPDF(reservaRealizada?.id)}
+      // onBack={handleBackToConfirm}
+      isPendingDescargaComprobante={isPendingDescargaComprobante}
+      receiptData={pagoSeniaRealizadaResponse}
+      handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
       />}
 
     </>

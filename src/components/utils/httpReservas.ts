@@ -188,6 +188,34 @@ export async function generarComprobante(reservaId: number | string) {
   return response.data;
 }
 
+export async function pagarSenia(reservaId: number | string, payload: any) {
+  const response = await axiosInstance.post(`/reservas/${reservaId}/registrar-senia/`, payload);
+  return response.data;
+}
+
+export async function descargarComprobanteById(comprobanteId: number | string) {
+  const response = await axiosInstance.get(
+    `/comprobantes/${comprobanteId}/descargar-pdf/`,
+    { responseType: 'blob' } // 👈 importante: indica que es un archivo binario
+  );
+
+  // Crear una URL temporal del archivo
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+
+  // Crear un enlace temporal para forzar la descarga
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `comprobante-${comprobanteId}.pdf`); // 👈 nombre del archivo
+  document.body.appendChild(link);
+  link.click();
+
+  // Limpieza
+  link.remove();
+  window.URL.revokeObjectURL(url);
+
+  return response;
+}
+
 
 
 export async function descargarComprobanteDesdeUrl(pdfUrl: string, fileName = 'comprobante.pdf') {

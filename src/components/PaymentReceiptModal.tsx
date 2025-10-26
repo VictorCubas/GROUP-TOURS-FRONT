@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { formatearFecha, formatearSeparadorMiles, getHoraDesdeFecha, getPrimerNombreApellido } from '@/helper/formatter';
-import { X, Download, Mail, Printer, CheckCircle2 } from 'lucide-react';
+import { X, Download, Mail, CheckCircle2, Loader2Icon } from 'lucide-react';
+import { Button } from './ui/button';
 
 // interface PaymentReceiptData {
 //   receiptNumber: string;
@@ -28,6 +29,7 @@ interface PaymentReceiptModalProps {
   onBack?: () => void;
   handleDescargarPDF: () => void;
   receiptData: any;
+  isPendingDescargaComprobante: boolean;
 }
 
 export default function PaymentReceiptModal({
@@ -35,6 +37,7 @@ export default function PaymentReceiptModal({
   onClose,
   receiptData,
   handleDescargarPDF,
+  isPendingDescargaComprobante,
 }: PaymentReceiptModalProps) {
   if (!isOpen) return null;
 
@@ -46,11 +49,6 @@ export default function PaymentReceiptModal({
   const handleSendEmail = () => {
     console.log('Enviando email...');
   };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
 
   console.log(receiptData)
 
@@ -91,14 +89,25 @@ export default function PaymentReceiptModal({
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors
-                cursor-pointer"
+            <Button
+              disabled={isPendingDescargaComprobante}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownloadPDF()
+              }}
+              className="px-6 py-5 bg-blue-600 text-white font-medium rounded-lg
+                        cursor-pointer hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
-              <Download className="w-4 h-4" />
-              Descargar PDF
-            </button>
+                {isPendingDescargaComprobante ? 
+                  <>
+                      <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                      Descargando...
+                  </> : 
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Descargar PDF
+                  </>}
+            </Button>
             <button
               disabled
               onClick={handleSendEmail}
@@ -106,14 +115,6 @@ export default function PaymentReceiptModal({
             >
               <Mail className="w-4 h-4" />
               Enviar Email
-            </button>
-            <button
-              disabled
-              onClick={handlePrint}
-              className="disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 px-4 py-2 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <Printer className="w-4 h-4" />
-              Imprimir
             </button>
           </div>
         </div>
@@ -129,7 +130,7 @@ export default function PaymentReceiptModal({
               COMPROBANTE DE PAGO
             </h2>
             <p className="text-xl font-mono text-gray-600">
-              #{receiptData.codigo}
+              #{receiptData.comprobante.numero_comprobante}
             </p>
           </div>
 
@@ -139,21 +140,19 @@ export default function PaymentReceiptModal({
               <div>
                 <p className="text-sm text-gray-600">Fecha:</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {formatearFecha(receiptData.fecha_reserva, false)} 
+                  {formatearFecha(receiptData.comprobante.fecha_pago, false)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Hora:</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {/* {receiptData.time} */}
-                  {getHoraDesdeFecha(receiptData.fecha_reserva)}
+                  {getHoraDesdeFecha(receiptData.comprobante.fecha_pago)}
                 </p>
               </div>
             </div>
             <div className="bg-blue-100 px-4 py-2 rounded-lg">
               <p className="text-sm font-bold text-blue-800">
-                {/* Tipo: {receiptData?.tipo_paquete?.nombre} */}
-                Tipo: SEÑA
+                Tipo: {receiptData.comprobante.tipo_display}
               </p>
             </div>
           </div>
@@ -195,19 +194,19 @@ export default function PaymentReceiptModal({
               <div className="flex">
                 <span className="text-gray-600 w-32">• Código:</span>
                 <span className="font-semibold text-gray-900 font-mono">
-                  {receiptData.codigo}
+                  {receiptData.comprobante.reserva_codigo}
                 </span>
               </div>
               <div className="flex">
                 <span className="text-gray-600 w-32">• Paquete:</span>
                 <span className="font-semibold text-gray-900">
-                  {receiptData?.paquete?.nombre}
+                  {receiptData?.reserva?.nombre_paquete}
                 </span>
               </div>
               <div className="flex">
                 <span className="text-gray-600 w-32">• Destino:</span>
                 <span className="font-semibold text-gray-900">
-                  {receiptData?.paquete?.destino?.ciudad}
+                  {receiptData?.reserva?.nombre_destino}
                 </span>
               </div>
             </div>
@@ -222,25 +221,64 @@ export default function PaymentReceiptModal({
               <div className="flex">
                 <span className="text-gray-600 w-32">• Método:</span>
                 <span className="font-semibold text-gray-900">
-                  {/* {receiptData.paymentMethod} */}
-                  EFECTIVO
+                  {receiptData.comprobante.metodo_pago_display}
                 </span>
               </div>
-              <div className="flex">
-                <span className="text-gray-600 w-32">• Referencia:</span>
-                <span className="font-semibold text-gray-900 font-mono">
-                  {/* {receiptData.paymentReference}                   */}
-                  TRF-20251022-001
-                </span>
-              </div>
+              {receiptData.comprobante.referencia && (
+                <div className="flex">
+                  <span className="text-gray-600 w-32">• Referencia:</span>
+                  <span className="font-semibold text-gray-900 font-mono">
+                    {receiptData.comprobante.referencia}
+                  </span>
+                </div>
+              )}
               <div className="flex">
                 <span className="text-gray-600 w-32">• Monto pagado:</span>
                 <span className="font-bold text-green-600 text-lg">
-                  {receiptData.paquete.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.monto_pagado)}
+                  {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.comprobante.monto)}
                 </span>
               </div>
             </div>
           </div>
+
+          {/* Passenger Distribution */}
+          {receiptData.comprobante.distribuciones && receiptData.comprobante.distribuciones.length > 0 && (
+            <div className="border border-gray-200 rounded-lg p-5 mb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                DISTRIBUCIÓN POR PASAJERO
+              </h3>
+              <div className="overflow-x-auto tabla-comprobante">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Pasajero</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {receiptData.comprobante.distribuciones.map((dist: any) => (
+                      <tr key={dist.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {dist.pasajero_nombre} {dist.pasajero_apellido}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                          {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(dist.monto)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50 border-t-2 border-gray-300">
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                      <td className="px-4 py-3 text-sm font-bold text-green-600 text-right">
+                        {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.comprobante.monto)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Economic Summary */}
           <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg p-6">
@@ -251,13 +289,13 @@ export default function PaymentReceiptModal({
               <div className="flex justify-between items-center">
                 <span className="text-gray-700 font-medium">• Precio total:</span>
                 <span className="text-xl font-bold text-gray-900">
-                  {receiptData.paquete.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.costo_total_estimado)}
+                  {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.reserva.costo_total_estimado)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-700 font-medium">• Total pagado:</span>
                 <span className="text-xl font-bold text-green-600">
-                  {receiptData.paquete.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.monto_pagado)}
+                  {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.reserva.monto_pagado)}
                 </span>
               </div>
               <div className="border-t-2 border-blue-300 pt-4 flex justify-between items-center">
@@ -265,7 +303,7 @@ export default function PaymentReceiptModal({
                   • Saldo pendiente:
                 </span>
                 <span className="text-2xl font-bold text-red-600">
-                  {receiptData.paquete.moneda.simbolo} {formatearSeparadorMiles.format(Number(receiptData.costo_total_estimado) - Number(receiptData.monto_pagado))}
+                  {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.reserva.saldo_pendiente)}
                 </span>
               </div>
             </div>

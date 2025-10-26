@@ -309,6 +309,10 @@ div:has(> table) {
   height: 55vh !important; 
 }
 
+.tabla-comprobante:has(> table) {
+  height: fit-content !important; 
+}
+
 .absolute-center{
     position: absolute;
     top: 50%;

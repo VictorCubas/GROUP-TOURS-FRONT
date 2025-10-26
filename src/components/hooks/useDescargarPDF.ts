@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from '@tanstack/react-query';
-import { descargarComprobanteDesdeUrl, descargarComprobantePDF, generarComprobante } from '../utils/httpReservas';
+import { descargarComprobanteById, descargarComprobantePDF, pagarSenia } from '../utils/httpReservas';
 
 export function useDescargarPDF() {
     return useMutation({
@@ -9,16 +10,10 @@ export function useDescargarPDF() {
 
 
 
-export function useGenerarYDescargarComprobante() {
+export function useDescargarComprobante() {
   return useMutation({
-    mutationFn: async (reservaId: number | string) => {
-      const data = await generarComprobante(reservaId);
-
-      if (data.pdf_url) {
-        await descargarComprobanteDesdeUrl(data.pdf_url, `comprobante-${data.comprobante_id}.pdf`);
-      }
-
-      return data;
+    mutationFn: async (comprobanteId: number | string) => {
+      await descargarComprobanteById(comprobanteId);
     },
     onSuccess: (data) => {
       console.log('✅ Comprobante generado y PDF descargado:', data);
@@ -27,6 +22,16 @@ export function useGenerarYDescargarComprobante() {
     onError: (error) => {
       console.error('❌ Error al generar o descargar el comprobante:', error);
       // toast.error('No se pudo generar el comprobante');
+    },
+  });
+}
+
+
+export function usePagarSenia() {
+  return useMutation({
+    mutationFn: async ({ reservaId, payload }: { reservaId: number | string; payload: any }) => {
+      const data = await pagarSenia(reservaId, payload);
+      return data;
     },
   });
 }

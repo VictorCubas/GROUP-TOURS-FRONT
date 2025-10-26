@@ -1,6 +1,6 @@
-import { formatearSeparadorMiles } from '@/helper/formatter';
 import type { Moneda } from '@/types/reservas';
-import { X, Calendar, Hotel, Users, BedDouble, CheckCircle2, Star } from 'lucide-react';
+import { X, Calendar, Hotel, Users, BedDouble, CheckCircle2, Star, Loader2Icon } from 'lucide-react';
+import { Button } from './ui/button';
 
 interface ReservationData {
   package: string;
@@ -24,6 +24,7 @@ interface ReservationConfirmModalProps {
   onClose: () => void;
   onConfirm: () => void;
   reservationData: ReservationData;
+  isPendingReservation: boolean;
 }
 
 export default function ReservationConfirmModal({
@@ -31,6 +32,7 @@ export default function ReservationConfirmModal({
   onClose,
   onConfirm,
   reservationData,
+  isPendingReservation
 }: ReservationConfirmModalProps) {
   if (!isOpen) return null;
 
@@ -82,7 +84,7 @@ export default function ReservationConfirmModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-            <div className="bg-white/95 rounded-xl shadow-xl max-w-5xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+            <div className="bg-white/95 rounded-xl shadow-xl max-w-2xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div>
@@ -202,74 +204,49 @@ export default function ReservationConfirmModal({
             </div>
           </div>
 
-          {/* Pricing */}
-          <div className="bg-gray-50 rounded-lg p-5 space-y-4">
-            <h4 className="font-semibold text-gray-900 mb-3">Resumen de Precios</h4>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Seña</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formatearSeparadorMiles.format(reservationData.depositPerPerson)} por persona
-                  </p>
-                </div>
-                <p className="text-xl font-bold text-blue-600">
-                  {reservationData.currency.simbolo} {formatearSeparadorMiles.format(reservationData.deposit)}
-                  
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <div>
-                  <p className="text-base font-semibold text-gray-900">Precio Total</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {formatearSeparadorMiles.format(reservationData.pricePerPerson)} por persona
-                    {/* asfasdfas por persona */}
-                  </p>
-                </div>
-                <p className="text-3xl font-bold text-green-600">
-                  {reservationData.currency.simbolo} {formatearSeparadorMiles.format(reservationData.totalPrice)}
-                  {/* 534634634534 */}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Important Notice */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex gap-3">
-              <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-900">
-                <p className="font-medium mb-1">Importante</p>
-                <p className="text-blue-700">
-                  Al confirmar, aceptas los términos y condiciones de la reserva.
-                  Recibirás un correo de confirmación con todos los detalles.
-                </p>
-              </div>
-            </div>
+          <div className="mt-5 bg-gradient-to-r from-amber-50 to-orange-50 border-1 border-amber-300 rounded-lg p-3 shadow-md">
+            <p className="text-balance text-sm text-amber-900 mb-1">
+              <strong>Nota:</strong> Al crear la reserva, esta quedará en estado pendiente de seña. En el siguiente paso
+              podrás optar por pagar la seña, pagar el total, o dejar la reserva pendiente para pagar más tarde.
+            </p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
-          <button
+          <Button
+          variant="outline"
             onClick={onClose}
-            className="px-6 py-2.5 text-gray-700 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-6 py-5 text-gray-700 font-medium border border-gray-300 rounded-lg 
+                        cursor-pointer hover:bg-gray-50 transition-colors"
           >
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
             type='button'
+            disabled={isPendingReservation}
             onClick={(e) => {
               e.stopPropagation();
               onConfirm()
             }}
-            className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            className="px-6 py-5 bg-green-600 text-white font-medium rounded-lg
+                    cursor-pointer hover:bg-green-700 transition-colors flex items-center gap-2"
           >
-            <CheckCircle2 className="w-5 h-5" />
-            Confirmar Reserva
-          </button>
+            {/* <CheckCircle2 className="w-5 h-5" />
+            Confirmar Reserva */}
+
+            {isPendingReservation ? 
+              <>
+                  <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                  Creando...
+              </> : 
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Confirmar Reserva  
+              </>}
+
+
+          </Button>
         </div>
       </div>
     </div>
