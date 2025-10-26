@@ -1,16 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // import type { Moneda } from '@/types/reservas';
-import { X, Calendar, Hotel, Users, BedDouble, CheckCircle2, Star, Loader2Icon, DollarSign, Wallet, AlertCircle, CreditCard } from 'lucide-react';
+import { Users, CheckCircle2, Loader2Icon, DollarSign, Wallet, AlertCircle, CreditCard } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from '@radix-ui/react-label';
 import { RadioGroup, RadioGroupItem } from '@radix-ui/react-radio-group';
 import { useState } from 'react';
 import { Input } from './ui/input';
-import { IoCash, IoCashOutline } from 'react-icons/io5';
+import { IoCashOutline } from 'react-icons/io5';
 import { formatearSeparadorMiles } from '@/helper/formatter';
-import { getPayload } from '@/helper/paquete';
 
 
 interface PagoSeniaModalProps {
