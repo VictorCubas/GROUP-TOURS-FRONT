@@ -14,7 +14,7 @@ import { formatearSeparadorMiles } from '@/helper/formatter';
 interface PagoSeniaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (payload: any) => void;
+  onConfirm: (payload: any, aymentType: "deposit" | "full") => void;
   reservationData: any;
   isPendingPagarSenia: boolean;
   reservationResponse: any;
@@ -59,6 +59,9 @@ export default function PagoSeniaModal({
 
   // Función para generar el payload del pago de seña
   const generarPayloadPago = () => {
+    console.log(reservationResponse?.pasajeros);
+    console.log(cantidadActualPasajeros);
+    console.log(selectedPasajerosData);
     const titularViaja = reservationResponse?.pasajeros?.some((p: any) => p.es_titular);
     const distribuciones: Array<{ pasajero: number | string; monto: number }> = [];
 
@@ -81,22 +84,27 @@ export default function PagoSeniaModal({
           // El primer pasajero es el titular
           const pasajeroTitular = reservationResponse?.pasajeros?.find((p: any) => p.es_titular);
           if (pasajeroTitular?.id) {
-            distribuciones.push({ pasajero: pasajeroTitular.id, monto });
+            distribuciones.push({ pasajero: pasajeroTitular.id, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
           } else {
-            distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto });
+            distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
           }
         } else {
           // Los demás pasajeros
           const pasajeroIndex = index - 1;
           const pasajero = selectedPasajerosData?.[pasajeroIndex];
           const pasajeroEnReserva = reservationResponse?.pasajeros?.find(
-            (p: any) => !p.es_titular && p.persona === pasajero?.id
+            (p: any) => {
+              console.log(p)
+              return !p.es_titular && p.persona.id === pasajero?.id
+            }
           );
 
+          console.log(pasajeroEnReserva)
+
           if (pasajeroEnReserva?.id) {
-            distribuciones.push({ pasajero: pasajeroEnReserva.id, monto });
+            distribuciones.push({ pasajero: pasajeroEnReserva.id, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
           } else {
-            distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto });
+            distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
           }
         }
       } else {
@@ -107,18 +115,21 @@ export default function PagoSeniaModal({
         );
 
         if (pasajeroEnReserva?.id) {
-          distribuciones.push({ pasajero: pasajeroEnReserva.id, monto });
+          distribuciones.push({ pasajero: pasajeroEnReserva.id, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
         } else {
-          distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto });
+          distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona});
         }
       }
     }
 
-    const payload = {
+    const payload: any = {
       metodo_pago: metodosPagoMap[paymentMethod] || 'efectivo',
       // referencia: `${metodosPagoMap[paymentMethod].toUpperCase()}-${Date.now()}`,
       distribuciones
     };
+
+    if(paymentType === 'full')
+      payload.tipo = 'pago_total'
 
     return payload;
   };
@@ -506,7 +517,8 @@ export default function PagoSeniaModal({
                 disabled={isPendingPagarSenia}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onConfirm(generarPayloadPago())
+                  console.log(generarPayloadPago())
+                  onConfirm(generarPayloadPago(), paymentType)
                 }}
                 className="px-6 py-5 bg-green-600 text-white font-medium rounded-lg
                         cursor-pointer hover:bg-green-700 transition-colors flex items-center gap-2"

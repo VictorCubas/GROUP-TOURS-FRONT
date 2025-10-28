@@ -44,6 +44,9 @@ import {
   LayoutGrid,
   List,
   Building2,
+  Heart,
+  Share2,
+  MapPin,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -74,7 +77,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
+import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type ReservaListado, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import {formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
 import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular } from "@/components/utils/httpReservas"
 
@@ -97,8 +100,9 @@ import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector";
 import { HotelHabitacionSelectorListMode } from "@/components/HotelHabitacionSelectorListMode";
 import ReservationConfirmModal from "@/components/ReservationConfirmModal"
 import PaymentReceiptModal from "@/components/PaymentReceiptModal"
-import { useDescargarComprobante, usePagarSenia } from "@/components/hooks/useDescargarPDF"
+import { useDescargarComprobante, usePagarSenia, usePagoTotal } from "@/components/hooks/useDescargarPDF"
 import PagoSeniaModal from "@/components/PagoSeniaModal"
+import DetallesReservaContainer from "@/components/DetallesReservaContainer"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
 
@@ -214,7 +218,8 @@ export default function ModulosPage() {
 
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeTab, setActiveTab] = useState('list');
+  const [activeTabCatalogo, setActiveTabCatalogo] = useState('list');
+  const [activeTab, setActiveTab] = useState<'general' | 'passengers' | 'payments'>('general');
   const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
                                                       next: null,
                                                       totalItems: 5,
@@ -299,6 +304,8 @@ export default function ModulosPage() {
   //FETCH PARA REALIZAR EL PAGO DE LA SEÑA
   const { mutate: fetchPagarSenia, isPending: isPendingPagarSenia } = usePagarSenia();
 
+  const { mutate: fetchPagoTotal, isPending: isPendingPagoTotal } = usePagoTotal();
+
   console.log(isPendingDescargaComprobante);
 
   function handleDescargarPDF(id: number) {
@@ -343,6 +350,40 @@ export default function ModulosPage() {
           const errorMessage = error.response?.data?.message
             || error.response?.data?.error
             || 'Error al generar la seña';
+
+          handleShowToast(errorMessage, 'error');
+        },
+      }
+    );
+  }
+
+  const handlePagoTotal = (id: number, payload: any) => {
+    console.log('📦 Payload enviado al backend:', JSON.stringify(payload, null, 2));
+
+    fetchPagoTotal(
+      { reservaId: id, payload },
+      {
+        onSuccess: (data) => {
+          console.log('✅ Se ha realizado la seña correctamente');
+          console.log('📄 Respuesta del servidor:', data);
+          handleShowToast('Se ha pagado el paquete correctamente', 'success');
+
+          // Cerrar modal y limpiar estado
+          setIsSenialModalOpen(false);
+          // setReservaRealizadaResponse(null);
+          setIsReceiptModalOpen(true);
+          setPagoSeniaRealizadaResponse(data); 
+
+          // Refrescar la lista de reservas para ver el estado actualizado
+          queryClient.invalidateQueries({ queryKey: ['reservas'] });
+        },
+        onError: (error: any) => {
+          console.error('❌ Error al realizar la seña:', error);
+          console.error('📋 Detalles del error:', error.response?.data);
+
+          const errorMessage = error.response?.data?.message
+            || error.response?.data?.error
+            || 'Error al generar el pagp';
 
           handleShowToast(errorMessage, 'error');
         },
@@ -401,7 +442,7 @@ export default function ModulosPage() {
 
   if(!isFetching && !isError){
     if(data?.results){
-      dataList = data.results.map((per: Reserva, index: number) => ({...per, numero: index + 1}));
+      dataList = data.results.map((per: ReservaListado, index: number) => ({...per, numero: index + 1}));
     }
   }
 
@@ -633,7 +674,7 @@ export default function ModulosPage() {
           queryKey: ['hotel-por-salida'],
         });
 
-        setActiveTab('list');
+        setActiveTabCatalogo('list');
     },
   });
 
@@ -669,7 +710,7 @@ export default function ModulosPage() {
           queryKey: ['hotel-por-salida'],
         });
 
-        setActiveTab('list');
+        setActiveTabCatalogo('list');
     },
   });
 
@@ -765,7 +806,7 @@ export default function ModulosPage() {
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
         
-        setActiveTab('list');
+        setActiveTabCatalogo('list');
   }
 
 
@@ -944,12 +985,17 @@ export default function ModulosPage() {
   };
 
   // Manejar la confirmación del modal
-  const handleConfirmSeniaPago = (payload: any) => {
+  const handleConfirmSeniaPago = (payload: any, paymentType: "deposit" | "full") => {
     if (payload) {
       console.log(reservaRealizadaResponse)
       // console.log(pagoSeniaRealizadaResponse)
       console.log(payload)
-      handlePagarSenia(reservaRealizadaResponse.id, payload)
+      console.log(paymentType)
+
+      if(paymentType === 'deposit')
+        handlePagarSenia(reservaRealizadaResponse.id, payload)
+      else
+        handlePagoTotal(reservaRealizadaResponse.id, payload)
     }
   };
 
@@ -1010,7 +1056,7 @@ export default function ModulosPage() {
 
   // const servicios_ids = data.servicios.map(servicio => servicio.id)
     console.log('data: ', data)
-    setActiveTab('form');
+    setActiveTabCatalogo('form');
     setDataAEditar(data);
 
     setSelectedPersonaID(data!.titular.id)
@@ -1043,10 +1089,11 @@ export default function ModulosPage() {
     setOnVerDetalles(true);
   }
 
-  // const handleCloseVerDetalles = () => {
-  //   setOnVerDetalles(false);
-  //   setDataDetalle(undefined);
-  // }
+  const handleCloseVerDetalles = () => {
+    setOnVerDetalles(false);
+    setDataDetalle(undefined);
+    setActiveTab('general');
+  }
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -1161,7 +1208,7 @@ export default function ModulosPage() {
   console.log('selectedPasajerosData: ', selectedPasajerosData)
 
   useEffect(() => {
-    if(activeTab === 'list'){
+    if(activeTabCatalogo === 'list'){
         queryClient.invalidateQueries({
                 queryKey: ['puestos-disponibles'],
                 exact: false
@@ -1172,7 +1219,7 @@ export default function ModulosPage() {
                 exact: false
               });
     }
-  }, [activeTab]);
+  }, [activeTabCatalogo]);
 
   useEffect(() => {
     if (tipoPaqueteSelected?.nombre === 'Comision' || tipoPaqueteSelected?.nombre === 'Comisión') {
@@ -1441,14 +1488,14 @@ export default function ModulosPage() {
 
   return (
     <>
-      {/* {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
+      {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="bg-white/95 rounded-xl shadow-xl max-w-5xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
               <div className="relative">
                 <img
-                  src={dataDetalle!.imagen ?? placeholderViaje}
-                  alt={dataDetalle?.nombre}
-                  className="w-full h-90 object-cover rounded-t-xl"
+                  src={dataDetalle!.paquete.imagen ?? placeholderViaje}
+                  alt={dataDetalle?.paquete.nombre}
+                  className="w-full h-74 object-cover rounded-t-xl"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-t-xl" />
 
@@ -1459,7 +1506,7 @@ export default function ModulosPage() {
                     {dataDetalle?.activo ? 'Activo' : 'Inactivo'}
                   </span>
                   <span className="px-4 py-2 bg-[rgba(0,0,0,0.2)] text-white text-xs font-medium rounded-full">
-                    {dataDetalle?.tipo_paquete.nombre}
+                    {dataDetalle?.paquete?.tipo_paquete.nombre}
                   </span>
                 </div>
                 
@@ -1484,21 +1531,59 @@ export default function ModulosPage() {
                 <div className="absolute bottom-6 left-6 right-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h1 className="text-4xl font-bold text-white mb-2">{dataDetalle?.nombre}</h1>
+                      <h1 className="text-4xl font-bold text-white mb-2">
+                        {dataDetalle?.paquete?.nombre}
+                      </h1>
                       <div className="flex items-center text-white/90 text-lg">
                         <MapPin className="w-5 h-5 mr-2" />
-                        <span>{dataDetalle?.destino.nombre}</span>
+                        <span>{dataDetalle?.paquete?.destino?.ciudad}</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-5xl font-bold text-white mb-1">{dataDetalle?.moneda.simbolo}{formatearSeparadorMiles.format(dataDetalle?.precio ?? 0)}</div>
+                      <div className="text-5xl font-bold text-white mb-1">
+                        {dataDetalle?.paquete?.moneda?.simbolo}{formatearSeparadorMiles.format(dataDetalle?.precio_unitario ?? 0)}
+                      </div>
                       <div className="text-white/80">por persona</div>
                     </div>
                   </div>
                 </div>
               </div>
+              <div className="border-b border-gray-200">
+                <nav className="flex space-x-8 px-8">
+                  <button
+                    onClick={() => setActiveTab('general')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 cursor-pointer ${
+                      activeTab === 'general'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Información General
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('passengers')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 cursor-pointer ${
+                      activeTab === 'passengers'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Pasajeros ({dataDetalle?.habitacion?.capacidad})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('payments')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 cursor-pointer ${
+                      activeTab === 'payments'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Pagos y Finanzas
+                  </button>
+                </nav>
+              </div>
 
-              {!dataDetalle?.propio && 
+              {/* {!dataDetalle?.paquete?.propio && 
                 <>
                   <div className="p-4 bg-blue-50 border-l-4 border-l-blue-500">
                     <div className="flex items-center justify-between">
@@ -1508,7 +1593,9 @@ export default function ModulosPage() {
                         </div>
                         <div>
                           <div className="font-medium text-blue-900">Distribuido por</div>
-                          <div className="text-lg font-bold text-blue-800">{dataDetalle?.distribuidora?.nombre}</div>
+                          <div className="text-lg font-bold text-blue-800">
+                            {dataDetalle?.paquete?.distribuidora?.nombre}
+                          </div>
                         </div>
                       </div>
                     
@@ -1516,22 +1603,22 @@ export default function ModulosPage() {
                   </div>
                   <Separator />
                 </>
-              }
+              } */}
 
-              <div className="p-8">
+              {/* <div className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                  {dataDetalle?.fecha_inicio &&
+                  {dataDetalle?.paquete?.fecha_inicio &&
                     <div className="bg-blue-50 p-6 rounded-xl">
                       <div className="flex items-center justify-between mb-3">
                         <Clock className="w-8 h-8 text-blue-600" />
-                        <span className="text-2xl font-bold text-blue-600">{getDaysBetweenDates(dataDetalle?.fecha_inicio ?? '', dataDetalle?.fecha_fin ?? '')}</span>
+                        <span className="text-2xl font-bold text-blue-600">{getDaysBetweenDates(dataDetalle?.paquete?.fecha_inicio ?? '', dataDetalle?.paquete?.fecha_fin ?? '')}</span>
                       </div>
                       <h3 className="font-semibold text-gray-900">Duración</h3>
                       <p className="text-sm text-gray-600">días de viaje</p>
                     </div>
                   }
 
-                  {!dataDetalle?.fecha_inicio &&
+                  {!dataDetalle?.paquete?.fecha_inicio &&
                     <div className="bg-blue-50 p-6 rounded-xl">
                       <div className="flex items-center justify-center mb-3">
                         <Clock className="w-8 h-8 text-blue-600" />
@@ -1541,7 +1628,7 @@ export default function ModulosPage() {
                     </div>
                   }
 
-                  {dataDetalle?.propio && 
+                  {dataDetalle?.paquete?.propio && 
                     <div className="bg-green-50 p-6 rounded-xl">
                       <div className="flex items-center justify-between mb-3">
                         <Users className="w-8 h-8 text-green-600" />
@@ -1556,34 +1643,34 @@ export default function ModulosPage() {
                     </div>
                   }
 
-                  {!dataDetalle?.propio && 
+                  {!dataDetalle?.paquete?.propio && 
                     <div className="bg-green-50 p-6 rounded-xl">
                       <div className="flex items-center justify-center mb-3">
                         <Users className="w-8 h-8 text-green-600" />
                       </div>
                       <h3 className="font-semibold text-gray-900 flex items-center justify-center">Flexible</h3>
                       <div className="w-full rounded-full flex items-center justify-center text-center">
-                        Pasajeros según solicitud
+                        Pasajeros según disponibilidad
                       </div>
                     </div>
                   }
 
-                  {dataDetalle?.fecha_inicio &&
+                  {dataDetalle?.paquete?.fecha_inicio &&
                     <div className="bg-emerald-50 p-6 rounded-xl">
                       <div className="flex items-center justify-between mb-3">
                         <Calendar className="w-8 h-8 text-emerald-600" />
                         <div className="text-right">
                           <div className="text-lg font-bold text-emerald-600">
-                            {new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                            {new Date(dataDetalle!.paquete?.fecha_inicio ?? '').toLocaleDateString('es', { day: 'numeric', month: 'short' })}
                           </div>
                         </div>
                       </div>
                       <h3 className="font-semibold text-gray-900">Inicio</h3>
-                      <p className="text-sm text-gray-600">{new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-600">{new Date(dataDetalle!.paquete?.fecha_inicio ?? '').toLocaleDateString()}</p>
                     </div>
                   }
 
-                  {!dataDetalle?.fecha_inicio &&
+                  {!dataDetalle?.paquete?.fecha_inicio &&
                     <div className="bg-emerald-50 p-6 rounded-xl">
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-right flex items-center justify-center w-full">
@@ -1612,7 +1699,7 @@ export default function ModulosPage() {
                 </div>
 
                 <div className="bg-gray-50 p-6 rounded-xl mb-8">
-                  {(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() === 'terrestre' && dataDetalle?.fecha_inicio)
+                  {(quitarAcentos(dataDetalle?.paquete?.tipo_paquete?.nombre ?? "").toLowerCase() === 'terrestre' && dataDetalle?.paquete?.fecha_inicio)
                       &&
                         <>
                           <h3 className="text-xl font-semibold text-gray-900 mb-4">Fechas del Viaje</h3>
@@ -1623,7 +1710,7 @@ export default function ModulosPage() {
                               </div>
                               <div>
                                 <h4 className="font-medium text-gray-900">Salida</h4>
-                                <p className="text-gray-600">{new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { 
+                                <p className="text-gray-600">{new Date(dataDetalle!.paquete?.fecha_inicio ?? '').toLocaleDateString('es', { 
                                   weekday: 'long', 
                                   year: 'numeric', 
                                   month: 'long', 
@@ -1637,7 +1724,7 @@ export default function ModulosPage() {
                               </div>
                               <div>
                                 <h4 className="font-medium text-gray-900">Regreso</h4>
-                                <p className="text-gray-600">{new Date(dataDetalle!.fecha_fin ?? '').toLocaleDateString('es', { 
+                                <p className="text-gray-600">{new Date(dataDetalle!.paquete?.fecha_fin ?? '').toLocaleDateString('es', { 
                                   weekday: 'long', 
                                   year: 'numeric', 
                                   month: 'long', 
@@ -1649,7 +1736,7 @@ export default function ModulosPage() {
                         </>
                       }
 
-                      {(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() !== 'terrestre' || !dataDetalle?.fecha_inicio) &&
+                      {(quitarAcentos(dataDetalle?.paquete?.tipo_paquete?.nombre ?? "").toLowerCase() !== 'terrestre' || !dataDetalle?.paquete?.fecha_inicio) &&
                         <>
                           <div className="p-4 bg-gradient-to-r from-sky-50 to-sky-100 border-l-4 border-l-sky-500">
                             <div className="flex items-center gap-3">
@@ -1657,7 +1744,7 @@ export default function ModulosPage() {
                                 <Calendar className="h-6 w-6 text-sky-700" />
                               </div>
                               <div className="flex-1">
-                                <div className="text-sm font-medium text-sky-700 uppercase tracking-wide">Reserva {dataDetalle?.tipo_paquete.nombre}</div>
+                                <div className="text-sm font-medium text-sky-700 uppercase tracking-wide">Reserva {dataDetalle?.paquete?.tipo_paquete.nombre}</div>
                                 <div className="text-lg font-bold text-sky-900">Fechas y pasajeros flexibles</div>
                                 <div className="text-sm text-sky-700 mt-1">
                                   Disponible todo el año • Grupos de cualquier tamaño • Salidas programadas
@@ -1678,7 +1765,7 @@ export default function ModulosPage() {
                     </h3>
                     <div className="space-y-4 max-h-60 overflow-y-auto">
                       
-                      {[...dataDetalle!.servicios].map((item, index) => (
+                      {[...dataDetalle!.paquete.servicios].map((item, index) => (
                         <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
                           <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                             {index === 0 && <Hotel className="w-3 h-3 text-green-600" />}
@@ -1687,24 +1774,24 @@ export default function ModulosPage() {
                             {index > 2 && <div className="w-2 h-2 bg-green-600 rounded-full" />}
                           </div>
                           <div>
-                            <p className="font-medium text-green-900">{item.nombre}</p>
+                            <p className="font-medium text-green-900">{item.nombre_servicio}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                </div>
+                </div> 
 
                 <div className="bg-blue-50 p-6 rounded-xl mb-8">
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Información Adicional</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                     <div>
-                      <p className="text-gray-600 mb-2"><strong>Creado:</strong> {new Date(dataDetalle!.fecha_creacion).toLocaleDateString()}</p>
-                      <p className="text-gray-600"><strong>Última actualización:</strong> {new Date(dataDetalle!.fecha_modificacion).toLocaleDateString()}</p>
+                      <p className="text-gray-600 mb-2"><strong>Creado:</strong> {new Date(dataDetalle!.paquete?.fecha_creacion).toLocaleDateString()}</p>
+                      <p className="text-gray-600"><strong>Última actualización:</strong> {new Date(dataDetalle!.paquete?.fecha_modificacion).toLocaleDateString()}</p>
                     </div>
                     <div>
                       <p className="text-gray-600 mb-2"><strong>Capacidad máxima:</strong> {dataDetalle?.cantidad_pasajeros ? `${dataDetalle?.cantidad_pasajeros} personas`: 'Flexible según distribuidora'}</p>
-                      <p className="text-gray-600 mb-2"><strong>Reservas actuales:</strong> {dataDetalle?.propio ? `${dataDetalle?.cantidad_pasajeros} personas`: 'Bajo demanda'}</p>
+                      <p className="text-gray-600 mb-2"><strong>Reservas actuales:</strong> {dataDetalle?.paquete?.propio ? `${dataDetalle?.cantidad_pasajeros} personas`: 'Bajo demanda'}</p>
                       <p className="text-gray-600"><strong>Disponibilidad:</strong> X espacios libres</p>
                     </div>
                   </div>
@@ -1718,11 +1805,17 @@ export default function ModulosPage() {
                     Cerrar
                   </button>
                 </div>
-              </div>
+              </div> */}
+
+              <DetallesReservaContainer 
+                activeTab={activeTab} 
+                reservaId={dataDetalle?.id ?? 0}
+                onClose={handleCloseVerDetalles}
+                />
             </div>
           </div>
 
-        </Modal>} */}
+        </Modal>}
 
       {onDesactivarData && <Modal onClose={handleCloseModal} claseCss="modal">
               <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
@@ -1775,7 +1868,7 @@ export default function ModulosPage() {
 
               {siTienePermiso("reservas", "exportar") && 
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
-                onClick={() => setActiveTab('form')}>
+                onClick={() => setActiveTabCatalogo('form')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Reserva
               </Button>
@@ -1787,7 +1880,7 @@ export default function ModulosPage() {
           <ResumenCardsDinamico resumen={dataResumen} isFetchingResumen={isFetchingResumen} isErrorResumen={isErrorResumen}/>
 
           {/* Main Content */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs value={activeTabCatalogo} onValueChange={setActiveTabCatalogo} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2 lg:w-80 bg-gray-100">
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
                 Lista de Reservas
@@ -3212,8 +3305,8 @@ export default function ModulosPage() {
 
                             <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900 truncate max-w-xs">{data?.titular?.nombre}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">{data?.titular?.documento}</div>
+                                <div className="font-medium text-gray-900 truncate max-w-xs">{data?.titular.nombre}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">{data?.titular.documento}</div>
                               </div>
                             </TableCell>
 
@@ -3275,15 +3368,13 @@ export default function ModulosPage() {
                               </div>
                             </TableCell>
 
-                          
-                           
                             <TableCell>
                               <div>
                                 <div className="font-medium text-gray-900 truncate max-w-xs">{data.paquete.moneda.simbolo}{formatearSeparadorMiles.format(data?.precio_unitario ?? 0)}</div>
                                 {/* <div className="text-sm text-gray-500 truncate max-w-xs">{data.titular.telefono}</div> */}
                               </div>
                             </TableCell>     
-                           
+                          
       
                             
                             

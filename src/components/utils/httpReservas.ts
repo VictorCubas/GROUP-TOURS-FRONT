@@ -193,6 +193,11 @@ export async function pagarSenia(reservaId: number | string, payload: any) {
   return response.data;
 }
 
+export async function pagoTotal(reservaId: number | string, payload: any) {
+  const response = await axiosInstance.post(`/reservas/${reservaId}/registrar-pago/`, payload);
+  return response.data;
+}
+
 export async function descargarComprobanteById(comprobanteId: number | string) {
   const response = await axiosInstance.get(
     `/comprobantes/${comprobanteId}/descargar-pdf/`,
@@ -269,6 +274,11 @@ interface FetchEventParams {
 
 export async function fetchDataHotelesPorSalida({ id, signal }: FetchEventParams) {
   const resp = await axiosInstance.get(`/hotel/por-salida/${id}`, { signal });
+  return resp?.data
+}
+
+export async function fetchReservaDetallesById({ id, signal }: FetchEventParams) {
+  const resp = await axiosInstance.get(`/reservas/${id}`, { signal });
   return resp?.data
 }
 
