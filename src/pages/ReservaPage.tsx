@@ -3687,7 +3687,7 @@ export default function ModulosPage() {
           isOpen={isSenialModalOpen}
           onClose={handleCloseSeniaModal}
           onConfirm={handleConfirmSeniaPago}
-          isPendingPagarSenia={isPendingPagarSenia}
+          isPendingPagarSenia={isPendingPagarSenia || isPendingPagoTotal}
           reservationData={sampleReservation}
           reservationResponse={reservaRealizadaResponse}
           seniaPorPersona={reservaRealizadaResponse?.pasajeros?.[0]?.seña_requerida || seniaPorPersona}

@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from '@/helper/formatter';
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Edit2, FileText, Globe, Loader2, Mail, MapPin, Package, Phone, Star, Ticket, User, UserCheck, Users } from 'lucide-react';
+import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, FileText, Globe, Loader2, Mail, Package, Phone, Star, Ticket, User, UserCheck, Users } from 'lucide-react';
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 
