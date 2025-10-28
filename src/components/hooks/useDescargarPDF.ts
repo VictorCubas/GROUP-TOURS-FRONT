@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from '@tanstack/react-query';
-import { descargarComprobanteById, descargarComprobantePDF, pagarSenia } from '../utils/httpReservas';
+import { descargarComprobanteById, descargarComprobantePDF, pagarSenia, pagoTotal } from '../utils/httpReservas';
 
 export function useDescargarPDF() {
     return useMutation({
@@ -31,6 +31,15 @@ export function usePagarSenia() {
   return useMutation({
     mutationFn: async ({ reservaId, payload }: { reservaId: number | string; payload: any }) => {
       const data = await pagarSenia(reservaId, payload);
+      return data;
+    },
+  });
+}
+
+export function usePagoTotal() {
+  return useMutation({
+    mutationFn: async ({ reservaId, payload }: { reservaId: number | string; payload: any }) => {
+      const data = await pagoTotal(reservaId, payload);
       return data;
     },
   });

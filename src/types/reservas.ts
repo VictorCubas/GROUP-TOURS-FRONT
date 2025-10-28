@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface TipoPaquete{
   id: number;
   nombre: string;
@@ -5,7 +6,7 @@ export interface TipoPaquete{
 
 export interface Servicio{
   id: number;
-  nombre: string;
+  nombre_servicio: string;
 }
 
 export interface Destino{
@@ -31,6 +32,15 @@ export interface Moneda{
   codigo: string;
 }
 
+interface Habitacion {
+  capacidad: number;
+  hotel_nombre: string;
+  id: number;
+  numero: number | string;
+  precio_noche: number;
+  tipo: "single" | "doble" | "triple" | "suite" | "premium"    // ISO datetime en string
+}
+
 export interface Paquete {
   id: number;
   nombre: string;
@@ -38,6 +48,7 @@ export interface Paquete {
   destino: Destino;
   distribuidora?: Distribuidora;
   precio: number;
+  precio_unitario: number;
   sena: number;
   moneda: Moneda;
   fecha_inicio: string | null; // formato YYYY-MM-DD
@@ -83,6 +94,10 @@ export interface Persona {
   documento: string;
   email: string;
   telefono: string;
+  tipo_documento_nombre?: string;
+  nacionalidad_nombre?: string;
+  genero_display?: string;
+  fecha_nacimiento?: string; // formato YYYY-MM-DD
 }
 
 // export interface PersonaJuridica {
@@ -157,6 +172,7 @@ export interface Reserva {
   titular: Persona;
   paquete: Paquete;
   fecha_reserva: string; // ISO datetime string
+  habitacion: Habitacion;
   precio_unitario: number;
   cantidad_pasajeros: number;
   monto_pagado: number;
@@ -169,6 +185,36 @@ export interface Reserva {
   monto_total: number;
   saldo_pendiente: number;
   porcentaje_pagado: number;
+}
+
+export interface ReservaListado {
+  id: number;
+  numero?: number;
+  codigo: string;
+  titular: Persona;
+  paquete: Paquete;
+  fecha_reserva: string; // ISO datetime string
+  habitacion: Habitacion;
+  precio_unitario: number;
+  cantidad_pasajeros: number;
+  costo_total_estimado: number;
+  monto_pagado: number;
+  estado: "pendiente" | "confirmada" |  "finalizada" | "cancelada";
+  estado_display: string;
+  pasajeros: Pasajero[];
+  activo: boolean;
+  fecha_modificacion: string; // ISO datetime
+  moneda: Moneda;
+  monto_total: number;
+  saldo_pendiente: number;
+  porcentaje_pagado: number;
+
+  paquete_ciudad: string;
+  paquete_nombre: string;
+  paquete_pais: string;
+  paquete_imagen: string | null;
+  titular_documento: string;
+  titular_nombre: string;
 }
 
 
@@ -190,17 +236,40 @@ export const PAYMENT_STATUS = {
 } as const;
 
 // Función helper para calcular estado de pago
-export const getPaymentStatus = (reserva: Reserva): keyof typeof PAYMENT_STATUS => {
-  const { monto_pagado, monto_total } = reserva;
-  
+export const getPaymentStatus = (reserva: any): keyof typeof PAYMENT_STATUS => {
+  // Validar que reserva exista y tenga los campos necesarios
+  if (!reserva || reserva.monto_pagado === undefined || reserva.costo_total_estimado === undefined) {
+    return 'sin_pagar';
+  }
+
+  const monto_pagado = reserva.monto_pagado;
+  const costo_total_estimado = reserva.costo_total_estimado;
+
   if (monto_pagado === 0) return 'sin_pagar';
-  if (monto_pagado < monto_total) return 'pago_parcial';
-  if (monto_pagado === monto_total) return 'pago_completo';
+  if (monto_pagado < costo_total_estimado) return 'pago_parcial';
+  if (monto_pagado === costo_total_estimado) return 'pago_completo';
   return 'pago_parcial';
 };
 
 // Función helper para calcular porcentaje de pago
-export const getPaymentPercentage = (reserva: Reserva): number => {
-  if (reserva.monto_total === 0) return 0;
-  return Math.min((reserva.monto_pagado / reserva.monto_total) * 100, 100);
+export const getPaymentPercentage = (reserva: any): number => {
+  // Validar que reserva exista y tenga los campos necesarios
+  if (!reserva || !reserva.costo_total_estimado) return 0;
+  if (reserva.costo_total_estimado === 0) return 0;
+  return Math.min((reserva.monto_pagado / reserva.costo_total_estimado) * 100, 100);
 };
+
+
+export const DOCUMENT_TYPES: Record<string, string> = {
+  'RUC': 'RUC',
+  'PASAPORTE': 'Pasaporte',
+  'DNI': 'DNI',
+  'CI': 'Cédula de Identidad',
+  // Mantenemos compatibilidad con valores en minúsculas si existen
+  'ruc': 'RUC',
+  'pasaporte': 'Pasaporte',
+  'dni': 'DNI',
+  'ci': 'Cédula de Identidad',
+  'cedula': 'Cédula de Identidad',
+  'tarjeta_identidad': 'Tarjeta de Identidad'
+} as const;
