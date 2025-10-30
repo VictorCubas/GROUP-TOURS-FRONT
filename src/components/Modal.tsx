@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, type ReactNode } from 'react'
+import React, { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 interface ModalProps{
@@ -9,30 +9,43 @@ interface ModalProps{
 
 
 const Modal: React.FC<ModalProps> = ({children, onClose, claseCss}) => {
-    const dialogRef = useRef<HTMLDialogElement | null>(null);
 
     useEffect(() => {
-        const modal = dialogRef.current;
-        if (modal) {
-                modal.showModal();
-        }
+        // Bloquear scroll del body cuando el modal está abierto
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
 
-        return () => {
-            if (modal?.open) {
-                modal.close();
+        // Manejar tecla ESC para cerrar
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
             }
         };
-    }, []);
+
+        document.addEventListener('keydown', handleEsc);
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            document.removeEventListener('keydown', handleEsc);
+        };
+    }, [onClose]);
 
 
     const modalRoot = document.getElementById('modal');
     if (!modalRoot) return null;
 
     return createPortal(
-        <dialog ref={dialogRef} onClose={onClose}
-            className={claseCss}>
+        <div
+            className={claseCss}
+            onClick={(e) => {
+                // Cerrar si se hace clic en el overlay (fuera del contenido)
+                if (e.target === e.currentTarget) {
+                    onClose();
+                }
+            }}
+        >
             {children}
-        </dialog>, modalRoot);
+        </div>, modalRoot);
 }
 
 export default Modal

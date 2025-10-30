@@ -1490,7 +1490,7 @@ export default function ModulosPage() {
     <>
       {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-            <div className="bg-white/95 rounded-xl shadow-xl max-w-5xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
               <div className="relative">
                 <img
                   src={dataDetalle!.paquete.imagen ?? placeholderViaje}
@@ -3477,7 +3477,6 @@ export default function ModulosPage() {
     {isReceiptModalOpen && <PaymentReceiptModal
       isOpen={isReceiptModalOpen}
       onClose={handleCloseReceipt}
-      // onBack={handleBackToConfirm}
       isPendingDescargaComprobante={isPendingDescargaComprobante}
       receiptData={pagoSeniaRealizadaResponse}
       handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
