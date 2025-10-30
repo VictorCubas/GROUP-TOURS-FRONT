@@ -1593,31 +1593,39 @@ export default function ModulosPage() {
 
         </Modal>}
 
-      {onDesactivarData && <Modal onClose={handleCloseModal} claseCss="modal">
-              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
-                  {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
-                  {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
-              </div>
-              <h2 className='text-center'>Confirmacion de operación</h2>
-            <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-              ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al reserva  
-              <b>
-                  {/* {' ' + capitalizePrimeraLetra((dataADesactivar?.nombre) ?? '')} */}
-                  sadasdasd
-              </b>? 
-            </p>
+      {onDesactivarData && 
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              {/* <div className="relative"> */}
+                      <Modal onClose={handleCloseModal} claseCss="modal">
+                        <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
+                            {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
+                            {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
+                        </div>
+                        <h2 className='text-center'>Confirmacion de operación</h2>
+                      <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
+                        ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al reserva  
+                        <b>
+                            {/* {' ' + capitalizePrimeraLetra((dataADesactivar?.nombre) ?? '')} */}
+                            sadasdasd
+                        </b>? 
+                      </p>
 
-            <div className='modal-actions'>
-                <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
-                <Button 
-                disabled={isPendingDesactivar}
-                className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
-                  items-center shadow-none hover:shadow-none`}
-                  onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
-                    {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
-                </Button>
+                      <div className='modal-actions'>
+                          <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
+                          <Button 
+                          disabled={isPendingDesactivar}
+                          className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
+                            items-center shadow-none hover:shadow-none`}
+                            onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
+                              {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
+                          </Button>
+                      </div>
+                  </Modal>
+              {/* </div> */}
             </div>
-        </Modal>}
+        </div> 
+        }
 
       <div className="max-w-7xl mx-auto space-y-8">
           {/* Page Header */}

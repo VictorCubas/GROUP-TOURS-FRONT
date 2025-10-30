@@ -431,123 +431,133 @@ export default function ModulosPage() {
 
   return (
     <>
-       {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
-            <div className=" bg-white rounded-lg shadow-lg p-6">
-                {/* Header */}
-                <div className="mb-6 border-b pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                      <User className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                        {dataDetalle?.empleado_nombre}
-                      </h2>
-                      <p className="text-gray-600">Detalles completos del usuario</p>
-                    </div>
-                  </div>
-                </div>
-
-                
-                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Estado</Label>
-                        <div className="mt-1">
-                          <Badge
-                            className={usuariosStatusColors[dataDetalle?.activo.toString() as keyof typeof usuariosStatusColors]}
-                          >
-                            {dataDetalle?.activo ? "Activo" : "Inactivo"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Puesto</Label>
-                        <div className="mt-1">
-                          <Badge className={'bg-blue-100 text-blue-700 border-blue-200'}>
-                            {dataDetalle?.empleado_puesto}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* <div>
-                      <Label className="text-sm font-medium text-gray-500">Descripción</Label>
-                      <p className="mt-1 text-gray-900">{dataDetalle?.descripcion}</p>
-                    </div> */}
-
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">
-                        Roles Asignados ({dataDetalle?.roles.length})
-                      </Label>
-                      <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
-                        {dataDetalle?.roles.map((per, index) => (
-                          <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                            <Shield className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm">{per.nombre}</span>
+       {onVerDetalles && 
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
+                  <div className=" bg-white rounded-lg shadow-lg p-6">
+                      {/* Header */}
+                      <div className="mb-6 border-b pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                            <User className="h-6 w-6 text-white" />
                           </div>
-                        ))}
+                          <div>
+                            <h2 className="text-xl font-semibold text-gray-900 capitalize">
+                              {dataDetalle?.empleado_nombre}
+                            </h2>
+                            <p className="text-gray-600">Detalles completos del usuario</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">Estado</Label>
+                              <div className="mt-1">
+                                <Badge
+                                  className={usuariosStatusColors[dataDetalle?.activo.toString() as keyof typeof usuariosStatusColors]}
+                                >
+                                  {dataDetalle?.activo ? "Activo" : "Inactivo"}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">Puesto</Label>
+                              <div className="mt-1">
+                                <Badge className={'bg-blue-100 text-blue-700 border-blue-200'}>
+                                  {dataDetalle?.empleado_puesto}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* <div>
+                            <Label className="text-sm font-medium text-gray-500">Descripción</Label>
+                            <p className="mt-1 text-gray-900">{dataDetalle?.descripcion}</p>
+                          </div> */}
+
+                          <div>
+                            <Label className="text-sm font-medium text-gray-500">
+                              Roles Asignados ({dataDetalle?.roles.length})
+                            </Label>
+                            <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                              {dataDetalle?.roles.map((per, index) => (
+                                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                  <Shield className="h-4 w-4 text-blue-500" />
+                                  <span className="text-sm">{per.nombre}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">Fecha de Creación</Label>
+                              <p className="mt-1 text-gray-900">
+                                {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">Última Modificación</Label>
+                              <p className="mt-1 text-gray-900">
+                                {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
+                              </p>
+                            </div>
+                          </div>
+
+                          
+                        </div>
+
+
+                      {/* Footer */}
+                      <div className="flex justify-end gap-3 mt-6">
+                        <button
+                          onClick={handleCloseVerDetalles}
+                          className="cursor-pointer border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+                        >
+                          Cerrar
+                        </button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Fecha de Creación</Label>
-                        <p className="mt-1 text-gray-900">
-                          {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
-                        </p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Última Modificación</Label>
-                        <p className="mt-1 text-gray-900">
-                          {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
-                        </p>
-                      </div>
-                    </div>
-
-                    
-                  </div>
-
-
-                {/* Footer */}
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={handleCloseVerDetalles}
-                    className="cursor-pointer border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-
-        </Modal>}
-
-       {onDesactivarData && <Modal onClose={handleCloseModal} claseCss="modal">
-              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
-                  {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
-                  {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
-                   
-               </div>
-              <h2 className='text-center'>Confirmacion de operación</h2>
-             <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al usuario  
-               <b>
-                  {' ' + capitalizePrimeraLetra((dataADesactivar?.empleado_nombre?? ''))}
-              </b>? 
-             </p>
-
-             <div className='modal-actions'>
-                   <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
-                   <Button 
-                    disabled={isPendingDesactivar}
-                    className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
-                                 items-center shadow-none hover:shadow-none`}
-                                 onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
-                                   {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
-                   </Button>
+              </Modal>
             </div>
-        </Modal>}
+      </div>}
+
+       {onDesactivarData && 
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseModal} claseCss="modal">
+                      <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
+                          {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
+                          {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
+                          
+                      </div>
+                      <h2 className='text-center'>Confirmacion de operación</h2>
+                    <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
+                      ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al usuario  
+                      <b>
+                          {' ' + capitalizePrimeraLetra((dataADesactivar?.empleado_nombre?? ''))}
+                      </b>? 
+                    </p>
+
+                    <div className='modal-actions'>
+                          <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
+                          <Button 
+                            disabled={isPendingDesactivar}
+                            className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
+                                        items-center shadow-none hover:shadow-none`}
+                                        onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
+                                          {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
+                          </Button>
+                    </div>
+              </Modal>
+            </div>
+      </div>}
 
       <div className="max-w-7xl mx-auto space-y-8">
           {/* Page Header */}

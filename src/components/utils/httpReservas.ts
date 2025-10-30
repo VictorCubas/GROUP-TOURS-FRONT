@@ -203,6 +203,11 @@ export async function registrarPago(reservaId: number | string, payload: any) {
   return response.data;
 }
 
+export async function asignarPasajero(pasajeroId: number | string, payload: any) {
+  const response = await axiosInstance.patch(`/reservas/pasajeros/${pasajeroId}`, payload);
+  return response.data;
+}
+
 export async function descargarComprobanteById(comprobanteId: number | string) {
   const response = await axiosInstance.get(
     `/comprobantes/${comprobanteId}/descargar-pdf/`,

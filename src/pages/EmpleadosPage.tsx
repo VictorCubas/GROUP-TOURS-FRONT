@@ -671,255 +671,266 @@ export default function ModulosPage() {
 
   return (
     <>
-       {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
-            <div className=" bg-white rounded-lg shadow-lg p-6">
-                {/* Header */}
-                <div className="mb-6 border-b pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                      <User className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                        {dataDetalle?.persona.tipo === 'fisica' ? dataDetalle?.persona.nombre : (dataDetalle?.persona as PersonaJuridica)?.razon_social}
-                      </h2>
-                      <p className="text-gray-600">Detalles completos del empleado</p>
-                    </div>
-                  </div>
-                </div>
-
-                
-                 <div className="p-3 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">DATOS LABORALES</h3>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Puesto:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {capitalizePrimeraLetra(dataDetalle?.puesto.nombre ?? '')}
-                              </Badge>
+      {onVerDetalles && 
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
+                    <div className=" bg-white rounded-lg shadow-lg p-6">
+                        {/* Header */}
+                        <div className="mb-6 border-b pb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                              <User className="h-6 w-6 text-white" />
                             </div>
-
-                            <div className="flex justify-between mt-1">
-                              <span className="text-gray-600">Tipo Remuneración:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {capitalizePrimeraLetra(dataDetalle?.tipo_remuneracion.nombre ?? '')}
-                              </Badge>
+                            <div>
+                              <h2 className="text-xl font-semibold text-gray-900 capitalize">
+                                {dataDetalle?.persona.tipo === 'fisica' ? dataDetalle?.persona.nombre : (dataDetalle?.persona as PersonaJuridica)?.razon_social}
+                              </h2>
+                              <p className="text-gray-600">Detalles completos del empleado</p>
                             </div>
+                          </div>
+                        </div>
 
-                          <div className="space-y-3">
-                            {/* {dataDetalle?.persona.tipo === 'fisica' && */}
-                              <> 
-                                <div className="flex justify-between mt-1">
-                                  <span className="text-gray-600">Salario:</span>
-                                  <span className="font-medium">
-                                    {formatearSeparadorMiles.format(dataDetalle?.salario ?? 0)} Gs.
-                                  </span>
+                        
+                        <div className="p-3 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-4">
+                                <div>
+                                  <h3 className="text-sm font-medium text-gray-500 mb-2">DATOS LABORALES</h3>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Puesto:</span>
+                                      <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                        {capitalizePrimeraLetra(dataDetalle?.puesto.nombre ?? '')}
+                                      </Badge>
+                                    </div>
+
+                                    <div className="flex justify-between mt-1">
+                                      <span className="text-gray-600">Tipo Remuneración:</span>
+                                      <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                        {capitalizePrimeraLetra(dataDetalle?.tipo_remuneracion.nombre ?? '')}
+                                      </Badge>
+                                    </div>
+
+                                  <div className="space-y-3">
+                                    {/* {dataDetalle?.persona.tipo === 'fisica' && */}
+                                      <> 
+                                        <div className="flex justify-between mt-1">
+                                          <span className="text-gray-600">Salario:</span>
+                                          <span className="font-medium">
+                                            {formatearSeparadorMiles.format(dataDetalle?.salario ?? 0)} Gs.
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-600">Porcetanje de comisión:</span>
+                                          <span className="font-medium">
+                                            {dataDetalle?.porcentaje_comision} %
+                                          </span>
+                                        </div>
+
+                                        
+                                      </>
+                                    {/* } */}
+
+                                    {/* {dataDetalle?.persona?.tipo === 'juridica' &&
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-600">Razon social:</span>
+                                        <span className="font-medium">
+                                          {(dataDetalle?.persona as PersonaJuridica).razon_social}
+                                        </span>
+                                      </div>
+                                    } */}
+
+                                  
+                                  </div>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Porcetanje de comisión:</span>
-                                  <span className="font-medium">
-                                    {dataDetalle?.porcentaje_comision} %
-                                  </span>
+
+                                <div>
+                                  <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
+                                  <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Tipo Documento:</span>
+                                      <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                        {dataDetalle?.persona?.tipo_documento.nombre}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Número:</span>
+                                      <span className="font-medium">{dataDetalle?.persona?.documento}</span>
+                                    </div>
+                                  </div>
                                 </div>
-
-                                 
-                              </>
-                            {/* } */}
-
-                            {/* {dataDetalle?.persona?.tipo === 'juridica' &&
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Razon social:</span>
-                                <span className="font-medium">
-                                  {(dataDetalle?.persona as PersonaJuridica).razon_social}
-                                </span>
                               </div>
-                            } */}
+                              <div className="space-y-4">
+                                <div>
+                                  <h3 className="text-sm font-medium text-gray-500 mb-2">INFORMACIÓN PERSONAL</h3>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Tipo:</span>
+                                      <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                        {capitalizePrimeraLetra(dataDetalle?.persona.tipo ?? '')}
+                                      </Badge>
+                                    </div>
 
-                           
-                          </div>
-                        </div>
+                                  <div className="space-y-3">
+                                    {dataDetalle?.persona.tipo === 'fisica' &&
+                                      <> 
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-600">Nombre completo:</span>
+                                          <span className="font-medium">
+                                            {dataDetalle?.persona.nombre} {dataDetalle?.persona.apellido}
+                                          </span>
+                                        </div>
 
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Tipo Documento:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {dataDetalle?.persona?.tipo_documento.nombre}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Número:</span>
-                              <span className="font-medium">{dataDetalle?.persona?.documento}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">INFORMACIÓN PERSONAL</h3>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Tipo:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {capitalizePrimeraLetra(dataDetalle?.persona.tipo ?? '')}
-                              </Badge>
-                            </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-600">Fecha de nacimiento:</span>
+                                          <span className="font-medium">{formatearFecha(dataDetalle?.persona?.fecha_nacimiento ?? '', false)}</span>
+                                        </div>
+                                        {/* <div className="flex justify-between">
+                                          <span className="text-gray-600">Edad:</span>
+                                          <span className="font-medium">{dataDetalle?.persona?.edad} años</span>
+                                        </div> */}
+                                        {/* <div className="flex justify-between">
+                                          <span className="text-gray-600">Género:</span>
+                                          <Badge className={`${genderColors[dataDetalle?.persona?.sexo ?? 'M']} border`}>
+                                            {dataDetalle?.persona?.sexo === 'F' ? 'Femenino': 'Masculino'}
+                                          </Badge>
+                                        </div> */}
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-600">Nacionalidad:</span>
+                                          <span className="font-medium">{dataDetalle?.persona?.nacionalidad?.nombre}</span>
+                                        </div>
+                                      </>
+                                    }
 
-                          <div className="space-y-3">
-                            {dataDetalle?.persona.tipo === 'fisica' &&
-                              <> 
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Nombre completo:</span>
-                                  <span className="font-medium">
-                                    {dataDetalle?.persona.nombre} {dataDetalle?.persona.apellido}
-                                  </span>
+                                    {dataDetalle?.persona?.tipo === 'juridica' &&
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-600">Razon social:</span>
+                                        <span className="font-medium">
+                                          {(dataDetalle?.persona as PersonaJuridica).razon_social}
+                                        </span>
+                                      </div>
+                                    }
+
+                                  
+                                  </div>
                                 </div>
 
-                                 <div className="flex justify-between">
-                                  <span className="text-gray-600">Fecha de nacimiento:</span>
-                                  <span className="font-medium">{formatearFecha(dataDetalle?.persona?.fecha_nacimiento ?? '', false)}</span>
+                                <div>
+                                  <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
+                                  <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Tipo Documento:</span>
+                                      <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
+                                        {dataDetalle?.persona?.tipo_documento.nombre}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Número:</span>
+                                      <span className="font-medium">{dataDetalle?.persona?.documento}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                {/* <div className="flex justify-between">
-                                  <span className="text-gray-600">Edad:</span>
-                                  <span className="font-medium">{dataDetalle?.persona?.edad} años</span>
-                                </div> */}
-                                {/* <div className="flex justify-between">
-                                  <span className="text-gray-600">Género:</span>
-                                  <Badge className={`${genderColors[dataDetalle?.persona?.sexo ?? 'M']} border`}>
-                                    {dataDetalle?.persona?.sexo === 'F' ? 'Femenino': 'Masculino'}
-                                  </Badge>
-                                </div> */}
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Nacionalidad:</span>
-                                  <span className="font-medium">{dataDetalle?.persona?.nacionalidad?.nombre}</span>
-                                </div>
-                              </>
-                            }
-
-                            {dataDetalle?.persona?.tipo === 'juridica' &&
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Razon social:</span>
-                                <span className="font-medium">
-                                  {(dataDetalle?.persona as PersonaJuridica).razon_social}
-                                </span>
                               </div>
-                            }
 
-                           
-                          </div>
-                        </div>
+                              <div className="space-y-4">
+                                <div>
+                                  <h3 className="text-sm font-medium text-gray-500 mb-2">CONTACTO</h3>
+                                  <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Email:</span>
+                                      <span className="font-medium">{dataDetalle?.persona?.email}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Teléfono:</span>
+                                      <span className="font-medium">{dataDetalle?.persona?.telefono}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Dirección:</span>
+                                      <span className="font-medium text-right">{dataDetalle?.persona?.direccion}</span>
+                                    </div>
+                                  </div>
+                                </div>
 
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">DOCUMENTO</h3>
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Tipo Documento:</span>
-                              <Badge className='border bg-blue-100 text-blue-700 border-blue-200'>
-                                {dataDetalle?.persona?.tipo_documento.nombre}
-                              </Badge>
+                              </div>
+                                <div>
+                                  <h3 className="text-sm font-medium text-gray-500 mb-2">ESTADO Y FECHAS</h3>
+                                  <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Estado:</span>
+                                      <Badge
+                                        className={
+                                          dataDetalle?.activo
+                                            ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                            : "bg-gray-100 text-gray-700 border-gray-200"
+                                        }
+                                      >
+                                        {dataDetalle?.activo ? "Activa" : "Inactiva"}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Fecha de ingreso:</span>
+                                      <span className="font-medium">{formatearFecha(dataDetalle?.fecha_ingreso ?? '')}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Fecha de registro:</span>
+                                      <span className="font-medium">{formatearFecha(dataDetalle?.fecha_creacion ?? '')}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Última modificación:</span>
+                                      <span className="font-medium">{formatearFecha(dataDetalle?.fecha_modificacion ?? '')}</span>
+                                    </div>
+                                  </div>
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Número:</span>
-                              <span className="font-medium">{dataDetalle?.persona?.documento}</span>
-                            </div>
-                          </div>
+                          </div> 
+
+
+                        {/* Footer */}
+                        <div className="flex justify-end gap-3 mt-6">
+                          <button
+                            onClick={handleCloseVerDetalles}
+                            className="cursor-pointer border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+                          >
+                            Cerrar
+                          </button>
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">CONTACTO</h3>
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Email:</span>
-                              <span className="font-medium">{dataDetalle?.persona?.email}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Teléfono:</span>
-                              <span className="font-medium">{dataDetalle?.persona?.telefono}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Dirección:</span>
-                              <span className="font-medium text-right">{dataDetalle?.persona?.direccion}</span>
-                            </div>
-                          </div>
-                        </div>
+              </Modal>
+          </div>
+      </div>
+      }
 
+       {onDesactivarData &&
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseModal} claseCss="modal">
+                      <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
+                          {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
+                          {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
+                          
                       </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-2">ESTADO Y FECHAS</h3>
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Estado:</span>
-                              <Badge
-                                className={
-                                  dataDetalle?.activo
-                                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                    : "bg-gray-100 text-gray-700 border-gray-200"
-                                }
-                              >
-                                {dataDetalle?.activo ? "Activa" : "Inactiva"}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Fecha de ingreso:</span>
-                              <span className="font-medium">{formatearFecha(dataDetalle?.fecha_ingreso ?? '')}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Fecha de registro:</span>
-                              <span className="font-medium">{formatearFecha(dataDetalle?.fecha_creacion ?? '')}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Última modificación:</span>
-                              <span className="font-medium">{formatearFecha(dataDetalle?.fecha_modificacion ?? '')}</span>
-                            </div>
-                          </div>
-                        </div>
+                      <h2 className='text-center'>Confirmacion de operación</h2>
+                    <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
+                      ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al empleado  
+                      <b>
+                          {' ' + capitalizePrimeraLetra((dataADesactivar?.persona as PersonaFisica)?.nombre ?? 
+                              ((dataADesactivar?.persona as PersonaJuridica)?.razon_social ?? ''))}
+                      </b>? 
+                    </p>
+
+                    <div className='modal-actions'>
+                          <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
+                          <Button 
+                            disabled={isPendingDesactivar}
+                            className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
+                                        items-center shadow-none hover:shadow-none`}
+                                        onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
+                                          {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
+                          </Button>
                     </div>
-                  </div> 
-
-
-                {/* Footer */}
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={handleCloseVerDetalles}
-                    className="cursor-pointer border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-
-        </Modal>}
-
-       {onDesactivarData && <Modal onClose={handleCloseModal} claseCss="modal">
-              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
-                  {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
-                  {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
-                   
-               </div>
-              <h2 className='text-center'>Confirmacion de operación</h2>
-             <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al empleado  
-               <b>
-                  {' ' + capitalizePrimeraLetra((dataADesactivar?.persona as PersonaFisica)?.nombre ?? 
-                      ((dataADesactivar?.persona as PersonaJuridica)?.razon_social ?? ''))}
-              </b>? 
-             </p>
-
-             <div className='modal-actions'>
-                   <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
-                   <Button 
-                    disabled={isPendingDesactivar}
-                    className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
-                                 items-center shadow-none hover:shadow-none`}
-                                 onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
-                                   {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
-                   </Button>
+              </Modal>
             </div>
-        </Modal>}
+          </div>}
 
       <div className="max-w-7xl mx-auto space-y-8">
           {/* Page Header */}

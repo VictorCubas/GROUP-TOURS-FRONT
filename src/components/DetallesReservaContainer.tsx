@@ -2,16 +2,17 @@
 import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from '@/helper/formatter';
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, FileText, Globe, Loader2, Mail, Package, Phone, Star, Ticket, User, UserCheck, Users } from 'lucide-react';
+import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, FileText, Globe, Loader2, Mail, Package, Phone, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users } from 'lucide-react';
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState } from 'react';
-import { useDescargarComprobante, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useAsignarPasajero, useDescargarComprobante, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
+import AsignarPasajeroModal from './AsignarPasajeroModal';
 
 interface DetallesReservaContainerProps{
     activeTab: 'general' | 'passengers' | 'payments';
@@ -28,6 +29,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
     const {handleShowToast} = use(ToastContext);
     const [isPagoParcialModalOpen, setIsPagoParcialModalOpen] = useState(false);
+    const [isAsiganrPasajeroModalOpen, setIsAsiganrPasajeroModalOpen] = useState(false);
     const [selectedPassengerId, setSelectedPassengerId] = useState<number | undefined>(undefined);
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
     const [pagoSeniaRealizadaResponse, setPagoSeniaRealizadaResponse] = useState<any>(null);
@@ -41,8 +43,10 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
 
     const { mutate: fetchRegistrarPagoParcial, isPending: isPendingPagaoParcial } = useRegistrarPagoParcial();
-
+    
     const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useDescargarComprobante();
+
+    const { mutate: fetchAsignarPasajero, isPending: isPendingAsignarPasajero } = useAsignarPasajero();
 
 
     console.log(dataDetalleTemp)
@@ -148,6 +152,42 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         );
     }
 
+    const handleAsignarPasajero = (id: number, payload: any) => {
+        console.log('📦 Payload enviado al backend:', JSON.stringify(payload, null, 2));
+        console.log(payload);
+        console.log(id)
+
+        fetchAsignarPasajero(
+            { pasajeroId: id, payload },
+            {
+                onSuccess: (data) => {
+                console.log('✅ Persona asignada correctamente');
+                console.log('📄 Respuesta del servidor:', data);
+                handleShowToast('Persona asignada al pasajero correctamente', 'success'); 
+
+                // Cerrar modal
+                setIsAsiganrPasajeroModalOpen(false);
+                console.log(data)
+                // setIsReceiptModalOpen(true);
+                // setPagoSeniaRealizadaResponse(data)
+
+                // Refrescar los detalles de la reserva para ver el estado actualizado
+                queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                },
+                onError: (error: any) => {
+                    console.error('❌ Error al asignar persona:', error);
+                    console.error('📋 Detalles del error:', error.response?.data);
+
+                    const errorMessage = error.response?.data?.message
+                        || error.response?.data?.error
+                        || 'Error al asignar persona';
+
+                    handleShowToast(errorMessage, 'error');
+                },
+            }
+        );
+    }
+
 
     function handleDescargarPDF(id: number) {
     generarYDescargar(id, {
@@ -171,6 +211,13 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         // setPayloadReservationData(null);
     };
 
+    const handleCloseAsigarPasajeroModal = () => {
+        setIsAsiganrPasajeroModalOpen(false);
+        setSelectedPassengerId(undefined);
+        // handleCancel()
+        // setPayloadReservationData(null);
+    };
+
      // Manejar la confirmación del modal
     const handleConfirmPagoParcial = (payload: any, paymentType: "deposit" | "full") => {
         if (payload && dataDetalleTemp) {
@@ -179,6 +226,17 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
             // Llamar a la función de pago con el ID de la reserva actual
             handleRegistrarPagoParcial(dataDetalleTemp.id, payload);
+        }
+    };
+
+     // Manejar la confirmación del modal
+    const handleConfirmAAsignarPasajero = (payload: any, pasajeroId: number | string) => {
+        if (payload && dataDetalleTemp && pasajeroId) {
+            console.log('Payload generado:', payload);
+            console.log('Payload generado:', pasajeroId);
+
+            // Llamar a la función de pago con el ID de la reserva actual
+            handleAsignarPasajero(Number(pasajeroId), payload);
         }
     };
 
@@ -669,7 +727,7 @@ return   <>
                                                 setIsPagoParcialModalOpen(true);
                                             }}
                                             className={`cursor-pointer disabled:cursor-not-allowed
-                                                      w-full px-6 py-3 border-1 border-blue-600 rounded-lg hover:bg-blue-100 
+                                                      w-full px-6 py-3 border-1 border-blue-600 rounded-lg bg-blue-50 hover:bg-blue-100 
                                                       disabled:hover:bg-transparent transition-colors duration-200
                                                       flex items-center justify-center space-x-2 font-medium
                                                       ${!pasajero?.saldo_pendiente ? 'bg-emerald-600 text-white': ''}`}
@@ -680,6 +738,33 @@ return   <>
                                               <span>Registrar pago por persona</span>
                                               :
                                               <span>Pago completo</span>
+                                            }
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            disabled={!pasajero?.por_asignar}
+                                            onClick={() => {
+                                                setSelectedPassengerId(pasajero.id);
+                                                setIsAsiganrPasajeroModalOpen(true);
+                                            }}
+                                            className={`mt-1 cursor-pointer disabled:cursor-not-allowed
+                                                      w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
+                                                      disabled:hover:bg-transparent transition-colors duration-200
+                                                      flex items-center justify-center space-x-2 font-medium
+                                                      `}
+                                            size="lg"
+                                        >
+                                            {pasajero.por_asignar ? 
+                                              <>
+                                                <UserPlus2 className="w-4 h-4" />
+                                                <span>Asignar</span> 
+                                              </>
+                                                :
+                                              <>
+                                                <UserCheck2 className="w-4 h-4" />
+                                                <span>Asignado</span>
+                                              </>
                                             }
                                         </Button>
                                     </div>
@@ -951,12 +1036,24 @@ return   <>
         )}
 
         {isReceiptModalOpen && <PaymentReceiptModal
-              isOpen={isReceiptModalOpen}
-              onClose={handleCloseReceipt}
-              isPendingDescargaComprobante={isPendingDescargaComprobante}
-              receiptData={pagoSeniaRealizadaResponse}
-              handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
-              />}
+            isOpen={isReceiptModalOpen}
+            onClose={handleCloseReceipt}
+            isPendingDescargaComprobante={isPendingDescargaComprobante}
+            receiptData={pagoSeniaRealizadaResponse}
+            handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
+        />}
+
+
+        {isAsiganrPasajeroModalOpen && (
+            <AsignarPasajeroModal
+                isOpen={isAsiganrPasajeroModalOpen}
+                onClose={handleCloseAsigarPasajeroModal}
+                onConfirm={handleConfirmAAsignarPasajero}
+                isPending={isPendingAsignarPasajero}
+                reservaData={dataDetalleTemp}
+                selectedPasajeroId={selectedPassengerId}
+            />
+        )}
 </>
 }
 

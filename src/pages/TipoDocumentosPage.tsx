@@ -342,146 +342,157 @@ export default function ModulosPage() {
 
   return (
     <>
-       {onVerData && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
-            <div className=" bg-white rounded-lg shadow-lg p-6">
-                {/* Header */}
-                <div className="mb-6 border-b pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                      <IoDocumentSharp className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                        {dataDetalle?.nombre}
-                      </h2>
-                      <p className="text-gray-600">Detalles completos del tipo de documento</p>
-                    </div>
-                  </div>
-                </div>
-
-                
-                  <div className="space-y-6">
-                    {/* Estado */}
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="text-sm font-medium text-gray-700">Estado:</div>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold border ${
-                            dataDetalle?.activo
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                              : "bg-gray-100 text-gray-600 border-gray-300"
-                          }`}
-                        >
-                          {dataDetalle?.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Descripción */}
-                    <div className="space-y-3">
-                      <label className="text-base font-semibold text-gray-900">Descripción</label>
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-gray-700 leading-relaxed">{dataDetalle?.descripcion}</p>
-                      </div>
-                    </div>
-
-                    {/* Fechas */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-900">Fecha de Creación</label>
-                        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                          <Calendar className="h-4 w-4 text-emerald-600" />
-                          <span className="text-sm text-gray-700">
-                            {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
-                          </span>
+       {onVerData && 
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
+                  <div className=" bg-white rounded-lg shadow-lg p-6">
+                      {/* Header */}
+                      <div className="mb-6 border-b pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                            <IoDocumentSharp className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-semibold text-gray-900 capitalize">
+                              {dataDetalle?.nombre}
+                            </h2>
+                            <p className="text-gray-600">Detalles completos del tipo de documento</p>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-900">Última Modificación</label>
-                        <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                          <Calendar className="h-4 w-4 text-orange-600" />
-                          <span className="text-sm text-gray-700">
-                            {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Información del Módulo */}
-                    <div className="p-4 bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                          <Boxes className="h-4 w-4 text-white" />
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-cyan-900">Información del Módulo</h4>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-600">Nombre:</span>
-                              <span className="ml-2 font-medium text-gray-900 capitalize">
-                                {dataDetalle?.nombre}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Estado:</span>
+                      
+                        <div className="space-y-6">
+                          {/* Estado */}
+                          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm font-medium text-gray-700">Estado:</div>
                               <span
-                                className={`ml-2 font-medium ${
-                                  dataDetalle?.activo ? "text-emerald-600" : "text-gray-600"
+                                className={`px-2 py-1 rounded-full text-xs font-semibold border ${
+                                  dataDetalle?.activo
+                                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                    : "bg-gray-100 text-gray-600 border-gray-300"
                                 }`}
                               >
                                 {dataDetalle?.activo ? "Activo" : "Inactivo"}
                               </span>
                             </div>
                           </div>
+
+                          {/* Descripción */}
+                          <div className="space-y-3">
+                            <label className="text-base font-semibold text-gray-900">Descripción</label>
+                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-gray-700 leading-relaxed">{dataDetalle?.descripcion}</p>
+                            </div>
+                          </div>
+
+                          {/* Fechas */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-semibold text-gray-900">Fecha de Creación</label>
+                              <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                <Calendar className="h-4 w-4 text-emerald-600" />
+                                <span className="text-sm text-gray-700">
+                                  {formatearFecha(dataDetalle?.fecha_creacion ?? '')}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-sm font-semibold text-gray-900">Última Modificación</label>
+                              <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                <Calendar className="h-4 w-4 text-orange-600" />
+                                <span className="text-sm text-gray-700">
+                                  {formatearFecha(dataDetalle?.fecha_modificacion ?? '')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Información del Módulo */}
+                          <div className="p-4 bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg">
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                                <Boxes className="h-4 w-4 text-white" />
+                              </div>
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-cyan-900">Información del Módulo</h4>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-gray-600">Nombre:</span>
+                                    <span className="ml-2 font-medium text-gray-900 capitalize">
+                                      {dataDetalle?.nombre}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600">Estado:</span>
+                                    <span
+                                      className={`ml-2 font-medium ${
+                                        dataDetalle?.activo ? "text-emerald-600" : "text-gray-600"
+                                      }`}
+                                    >
+                                      {dataDetalle?.activo ? "Activo" : "Inactivo"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
+
+
+                      {/* Footer */}
+                      <div className="flex justify-end gap-3 mt-6">
+                        <button
+                          onClick={handleCloseVerDetalles}
+                          className="cursor-pointer border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+                        >
+                          Cerrar
+                        </button>
+                          {/* <button
+                            onClick={() => {}}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Editar Módulo
+                          </button> */}
                       </div>
                     </div>
-                  </div>
 
-
-                {/* Footer */}
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={handleCloseVerDetalles}
-                    className="cursor-pointer border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
-                  >
-                    Cerrar
-                  </button>
-                    {/* <button
-                      onClick={() => {}}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Editar Módulo
-                    </button> */}
-                </div>
-              </div>
-
-        </Modal>}
-
-       {onDesactivarData && <Modal onClose={handleCloseModal} claseCss="modal">
-              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
-                  {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
-                  {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
-                   
-               </div>
-              <h2 className='text-center'>Confirmacion de operación</h2>
-             <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} el tipo de documento <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
-             </p>
-
-             <div className='modal-actions'>
-                   <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
-                   <Button 
-                    disabled={isPendingDesactivar}
-                    className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
-                                 items-center shadow-none hover:shadow-none`}
-                                 onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
-                                   {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
-                   </Button>
+              </Modal>
             </div>
-        </Modal>}
+      </div>
+        }
+
+       {onDesactivarData && 
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseModal} claseCss="modal">
+                      <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
+                          {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
+                          {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
+                          
+                      </div>
+                      <h2 className='text-center'>Confirmacion de operación</h2>
+                    <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
+                      ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} el tipo de documento <b>{capitalizePrimeraLetra(dataADesactivar?.nombre ?? '')}</b>? 
+                    </p>
+
+                    <div className='modal-actions'>
+                          <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
+                          <Button 
+                            disabled={isPendingDesactivar}
+                            className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
+                                        items-center shadow-none hover:shadow-none`}
+                                        onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
+                                          {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
+                          </Button>
+                    </div>
+              </Modal>
+            </div>
+          </div>}
 
       <div className="max-w-7xl mx-auto space-y-8">
           {/* Page Header */}

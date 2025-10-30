@@ -1965,421 +1965,431 @@ const handleSubmitClick = useCallback(async () => {
 
   return (
     <>
-      {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-            <div className="bg-white/95 rounded-xl shadow-xl max-w-5xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
-              {/* Header con imagen */}
-              <div className="relative">
-                <img
-                  src={dataDetalle!.imagen ?? placeholderViaje}
-                  alt={dataDetalle?.nombre}
-                  className="w-full h-90 object-cover rounded-t-xl"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-t-xl" />
+      {onVerDetalles && 
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white/95 rounded-xl shadow-xl max-w-5xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+                    {/* Header con imagen */}
+                    <div className="relative">
+                      <img
+                        src={dataDetalle!.imagen ?? placeholderViaje}
+                        alt={dataDetalle?.nombre}
+                        className="w-full h-90 object-cover rounded-t-xl"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-t-xl" />
 
-                <div className="absolute top-4 left-4 flex space-x-2">
-                  <span className={`px-4 py-2 rounded-full text-xs font-medium ${
-                    dataDetalle?.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {dataDetalle?.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                  <span className="px-4 py-2 bg-[rgba(0,0,0,0.2)] text-white text-xs font-medium rounded-full">
-                    {dataDetalle?.tipo_paquete.nombre}
-                  </span>
-                </div>
-                
-                {/* Botones de acción en la imagen */}
-                <div className="absolute top-4 right-4 flex space-x-2">
-                  <Button disabled className="cursor-pointer w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors duration-200">
-                    <Heart className="w-5 h-5 text-gray-600" />
-                  </Button>
-                  <Button disabled className="cursor-pointer w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors duration-200">
-                    <Share2 className="w-5 h-5 text-gray-600" />
-                  </Button>
-                  <Button disabled className="cursor-pointer w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors duration-200">
-                    <Download className="w-5 h-5 text-gray-600" />
-                  </Button>
-                  <Button
-                    onClick={handleCloseVerDetalles}
-                    className="cursor-pointer w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors duration-200"
-                  >
-                    <X className="w-5 h-5 text-gray-600" />
-                  </Button>
-                </div>
-
-                {/* Información superpuesta */}
-                <div className="absolute bottom-6 left-6 right-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      {/* <div className="flex items-center space-x-3 mb-3">
-                        <span className={`px-3 py-1 text-sm font-medium rounded-full ${getCategoryColor(pkg.category)}`}>
-                          {getCategoryLabel(pkg.category)}
-                        </span>
-                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          pkg.isActive ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                      <div className="absolute top-4 left-4 flex space-x-2">
+                        <span className={`px-4 py-2 rounded-full text-xs font-medium ${
+                          dataDetalle?.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          <div className={`w-2 h-2 rounded-full mr-2 ${
-                            pkg.isActive ? 'bg-green-200' : 'bg-red-200'
-                          }`} />
-                          {pkg.isActive ? 'Activo' : 'Inactivo'}
-                        </div>
-                      </div> */}
-                      <h1 className="text-4xl font-bold text-white mb-2">{dataDetalle?.nombre}</h1>
-                      <div className="flex items-center text-white/90 text-lg">
-                        <MapPin className="w-5 h-5 mr-2" />
-                        <span>{dataDetalle?.destino.ciudad}</span>
+                          {dataDetalle?.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                        <span className="px-4 py-2 bg-[rgba(0,0,0,0.2)] text-white text-xs font-medium rounded-full">
+                          {dataDetalle?.tipo_paquete.nombre}
+                        </span>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-5xl font-bold text-white mb-1">{dataDetalle?.moneda.simbolo}{formatearSeparadorMiles.format(dataDetalle?.precio_venta_desde ?? 0)}</div>
-                      <div className="text-white/80">por persona</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {!dataDetalle?.propio && 
-                <>
-                  <div className="p-4 bg-blue-50 border-l-4 border-l-blue-500">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-blue-900">Distribuido por</div>
-                          <div className="text-lg font-bold text-blue-800">{dataDetalle?.distribuidora?.nombre}</div>
-                        </div>
+                      
+                      {/* Botones de acción en la imagen */}
+                      <div className="absolute top-4 right-4 flex space-x-2">
+                        <Button disabled className="cursor-pointer w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors duration-200">
+                          <Heart className="w-5 h-5 text-gray-600" />
+                        </Button>
+                        <Button disabled className="cursor-pointer w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors duration-200">
+                          <Share2 className="w-5 h-5 text-gray-600" />
+                        </Button>
+                        <Button disabled className="cursor-pointer w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors duration-200">
+                          <Download className="w-5 h-5 text-gray-600" />
+                        </Button>
+                        <Button
+                          onClick={handleCloseVerDetalles}
+                          className="cursor-pointer w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors duration-200"
+                        >
+                          <X className="w-5 h-5 text-gray-600" />
+                        </Button>
                       </div>
-                    
-                    </div>
-                  </div>
-                  <Separator />
-                </>
-              }
 
-              {/* Contenido principal */}
-              <div className="p-8">
-                {/* Métricas principales */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                  {dataDetalle?.fecha_inicio &&
-                    <div className="bg-blue-50 p-6 rounded-xl">
-                      <div className="flex items-center justify-between mb-3">
-                        <Clock className="w-8 h-8 text-blue-600" />
-                        <span className="text-2xl font-bold text-blue-600">{getDaysBetweenDates(dataDetalle?.fecha_inicio ?? '', dataDetalle?.fecha_fin ?? '')}</span>
-                      </div>
-                      <h3 className="font-semibold text-gray-900">Duración</h3>
-                      <p className="text-sm text-gray-600">días de viaje</p>
-                    </div>
-                  }
-
-                  {!dataDetalle?.fecha_inicio &&
-                    <div className="bg-blue-50 p-6 rounded-xl">
-                      <div className="flex items-center justify-center mb-3">
-                        <Clock className="w-8 h-8 text-blue-600" />
-                        {/* <span className="text-2xl font-bold text-blue-600">{getDaysBetweenDates(dataDetalle?.fecha_inicio ?? '', dataDetalle?.fecha_fin ?? '')}</span> */}
-                      </div>
-                      <h3 className="font-semibold text-gray-900 flex items-center justify-center">Variable</h3>
-                      <p className="text-sm text-gray-600 flex items-center justify-center">Duracion segun fechas</p>
-                    </div>
-                  }
-
-                  {dataDetalle?.propio && 
-                    <div className="bg-green-50 p-6 rounded-xl">
-                      <div className="flex items-center justify-between mb-3">
-                        <Users className="w-8 h-8 text-green-600" />
-                        <span className="text-2xl font-bold text-green-600">10/{dataDetalle?.cantidad_pasajeros}</span>
-                      </div>
-                      <h3 className="font-semibold text-gray-900">Ocupación</h3>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          // style={{ width: `${occupancyPercentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  }
-
-                  {!dataDetalle?.propio && 
-                    <div className="bg-green-50 p-6 rounded-xl">
-                      <div className="flex items-center justify-center mb-3">
-                        <Users className="w-8 h-8 text-green-600" />
-                        {/* <span className="text-2xl font-bold text-green-600">10/{dataDetalle?.cantidad_pasajeros}</span> */}
-                      </div>
-                      <h3 className="font-semibold text-gray-900 flex items-center justify-center">Flexible</h3>
-                      <div className="w-full rounded-full flex items-center justify-center text-center">
-                        {/* <div 
-                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          
-                        /> */}
-                        Pasajeros según solicitud
-                      </div>
-                    </div>
-                  }
-
-                  {dataDetalle?.fecha_inicio &&
-                    <div className="bg-emerald-50 p-6 rounded-xl">
-                      <div className="flex items-center justify-between mb-3">
-                        <Calendar className="w-8 h-8 text-emerald-600" />
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-emerald-600">
-                            {new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { day: 'numeric', month: 'short' })}
-                          </div>
-                        </div>
-                      </div>
-                      <h3 className="font-semibold text-gray-900">Inicio</h3>
-                      <p className="text-sm text-gray-600">{new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString()}</p>
-                    </div>
-                  }
-
-                  {!dataDetalle?.fecha_inicio &&
-                    <div className="bg-emerald-50 p-6 rounded-xl">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="text-right flex items-center justify-center w-full">
-                          <div className="font-semibold flex items-center justify-center ">
-                            {/* {new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { day: 'numeric', month: 'short' })} */}
-                        <Calendar className="w-8 h-8 text-emerald-600" />
-                            {/* Flexible */}
-                          </div>
-                        </div>
-                      </div>
-                      <h3 className="font-semibold text-gray-900 flex items-center justify-center">Flexible</h3>
-                      <p className="text-sm text-gray-600 flex items-center justify-center">Fechas a coordinar</p>
-                    </div>
-                  }
-
-                  <div className="bg-orange-50 p-6 rounded-xl">
-                    <div className="flex items-center justify-between mb-3">
-                      <Star className="w-8 h-8 text-orange-600" />
-                      <span className="text-2xl font-bold text-orange-600">4.8</span>
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Valoración</h3>
-                    <p className="text-sm text-gray-600">basada en 127 reseñas</p>
-                  </div>
-                </div>
-
-                {/* Descripción */}
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Detallles del Viaje</h2>
-                  {/* <p className="text-gray-700 leading-relaxed text-lg">{dataDetalle?.description}</p> */}
-                </div>
-
-                {/* Fechas detalladas */}
-                <div className="bg-gray-50 p-6 rounded-xl mb-8">
-                  {(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() === 'terrestre' && dataDetalle?.fecha_inicio)
-                      &&
-                        <>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-4">Salida más próxima</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="flex items-center space-x-4">
-                              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                <Plane className="w-6 h-6 text-green-600" />
+                      {/* Información superpuesta */}
+                      <div className="absolute bottom-6 left-6 right-6">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            {/* <div className="flex items-center space-x-3 mb-3">
+                              <span className={`px-3 py-1 text-sm font-medium rounded-full ${getCategoryColor(pkg.category)}`}>
+                                {getCategoryLabel(pkg.category)}
+                              </span>
+                              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                pkg.isActive ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                              }`}>
+                                <div className={`w-2 h-2 rounded-full mr-2 ${
+                                  pkg.isActive ? 'bg-green-200' : 'bg-red-200'
+                                }`} />
+                                {pkg.isActive ? 'Activo' : 'Inactivo'}
                               </div>
-                              <div>
-                                <h4 className="font-medium text-gray-900">Salida</h4>
-                                <p className="text-gray-600">{new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { 
-                                  weekday: 'long', 
-                                  year: 'numeric', 
-                                  month: 'long', 
-                                  day: 'numeric' ,
-                                  timeZone: 'UTC', 
-                                })}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <Calendar className="w-6 h-6 text-blue-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-gray-900">Regreso</h4>
-                                <p className="text-gray-600">{new Date(dataDetalle!.fecha_fin ?? '').toLocaleDateString('es', { 
-                                  weekday: 'long', 
-                                  year: 'numeric', 
-                                  month: 'long', 
-                                  day: 'numeric' ,
-                                  timeZone: 'UTC', 
-                                })}</p>
-                              </div>
+                            </div> */}
+                            <h1 className="text-4xl font-bold text-white mb-2">{dataDetalle?.nombre}</h1>
+                            <div className="flex items-center text-white/90 text-lg">
+                              <MapPin className="w-5 h-5 mr-2" />
+                              <span>{dataDetalle?.destino.ciudad}</span>
                             </div>
                           </div>
-                        </>
-                      }
+                          <div className="text-right">
+                            <div className="text-5xl font-bold text-white mb-1">{dataDetalle?.moneda.simbolo}{formatearSeparadorMiles.format(dataDetalle?.precio_venta_desde ?? 0)}</div>
+                            <div className="text-white/80">por persona</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                      {(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() !== 'terrestre' || !dataDetalle?.fecha_inicio) &&
-                        <>
-                          <div className="p-4 bg-gradient-to-r from-sky-50 to-sky-100 border-l-4 border-l-sky-500">
+                    {!dataDetalle?.propio && 
+                      <>
+                        <div className="p-4 bg-blue-50 border-l-4 border-l-blue-500">
+                          <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className="h-12 w-12 rounded-full bg-sky-200 flex items-center justify-center shadow-sm">
-                                <Calendar className="h-6 w-6 text-sky-700" />
+                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Building2 className="h-5 w-5 text-blue-600" />
                               </div>
-                              <div className="flex-1">
-                                <div className="text-sm font-medium text-sky-700 uppercase tracking-wide">Paquete {dataDetalle?.tipo_paquete.nombre}</div>
-                                <div className="text-lg font-bold text-sky-900">Fechas y pasajeros flexibles</div>
-                                <div className="text-sm text-sky-700 mt-1">
-                                  Disponible todo el año • Grupos de cualquier tamaño • Salidas programadas
+                              <div>
+                                <div className="font-medium text-blue-900">Distribuido por</div>
+                                <div className="text-lg font-bold text-blue-800">{dataDetalle?.distribuidora?.nombre}</div>
+                              </div>
+                            </div>
+                          
+                          </div>
+                        </div>
+                        <Separator />
+                      </>
+                    }
+
+                    {/* Contenido principal */}
+                    <div className="p-8">
+                      {/* Métricas principales */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        {dataDetalle?.fecha_inicio &&
+                          <div className="bg-blue-50 p-6 rounded-xl">
+                            <div className="flex items-center justify-between mb-3">
+                              <Clock className="w-8 h-8 text-blue-600" />
+                              <span className="text-2xl font-bold text-blue-600">{getDaysBetweenDates(dataDetalle?.fecha_inicio ?? '', dataDetalle?.fecha_fin ?? '')}</span>
+                            </div>
+                            <h3 className="font-semibold text-gray-900">Duración</h3>
+                            <p className="text-sm text-gray-600">días de viaje</p>
+                          </div>
+                        }
+
+                        {!dataDetalle?.fecha_inicio &&
+                          <div className="bg-blue-50 p-6 rounded-xl">
+                            <div className="flex items-center justify-center mb-3">
+                              <Clock className="w-8 h-8 text-blue-600" />
+                              {/* <span className="text-2xl font-bold text-blue-600">{getDaysBetweenDates(dataDetalle?.fecha_inicio ?? '', dataDetalle?.fecha_fin ?? '')}</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 flex items-center justify-center">Variable</h3>
+                            <p className="text-sm text-gray-600 flex items-center justify-center">Duracion segun fechas</p>
+                          </div>
+                        }
+
+                        {dataDetalle?.propio && 
+                          <div className="bg-green-50 p-6 rounded-xl">
+                            <div className="flex items-center justify-between mb-3">
+                              <Users className="w-8 h-8 text-green-600" />
+                              <span className="text-2xl font-bold text-green-600">10/{dataDetalle?.cantidad_pasajeros}</span>
+                            </div>
+                            <h3 className="font-semibold text-gray-900">Ocupación</h3>
+                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                              <div 
+                                className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                // style={{ width: `${occupancyPercentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        }
+
+                        {!dataDetalle?.propio && 
+                          <div className="bg-green-50 p-6 rounded-xl">
+                            <div className="flex items-center justify-center mb-3">
+                              <Users className="w-8 h-8 text-green-600" />
+                              {/* <span className="text-2xl font-bold text-green-600">10/{dataDetalle?.cantidad_pasajeros}</span> */}
+                            </div>
+                            <h3 className="font-semibold text-gray-900 flex items-center justify-center">Flexible</h3>
+                            <div className="w-full rounded-full flex items-center justify-center text-center">
+                              {/* <div 
+                                className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                
+                              /> */}
+                              Pasajeros según solicitud
+                            </div>
+                          </div>
+                        }
+
+                        {dataDetalle?.fecha_inicio &&
+                          <div className="bg-emerald-50 p-6 rounded-xl">
+                            <div className="flex items-center justify-between mb-3">
+                              <Calendar className="w-8 h-8 text-emerald-600" />
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-emerald-600">
+                                  {new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { day: 'numeric', month: 'short' })}
                                 </div>
                               </div>
                             </div>
+                            <h3 className="font-semibold text-gray-900">Inicio</h3>
+                            <p className="text-sm text-gray-600">{new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString()}</p>
                           </div>
-                          <Separator />
-                          </>
-                      }
-                </div>
+                        }
 
-                <div className="mb-8">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                    Zona Geográfica
-                  </h3>
-                  <div className="flex items-center gap-3 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl px-5 py-4">
-                    <MapPin size={24} className="text-blue-600" />
-                    <span className="text-lg font-medium text-slate-800">{dataDetalle?.zona_geografica?.nombre ?? 'Zona no asignada'}</span>
-                  </div>
-                </div>
-
-                {/* Servicios incluidos y excluidos */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                      <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
-                      Salidas
-                    </h3>
-                    <div className="space-y-4 max-h-60 overflow-y-auto">
-                      
-                      {[...dataDetalle!.salidas].map((item, index) => (
-                        <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
-
-                          <div className="flex items-center gap-3">
-                              <div className="bg-gradient-to-br from-green-100 to-emerald-100 p-2 rounded-xl">
-                                <Plane className="text-green-600 transform rotate-45" size={16} /> 
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500">Salida</p>
-                                <p className="font-semibold text-slate-800">
-                                  {formatearFecha(item?.fecha_salida, false)}
-                                </p>
+                        {!dataDetalle?.fecha_inicio &&
+                          <div className="bg-emerald-50 p-6 rounded-xl">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="text-right flex items-center justify-center w-full">
+                                <div className="font-semibold flex items-center justify-center ">
+                                  {/* {new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { day: 'numeric', month: 'short' })} */}
+                              <Calendar className="w-8 h-8 text-emerald-600" />
+                                  {/* Flexible */}
+                                </div>
                               </div>
                             </div>
+                            <h3 className="font-semibold text-gray-900 flex items-center justify-center">Flexible</h3>
+                            <p className="text-sm text-gray-600 flex items-center justify-center">Fechas a coordinar</p>
+                          </div>
+                        }
 
-                            <div className="flex items-center gap-3">
-                              <div className="bg-gradient-to-br from-orange-100 to-red-100 p-2 rounded-xl">
-                                <Plane className="text-orange-600 transform -rotate-45" size={16} />
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500">Regreso</p>
-                                <p className="font-semibold text-slate-800">
-                                  {formatearFecha(item?.fecha_regreso, false)}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                              <div className="bg-gradient-to-br from-blue-100 to-blue-100 p-2 rounded-xl text-blue-600">
-                                {/* <DollarSignIcon className="text-blue-600" size={16} /> */}
-                                {dataDetalle?.moneda?.simbolo}
-                              </div>
-                              <div>
-                                <p className="text-sm text-slate-500">Precio</p>
-                                <p className="font-semibold text-slate-800">
-                                  {formatearSeparadorMiles.format(item?.precio_actual)}
-                                </p>
-                              </div>
-                            </div>
-                            {/* <p className="font-medium text-green-900">{dataDetalle?.moneda.simbolo}{item.precio_actual}</p> */}
+                        <div className="bg-orange-50 p-6 rounded-xl">
+                          <div className="flex items-center justify-between mb-3">
+                            <Star className="w-8 h-8 text-orange-600" />
+                            <span className="text-2xl font-bold text-orange-600">4.8</span>
+                          </div>
+                          <h3 className="font-semibold text-gray-900">Valoración</h3>
+                          <p className="text-sm text-gray-600">basada en 127 reseñas</p>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                      <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
-                      Servicios Incluidos
-                    </h3>
-                    <div className="space-y-4 max-h-60 overflow-y-auto">
-                      
-                      {[...dataDetalle!.servicios].map((item, index) => (
-                        <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
-                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            {index === 0 && <Hotel className="w-3 h-3 text-green-600" />}
-                            {index === 1 && <Car className="w-3 h-3 text-green-600" />}
-                            {index === 2 && <Users className="w-3 h-3 text-green-600" />}
-                            {index > 2 && <div className="w-2 h-2 bg-green-600 rounded-full" />}
+                      {/* Descripción */}
+                      <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Detallles del Viaje</h2>
+                        {/* <p className="text-gray-700 leading-relaxed text-lg">{dataDetalle?.description}</p> */}
+                      </div>
+
+                      {/* Fechas detalladas */}
+                      <div className="bg-gray-50 p-6 rounded-xl mb-8">
+                        {(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() === 'terrestre' && dataDetalle?.fecha_inicio)
+                            &&
+                              <>
+                                <h3 className="text-xl font-semibold text-gray-900 mb-4">Salida más próxima</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="flex items-center space-x-4">
+                                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                      <Plane className="w-6 h-6 text-green-600" />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium text-gray-900">Salida</h4>
+                                      <p className="text-gray-600">{new Date(dataDetalle!.fecha_inicio ?? '').toLocaleDateString('es', { 
+                                        weekday: 'long', 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' ,
+                                        timeZone: 'UTC', 
+                                      })}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-4">
+                                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                      <Calendar className="w-6 h-6 text-blue-600" />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium text-gray-900">Regreso</h4>
+                                      <p className="text-gray-600">{new Date(dataDetalle!.fecha_fin ?? '').toLocaleDateString('es', { 
+                                        weekday: 'long', 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' ,
+                                        timeZone: 'UTC', 
+                                      })}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            }
+
+                            {(quitarAcentos(dataDetalle?.tipo_paquete?.nombre ?? "").toLowerCase() !== 'terrestre' || !dataDetalle?.fecha_inicio) &&
+                              <>
+                                <div className="p-4 bg-gradient-to-r from-sky-50 to-sky-100 border-l-4 border-l-sky-500">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-12 w-12 rounded-full bg-sky-200 flex items-center justify-center shadow-sm">
+                                      <Calendar className="h-6 w-6 text-sky-700" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="text-sm font-medium text-sky-700 uppercase tracking-wide">Paquete {dataDetalle?.tipo_paquete.nombre}</div>
+                                      <div className="text-lg font-bold text-sky-900">Fechas y pasajeros flexibles</div>
+                                      <div className="text-sm text-sky-700 mt-1">
+                                        Disponible todo el año • Grupos de cualquier tamaño • Salidas programadas
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <Separator />
+                                </>
+                            }
+                      </div>
+
+                      <div className="mb-8">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                          Zona Geográfica
+                        </h3>
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl px-5 py-4">
+                          <MapPin size={24} className="text-blue-600" />
+                          <span className="text-lg font-medium text-slate-800">{dataDetalle?.zona_geografica?.nombre ?? 'Zona no asignada'}</span>
+                        </div>
+                      </div>
+
+                      {/* Servicios incluidos y excluidos */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
+                            Salidas
+                          </h3>
+                          <div className="space-y-4 max-h-60 overflow-y-auto">
+                            
+                            {[...dataDetalle!.salidas].map((item, index) => (
+                              <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
+
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-gradient-to-br from-green-100 to-emerald-100 p-2 rounded-xl">
+                                      <Plane className="text-green-600 transform rotate-45" size={16} /> 
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-slate-500">Salida</p>
+                                      <p className="font-semibold text-slate-800">
+                                        {formatearFecha(item?.fecha_salida, false)}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-3">
+                                    <div className="bg-gradient-to-br from-orange-100 to-red-100 p-2 rounded-xl">
+                                      <Plane className="text-orange-600 transform -rotate-45" size={16} />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-slate-500">Regreso</p>
+                                      <p className="font-semibold text-slate-800">
+                                        {formatearFecha(item?.fecha_regreso, false)}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-3">
+                                    <div className="bg-gradient-to-br from-blue-100 to-blue-100 p-2 rounded-xl text-blue-600">
+                                      {/* <DollarSignIcon className="text-blue-600" size={16} /> */}
+                                      {dataDetalle?.moneda?.simbolo}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-slate-500">Precio</p>
+                                      <p className="font-semibold text-slate-800">
+                                        {formatearSeparadorMiles.format(item?.precio_actual)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {/* <p className="font-medium text-green-900">{dataDetalle?.moneda.simbolo}{item.precio_actual}</p> */}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
+                            Servicios Incluidos
+                          </h3>
+                          <div className="space-y-4 max-h-60 overflow-y-auto">
+                            
+                            {[...dataDetalle!.servicios].map((item, index) => (
+                              <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
+                                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  {index === 0 && <Hotel className="w-3 h-3 text-green-600" />}
+                                  {index === 1 && <Car className="w-3 h-3 text-green-600" />}
+                                  {index === 2 && <Users className="w-3 h-3 text-green-600" />}
+                                  {index > 2 && <div className="w-2 h-2 bg-green-600 rounded-full" />}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-green-900">{item.nombre_servicio}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Información adicional */}
+                      <div className="bg-blue-50 p-6 rounded-xl mb-8">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-4">Información Adicional</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                          <div>
+                            <p className="text-gray-600 mb-2"><strong>Creado:</strong> {new Date(dataDetalle!.fecha_creacion).toLocaleDateString()}</p>
+                            <p className="text-gray-600"><strong>Última actualización:</strong> {new Date(dataDetalle!.fecha_modificacion).toLocaleDateString()}</p>
                           </div>
                           <div>
-                            <p className="font-medium text-green-900">{item.nombre_servicio}</p>
+                            <p className="text-gray-600 mb-2"><strong>Capacidad máxima:</strong> {dataDetalle?.cantidad_pasajeros ? `${dataDetalle?.cantidad_pasajeros} personas`: 'Flexible según distribuidora'}</p>
+                            <p className="text-gray-600 mb-2"><strong>Reservas actuales:</strong> {dataDetalle?.propio ? `${dataDetalle?.cantidad_pasajeros} personas`: 'Bajo demanda'}</p>
+                            <p className="text-gray-600"><strong>Disponibilidad:</strong> X espacios libres</p>
                           </div>
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
+                        <button
+                          onClick={handleCloseVerDetalles}
+                          className="cursor-pointer px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium"
+                        >
+                          Cerrar
+                        </button>
+                        {/* <button
+                          onClick={() => {
+                            onEdit(pkg);
+                            onClose();
+                          }}
+                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 font-medium"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          <span>Editar Paquete</span>
+                        </button> */}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Información adicional */}
-                <div className="bg-blue-50 p-6 rounded-xl mb-8">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Información Adicional</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-                    <div>
-                      <p className="text-gray-600 mb-2"><strong>Creado:</strong> {new Date(dataDetalle!.fecha_creacion).toLocaleDateString()}</p>
-                      <p className="text-gray-600"><strong>Última actualización:</strong> {new Date(dataDetalle!.fecha_modificacion).toLocaleDateString()}</p>
+              </Modal>
+            </div>
+      </div>}
+
+       {onDesactivarData && 
+       <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseModal} claseCss="modal">
+                    <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
+                        {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
+                        {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
+                        
                     </div>
-                    <div>
-                      <p className="text-gray-600 mb-2"><strong>Capacidad máxima:</strong> {dataDetalle?.cantidad_pasajeros ? `${dataDetalle?.cantidad_pasajeros} personas`: 'Flexible según distribuidora'}</p>
-                      <p className="text-gray-600 mb-2"><strong>Reservas actuales:</strong> {dataDetalle?.propio ? `${dataDetalle?.cantidad_pasajeros} personas`: 'Bajo demanda'}</p>
-                      <p className="text-gray-600"><strong>Disponibilidad:</strong> X espacios libres</p>
-                    </div>
+                    <h2 className='text-center'>Confirmacion de operación</h2>
+                  <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
+                    ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al paquete  
+                    <b>
+                        {' ' + capitalizePrimeraLetra((dataADesactivar?.nombre) ?? '')}
+                    </b>? 
+                  </p>
+
+                  <div className='modal-actions'>
+                        <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
+                        <Button 
+                          disabled={isPendingDesactivar}
+                          className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
+                                      items-center shadow-none hover:shadow-none`}
+                                      onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
+                                        {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
+                        </Button>
                   </div>
-                </div>
-
-                {/* Botones de acción */}
-                <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
-                  <button
-                    onClick={handleCloseVerDetalles}
-                    className="cursor-pointer px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium"
-                  >
-                    Cerrar
-                  </button>
-                  {/* <button
-                    onClick={() => {
-                      onEdit(pkg);
-                      onClose();
-                    }}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 font-medium"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    <span>Editar Paquete</span>
-                  </button> */}
-                </div>
-              </div>
+              </Modal>
             </div>
-          </div>
-
-        </Modal>}
-
-       {onDesactivarData && <Modal onClose={handleCloseModal} claseCss="modal">
-              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
-                  {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
-                  {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
-                   
-               </div>
-              <h2 className='text-center'>Confirmacion de operación</h2>
-             <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al paquete  
-               <b>
-                  {' ' + capitalizePrimeraLetra((dataADesactivar?.nombre) ?? '')}
-              </b>? 
-             </p>
-
-             <div className='modal-actions'>
-                   <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
-                   <Button 
-                    disabled={isPendingDesactivar}
-                    className={`cursor-pointer ${dataADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
-                                 items-center shadow-none hover:shadow-none`}
-                                 onClick={() => handleConfirmActivo(!dataADesactivar!.activo)}>
-                                   {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
-                   </Button>
-            </div>
-        </Modal>}
+      </div>}
 
       <div className="max-w-7xl mx-auto space-y-8">
           {/* Page Header */}
