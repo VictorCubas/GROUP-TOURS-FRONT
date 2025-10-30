@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // import type { Moneda } from '@/types/reservas';
 import { CheckCircle2, FileText, Loader2Icon, Mail, MapPin, Phone, UserPlus2Icon } from 'lucide-react';
@@ -30,7 +29,6 @@ export default function AsignarPasajeroModal({
   onClose,
   onConfirm,
   isPending,
-  reservaData,
   selectedPasajeroId,
 }: AsignarPasajeroModalProps) {
 
@@ -42,8 +40,6 @@ export default function AsignarPasajeroModal({
   const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
   const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
 
-  // Determinar si es modo individual o múltiple
-  const isSinglePassengerMode = selectedPasajeroId !== undefined;
 
   // Encontrar el índice del pasajero seleccionado
   // const selectedPassengerIndex = isSinglePassengerMode
