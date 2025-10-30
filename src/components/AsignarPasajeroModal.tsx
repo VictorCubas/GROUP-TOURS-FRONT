@@ -38,22 +38,17 @@ export default function AsignarPasajeroModal({
 
   const {handleShowToast} = use(ToastContext);
   // Extraer datos necesarios de la reserva
-  const seniaPorPersona = reservaData?.salida?.senia || 0;
-  const cantidadPasajeros = reservaData?.cantidad_pasajeros || 0;
   const [selectedPersonaData, setSelectedPersonaData] = useState<any | undefined>();
   const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
   const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
-  const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
-  const [paymentType, setPaymentType] = useState<"deposit" | "full">("deposit")
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer" | 'cash'>("cash")
 
   // Determinar si es modo individual o múltiple
   const isSinglePassengerMode = selectedPasajeroId !== undefined;
 
   // Encontrar el índice del pasajero seleccionado
-  const selectedPassengerIndex = isSinglePassengerMode
-    ? reservaData?.pasajeros?.findIndex((p: any) => p.id === selectedPasajeroId)
-    : -1;
+  // const selectedPassengerIndex = isSinglePassengerMode
+  //   ? reservaData?.pasajeros?.findIndex((p: any) => p.id === selectedPasajeroId)
+  //   : -1;
 
   // Bloquear scroll del modal padre cuando AsignarPasajeroModal está abierto
   useEffect(() => {
@@ -85,10 +80,10 @@ export default function AsignarPasajeroModal({
     return payload;
   };
 
-  const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
-    console.log(value)
-    setPersonaNoSeleccionada(value);
-  }
+  // const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
+  //   console.log(value)
+  //   setPersonaNoSeleccionada(value);
+  // }
 
   const {data: dataPersonaList, isFetching: isFetchingPersonas} = useQuery({
     queryKey: ['personas-disponibles', 1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}], //data cached 
@@ -197,7 +192,7 @@ export default function AsignarPasajeroModal({
                             value={selectedPersonaID}
                             onValueChange={setSelectedPersonaID}
                             setSelectedTitularData={setSelectedPersonaData}
-                            handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                            // handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
                             onSearchChange={setPersonaBusqueda}
                             isFetchingPersonas={isFetchingPersonas}
                             placeholder="Buscar persona por documento o nombre..."
