@@ -366,7 +366,9 @@ export default function PaymentReceiptModal({
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Pasajero</th>
-                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Monto</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Total Pagado</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Total Pendiente</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Monto Pagado</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -375,20 +377,28 @@ export default function PaymentReceiptModal({
                           <td className="px-4 py-3 text-sm text-gray-900">
                             {dist.pasajero_nombre} {dist.pasajero_apellido}
                           </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
-                            {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(dist.monto)}
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
+                            {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(dist.monto_pagado_total)}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
+                            {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(dist.saldo_pendiente)}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-green-900 text-right">
+                            <span className='bg-green-200 p-1 rounded-lg border-2 border-gray-300'>
+                              {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(dist.monto)}
+                            </span>
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-gray-50 border-t-2 border-gray-300">
+                    {/* <tfoot className="bg-gray-50 border-t-2 border-gray-300">
                       <tr>
                         <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
                         <td className="px-4 py-3 text-sm font-bold text-green-600 text-right">
                           {receiptData.reserva.moneda.simbolo} {formatearSeparadorMiles.format(receiptData.comprobante.monto)}
                         </td>
                       </tr>
-                    </tfoot>
+                    </tfoot> */}
                   </table>
                 </div>
               </div>

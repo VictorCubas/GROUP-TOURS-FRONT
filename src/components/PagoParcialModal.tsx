@@ -114,13 +114,8 @@ export default function PagoParcialModal({
         // Si el pasajero no tiene saldo, no validar
         if (saldoPendientePasajero === 0) return true;
 
-        // Si el saldo pendiente es menor a la seña mínima, validar que el monto sea mayor a 0
-        if (saldoPendientePasajero < seniaPorPersona) {
-          return montoIngresado > 0;
-        }
-
-        // Si el saldo es mayor o igual a la seña mínima, validar que el monto sea al menos la seña
-        return montoIngresado >= seniaPorPersona;
+        // En modo múltiple (distribución), solo validar que el monto sea mayor a 0
+        return montoIngresado > 0;
       });
 
   // Manejar cambios en los inputs de seña por pasajero
@@ -345,18 +340,18 @@ export default function PagoParcialModal({
                                   <span className={`${!tieneSaldo ? 'text-gray-400' : 'text-gray-600'}`}>$</span>
                                   <Input
                                     type="number"
-                                    min={saldoPendientePasajero < seniaPorPersona ? 0 : seniaPorPersona}
+                                    min={0}
                                     disabled={!tieneSaldo}
                                     value={tieneSaldo ? passengerDeposits[index] : precioUnitario}
                                     onChange={(e) => handlePassengerDepositChange(index, e.target.value)}
                                     className={`flex-1 ${!tieneSaldo ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                   />
                                 </div>
-                                {tieneSaldo && saldoPendientePasajero >= seniaPorPersona && Number(passengerDeposits[index] || 0) < seniaPorPersona && (
-                                  <span className="text-red-600 text-sm">Mínimo: {formatearSeparadorMiles.format(seniaPorPersona)}</span>
+                                {tieneSaldo && Number(passengerDeposits[index] || 0) <= 0 && (
+                                  <span className="text-red-600 text-sm">Debe ingresar un monto</span>
                                 )}
-                                {tieneSaldo && saldoPendientePasajero < seniaPorPersona && Number(passengerDeposits[index] || 0) <= 0 && (
-                                  <span className="text-amber-600 text-sm">Saldo: {formatearSeparadorMiles.format(saldoPendientePasajero)}</span>
+                                {tieneSaldo && Number(passengerDeposits[index] || 0) > 0 && (
+                                  <span className="text-gray-600 text-sm">Saldo: {formatearSeparadorMiles.format(saldoPendientePasajero)}</span>
                                 )}
                                 {!tieneSaldo && (
                                   <span className="text-green-600 text-sm font-medium flex items-center gap-1">
