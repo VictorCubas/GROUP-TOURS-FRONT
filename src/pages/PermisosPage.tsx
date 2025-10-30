@@ -378,125 +378,137 @@ export default function PermisosPage() {
 
   return (
     <>
-       {onVerPermiso && <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Detalles del Permiso</h2>
-                  </div>
-                </div>
-                <button
-                  onClick={handleCloseVerDetalles}
-                  className="cursor-pointer w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                >
-                  <X className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
+       {onVerPermiso && 
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+                <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
+                      <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <Shield className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h2 className="text-xl font-semibold text-gray-900">Detalles del Permiso</h2>
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleCloseVerDetalles}
+                            className="cursor-pointer w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                          >
+                            <X className="w-4 h-4 text-gray-600" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-6 space-y-6">
+                        {/* Header Info */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{permisoDetalle?.nombre}</h3>
+                          <p className="text-gray-700">{permisoDetalle?.descripcion}</p>
+                        </div>
+
+                        {/* Status and Type */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Tag className="w-4 h-4 text-gray-500" />
+                              <h4 className="font-medium text-gray-900">Tipo</h4>
+                            </div>
+                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border bg-blue-100 text-blue-800 border-blue-200`}>
+                              {permisoDetalle?.tipo}
+                            </span>
+                          </div>
+
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Activity className="w-4 h-4 text-gray-500" />
+                              <h4 className="font-medium text-gray-900">Estado</h4>
+                            </div>
+                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${permisoDetalle?.activo ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'} border`}>
+                              {permisoDetalle?.activo ? 'Activo': 'Inactivo'}
+                            </span>
+                          </div>
+
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Users className="w-4 h-4 text-gray-500" />
+                              <h4 className="font-medium text-gray-900">En uso</h4>
+                            </div>
+                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${
+                              permisoDetalle?.en_uso 
+                                ? 'bg-orange-100 text-orange-800 border-orange-200' 
+                                : 'bg-gray-100 text-gray-800 border-gray-200'
+                            }`}>
+                              {permisoDetalle?.en_uso ? 'Asignado' : 'Sin asignar'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Module and Creation Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <FileText className="w-4 h-4 text-gray-500" />
+                              <h4 className="font-medium text-gray-900">Módulo</h4>
+                            </div>
+                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-indigo-900 text-white`}>
+                              {permisoDetalle?.modulo?.nombre}
+                            </span>
+                          </div>
+
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Calendar className="w-4 h-4 text-gray-500" />
+                              <h4 className="font-medium text-gray-900">Fecha de Creación</h4>
+                            </div>
+                            <p className="text-sm text-gray-700">{formatearFecha(permisoDetalle!.fechaCreacion)}</p>
+                          </div>
+                        </div>
+                      
+                        <div className='modal-actions'>
+                              <Button 
+                                className={`cursor-pointer bg-blue-500 hover:bg-blue-600 flex justify-center 
+                                            items-center shadow-none hover:shadow-none`}
+                                            onClick={handleCloseVerDetalles}>
+                                              Aceptar
+                              </Button>
+                        </div>
+                        
+                      </div>
+                  </Modal>
             </div>
+        </div>
+        }
 
-            <div className="p-6 space-y-6">
-              {/* Header Info */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{permisoDetalle?.nombre}</h3>
-                <p className="text-gray-700">{permisoDetalle?.descripcion}</p>
-              </div>
+       {onDesactivarPermiso && 
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCloseModal} claseCss="modal">
+                    <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${permisoADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
+                        {permisoADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
+                        {!permisoADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
+                        
+                    </div>
+                    <h2 className='text-center'>Confirmacion de operación</h2>
+                  <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
+                    ¿Estás seguro de que deseas {permisoADesactivar!.activo ? 'desactivar' : 'activar'} el permiso <b>{permisoADesactivar?.nombre}</b>? 
+                  </p>
 
-              {/* Status and Type */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Tag className="w-4 h-4 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">Tipo</h4>
+                  <div className='modal-actions'>
+                        <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
+                        <Button 
+                          disabled={isPendingDesactivar}
+                          className={`cursor-pointer ${permisoADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
+                                      items-center shadow-none hover:shadow-none`}
+                                      onClick={() => handleConfirmActivo(!permisoADesactivar!.activo)}>
+                                        {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
+                        </Button>
                   </div>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border bg-blue-100 text-blue-800 border-blue-200`}>
-                    {permisoDetalle?.tipo}
-                  </span>
-                </div>
-
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Activity className="w-4 h-4 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">Estado</h4>
-                  </div>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${permisoDetalle?.activo ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'} border`}>
-                    {permisoDetalle?.activo ? 'Activo': 'Inactivo'}
-                  </span>
-                </div>
-
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">En uso</h4>
-                  </div>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${
-                    permisoDetalle?.en_uso 
-                      ? 'bg-orange-100 text-orange-800 border-orange-200' 
-                      : 'bg-gray-100 text-gray-800 border-gray-200'
-                  }`}>
-                    {permisoDetalle?.en_uso ? 'Asignado' : 'Sin asignar'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Module and Creation Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <FileText className="w-4 h-4 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">Módulo</h4>
-                  </div>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-indigo-900 text-white`}>
-                    {permisoDetalle?.modulo?.nombre}
-                  </span>
-                </div>
-
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <h4 className="font-medium text-gray-900">Fecha de Creación</h4>
-                  </div>
-                  <p className="text-sm text-gray-700">{formatearFecha(permisoDetalle!.fechaCreacion)}</p>
-                </div>
-              </div>
-            
-              <div className='modal-actions'>
-                    <Button 
-                      className={`cursor-pointer bg-blue-500 hover:bg-blue-600 flex justify-center 
-                                  items-center shadow-none hover:shadow-none`}
-                                  onClick={handleCloseVerDetalles}>
-                                    Aceptar
-                    </Button>
-              </div>
-              
+              </Modal>
             </div>
-        </Modal>}
-
-       {onDesactivarPermiso && <Modal onClose={handleCloseModal} claseCss="modal">
-              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${permisoADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
-                  {permisoADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
-                  {!permisoADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
-                   
-               </div>
-              <h2 className='text-center'>Confirmacion de operación</h2>
-             <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-               ¿Estás seguro de que deseas {permisoADesactivar!.activo ? 'desactivar' : 'activar'} el permiso <b>{permisoADesactivar?.nombre}</b>? 
-             </p>
-
-             <div className='modal-actions'>
-                   <Button className="hover:bg-transparent cursor-pointer bg-transparent text-gray-700" onClick={handleCloseModal}>Cancelar</Button>
-                   <Button 
-                    disabled={isPendingDesactivar}
-                    className={`cursor-pointer ${permisoADesactivar!.activo ? 'bg-red-500 hover:bg-red-600': 'bg-green-500 hover:bg-green-600'} flex justify-center 
-                                 items-center shadow-none hover:shadow-none`}
-                                 onClick={() => handleConfirmActivo(!permisoADesactivar!.activo)}>
-                                   {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
-                   </Button>
-            </div>
-        </Modal>}
+      </div>
+        }
 
       <div className="max-w-7xl mx-auto space-y-8">
           {/* Page Header */}

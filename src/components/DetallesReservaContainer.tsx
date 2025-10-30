@@ -2,9 +2,17 @@
 import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from '@/helper/formatter';
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, FileText, Globe, Loader2, Mail, Package, Phone, Star, Ticket, User, UserCheck, Users } from 'lucide-react';
+import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, FileText, Globe, Loader2, Mail, Package, Phone, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users } from 'lucide-react';
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import PagoParcialModal from './PagoParcialModal';
+import { use, useState } from 'react';
+import { useAsignarPasajero, useDescargarComprobante, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { ToastContext } from '@/context/ToastContext';
+import { queryClient } from './utils/http';
+import PaymentReceiptModal from './PaymentReceiptModal';
+import AsignarPasajeroModal from './AsignarPasajeroModal';
 
 interface DetallesReservaContainerProps{
     activeTab: 'general' | 'passengers' | 'payments';
@@ -12,24 +20,36 @@ interface DetallesReservaContainerProps{
     onClose: () => void
     
 } 
-
 const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
-    activeTab, 
-    reservaId,
-    onClose
-}) => {
+        activeTab, 
+        reservaId,
+        onClose
+    }) => {
 
 
+    const {handleShowToast} = use(ToastContext);
+    const [isPagoParcialModalOpen, setIsPagoParcialModalOpen] = useState(false);
+    const [isAsiganrPasajeroModalOpen, setIsAsiganrPasajeroModalOpen] = useState(false);
+    const [selectedPassengerId, setSelectedPassengerId] = useState<number | undefined>(undefined);
+    const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+    const [pagoSeniaRealizadaResponse, setPagoSeniaRealizadaResponse] = useState<any>(null);
+    
+    const {data: dataDetalleTemp, isFetching: isFetchingDetalles,} = useQuery({
+        queryKey: ['reserva-detalles', reservaId], //data cached
+        queryFn: ({signal}) => fetchReservaDetallesById({signal, id: reservaId}),
+        enabled: Boolean(reservaId),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
 
-const {data: dataDetalleTemp, isFetching: isFetchingDetalles,} = useQuery({
-    queryKey: ['reserva-detalles', reservaId], //data cached
-    queryFn: ({signal}) => fetchReservaDetallesById({signal, id: reservaId}),
-    enabled: Boolean(reservaId),
-    staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-});
+
+    const { mutate: fetchRegistrarPagoParcial, isPending: isPendingPagaoParcial } = useRegistrarPagoParcial();
+    
+    const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useDescargarComprobante();
+
+    const { mutate: fetchAsignarPasajero, isPending: isPendingAsignarPasajero } = useAsignarPasajero();
 
 
-console.log(dataDetalleTemp)
+    console.log(dataDetalleTemp)
 
     const renderStars = (rating: number) => {
         return (
@@ -70,6 +90,23 @@ console.log(dataDetalleTemp)
             return <UserCheck className="w-4 h-4 text-green-500" />;
     };
 
+    // Función para calcular el porcentaje de pago por pasajero
+    const getPassengerPaymentPercentage = (pasajero: any): number => {
+        if (!pasajero || !dataDetalleTemp?.precio_unitario) return 0;
+        const precioTotal = dataDetalleTemp.precio_unitario;
+        if (precioTotal === 0) return 0;
+        const montoPagado = precioTotal - (pasajero.saldo_pendiente || 0);
+        return Math.min((montoPagado / precioTotal) * 100, 100);
+    };
+
+    // Función para obtener el color de la barra según el porcentaje
+    const getProgressBarColor = (percentage: number): string => {
+        if (percentage < 20) return 'bg-red-600';
+        if (percentage < 50) return 'bg-red-400';
+        if (percentage < 100) return 'bg-yellow-500';
+        return 'bg-green-600';
+    };
+
 
     if(isFetchingDetalles){
         return (
@@ -78,7 +115,135 @@ console.log(dataDetalleTemp)
                 <p className="text-sm font-medium">Cargando detalles...</p>
             </div>
             );
-}
+    }
+
+
+    const handleRegistrarPagoParcial = (id: number, payload: any) => {
+        console.log('📦 Payload enviado al backend:', JSON.stringify(payload, null, 2));
+
+        fetchRegistrarPagoParcial(
+            { reservaId: id, payload },
+            {
+                onSuccess: (data) => {
+                console.log('✅ Pago registrado correctamente');
+                console.log('📄 Respuesta del servidor:', data);
+                handleShowToast('Pago registrado correctamente', 'success'); 
+
+                // Cerrar modal
+                setIsPagoParcialModalOpen(false);
+                console.log(data)
+                setIsReceiptModalOpen(true);
+                setPagoSeniaRealizadaResponse(data)
+
+                // Refrescar los detalles de la reserva para ver el estado actualizado
+                queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                },
+                onError: (error: any) => {
+                    console.error('❌ Error al registrar el pago:', error);
+                    console.error('📋 Detalles del error:', error.response?.data);
+
+                    const errorMessage = error.response?.data?.message
+                        || error.response?.data?.error
+                        || 'Error al registrar el pago';
+
+                    handleShowToast(errorMessage, 'error');
+                },
+            }
+        );
+    }
+
+    const handleAsignarPasajero = (id: number, payload: any) => {
+        console.log('📦 Payload enviado al backend:', JSON.stringify(payload, null, 2));
+        console.log(payload);
+        console.log(id)
+
+        fetchAsignarPasajero(
+            { pasajeroId: id, payload },
+            {
+                onSuccess: (data) => {
+                console.log('✅ Persona asignada correctamente');
+                console.log('📄 Respuesta del servidor:', data);
+                handleShowToast('Persona asignada al pasajero correctamente', 'success'); 
+
+                // Cerrar modal
+                setIsAsiganrPasajeroModalOpen(false);
+                console.log(data)
+                // setIsReceiptModalOpen(true);
+                // setPagoSeniaRealizadaResponse(data)
+
+                // Refrescar los detalles de la reserva para ver el estado actualizado
+                queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                },
+                onError: (error: any) => {
+                    console.error('❌ Error al asignar persona:', error);
+                    console.error('📋 Detalles del error:', error.response?.data);
+
+                    const errorMessage = error.response?.data?.message
+                        || error.response?.data?.error
+                        || 'Error al asignar persona';
+
+                    handleShowToast(errorMessage, 'error');
+                },
+            }
+        );
+    }
+
+
+    function handleDescargarPDF(id: number) {
+    generarYDescargar(id, {
+      onSuccess: () => {
+        console.log('✅ PDF descargado correctamente');
+        handleShowToast('Comprobante descargado correctamente', 'success');
+        // setIsReceiptModalOpen(false);
+        // setReservaRealizadaResponse(null);
+      },
+      onError: (error) => {
+        console.error('❌ Error al descargar el PDF', error);
+        handleShowToast('Error al descargar el comprobante', 'error');
+      },
+    });
+  }
+
+    const handleClosePagoParcialModal = () => {
+        setIsPagoParcialModalOpen(false);
+        setSelectedPassengerId(undefined);
+        // handleCancel()
+        // setPayloadReservationData(null);
+    };
+
+    const handleCloseAsigarPasajeroModal = () => {
+        setIsAsiganrPasajeroModalOpen(false);
+        setSelectedPassengerId(undefined);
+        // handleCancel()
+        // setPayloadReservationData(null);
+    };
+
+     // Manejar la confirmación del modal
+    const handleConfirmPagoParcial = (payload: any, paymentType: "deposit" | "full") => {
+        if (payload && dataDetalleTemp) {
+            console.log('Payload generado:', payload);
+            console.log('Tipo de pago:', paymentType);
+
+            // Llamar a la función de pago con el ID de la reserva actual
+            handleRegistrarPagoParcial(dataDetalleTemp.id, payload);
+        }
+    };
+
+     // Manejar la confirmación del modal
+    const handleConfirmAAsignarPasajero = (payload: any, pasajeroId: number | string) => {
+        if (payload && dataDetalleTemp && pasajeroId) {
+            console.log('Payload generado:', payload);
+            console.log('Payload generado:', pasajeroId);
+
+            // Llamar a la función de pago con el ID de la reserva actual
+            handleAsignarPasajero(Number(pasajeroId), payload);
+        }
+    };
+
+  const handleCloseReceipt = () => {
+    console.log('Modal de comprobante cerrado');
+    setIsReceiptModalOpen(false);
+  };
 
 return   <>
     {/* Contenido de tabs */}
@@ -379,15 +544,35 @@ return   <>
                         (pasajero: any) => pasajero.persona?.nombre?.toLowerCase().includes('por asignar')
                     )?.length || 0;
 
-                    return pasajerosPorAsignar > 0 && (
-                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                            <div className="flex items-center space-x-2">
-                                <AlertCircle className="w-4 h-4 text-orange-600" />
-                                <span className="text-sm font-medium text-orange-800">
-                                    Faltan {pasajerosPorAsignar} pasajero{pasajerosPorAsignar !== 1 ? 's' : ''} por registrar y/o asignar
-                                </span>
+                    return (
+                        <>
+                          <div className='flex items-center gap-5'>
+                            <div>
+                                <Button
+                                    onClick={() => {
+                                        setSelectedPassengerId(undefined);
+                                        setIsPagoParcialModalOpen(true);
+                                    }}
+                                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
+                                    size="lg"
+                                >
+                                    <DollarSign className="w-4 h-4" />
+                                    <span>Registrar pago</span>
+                                </Button>
                             </div>
-                        </div>
+                            {pasajerosPorAsignar > 0 &&
+                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                    <div className="flex items-center space-x-2">
+                                        <AlertCircle className="w-4 h-4 text-orange-600" />
+                                        <span className="text-sm font-medium text-orange-800">
+                                            Faltan {pasajerosPorAsignar} pasajero{pasajerosPorAsignar !== 1 ? 's' : ''} por registrar y/o asignar
+                                        </span>
+                                    </div>
+                                </div>
+                            }
+                          </div>
+
+                        </>
                     );
                 })()}
                 </div>
@@ -427,7 +612,29 @@ return   <>
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <p className="text-xs text-gray-500">Estado de Pago</p>
+                                  <p className="text-xs font-medium text-gray-700">
+                                    {getPassengerPaymentPercentage(pasajero).toFixed(0)}%
+                                  </p>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className={`${getProgressBarColor(getPassengerPaymentPercentage(pasajero))} h-2 rounded-full transition-all duration-300`}
+                                    style={{ width: `${Math.min(getPassengerPaymentPercentage(pasajero), 100)}%` }}
+                                  />
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="text-gray-500">
+                                    Pagado: {formatearSeparadorMiles.format(dataDetalleTemp.precio_unitario - (pasajero.saldo_pendiente || 0))}
+                                  </span>
+                                  <span className={`font-medium ${pasajero.saldo_pendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                    Saldo: {formatearSeparadorMiles.format(pasajero.saldo_pendiente || 0)}
+                                  </span>
+                                </div>
+                            </div>
+                            <div className="space-y-3 mt-5 pt-2 border-t border-gray-200">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                     <p className="text-sm text-gray-500">Documento</p>
@@ -509,33 +716,86 @@ return   <>
                                     Registrado: {new Date(pasajero.fecha_registro).toLocaleDateString()}
                                     </p>
                                 </div>
+
+                                {dataDetalleTemp.saldo_pendiente > 0 && (
+                                    <div>
+                                        <Button
+                                            variant="outline"
+                                            disabled={!pasajero?.saldo_pendiente}
+                                            onClick={() => {
+                                                setSelectedPassengerId(pasajero.id);
+                                                setIsPagoParcialModalOpen(true);
+                                            }}
+                                            className={`cursor-pointer disabled:cursor-not-allowed
+                                                      w-full px-6 py-3 border-1 border-blue-600 rounded-lg bg-blue-50 hover:bg-blue-100 
+                                                      disabled:hover:bg-transparent transition-colors duration-200
+                                                      flex items-center justify-center space-x-2 font-medium
+                                                      ${!pasajero?.saldo_pendiente ? 'bg-emerald-600 text-white': ''}`}
+                                            size="lg"
+                                        >
+                                            <DollarSign className="w-4 h-4" />
+                                            {pasajero?.saldo_pendiente ?
+                                              <span>Registrar pago por persona</span>
+                                              :
+                                              <span>Pago completo</span>
+                                            }
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            disabled={!pasajero?.por_asignar}
+                                            onClick={() => {
+                                                setSelectedPassengerId(pasajero.id);
+                                                setIsAsiganrPasajeroModalOpen(true);
+                                            }}
+                                            className={`mt-1 cursor-pointer disabled:cursor-not-allowed
+                                                      w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
+                                                      disabled:hover:bg-transparent transition-colors duration-200
+                                                      flex items-center justify-center space-x-2 font-medium
+                                                      `}
+                                            size="lg"
+                                        >
+                                            {pasajero.por_asignar ? 
+                                              <>
+                                                <UserPlus2 className="w-4 h-4" />
+                                                <span>Asignar</span> 
+                                              </>
+                                                :
+                                              <>
+                                                <UserCheck2 className="w-4 h-4" />
+                                                <span>Asignado</span>
+                                              </>
+                                            }
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         ))}
                     </div>
                 ) : (
                     <div className="text-center py-12 bg-gray-50 rounded-xl">
-                    <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Pasajeros no registrados individualmente
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                        {/* Esta reserva fue creada en modo rápido con {booking.cantidad_pasajeros} pasajero{booking.cantidad_pasajeros !== 1 ? 's' : ''}. */}
-                        Esta reserva fue creada en modo rápido con ASFAS pasajero{dataDetalleTemp.cantidad_pasajeros !== 1 ? 's' : ''}.
-                    </p>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-                        <div className="flex items-center space-x-2 mb-2">
-                        <User className="w-4 h-4 text-blue-600" />
-                        <span className="font-medium text-blue-900">Información disponible:</span>
-                        </div>
-                        <div className="text-sm text-blue-800 space-y-1">
-                        {/* <p>• Titular: {booking.persona.nombre} {booking.persona.apellido}</p> */}
-                        <p>• Titular: dasdsa</p>
-                        <p>• Total de pasajeros: 45643</p>
-                        {/* <p>• Estado: {RESERVATION_STATES[booking.estado].label}</p> */}
-                        <p>• Estado: sdfsdf</p>
-                        </div>
-                    </div>
+                        <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            Pasajeros no registrados individualmente
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                            {/* Esta reserva fue creada en modo rápido con {booking.cantidad_pasajeros} pasajero{booking.cantidad_pasajeros !== 1 ? 's' : ''}. */}
+                            Esta reserva fue creada en modo rápido con ASFAS pasajero{dataDetalleTemp.cantidad_pasajeros !== 1 ? 's' : ''}.
+                        </p>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                            <div className="flex items-center space-x-2 mb-2">
+                            <User className="w-4 h-4 text-blue-600" />
+                            <span className="font-medium text-blue-900">Información disponible:</span>
+                            </div>
+                            <div className="text-sm text-blue-800 space-y-1">
+                            {/* <p>• Titular: {booking.persona.nombre} {booking.persona.apellido}</p> */}
+                            <p>• Titular: dasdsa</p>
+                            <p>• Total de pasajeros: 45643</p>
+                            {/* <p>• Estado: {RESERVATION_STATES[booking.estado].label}</p> */}
+                            <p>• Estado: sdfsdf</p>
+                            </div>
+                        </div> 
                     </div>
                 )}
                 </div>
@@ -545,50 +805,33 @@ return   <>
             {activeTab === 'payments' && (
                 <div className="space-y-8">
                     {/* {booking.pagos && booking.pagos.length > 0 && ( */}
-                    
-                        <div className="bg-white border border-gray-200 p-6 rounded-xl">
-                            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                                <Clock className="w-6 h-6 mr-3 text-gray-600" />
-                                Historial de Pagos
-                            </h3>
-                            <div className="space-y-3">
-                                {/* {[booking.pagos].map((pago) => ( */}
-                                {dataDetalleTemp.comprobantes.map((pago: any) => (
-                                <div
-                                    key={pago.id}
-                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                                >
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                            <DollarSign className="w-5 h-5 text-green-600" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-gray-900">
-                                            {dataDetalleTemp.paquete.moneda?.simbolo || '$'}
-                                            {pago.monto.toLocaleString()}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                            {formatearFecha(pago.fecha_creacion, false)} • {' '}
-                                            {pago.metodo_pago_display}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                    <span
-                                        className={`px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800`}
-                                    >
-                                        {pago.tipo_display}
-                                    </span>
-                                    {/* <p className="text-xs text-gray-500 mt-1 capitalize">
-                                        {pago.concepto}
-                                    </p> */}
-                                    </div>
+
+                    {/* Botón para registrar nuevo pago */}
+                    {dataDetalleTemp.saldo_pendiente > 0 && (
+                        <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-xl border-2 border-blue-200">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                                        <CreditCard className="w-5 h-5 mr-2 text-blue-600" />
+                                        Registrar Pago
+                                    </h3>
+                                    <p className="text-sm text-gray-600">
+                                        Saldo pendiente: {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp.saldo_pendiente)}
+                                    </p>
                                 </div>
-                                ))}
+                                <Button
+                                    onClick={() => {
+                                        setSelectedPassengerId(undefined);
+                                        setIsPagoParcialModalOpen(true);
+                                    }}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
+                                >
+                                    <DollarSign className="w-4 h-4 mr-2" />
+                                    Realizar Pago
+                                </Button>
                             </div>
                         </div>
-                    
-
+                    )}
 
                     {/* Resumen Financiero */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -611,7 +854,10 @@ return   <>
                                 {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp.monto_pagado)}
                                 </span>
                             </div>
-                            <h3 className="font-semibold text-gray-900">Pagado</h3>
+                            <div className="flex justify-between">
+                                <h3 className="font-semibold text-gray-900">Pagado</h3>
+                                <span className="font-medium">{Math.round(paymentProgress)}%</span>
+                            </div>
                             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                                 <div 
                                 className="bg-green-600 h-2 rounded-full transition-all duration-300"
@@ -720,6 +966,47 @@ return   <>
                         </div>
                     </div>
 
+                    <div className="bg-white border border-gray-200 p-6 rounded-xl">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                          <Clock className="w-6 h-6 mr-3 text-gray-600" />
+                          Historial de Pagos
+                      </h3>
+                      <div className="space-y-3">
+                          {/* {[booking.pagos].map((pago) => ( */}
+                          {dataDetalleTemp.comprobantes.map((pago: any) => (
+                          <div
+                              key={pago.id}
+                              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                          >
+                              <div className="flex items-center space-x-4">
+                                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                      <DollarSign className="w-5 h-5 text-green-600" />
+                                  </div>
+                                  <div>
+                                      <p className="font-medium text-gray-900">
+                                      {dataDetalleTemp.paquete.moneda?.simbolo || '$'}
+                                      {pago.monto.toLocaleString()}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                      {formatearFecha(pago.fecha_creacion, false)} • {' '}
+                                      {pago.metodo_pago_display}
+                                      </p>
+                                  </div>
+                              </div>
+                              <div className="text-right">
+                              <span
+                                  className={`px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800`}
+                              >
+                                  {pago.tipo_display}
+                              </span>
+                              {/* <p className="text-xs text-gray-500 mt-1 capitalize">
+                                  {pago.concepto}
+                              </p> */}
+                              </div>
+                          </div>
+                          ))}
+                      </div>
+                  </div>
                 </div>
             )}
 
@@ -736,6 +1023,37 @@ return   <>
             </button>
             </div>
         </div>
+
+        {isPagoParcialModalOpen && (
+            <PagoParcialModal
+                isOpen={isPagoParcialModalOpen}
+                onClose={handleClosePagoParcialModal}
+                onConfirm={handleConfirmPagoParcial}
+                isPendingPago={isPendingPagaoParcial}
+                reservaData={dataDetalleTemp}
+                selectedPassengerId={selectedPassengerId}
+            />
+        )}
+
+        {isReceiptModalOpen && <PaymentReceiptModal
+            isOpen={isReceiptModalOpen}
+            onClose={handleCloseReceipt}
+            isPendingDescargaComprobante={isPendingDescargaComprobante}
+            receiptData={pagoSeniaRealizadaResponse}
+            handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
+        />}
+
+
+        {isAsiganrPasajeroModalOpen && (
+            <AsignarPasajeroModal
+                isOpen={isAsiganrPasajeroModalOpen}
+                onClose={handleCloseAsigarPasajeroModal}
+                onConfirm={handleConfirmAAsignarPasajero}
+                isPending={isPendingAsignarPasajero}
+                reservaData={dataDetalleTemp}
+                selectedPasajeroId={selectedPassengerId}
+            />
+        )}
 </>
 }
 
