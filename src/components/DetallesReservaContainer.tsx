@@ -137,7 +137,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
                 // Refrescar los detalles de la reserva para ver el estado actualizado
                 queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
-                },
+                queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
+            },
                 onError: (error: any) => {
                     console.error('❌ Error al registrar el pago:', error);
                     console.error('📋 Detalles del error:', error.response?.data);
@@ -173,6 +174,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
                 // Refrescar los detalles de la reserva para ver el estado actualizado
                 queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
                 },
                 onError: (error: any) => {
                     console.error('❌ Error al asignar persona:', error);
@@ -716,59 +718,58 @@ return   <>
                                     Registrado: {new Date(pasajero.fecha_registro).toLocaleDateString()}
                                     </p>
                                 </div>
+                                
+                                <div>
+                                    <Button
+                                        variant="outline"
+                                        disabled={!pasajero?.saldo_pendiente}
+                                        onClick={() => {
+                                            setSelectedPassengerId(pasajero.id);
+                                            setIsPagoParcialModalOpen(true);
+                                        }}
+                                        className={`cursor-pointer disabled:cursor-not-allowed
+                                                    w-full px-6 py-3 border-1 border-blue-600 rounded-lg bg-blue-50 hover:bg-blue-100 
+                                                    disabled:hover:bg-transparent transition-colors duration-200
+                                                    flex items-center justify-center space-x-2 font-medium
+                                                    ${!pasajero?.saldo_pendiente ? 'bg-emerald-600 text-white': ''}`}
+                                        size="lg"
+                                    >
+                                        <DollarSign className="w-4 h-4" />
+                                        {pasajero?.saldo_pendiente ?
+                                            <span>Registrar pago por persona</span>
+                                            :
+                                            <span>Pago completo</span>
+                                        }
+                                    </Button>
 
-                                {dataDetalleTemp.saldo_pendiente > 0 && (
-                                    <div>
-                                        <Button
-                                            variant="outline"
-                                            disabled={!pasajero?.saldo_pendiente}
-                                            onClick={() => {
-                                                setSelectedPassengerId(pasajero.id);
-                                                setIsPagoParcialModalOpen(true);
-                                            }}
-                                            className={`cursor-pointer disabled:cursor-not-allowed
-                                                      w-full px-6 py-3 border-1 border-blue-600 rounded-lg bg-blue-50 hover:bg-blue-100 
-                                                      disabled:hover:bg-transparent transition-colors duration-200
-                                                      flex items-center justify-center space-x-2 font-medium
-                                                      ${!pasajero?.saldo_pendiente ? 'bg-emerald-600 text-white': ''}`}
-                                            size="lg"
-                                        >
-                                            <DollarSign className="w-4 h-4" />
-                                            {pasajero?.saldo_pendiente ?
-                                              <span>Registrar pago por persona</span>
-                                              :
-                                              <span>Pago completo</span>
-                                            }
-                                        </Button>
-
-                                        <Button
-                                            variant="outline"
-                                            disabled={!pasajero?.por_asignar}
-                                            onClick={() => {
-                                                setSelectedPassengerId(pasajero.id);
-                                                setIsAsiganrPasajeroModalOpen(true);
-                                            }}
-                                            className={`mt-1 cursor-pointer disabled:cursor-not-allowed
-                                                      w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
-                                                      disabled:hover:bg-transparent transition-colors duration-200
-                                                      flex items-center justify-center space-x-2 font-medium
-                                                      `}
-                                            size="lg"
-                                        >
-                                            {pasajero.por_asignar ? 
-                                              <>
-                                                <UserPlus2 className="w-4 h-4" />
-                                                <span>Asignar</span> 
-                                              </>
-                                                :
-                                              <>
-                                                <UserCheck2 className="w-4 h-4" />
-                                                <span>Asignado</span>
-                                              </>
-                                            }
-                                        </Button>
-                                    </div>
-                                )}
+                                    <Button
+                                        variant="outline"
+                                        disabled={!pasajero?.por_asignar}
+                                        onClick={() => {
+                                            setSelectedPassengerId(pasajero.id);
+                                            setIsAsiganrPasajeroModalOpen(true);
+                                        }}
+                                        className={`mt-1 cursor-pointer disabled:cursor-not-allowed
+                                                    w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
+                                                    disabled:hover:bg-transparent transition-colors duration-200
+                                                    flex items-center justify-center space-x-2 font-medium
+                                                    `}
+                                        size="lg"
+                                    >
+                                        {pasajero.por_asignar ? 
+                                            <>
+                                            <UserPlus2 className="w-4 h-4" />
+                                            <span>Asignar</span> 
+                                            </>
+                                            :
+                                            <>
+                                            <UserCheck2 className="w-4 h-4" />
+                                            <span>Asignado</span>
+                                            </>
+                                        }
+                                    </Button>
+                                </div>
+                                
                             </div>
                         </div>
                         ))}
