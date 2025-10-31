@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
-
 import { use, useEffect, useState } from "react"
 import { Eye, EyeOff, Lock, Plane, Loader2, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -36,6 +35,18 @@ export default function LoginPage() {
     const fechaActual = new Date();
     const anio = fechaActual.getFullYear();
     setAnioActual(anio);
+  }, []);
+
+
+  useEffect(() => {
+    // Cuando el login page se monta
+    const html = document.documentElement;
+    html.style.overflowY = "auto";
+
+    // Cuando se desmonta, restauramos el valor anterior (buena práctica)
+    return () => {
+      html.style.overflowY = "";
+    };
   }, []);
 
 
@@ -74,7 +85,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4
+    overflow-y-auto">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-20">
         <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
