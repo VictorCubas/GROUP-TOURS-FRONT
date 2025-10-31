@@ -231,6 +231,29 @@ export async function descargarComprobanteById(comprobanteId: number | string) {
   return response;
 }
 
+export async function descargaVoucherById(id: number | string) {
+  const response = await axiosInstance.get(
+    `/vouchers/${id}/descargar-pdf/`,
+    { responseType: 'blob' } // 👈 importante: indica que es un archivo binario
+  );
+
+  // Crear una URL temporal del archivo
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+
+  // Crear un enlace temporal para forzar la descarga
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `comprobante-${id}.pdf`); // 👈 nombre del archivo
+  document.body.appendChild(link);
+  link.click();
+
+  // Limpieza
+  link.remove();
+  window.URL.revokeObjectURL(url);
+
+  return response;
+}
+
 
 
 export async function descargarComprobanteDesdeUrl(pdfUrl: string, fileName = 'comprobante.pdf') {

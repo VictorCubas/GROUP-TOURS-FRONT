@@ -407,7 +407,7 @@ export default function PaymentReceiptModal({
             {/* Economic Summary */}
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-5 pb-2 border-b-2 border-blue-300">
-                RESUMEN ECONÓMICO
+                RESUMEN ECONÓMICO DEL PAQUETE
               </h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">

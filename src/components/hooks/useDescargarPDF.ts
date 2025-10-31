@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from '@tanstack/react-query';
-import { asignarPasajero, descargarComprobanteById, descargarComprobantePDF, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
+import { asignarPasajero, descargarComprobanteById, descargarComprobantePDF, descargaVoucherById, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
 
 export function useDescargarPDF() {
     return useMutation({
@@ -14,6 +14,22 @@ export function useDescargarComprobante() {
   return useMutation({
     mutationFn: async (comprobanteId: number | string) => {
       await descargarComprobanteById(comprobanteId);
+    },
+    onSuccess: (data) => {
+      console.log('✅ Comprobante generado y PDF descargado:', data);
+      // Ejemplo: toast.success('Comprobante generado correctamente');
+    },
+    onError: (error) => {
+      console.error('❌ Error al generar o descargar el comprobante:', error);
+      // toast.error('No se pudo generar el comprobante');
+    },
+  });
+}
+
+export function useDescargarVoucher() {
+  return useMutation({
+    mutationFn: async (comprobanteId: number | string) => {
+      await descargaVoucherById(comprobanteId);
     },
     onSuccess: (data) => {
       console.log('✅ Comprobante generado y PDF descargado:', data);
