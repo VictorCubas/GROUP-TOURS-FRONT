@@ -2,13 +2,13 @@
 import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from '@/helper/formatter';
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, FileText, Globe, Loader2, Mail, Package, Phone, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users } from 'lucide-react';
+import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Mail, Package, Phone, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users } from 'lucide-react';
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState } from 'react';
-import { useAsignarPasajero, useDescargarComprobante, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useAsignarPasajero, useDescargarComprobante, useDescargarVoucher, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
@@ -32,6 +32,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const [isAsiganrPasajeroModalOpen, setIsAsiganrPasajeroModalOpen] = useState(false);
     const [selectedPassengerId, setSelectedPassengerId] = useState<number | undefined>(undefined);
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+    const [descargandoVoucherId, setDescargandoVoucherId] = useState<number | undefined>(undefined);
     const [pagoSeniaRealizadaResponse, setPagoSeniaRealizadaResponse] = useState<any>(null);
     
     const {data: dataDetalleTemp, isFetching: isFetchingDetalles,} = useQuery({
@@ -45,8 +46,10 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: fetchRegistrarPagoParcial, isPending: isPendingPagaoParcial } = useRegistrarPagoParcial();
     
     const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useDescargarComprobante();
-
+    
     const { mutate: fetchAsignarPasajero, isPending: isPendingAsignarPasajero } = useAsignarPasajero();
+    
+    const { mutate: generarYDescargarVoucher, isPending: isPendingDescargaVoucher } = useDescargarVoucher();
 
 
     console.log(dataDetalleTemp)
@@ -192,19 +195,35 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
 
     function handleDescargarPDF(id: number) {
-    generarYDescargar(id, {
-      onSuccess: () => {
-        console.log('✅ PDF descargado correctamente');
-        handleShowToast('Comprobante descargado correctamente', 'success');
-        // setIsReceiptModalOpen(false);
-        // setReservaRealizadaResponse(null);
-      },
-      onError: (error) => {
-        console.error('❌ Error al descargar el PDF', error);
-        handleShowToast('Error al descargar el comprobante', 'error');
-      },
-    });
-  }
+        generarYDescargar(id, {
+        onSuccess: () => {
+            console.log('✅ PDF descargado correctamente');
+            handleShowToast('Comprobante descargado correctamente', 'success');
+            // setIsReceiptModalOpen(false);
+            // setReservaRealizadaResponse(null);
+        },
+        onError: (error) => {
+            console.error('❌ Error al descargar el PDF', error);
+            handleShowToast('Error al descargar el comprobante', 'error');
+        },
+        });
+    }
+
+    const handleDescargarVoucherPDF = (id: number) => {
+        setDescargandoVoucherId(id)
+        generarYDescargarVoucher(id, {
+        onSuccess: () => {
+            console.log('✅ PDF descargado correctamente');
+            handleShowToast('Voucher descargado correctamente', 'success');
+            // setIsReceiptModalOpen(false);
+            // setReservaRealizadaResponse(null);
+        },
+        onError: (error) => {
+            console.error('❌ Error al descargar el PDF', error);
+            handleShowToast('Error al descargar el voucher', 'error');
+        },
+        });
+    }
 
     const handleClosePagoParcialModal = () => {
         setIsPagoParcialModalOpen(false);
@@ -242,10 +261,10 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         }
     };
 
-  const handleCloseReceipt = () => {
-    console.log('Modal de comprobante cerrado');
-    setIsReceiptModalOpen(false);
-  };
+    const handleCloseReceipt = () => {
+        console.log('Modal de comprobante cerrado');
+        setIsReceiptModalOpen(false);
+    };
 
 return   <>
     {/* Contenido de tabs */}
@@ -691,27 +710,54 @@ return   <>
                                 )}
 
                                 {/* Información de tickets y vouchers */}
-                                {(pasajero.ticket_numero || pasajero.voucher_codigo) && (
-                                    <div className="pt-3 border-t border-gray-200">
-                                    <p className="text-sm text-gray-500 mb-2">Documentos de Viaje</p>
-                                    <div className="space-y-2">
-                                        {pasajero.ticket_numero && (
-                                        <div className="flex items-center space-x-2">
-                                            <Ticket className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm text-gray-700 font-mono">{pasajero.ticket_numero}</span>
-                                            <span className="text-xs text-gray-500">Ticket</span>
+                                    <button
+                                          className={`w-full rounded-lg border p-4 text-left transition-all 
+                                            ${(pasajero.ticket_numero || pasajero.voucher_codigo) ? 'border-blue-500 bg-blue-50' : 'border-orange-300 bg-orange-50'}
+                                             cursor-pointer`}
+                                          onClick={() => {
+                                            if(pasajero.ticket_numero || pasajero.voucher_codigo)
+                                              handleDescargarVoucherPDF(pasajero?.voucher_id)
+                                          }}
+                                        >
+                                        <div className='flex justify-between items-center '>
+                                          {((pasajero.ticket_numero || pasajero.voucher_codigo) && !pasajero.por_asignar) ?
+                                              <>
+                                              <div className=''>
+                                                <p className="text-sm text-gray-500 mb-2">Documentos de Viaje</p>
+                                                <div className="space-y-2">
+                                                    {pasajero.ticket_numero && (
+                                                    <div className="flex items-center space-x-2">
+                                                        <Ticket className="w-4 h-4 text-gray-400" />
+                                                        <span className="text-sm text-gray-700 font-mono">{pasajero.ticket_numero}</span>
+                                                        <span className="text-xs text-gray-500">Ticket</span>
+                                                    </div>
+                                                    )}
+                                                    {pasajero.voucher_codigo && (
+                                                    <div className="flex items-center space-x-2">
+                                                        <FileText className="w-4 h-4 text-gray-400" />
+                                                        <span className="text-sm text-gray-700 font-mono">{pasajero?.voucher_codigo}</span>
+                                                        <span className="text-xs text-gray-500">Voucher</span>
+                                                    </div>
+                                                    )}
+                                                </div>
+                                              </div>
+                                                
+                                                {(isPendingDescargaVoucher && pasajero?.voucher_id.toString() === descargandoVoucherId?.toString()) ?
+                                                  <Loader2 className="w-5 h-5 text-gray-400" /> :
+                                                  <Download className="w-5 h-5 text-gray-400" /> 
+                                                }
+                                              </> :
+                                              <>
+                                                  <div className='text-orange-400'>
+                                                    <p>VOUCHER NO DISPONIBLE AUN</p>
+                                                    <span className='text-xs text-gray-400'>Requerido: Completar pago + datos completos</span>
+                                                  </div>
+                                              </>
+                                          }
                                         </div>
-                                        )}
-                                        {pasajero.voucher_codigo && (
-                                        <div className="flex items-center space-x-2">
-                                            <FileText className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm text-gray-700 font-mono">{pasajero.voucher_codigo}</span>
-                                            <span className="text-xs text-gray-500">Voucher</span>
-                                        </div>
-                                        )}
-                                    </div>
-                                    </div>
-                                )}
+
+                                    </button>
+                                  
 
                                 <div className="pt-3 border-t border-gray-200">
                                     <p className="text-xs text-gray-500">

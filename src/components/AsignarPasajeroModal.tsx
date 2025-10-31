@@ -165,7 +165,7 @@ export default function AsignarPasajeroModal({
                     <div className="flex items-center justify-between border-b pb-4 ">
                       <div>
                           <div className='flex w-full justify-between'>
-                            <h2 className="text-2xl font-bold">Asignar de Pago</h2>
+                            <h2 className="text-2xl font-bold">Asignación de pasajeo</h2>
                             <UserPlus2Icon className="h-8 w-8 text-blue-600" />
                           </div>
 
@@ -300,7 +300,7 @@ export default function AsignarPasajeroModal({
                   </> :
                   <>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Aignar pasajero
+                    Asignar pasajero
                   </>}
               </Button>
             </div>
