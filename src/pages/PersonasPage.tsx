@@ -249,19 +249,6 @@ export default function ModulosPage() {
     mutationFn: nuevoDataFetch,
     onSuccess: () => {
         handleShowToast('Se ha creado un nueva persona satisfactoriamente', 'success');
-        reset({
-          nombre: '',
-          apellido: '',
-          direccion: '',
-          documento: '',
-          telefono: '',
-          nacionalidad: '',
-          fecha_nacimiento: getFechaPorDefecto(),
-          tipo: 'fisica',
-          tipo_documento: '1',
-          sexo: '',
-          razon_social: '',
-        });
 
         setTipoDePersonaCreacion(undefined);
         setTipoDocumentoRuc(undefined);
@@ -297,6 +284,19 @@ export default function ModulosPage() {
           queryKey: ['usuarios-resumen'],
         });
 
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['pasajeros-disponibles'],
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: ['personas-disponibles'],
+        });
+
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
         //   exact: false
@@ -311,6 +311,7 @@ export default function ModulosPage() {
         //   queryKey: ['tipo-documentos-de-personas'],
         //   exact: false
         // });
+        handleCancel();
     },
   });
 
@@ -395,8 +396,18 @@ export default function ModulosPage() {
 
     setTipoDePersonaCreacion('fisica');
     reset({
+      nombre: '',
+      apellido: '',
+      direccion: '',
+      documento: '',
+      telefono: '',
+      nacionalidad: '',
+      fecha_nacimiento: getFechaPorDefecto(),
       tipo: 'fisica',
-      tipo_documento: '1'
+      tipo_documento: '1',
+      sexo: '',
+      razon_social: '',
+      email: '',
     })
   }
   }, [dataTipoDocumentoList, reset]);
@@ -422,7 +433,7 @@ export default function ModulosPage() {
         });
 
 
-        setTipoDePersonaCreacion(undefined);
+        setTipoDePersonaCreacion('fisica');
         setTipoDocumentoRuc(undefined);
         
         setActiveTab('list');
@@ -458,10 +469,6 @@ export default function ModulosPage() {
           razon_social: '',
           email: '',
         });
-
-
-    setTipoDePersonaCreacion(undefined);
-    setTipoDocumentoRuc(undefined);
 
     mutate({...dataForm, activo: true, en_uso: false});
   }
@@ -976,15 +983,23 @@ export default function ModulosPage() {
                             <Label htmlFor="fecha_nacimiento" className="text-gray-700 font-medium">
                                Fecha de Nacimiento *
                             </Label>
-                            <Input
-                              id="fecha_nacimiento"
-                              type="date"
-                              autoComplete="fecha_nacimiento"
-                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                              {...register('fecha_nacimiento', {
-                              required: true, 
-                              validate: {blankSpace: (value) => !!value.trim()},
-                              minLength: 3})}
+                            <Controller
+                              name="fecha_nacimiento"
+                              control={control}
+                              rules={{
+                                required: true,
+                                validate: {blankSpace: (value) => !!value.trim()},
+                                minLength: 3
+                              }}
+                              render={({ field }) => (
+                                <Input
+                                  id="fecha_nacimiento"
+                                  type="date"
+                                  autoComplete="fecha_nacimiento"
+                                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                  {...field}
+                                />
+                              )}
                             />
                             <div>
                               {(errors?.fecha_nacimiento?.type === 'required' || errors?.fecha_nacimiento?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
