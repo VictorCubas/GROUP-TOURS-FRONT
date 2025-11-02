@@ -8,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState } from 'react';
-import { useAsignarPasajero, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarVoucher, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useAsignarPasajero, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarVoucher, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
@@ -49,6 +49,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useDescargarComprobante();
 
     const { mutate: generarYDescargarFacturaGlobal, isPending: isPendingDescargaFacturaGlobal } = useDescargarFacturaGlobal();
+    
+    const { mutate: generarYDescargarFacturaIndividual, isPending: isPendingDescargaFacturaIndividual } = useDescargarFacturaIndividual();
     
     const { mutate: fetchAsignarPasajero, isPending: isPendingAsignarPasajero } = useAsignarPasajero();
     
@@ -222,6 +224,23 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         },
         onError: (error) => {
             console.error('❌ Error al descargar el PDF', error);
+            handleShowToast('Error al descargar la factura', 'error');
+        },
+        });
+    }
+    
+    function handleDescargarFacturaIndividual(reservaId: number, pasajeroId: number) {
+        console.log(reservaId, pasajeroId)
+        // return;
+        generarYDescargarFacturaIndividual( { reservaId, pasajeroId }, {
+        onSuccess: () => {
+            console.log('✅ PDF descargado correctamente');
+            handleShowToast('Factura descargada correctamente', 'success');
+            // setIsReceiptModalOpen(false);
+            // setReservaRealizadaResponse(null);
+        },
+        onError: (error) => {
+            console.error('❌ Error al descargar la factura', error);
             handleShowToast('Error al descargar la factura', 'error');
         },
         });
@@ -877,10 +896,11 @@ return   <>
                                           <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                disabled={!pasajero?.por_asignar}
+                                                disabled={isPendingDescargaFacturaIndividual}
                                                 onClick={() => {
-                                                    setSelectedPassengerId(pasajero.id);
-                                                    setIsAsiganrPasajeroModalOpen(true);
+                                                    handleDescargarFacturaIndividual(dataDetalleTemp?.id, pasajero.id)
+                                                    // setSelectedPassengerId(pasajero.id);
+                                                    // setIsAsiganrPasajeroModalOpen(true);
                                                 }}
                                                 className={`cursor-pointer disabled:cursor-not-allowed
                                                             w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
@@ -889,8 +909,15 @@ return   <>
                                                             `}
                                                 size="lg"
                                             >
-                                              <Download className="w-4 h-4" />
-                                              <span>Descargar</span> 
+                                              {isPendingDescargaFacturaIndividual ? 
+                                                  <>
+                                                      <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                                                      Descargando...
+                                                  </> : 
+                                                  <>
+                                                    <Download className="h-4 w-4 mr-2" />
+                                                    Descargar
+                                                </>} 
                                             </Button>
                                           </TooltipTrigger>
                                           <TooltipContent>

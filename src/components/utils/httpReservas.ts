@@ -254,6 +254,41 @@ export async function descargarFacturaGlobalById(id: number | string) {
   return response;
 }
 
+export async function descargarFacturaIndividualById(reservaId: number | string, pasajeroId: number | string) {
+  const response = await axiosInstance.get(
+    `/reservas/${reservaId}/descargar-factura-individual/?pasajero_id=${pasajeroId}`,
+    { responseType: 'blob' }
+  );
+
+  // Intentar obtener el nombre desde el header Content-Disposition
+  const disposition = response.headers['content-disposition'];
+  let filename = `factura-${pasajeroId}.pdf`; // valor por defecto
+
+  if (disposition && disposition.includes('filename=')) {
+    const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+    if (filenameMatch && filenameMatch.length > 1) {
+      filename = decodeURIComponent(filenameMatch[1]);
+    }
+  }
+
+  // Crear la URL del archivo
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+
+  // Crear el enlace temporal para la descarga
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+
+  // Limpieza
+  link.remove();
+  window.URL.revokeObjectURL(url);
+
+  return response;
+}
+
+
 export async function descargaVoucherById(id: number | string) {
   const response = await axiosInstance.get(
     `/vouchers/${id}/descargar-pdf/`,
