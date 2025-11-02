@@ -214,6 +214,10 @@ export default function TipoPaquetePage() {
           queryKey: ['tipo-paquetes-de-paquetes'],
           exact: false
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['tipos-paquetes-disponibles'],
+        });
     },
   });
 
@@ -245,6 +249,10 @@ export default function TipoPaquetePage() {
           queryKey: ['tipo-paquetes-de-paquetes'],
           exact: false
         });
+
+        queryClient.invalidateQueries({
+            queryKey: ['tipos-paquetes-disponibles'],
+          });
     },
   });
 
@@ -274,6 +282,10 @@ export default function TipoPaquetePage() {
           queryKey: ['tipo-paquetes-de-paquetes'],
           exact: false
         });
+
+        queryClient.invalidateQueries({
+            queryKey: ['tipos-paquetes-disponibles'],
+          });
     },
   });
 
