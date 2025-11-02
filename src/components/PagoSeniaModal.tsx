@@ -483,7 +483,7 @@ export default function PagoSeniaModal({
                   e.stopPropagation();
                   
                   if(!modalidadFacturacion){
-                    handleShowToast('### Debes seleccionar la modalidad de facturación', 'error');
+                    handleShowToast('Debes seleccionar la modalidad de facturación', 'error');
                     return;
                   }
                   else{
