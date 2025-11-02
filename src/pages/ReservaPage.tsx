@@ -137,7 +137,7 @@ console.log(tipoReservaFilterList);
 
 // let paqueteSeleccionado: any = [];
 
-export default function ModulosPage() {
+export default function ReservaPage() {
   const {siTienePermiso} = useSessionStore();
   // const [setSearchTerm] = useState("")
   const [paymentType, setPaymentType] = useState<"minimum" | "total">("minimum")
@@ -3482,13 +3482,14 @@ export default function ModulosPage() {
         />
       )}
 
-    {isReceiptModalOpen && <PaymentReceiptModal
-      isOpen={isReceiptModalOpen}
-      onClose={handleCloseReceipt}
-      isPendingDescargaComprobante={isPendingDescargaComprobante}
-      receiptData={pagoSeniaRealizadaResponse}
-      handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
-      />}
+        {/* Modal de vista del comprobante de pago de seña */}
+      {isReceiptModalOpen && <PaymentReceiptModal
+          isOpen={isReceiptModalOpen}
+          onClose={handleCloseReceipt}
+          isPendingDescargaComprobante={isPendingDescargaComprobante}
+          receiptData={pagoSeniaRealizadaResponse}
+          handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
+        />}
 
     </>
   )
