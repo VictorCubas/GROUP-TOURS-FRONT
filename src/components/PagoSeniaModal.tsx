@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // import type { Moneda } from '@/types/reservas';
-import { Users, CheckCircle2, Loader2Icon, DollarSign, Wallet, AlertCircle, CreditCard } from 'lucide-react';
+import { Users, CheckCircle2, Loader2Icon, DollarSign, Wallet, AlertCircle, CreditCard, FileText, UserCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from '@radix-ui/react-label';
 import { RadioGroup, RadioGroupItem } from '@radix-ui/react-radio-group';
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { Input } from './ui/input';
 import { IoCashOutline } from 'react-icons/io5';
 import { formatearSeparadorMiles } from '@/helper/formatter';
+import { ToastContext } from '@/context/ToastContext';
 
 
 interface PagoSeniaModalProps {
@@ -38,7 +39,9 @@ export default function PagoSeniaModal({
   selectedPasajerosData,
   titular
 }: PagoSeniaModalProps) {
+  const {handleShowToast} = use(ToastContext);
   const [paymentType, setPaymentType] = useState<"deposit" | "full">("deposit")
+  const [modalidadFacturacion, setModalidadFacturacion] = useState<"global" | "individual" | "">("")
   const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer" | 'cash'>("cash")
   const [passengerDeposits, setPassengerDeposits] = useState<string[]>(
     Array.from({ length: cantidadActualPasajeros }, () => seniaPorPersona.toString())
@@ -130,6 +133,13 @@ export default function PagoSeniaModal({
 
     if(paymentType === 'full')
       payload.tipo = 'pago_total'
+
+
+    if(!modalidadFacturacion)
+      return null
+
+
+    payload.modalidad_facturacion = modalidadFacturacion;
 
     return payload;
   };
@@ -352,6 +362,54 @@ export default function PagoSeniaModal({
                     </div>
                   )}
 
+
+                  <div className="space-y-4 mt-6">
+                    <Label className="text-lg font-semibold">Modalidad de facturación</Label>
+                    <RadioGroup value={modalidadFacturacion} onValueChange={(value: any) => setModalidadFacturacion(value)} className="space-y-4">
+                      <div
+                        className={`mt-6 flex items-center space-x-2 rounded-lg p-4 cursor-pointer transition-all ${
+                          modalidadFacturacion === "global"
+                            ? "border-2 border-blue-500 bg-blue-50"
+                            : "border-2 border-gray-200 hover:bg-blue-50"
+                        }`}
+                      >
+                        <RadioGroupItem value="global" id="global" />
+                        <Label htmlFor="global" className="flex items-center gap-3 cursor-pointer flex-1">
+                          <FileText
+                            className={`h-6 w-6 transition-opacity ${modalidadFacturacion === "global" ? "text-blue-600 opacity-100" : "text-blue-400 opacity-40"}`}
+                          />
+                          <div>
+                            <p className="font-semibold">Facturación Global</p>
+                            <p className="text-sm text-gray-600">
+                              Una factura por el total de la reserva al finalizar
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
+
+                      <div
+                        className={`flex items-center space-x-2 rounded-lg p-4 cursor-pointer transition-all ${
+                          modalidadFacturacion === "individual"
+                            ? "border-2 border-blue-500 bg-green-50"
+                            : "border-2 border-gray-200 hover:bg-green-50"
+                        }`}
+                      >
+                        <RadioGroupItem value="individual" id="individual" />
+                        <Label htmlFor="individual" className="flex items-center gap-3 cursor-pointer flex-1">
+                          <UserCheck
+                            className={`h-6 w-6 transition-opacity ${modalidadFacturacion === "individual" ? "text-green-600 opacity-100" : "text-green-400 opacity-40"}`}
+                          />
+                          <div>
+                            <p className="font-semibold">Facturación por pasajeros</p>
+                            <p className="text-sm text-gray-600">
+                              Factura individual generada después de que cada pasajero abone su parte
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
                   <div className="space-y-4">
                     <Label className="text-lg font-semibold">Método de Pago</Label>
                     <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)} className="space-y-4">
@@ -404,100 +462,6 @@ export default function PagoSeniaModal({
                       </div>
                     </RadioGroup>
                   </div>
-
-                 {/* {paymentMethod === "card" && (
-                    <div className="space-y-4 border-t pt-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="cardNumber">Número de Tarjeta</Label>
-                        <Input
-                          id="cardNumber"
-                          placeholder="1234 5678 9012 3456"
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(e.target.value)}
-                          maxLength={19}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="cardName">Nombre en la Tarjeta</Label>
-                        <Input
-                          id="cardName"
-                          placeholder="JUAN PEREZ"
-                          value={cardName}
-                          onChange={(e) => setCardName(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="expiryDate">Fecha de Vencimiento</Label>
-                          <Input
-                            id="expiryDate"
-                            placeholder="MM/AA"
-                            value={expiryDate}
-                            onChange={(e) => setExpiryDate(e.target.value)}
-                            maxLength={5}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="cvv">CVV</Label>
-                          <Input
-                            id="cvv"
-                            placeholder="123"
-                            value={cvv}
-                            onChange={(e) => setCvv(e.target.value)}
-                            maxLength={4}
-                            type="password"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {paymentMethod === "transfer" && (
-                    <div className="border-t pt-6 bg-gray-50 rounded-lg p-6">
-                      <h3 className="font-semibold mb-4">Datos para Transferencia</h3>
-                      <div className="space-y-2 text-sm">
-                        <p>
-                          <strong>Banco:</strong> Banco Ejemplo
-                        </p>
-                        <p>
-                          <strong>Titular:</strong> Agencia de Viajes XYZ
-                        </p>
-                        <p>
-                          <strong>CBU:</strong> 0123456789012345678901
-                        </p>
-                        <p>
-                          <strong>Alias:</strong> VIAJES.AGENCIA
-                        </p>
-                        <p className="text-yellow-700 mt-4">
-                          <strong>Importante:</strong> Enviar comprobante de pago a pagos@agencia.com
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-3 pt-6 border-t">
-                    <Button
-                      onClick={handlePayment}
-                      className={`w-full text-white h-12 text-lg ${paymentType === "full" ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}`}
-                      disabled={!isValidPayment}
-                    >
-                      <CheckCircle2 className="mr-2 h-5 w-5" />
-                      {paymentType === "deposit"
-                        ? `Pagar Seña ($${paymentAmount.toLocaleString("es-AR")})`
-                        : `Pagar Total ($${paymentAmount.toLocaleString("es-AR")})`}
-                    </Button>
-
-                    <Button onClick={onSkipPayment} variant="outline" className="w-full h-12 text-lg bg-transparent">
-                      Omitir Pago (Mantener Reserva Pendiente)
-                    </Button>
-                  </div>
-
-                  <p className="text-xs text-gray-500 text-center">
-                    Si omites el pago, tu reserva permanecerá en estado PENDIENTE y podrás pagarla más tarde.
-                  </p>*/}
                 </div> 
               </Card>
             </div>
@@ -517,8 +481,19 @@ export default function PagoSeniaModal({
                 disabled={isPendingPagarSenia}
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log(generarPayloadPago())
-                  onConfirm(generarPayloadPago(), paymentType)
+                  
+                  if(!modalidadFacturacion){
+                    handleShowToast('### Debes seleccionar la modalidad de facturación', 'error');
+                    return;
+                  }
+                  else{
+                    console.log('generarPayloadPago(): ', generarPayloadPago());
+                    const payload = generarPayloadPago();
+                    console.log(payload)
+                    if(payload)
+                      onConfirm(generarPayloadPago(), paymentType)
+                  }
+                  
                 }}
                 className="px-6 py-5 bg-green-600 text-white font-medium rounded-lg
                         cursor-pointer hover:bg-green-700 transition-colors flex items-center gap-2"

@@ -2,17 +2,18 @@
 import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from '@/helper/formatter';
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Mail, Package, Phone, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users } from 'lucide-react';
+import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Loader2Icon, Mail, Package, Phone, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users } from 'lucide-react';
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState } from 'react';
-import { useAsignarPasajero, useDescargarComprobante, useDescargarVoucher, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useAsignarPasajero, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarVoucher, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
 import AsignarPasajeroModal from './AsignarPasajeroModal';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 interface DetallesReservaContainerProps{
     activeTab: 'general' | 'passengers' | 'payments';
@@ -46,6 +47,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: fetchRegistrarPagoParcial, isPending: isPendingPagaoParcial } = useRegistrarPagoParcial();
     
     const { mutate: generarYDescargar, isPending: isPendingDescargaComprobante } = useDescargarComprobante();
+
+    const { mutate: generarYDescargarFacturaGlobal, isPending: isPendingDescargaFacturaGlobal } = useDescargarFacturaGlobal();
     
     const { mutate: fetchAsignarPasajero, isPending: isPendingAsignarPasajero } = useAsignarPasajero();
     
@@ -205,6 +208,21 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         onError: (error) => {
             console.error('❌ Error al descargar el PDF', error);
             handleShowToast('Error al descargar el comprobante', 'error');
+        },
+        });
+    }
+
+    function handleDescargarFacturaGlobal(id: number) {
+        generarYDescargarFacturaGlobal(id, {
+        onSuccess: () => {
+            console.log('✅ PDF descargado correctamente');
+            handleShowToast('Factura descargado correctamente', 'success');
+            // setIsReceiptModalOpen(false);
+            // setReservaRealizadaResponse(null);
+        },
+        onError: (error) => {
+            console.error('❌ Error al descargar el PDF', error);
+            handleShowToast('Error al descargar la factura', 'error');
         },
         });
     }
@@ -568,13 +586,37 @@ return   <>
                     return (
                         <>
                           <div className='flex items-center gap-5'>
+                            {dataDetalleTemp?.puede_descargar_factura_global  &&
+                              <div>
+                                  <Button
+                                      disabled={isPendingDescargaFacturaGlobal}
+                                      onClick={() => {
+                                          handleDescargarFacturaGlobal(dataDetalleTemp?.id)
+                                      }}
+                                      className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
+                                      size="lg"
+                                  >
+                                      {isPendingDescargaFacturaGlobal ? 
+                                        <>
+                                            <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
+                                            Descargando...
+                                        </> : 
+                                        <>
+                                          <Download className="h-4 w-4 mr-2" />
+                                          Descargar Factura
+                                        </>}
+                                  </Button>
+                              </div>
+                            }
+
                             <div>
                                 <Button
+                                    disabled={dataDetalleTemp?.esta_totalmente_pagada}
                                     onClick={() => {
                                         setSelectedPassengerId(undefined);
                                         setIsPagoParcialModalOpen(true);
                                     }}
-                                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
+                                    className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
                                     size="lg"
                                 >
                                     <DollarSign className="w-4 h-4" />
@@ -765,55 +807,97 @@ return   <>
                                     </p>
                                 </div>
                                 
-                                <div>
-                                    <Button
-                                        variant="outline"
-                                        disabled={!pasajero?.saldo_pendiente}
-                                        onClick={() => {
-                                            setSelectedPassengerId(pasajero.id);
-                                            setIsPagoParcialModalOpen(true);
-                                        }}
-                                        className={`cursor-pointer disabled:cursor-not-allowed
-                                                    w-full px-6 py-3 border-1 border-blue-600 rounded-lg bg-blue-50 hover:bg-blue-100 
-                                                    disabled:hover:bg-transparent transition-colors duration-200
-                                                    flex items-center justify-center space-x-2 font-medium
-                                                    ${!pasajero?.saldo_pendiente ? 'bg-emerald-600 text-white': ''}`}
-                                        size="lg"
-                                    >
-                                        <DollarSign className="w-4 h-4" />
-                                        {pasajero?.saldo_pendiente ?
-                                            <span>Registrar pago por persona</span>
-                                            :
-                                            <span>Pago completo</span>
-                                        }
-                                    </Button>
+                                <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+                                      
+                                      <Tooltip>
+                                      <TooltipTrigger asChild>
+                                          <Button
+                                              variant="outline"
+                                              disabled={!pasajero?.saldo_pendiente}
+                                              onClick={() => {
+                                                  setSelectedPassengerId(pasajero.id);
+                                                  setIsPagoParcialModalOpen(true);
+                                              }}
+                                              className={`cursor-pointer disabled:cursor-not-allowed
+                                                          w-full px-6 py-3 border-1 rounded-lg hover:bg-blue-100 
+                                                          disabled:hover:bg-transparent transition-colors duration-200
+                                                          flex items-center justify-center space-x-2 font-medium
+                                                          ${!pasajero?.saldo_pendiente ? 'bg-emerald-600 text-white': ''}`}
+                                              size="lg"
+                                          >
+                                              <DollarSign className="w-4 h-4" />
+                                              {pasajero?.saldo_pendiente ?
+                                                  <span>Pagar</span>
+                                                  :
+                                                  <span>Pago completo</span>
+                                              }
+                                          </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Regstrar un pago por pasajero</p>
+                                      </TooltipContent>
+                                    </Tooltip>
 
-                                    <Button
-                                        variant="outline"
-                                        disabled={!pasajero?.por_asignar}
-                                        onClick={() => {
-                                            setSelectedPassengerId(pasajero.id);
-                                            setIsAsiganrPasajeroModalOpen(true);
-                                        }}
-                                        className={`mt-1 cursor-pointer disabled:cursor-not-allowed
-                                                    w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
-                                                    disabled:hover:bg-transparent transition-colors duration-200
-                                                    flex items-center justify-center space-x-2 font-medium
-                                                    `}
-                                        size="lg"
-                                    >
-                                        {pasajero.por_asignar ? 
-                                            <>
-                                            <UserPlus2 className="w-4 h-4" />
-                                            <span>Asignar</span> 
-                                            </>
-                                            :
-                                            <>
-                                            <UserCheck2 className="w-4 h-4" />
-                                            <span>Asignado</span>
-                                            </>
-                                        }
-                                    </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                          <Button
+                                            variant="outline"
+                                            disabled={!pasajero?.por_asignar}
+                                            onClick={() => {
+                                                setSelectedPassengerId(pasajero.id);
+                                                setIsAsiganrPasajeroModalOpen(true);
+                                            }}
+                                            className={`cursor-pointer disabled:cursor-not-allowed
+                                                        w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
+                                                        disabled:hover:bg-transparent transition-colors duration-200
+                                                        flex items-center justify-center space-x-2 font-medium
+                                                        `}
+                                            size="lg"
+                                        >
+                                            {pasajero.por_asignar ? 
+                                                <>
+                                                <UserPlus2 className="w-4 h-4" />
+                                                <span>Asignar</span> 
+                                                </>
+                                                :
+                                                <>
+                                                <UserCheck2 className="w-4 h-4" />
+                                                <span>Asignado</span>
+                                                </>
+                                            }
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Asignar una persona a este pasajero</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                      
+                                      {pasajero?.puede_descargar_factura &&
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                disabled={!pasajero?.por_asignar}
+                                                onClick={() => {
+                                                    setSelectedPassengerId(pasajero.id);
+                                                    setIsAsiganrPasajeroModalOpen(true);
+                                                }}
+                                                className={`cursor-pointer disabled:cursor-not-allowed
+                                                            w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
+                                                            disabled:hover:bg-transparent transition-colors duration-200
+                                                            flex items-center justify-center space-x-2 font-medium
+                                                            `}
+                                                size="lg"
+                                            >
+                                              <Download className="w-4 h-4" />
+                                              <span>Descargar</span> 
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Descargar factura por pasajero</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      }
                                 </div>
                                 
                             </div>
@@ -927,6 +1011,15 @@ return   <>
                         </div>
                     </div>
 
+                    <div className="bg-white border border-gray-200 p-6 rounded-xl flex gap-6 items-center">
+                        <div className="flex gap-6 items-center">
+                          <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center pt-3">
+                            <FileText className="w-6 h-6 mr-3 text-gray-600" />
+                            Modalidad de facturación:
+                          </h3>
+                          <span className='text-gray-600 font-600'>{dataDetalleTemp.modalidad_facturacion_display}</span>
+                        </div>
+                    </div>
 
                      {/* Estado de Pago */}
                     <div className="bg-white border border-gray-200 p-6 rounded-xl">
@@ -1015,8 +1108,9 @@ return   <>
 
                     <div className="bg-white border border-gray-200 p-6 rounded-xl">
                       <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                          <Clock className="w-6 h-6 mr-3 text-gray-600" />
-                          Historial de Pagos
+                            <Clock className="w-6 h-6 mr-3 text-gray-600" />
+                            Historial de Pagos
+                          
                       </h3>
                       <div className="space-y-3">
                           {/* {[booking.pagos].map((pago) => ( */}

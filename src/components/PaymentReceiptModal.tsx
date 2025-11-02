@@ -323,6 +323,12 @@ export default function PaymentReceiptModal({
                     {receiptData?.reserva?.nombre_destino}
                   </span>
                 </div>
+                <div className="flex">
+                  <span className="text-gray-600 w-32">• Modalidad de facturación:</span>
+                  <span className="font-semibold text-gray-900">
+                    {receiptData?.reserva?.modalidad_facturacion_display}
+                  </span>
+                </div>
               </div>
             </div>
 
