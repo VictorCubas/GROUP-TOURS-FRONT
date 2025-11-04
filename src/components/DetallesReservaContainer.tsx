@@ -328,21 +328,9 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const handleConfirmGenerarFacturaIndividual = (payload: ClienteFacturaData,) => {
         if (payload && dataDetalleTemp) {
             console.log('Payload generado:', payload);
-            console.log(selectedPassengerId);
-
-            const pasajero = dataDetalleTemp.pasajeros.filter(p => p.id.toString() === selectedPassengerId?.toString())
-            console.log(pasajero);
-            const pax = pasajero[0];
-            if(pax.factura_individual_generada){
-
-              const params = `?pasajero_id=${selectedPassengerId}`;
-              console.log('12312');
-              // handleDescargarFacturaIndividual(dataDetalleTemp?.id, params)
-            }
-            else{
-              const params = `?pasajero_id=${selectedPassengerId}&tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
-              handleDescargarFacturaIndividual(dataDetalleTemp?.id, params)
-            }
+            console.log(selectedPassengerId);            
+            const params = `?pasajero_id=${selectedPassengerId}&tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
+            handleDescargarFacturaIndividual(dataDetalleTemp?.id, params)
 
         }
     };
