@@ -11,7 +11,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchDataTodo } from "./utils/httpTipoDocumentos"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Loader2Icon } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useFacturaContext } from "@/context/FacturaContext"
 
 export interface ClienteFacturaData {
   nombre: string;
@@ -30,8 +31,9 @@ interface InfoFacturaTitularProps {
 
 export function InfoFacturaTitular({ onInvoiceGenerated, isPending, onClose }: InfoFacturaTitularProps) {
   const [tipoDocumentoSelected, setTipoDocumentoSelected] = useState<any>();
-  
-  const {control,  register, handleSubmit, formState: {errors, },clearErrors, } = useForm<ClienteFacturaData>({
+  const { formData, activeTab } = useFacturaContext();
+
+  const {control,  register, handleSubmit, formState: {errors, }, clearErrors, reset } = useForm<ClienteFacturaData>({
     mode: "onBlur",
     defaultValues: {
       nombre: '',
@@ -43,17 +45,29 @@ export function InfoFacturaTitular({ onInvoiceGenerated, isPending, onClose }: I
     }
   });
 
-  const onSubmit = async (data: ClienteFacturaData) => {
-    console.log(data)
-    onInvoiceGenerated(data);
-  };
-
-
   const {data: dataTipoDocumentoList, isFetching: isFetchingTipoDocumento,} = useQuery({
       queryKey: ['tipo-documentos-de-personas',], //data cached
       queryFn: () => fetchDataTodo(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
+
+  // Restaurar valores del formulario cuando volvemos al tab
+  useEffect(() => {
+    if (activeTab === 'form' && formData) {
+      reset(formData);
+      // También restaurar el tipo de documento seleccionado si existe
+      if (formData.tipo_documento && dataTipoDocumentoList) {
+        setTipoDocumentoSelected(
+          dataTipoDocumentoList?.find((doc: any) => doc.id.toString() === formData.tipo_documento)
+        );
+      }
+    }
+  }, [activeTab, formData, reset, dataTipoDocumentoList]);
+
+  const onSubmit = async (data: ClienteFacturaData) => {
+    console.log(data)
+    onInvoiceGenerated(data);
+  };
 
 
   console.log('dataTipoDocumentoList:', dataTipoDocumentoList)
@@ -266,7 +280,9 @@ export function InfoFacturaTitular({ onInvoiceGenerated, isPending, onClose }: I
               className="px-6 py-5 bg-green-600 text-white font-medium rounded-lg
                       cursor-pointer hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isPending ? 'Generando...' : 'Generar Factura'}
+              {/* {isPending ? 'Generando...' : 'Generar Factura'} */}
+              {/* {isPending ? 'Generando...' : 'Generar Factura'} */}
+              Ver Preview
             </Button>
           </div>
         </CardContent>

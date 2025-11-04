@@ -26,3 +26,37 @@ export interface InvoiceConfig {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface InvoiceItem {
+  code: string;
+  description: string;
+  unitMeasure: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  taxType: "exenta" | "iva5" | "iva10";
+}
+
+export interface InvoiceData {
+  // Company data
+  ruc: string;
+  timbrado: string;
+  timbrado_numero: string;
+  vigencyStartDate: string;
+  invoiceNumber: string;
+
+  // Invoice metadata
+  emissionDate: string;
+  saleCondition: string;
+  currency: string;
+
+  // Customer data
+  customerRuc: string;
+  customerName: string;
+  customerAddress: string;
+  customerPhone: string;
+  customerEmail: string;
+
+  // Items
+  items: InvoiceItem[];
+}
