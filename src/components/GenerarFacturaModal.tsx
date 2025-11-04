@@ -29,7 +29,6 @@ export default function GenerarFacturaModal({
   onClose,
   onConfirm,
   isPending,
-  selectedPasajeroId,
   reservaData,
 }: GenerarFacturaModalProps) {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null)
