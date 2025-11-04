@@ -231,9 +231,17 @@ export async function descargarComprobanteById(comprobanteId: number | string) {
   return response;
 }
 
-export async function descargarFacturaGlobalById(id: number | string) {
+export async function descargarFacturaGlobalById(id: number | string, params: string | null) {
+  let url_fetch = `/reservas/${id}/descargar-factura-global/`;
+
+  if(params)
+    url_fetch += `${params}`
+
+
+  console.log(url_fetch);
+
   const response = await axiosInstance.get(
-    `/reservas/${id}/descargar-factura-global/`,
+    url_fetch,
     { responseType: 'blob' } // 👈 importante: indica que es un archivo binario
   );
 

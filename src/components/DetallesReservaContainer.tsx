@@ -14,6 +14,8 @@ import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
 import AsignarPasajeroModal from './AsignarPasajeroModal';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import GenerarFacturaModal from './GenerarFacturaModal';
+import type { ClienteFacturaData } from './InfoFacturaTitular';
 
 interface DetallesReservaContainerProps{
     activeTab: 'general' | 'passengers' | 'payments';
@@ -31,6 +33,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const {handleShowToast} = use(ToastContext);
     const [isPagoParcialModalOpen, setIsPagoParcialModalOpen] = useState(false);
     const [isAsiganrPasajeroModalOpen, setIsAsiganrPasajeroModalOpen] = useState(false);
+    const [isGenerarFacturaOpen, setIsGenerarFacturaOpen] = useState(false);
     const [selectedPassengerId, setSelectedPassengerId] = useState<number | undefined>(undefined);
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
     const [descargandoVoucherId, setDescargandoVoucherId] = useState<number | undefined>(undefined);
@@ -214,13 +217,14 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         });
     }
 
-    function handleDescargarFacturaGlobal(id: number) {
-        generarYDescargarFacturaGlobal(id, {
+    function handleDescargarFacturaGlobal(id: number, params: string) {
+        generarYDescargarFacturaGlobal({id, params}, {
         onSuccess: () => {
             console.log('✅ PDF descargado correctamente');
             handleShowToast('Factura descargado correctamente', 'success');
             // setIsReceiptModalOpen(false);
             // setReservaRealizadaResponse(null);
+            setIsGenerarFacturaOpen(false)
         },
         onError: (error) => {
             console.error('❌ Error al descargar el PDF', error);
@@ -276,6 +280,12 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         // setPayloadReservationData(null);
     };
 
+    const handleCloseGenerarFacturaModal = () => {
+        setIsGenerarFacturaOpen(false)
+        // handleCancel()
+        // setPayloadReservationData(null);
+    };
+
      // Manejar la confirmación del modal
     const handleConfirmPagoParcial = (payload: any, paymentType: "deposit" | "full") => {
         if (payload && dataDetalleTemp) {
@@ -295,6 +305,34 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
             // Llamar a la función de pago con el ID de la reserva actual
             handleAsignarPasajero(Number(pasajeroId), payload);
+        }
+    };
+
+     // Manejar la confirmación del modal
+    const handleConfirmGenerarFacturaModal = (payload: ClienteFacturaData,) => {
+        if (payload && dataDetalleTemp) {
+            console.log('Payload generado:', payload);
+            // console.log('Payload generado:', pasajeroId);
+
+            //  {
+            //     nombre: 'VICTOR HUGO CUBAS BALBUENA',
+            //     ruc: '4028760',
+            //     email: 'vhcubas91@gmail.com',
+            //     telefono: '+595971991960',
+            //     direccion: 'Ruta 1 km 20, Missiones 115'
+            // }
+
+            //  ?tercero_nombre=Empresa ABC S.A.
+            // &tercero_tipo_documento=4
+            // &tercero_numero_documento=80012345-6
+            // &tercero_direccion=Av. España 1234
+            // &tercero_telefono=021-123456
+            // &tercero_email=facturacion@abc.com
+            const params = `?tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
+
+            console.log(params)
+
+            handleDescargarFacturaGlobal(dataDetalleTemp?.id, params)
         }
     };
 
@@ -610,7 +648,8 @@ return   <>
                                   <Button
                                       disabled={isPendingDescargaFacturaGlobal}
                                       onClick={() => {
-                                          handleDescargarFacturaGlobal(dataDetalleTemp?.id)
+                                            setIsGenerarFacturaOpen(true);
+                                          // handleDescargarFacturaGlobal(dataDetalleTemp?.id)
                                       }}
                                       className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
                                       size="lg"
@@ -1218,6 +1257,18 @@ return   <>
                 onClose={handleCloseAsigarPasajeroModal}
                 onConfirm={handleConfirmAAsignarPasajero}
                 isPending={isPendingAsignarPasajero}
+                reservaData={dataDetalleTemp}
+                selectedPasajeroId={selectedPassengerId}
+            />
+        )}
+
+
+        {isGenerarFacturaOpen && (
+            <GenerarFacturaModal
+                isOpen={isGenerarFacturaOpen}
+                onClose={handleCloseGenerarFacturaModal}
+                onConfirm={handleConfirmGenerarFacturaModal}
+                isPending={isPendingDescargaFacturaGlobal}
                 reservaData={dataDetalleTemp}
                 selectedPasajeroId={selectedPassengerId}
             />

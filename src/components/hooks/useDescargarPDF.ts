@@ -28,8 +28,9 @@ export function useDescargarComprobante() {
 
 export function useDescargarFacturaGlobal() {
   return useMutation({
-    mutationFn: async (id: number | string) => {
-      await descargarFacturaGlobalById(id);
+    // mutationFn: async (id: number | string) => {
+    mutationFn: async ({id, params}: {id: number | string, params: string}) => {
+      await descargarFacturaGlobalById(id, params);
     },
     onSuccess: (data) => {
       console.log('✅ Factura generado y PDF descargado:', data);
