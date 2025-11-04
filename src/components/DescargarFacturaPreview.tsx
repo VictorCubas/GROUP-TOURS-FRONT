@@ -15,17 +15,36 @@ interface InvoicePreviewProps {
 }
 
 export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoicePreviewProps) {
-  const { reservaData, setActiveTab } = useFacturaContext();
+  const { reservaData, setActiveTab, selectedPasajeroId } = useFacturaContext();
+
+  console.log(reservaData)
+  console.log(selectedPasajeroId)
 
   const calculateItemTotal = (item: (typeof data.items)[0]) => {
+    // Si es factura individual, usar precio unitario de la reserva
+    if (selectedPasajeroId) {
+      return reservaData.precio_unitario - item.discount
+    }
+    // Si es factura global, calcular con cantidad * precio
     return item.quantity * item.unitPrice - item.discount
   }
 
   const calculateSubtotal = () => {
+    // Si es factura individual, retornar el precio unitario de la reserva
+    if (selectedPasajeroId) {
+      return reservaData.precio_unitario
+    }
+    // Si es factura global, sumar todos los items
     return data.items.reduce((sum, item) => sum + calculateItemTotal(item), 0)
   }
 
   const calculateTaxByType = (taxType: string) => {
+    // Si es factura individual, retornar el precio unitario si el tipo de impuesto coincide
+    if (selectedPasajeroId) {
+      const item = data.items.find((item) => item.taxType === taxType)
+      return item ? reservaData.precio_unitario : 0
+    }
+    // Si es factura global, filtrar y sumar por tipo de impuesto
     return data.items
       .filter((item) => item.taxType === taxType)
       .reduce((sum, item) => sum + calculateItemTotal(item), 0)
@@ -113,7 +132,7 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto tabla-facturacion-preview">
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="bg-muted">
@@ -141,8 +160,10 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
                   <td className="border border-border p-2">{item.code}</td>
                   <td className="border border-border p-2">{item.description}</td>
                   <td className="border border-border p-2 text-center">{item.unitMeasure}</td>
-                  <td className="border border-border p-2 text-center">{item.quantity}</td>
-                  <td className="border border-border p-2 text-right">{item.unitPrice.toLocaleString()}</td>
+                  <td className="border border-border p-2 text-center">{selectedPasajeroId? '1': item.quantity}</td>
+                  <td className="border border-border p-2 text-right">
+                    {selectedPasajeroId ? reservaData.precio_unitario.toLocaleString() : item.unitPrice.toLocaleString()}
+                  </td>
                   <td className="border border-border p-2 text-right">
                     {item.taxType === "exenta" ? item.discount : 0}
                   </td>
@@ -150,7 +171,9 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
                   <td className="border border-border p-2 text-right">
                     {item.taxType === "iva10" ? item.discount : 0}
                   </td>
-                  <td className="border border-border p-2 text-right">{calculateItemTotal(item).toLocaleString()}</td>
+                  <td className="border border-border p-2 text-right">
+                      {calculateItemTotal(item).toLocaleString()}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -191,7 +214,7 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
           {reservaData && (
             <div className="italic mt-2 space-y-1">
               <p>Reserva asociada: {reservaData.codigo}</p>
-              <p>Cantidad de pasajeros: {reservaData.cantidad_pasajeros}</p>
+              <p>Cantidad de pasajeros: {selectedPasajeroId ? '1' : reservaData.cantidad_pasajeros}</p>
               <p>Monto pagado: {reservaData.moneda?.simbolo || ''} {reservaData.monto_pagado?.toLocaleString()}</p>
               <p>Saldo pendiente: {reservaData.moneda?.simbolo || ''} {reservaData.saldo_pendiente?.toLocaleString()}</p>
             </div>

@@ -29,11 +29,11 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         onClose
     }) => {
 
-
     const {handleShowToast} = use(ToastContext);
     const [isPagoParcialModalOpen, setIsPagoParcialModalOpen] = useState(false);
     const [isAsiganrPasajeroModalOpen, setIsAsiganrPasajeroModalOpen] = useState(false);
     const [isGenerarFacturaOpen, setIsGenerarFacturaOpen] = useState(false);
+    const [tipoFacturaAgenerarse, setTipoFacturaAgenerarse] = useState<'global' | "individual" | "">("");
     const [selectedPassengerId, setSelectedPassengerId] = useState<number | undefined>(undefined);
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
     const [descargandoVoucherId, setDescargandoVoucherId] = useState<number | undefined>(undefined);
@@ -144,7 +144,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                 setIsPagoParcialModalOpen(false);
                 console.log(data)
                 setIsReceiptModalOpen(true);
-                setPagoSeniaRealizadaResponse(data)
+                setPagoSeniaRealizadaResponse(data);
+                setSelectedPassengerId(undefined);;
 
                 // Refrescar los detalles de la reserva para ver el estado actualizado
                 queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
@@ -179,6 +180,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
                 // Cerrar modal
                 setIsAsiganrPasajeroModalOpen(false);
+                setSelectedPassengerId(undefined);
                 console.log(data)
                 // setIsReceiptModalOpen(true);
                 // setPagoSeniaRealizadaResponse(data)
@@ -217,14 +219,16 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         });
     }
 
-    function handleDescargarFacturaGlobal(id: number, params: string) {
+    function handleDescargarFacturaGlobal(id: number, params: string | null = null) {
         generarYDescargarFacturaGlobal({id, params}, {
         onSuccess: () => {
             console.log('✅ PDF descargado correctamente');
             handleShowToast('Factura descargado correctamente', 'success');
             // setIsReceiptModalOpen(false);
             // setReservaRealizadaResponse(null);
-            setIsGenerarFacturaOpen(false)
+            setIsGenerarFacturaOpen(false);
+            setTipoFacturaAgenerarse("");
+            setSelectedPassengerId(undefined);
         },
         onError: (error) => {
             console.error('❌ Error al descargar el PDF', error);
@@ -233,13 +237,14 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         });
     }
     
-    function handleDescargarFacturaIndividual(reservaId: number, pasajeroId: number) {
-        console.log(reservaId, pasajeroId)
+    function handleDescargarFacturaIndividual(reservaId: number, params: string) {
+        console.log(reservaId, params)
         // return;
-        generarYDescargarFacturaIndividual( { reservaId, pasajeroId }, {
+        generarYDescargarFacturaIndividual( { reservaId, params }, {
         onSuccess: () => {
             console.log('✅ PDF descargado correctamente');
             handleShowToast('Factura descargada correctamente', 'success');
+            setSelectedPassengerId(undefined);
             // setIsReceiptModalOpen(false);
             // setReservaRealizadaResponse(null);
         },
@@ -282,6 +287,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
     const handleCloseGenerarFacturaModal = () => {
         setIsGenerarFacturaOpen(false)
+        setTipoFacturaAgenerarse("");
+        setSelectedPassengerId(undefined);
         // handleCancel()
         // setPayloadReservationData(null);
     };
@@ -309,30 +316,34 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     };
 
      // Manejar la confirmación del modal
-    const handleConfirmGenerarFacturaModal = (payload: ClienteFacturaData,) => {
+    const handleConfirmGenerarFacturaGlobal = (payload: ClienteFacturaData,) => {
         if (payload && dataDetalleTemp) {
             console.log('Payload generado:', payload);
-            // console.log('Payload generado:', pasajeroId);
-
-            //  {
-            //     nombre: 'VICTOR HUGO CUBAS BALBUENA',
-            //     ruc: '4028760',
-            //     email: 'vhcubas91@gmail.com',
-            //     telefono: '+595971991960',
-            //     direccion: 'Ruta 1 km 20, Missiones 115'
-            // }
-
-            //  ?tercero_nombre=Empresa ABC S.A.
-            // &tercero_tipo_documento=4
-            // &tercero_numero_documento=80012345-6
-            // &tercero_direccion=Av. España 1234
-            // &tercero_telefono=021-123456
-            // &tercero_email=facturacion@abc.com
             const params = `?tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
-
-            console.log(params)
-
             handleDescargarFacturaGlobal(dataDetalleTemp?.id, params)
+        }
+    };
+
+     // Manejar la confirmación del modal
+    const handleConfirmGenerarFacturaIndividual = (payload: ClienteFacturaData,) => {
+        if (payload && dataDetalleTemp) {
+            console.log('Payload generado:', payload);
+            console.log(selectedPassengerId);
+
+            const pasajero = dataDetalleTemp.pasajeros.filter(p => p.id.toString() === selectedPassengerId?.toString())
+            console.log(pasajero);
+            const pax = pasajero[0];
+            if(pax.factura_individual_generada){
+
+              const params = `?pasajero_id=${selectedPassengerId}`;
+              console.log('12312');
+              // handleDescargarFacturaIndividual(dataDetalleTemp?.id, params)
+            }
+            else{
+              const params = `?pasajero_id=${selectedPassengerId}&tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
+              handleDescargarFacturaIndividual(dataDetalleTemp?.id, params)
+            }
+
         }
     };
 
@@ -648,7 +659,13 @@ return   <>
                                   <Button
                                       disabled={isPendingDescargaFacturaGlobal}
                                       onClick={() => {
-                                            setIsGenerarFacturaOpen(true);
+                                            if(dataDetalleTemp.factura_global_generada){
+                                              handleDescargarFacturaGlobal(dataDetalleTemp?.id)
+                                            }
+                                            else{
+                                              setIsGenerarFacturaOpen(true);
+                                              setTipoFacturaAgenerarse("global");
+                                            }
                                           // handleDescargarFacturaGlobal(dataDetalleTemp?.id)
                                       }}
                                       className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
@@ -937,8 +954,18 @@ return   <>
                                                 variant="outline"
                                                 disabled={isPendingDescargaFacturaIndividual}
                                                 onClick={() => {
-                                                    handleDescargarFacturaIndividual(dataDetalleTemp?.id, pasajero.id)
-                                                    // setSelectedPassengerId(pasajero.id);
+                                                    if(pasajero.factura_individual_generada){
+                                                        //DESCARGA DIRECTA (FACTURA YA GENERADA)
+                                                        const params = `?pasajero_id=${pasajero.id}`;
+                                                        handleDescargarFacturaIndividual(dataDetalleTemp?.id, params)
+                                                    }
+                                                    else{
+                                                      //ABRE EL FOMRULARIO DE DESCARGA (FACTURA POR GENERARSE)
+                                                      setIsGenerarFacturaOpen(true);
+                                                      setTipoFacturaAgenerarse("individual");
+                                                      setSelectedPassengerId(pasajero.id);
+                                                    }
+                                                    
                                                     // setIsAsiganrPasajeroModalOpen(true);
                                                 }}
                                                 className={`cursor-pointer disabled:cursor-not-allowed
@@ -1267,8 +1294,8 @@ return   <>
             <GenerarFacturaModal
                 isOpen={isGenerarFacturaOpen}
                 onClose={handleCloseGenerarFacturaModal}
-                onConfirm={handleConfirmGenerarFacturaModal}
-                isPending={isPendingDescargaFacturaGlobal}
+                onConfirm={tipoFacturaAgenerarse === "global" ? handleConfirmGenerarFacturaGlobal: handleConfirmGenerarFacturaIndividual}
+                isPending={isPendingDescargaFacturaGlobal || isPendingDescargaFacturaIndividual}
                 reservaData={dataDetalleTemp}
                 selectedPasajeroId={selectedPassengerId}
             />

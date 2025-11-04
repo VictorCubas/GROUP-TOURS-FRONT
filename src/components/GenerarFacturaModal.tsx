@@ -30,6 +30,8 @@ export default function GenerarFacturaModal({
   onConfirm,
   isPending,
   reservaData,
+  selectedPasajeroId,
+  
 }: GenerarFacturaModalProps) {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null)
   const [activeTab, setActiveTab] = useState("form")
@@ -44,6 +46,9 @@ export default function GenerarFacturaModal({
     staleTime: 5 * 60 * 1000,
     enabled: isOpen
   });
+
+
+  console.log(selectedPasajeroId)
 
   console.log('configFacturaData:', configFacturaData);
   console.log('reservaData:', reservaData);
@@ -204,6 +209,7 @@ export default function GenerarFacturaModal({
         formData,
         setFormData,
         reservaData,
+        selectedPasajeroId,
       }}
     >
       <div
@@ -295,42 +301,6 @@ export default function GenerarFacturaModal({
                   </TabsContent>
                 </Tabs>
               </div>
-
-              {/* Footer */}
-              {/* <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
-                <Button
-                variant="outline"
-                  onClick={onClose}
-                  className="px-6 py-5 text-gray-700 font-medium border border-gray-300 rounded-lg 
-                              cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type='button'
-                  disabled={isPending}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    console.log(generarPayloadPago())
-                    // if(!selectedPasajeroId)
-                    //   handleShowToast('Debes seleccionar primero a la persona', 'error'); 
-                    // else
-                    //   onConfirm(generarPayloadPago(), selectedPasajeroId)
-                  }}
-                  className="px-6 py-5 bg-green-600 text-white font-medium rounded-lg
-                          cursor-pointer hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPending ?
-                    <>
-                        <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
-                        generando..
-                    </> :
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Generar factura
-                    </>}
-                </Button>
-              </div> */}
           </div>
       </div>
     </FacturaContext.Provider>,

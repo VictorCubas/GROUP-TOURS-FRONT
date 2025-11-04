@@ -29,7 +29,7 @@ export function useDescargarComprobante() {
 export function useDescargarFacturaGlobal() {
   return useMutation({
     // mutationFn: async (id: number | string) => {
-    mutationFn: async ({id, params}: {id: number | string, params: string}) => {
+    mutationFn: async ({id, params}: {id: number | string, params: string | null}) => {
       await descargarFacturaGlobalById(id, params);
     },
     onSuccess: (data) => {
@@ -45,8 +45,8 @@ export function useDescargarFacturaGlobal() {
 
 export function useDescargarFacturaIndividual() {
   return useMutation({
-    mutationFn: async ({ reservaId, pasajeroId }: { reservaId: number | string; pasajeroId: number | string }) => {
-      await descargarFacturaIndividualById(reservaId, pasajeroId);
+    mutationFn: async ({ reservaId, params }: { reservaId: number | string; params: string }) => {
+      await descargarFacturaIndividualById(reservaId, params);
     },
     onSuccess: (data) => {
       console.log('✅ Factura generada y PDF descargada:', data);

@@ -17,6 +17,7 @@ interface FacturaContextType {
   formData: ClienteFacturaData | null;
   setFormData: (data: ClienteFacturaData | null) => void;
   reservaData: any;
+  selectedPasajeroId?: number
 }
 
 export const FacturaContext = createContext<FacturaContextType | undefined>(undefined);
