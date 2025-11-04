@@ -34,7 +34,7 @@ export default function GenerarFacturaModal({
   const [invoiceData, setInvoiceData] = useState<any | null>(null)
   const [activeTab, setActiveTab] = useState("form")
 
-  const {handleShowToast} = use(ToastContext);
+  // const {handleShowToast} = use(ToastContext);
   // Extraer datos necesarios de la reserva
 
 

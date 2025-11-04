@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Controller, useForm } from "react-hook-form"
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { fetchDataTodo } from "./utils/httpTipoDocumentos"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Loader2Icon } from "lucide-react"
@@ -31,7 +31,7 @@ interface InfoFacturaTitularProps {
 export function InfoFacturaTitular({ onInvoiceGenerated, isPending, onClose }: InfoFacturaTitularProps) {
   const [tipoDocumentoSelected, setTipoDocumentoSelected] = useState<any>();
   
-  const {control,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = useForm<ClienteFacturaData>({
+  const {control,  register, handleSubmit, formState: {errors, },clearErrors, } = useForm<ClienteFacturaData>({
     mode: "onBlur",
     defaultValues: {
       nombre: '',
