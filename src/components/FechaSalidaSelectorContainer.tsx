@@ -91,17 +91,56 @@ export function FechaSalidaSelectorContainer({
     <div className="space-y-4">
       <Label>Fecha de Salida *</Label>
       <RadioGroup value={fechaSeleccionada} onValueChange={onFechaSeleccionada} className="space-y-3 max-h-90 overflow-y-auto">
-        {fechaSalidasList.map((departure) => { 
-          const hoyLocal = new Date().toLocaleDateString('sv-SE'); 
+        {fechaSalidasList.map((departure) => {
+          const hoyLocal = new Date().toLocaleDateString('sv-SE');
           const cantDias = getDaysBetweenDates(hoyLocal, departure?.fecha_salida)
           const style = getDaysRemainingStyle(cantDias);
 
+          // Determinar el mensaje según el estado del viaje
+          let mensajeEstado = '';
+          let estiloEstado = style;
+          let esSeleccionable = true;
+
+          if (cantDias > 0) {
+            // Aún falta tiempo para la salida
+            mensajeEstado = `Faltan ${cantDias} días para la salida`;
+          } else if (cantDias === 0) {
+            // El viaje es hoy
+            mensajeEstado = '¡El viaje es hoy!';
+            estiloEstado = { text: "text-green-600", weight: "font-bold" };
+          } else {
+            // cantDias < 0, verificar si está en curso
+            const diasDesdeRegreso = getDaysBetweenDates(hoyLocal, departure?.fecha_regreso);
+
+            if (diasDesdeRegreso >= 0) {
+              // La fecha actual está entre salida y regreso
+              const diaDelViaje = Math.abs(cantDias) + 1; // Día actual del viaje (empieza en 1)
+              mensajeEstado = `Esta salida está en curso (día ${diaDelViaje})`;
+              estiloEstado = { text: "text-blue-600", weight: "font-semibold" };
+              esSeleccionable = false; // No se puede seleccionar
+            } else {
+              // Ya pasó la fecha de regreso
+              mensajeEstado = 'Esta salida ya finalizó';
+              estiloEstado = { text: "text-gray-500", weight: "font-normal" };
+              esSeleccionable = false; // No se puede seleccionar
+            }
+          }
+
           return <div key={departure.id} className="relative">
-            <RadioGroupItem value={departure.id} id={departure.id} className="peer sr-only" />
+            <RadioGroupItem
+              value={departure.id}
+              id={departure.id}
+              className="peer sr-only"
+              disabled={!esSeleccionable}
+            />
             <Label
               htmlFor={departure.id}
-              className="flex items-start gap-4 p-4 rounded-lg border-2 border-muted bg-background hover:bg-accent/5 cursor-pointer transition-all 
-                              peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-50"
+              className={cn(
+                "flex items-start gap-4 p-4 rounded-lg border-2 border-muted bg-background transition-all",
+                esSeleccionable
+                  ? "hover:bg-accent/5 cursor-pointer peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-50"
+                  : "opacity-60 cursor-not-allowed bg-gray-50"
+              )}
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 peer-data-[state=checked]:bg-blue-100">
                 <Calendar className="h-5 w-5 text-blue-600" />
@@ -110,8 +149,8 @@ export function FechaSalidaSelectorContainer({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-foreground capitalize">{formatDate(departure.fecha_salida)}</p>
-                    <p className={cn("text-sm mt-3", style.text, style.weight)}>
-                          Faltan {cantDias} días para la salida
+                    <p className={cn("text-sm mt-3", estiloEstado.text, estiloEstado.weight)}>
+                          {mensajeEstado}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">

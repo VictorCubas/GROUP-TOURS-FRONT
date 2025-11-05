@@ -18,12 +18,12 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
   const { reservaData, setActiveTab, selectedPasajeroId } = useFacturaContext();
 
   console.log(reservaData)
-  console.log(selectedPasajeroId)
+  console.log(selectedPasajeroId) 
 
   const calculateItemTotal = (item: (typeof data.items)[0]) => {
-    // Si es factura individual, usar precio unitario de la reserva
+    // Si es factura individual, usar precio unitario de la reserva (cantidad siempre es 1)
     if (selectedPasajeroId) {
-      return reservaData.precio_unitario - item.discount
+      return 1 * reservaData.precio_unitario - item.discount
     }
     // Si es factura global, calcular con cantidad * precio
     return item.quantity * item.unitPrice - item.discount
@@ -39,10 +39,10 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
   }
 
   const calculateTaxByType = (taxType: string) => {
-    // Si es factura individual, retornar el precio unitario si el tipo de impuesto coincide
+    // Si es factura individual, retornar el precio unitario menos descuentos si el tipo de impuesto coincide
     if (selectedPasajeroId) {
       const item = data.items.find((item) => item.taxType === taxType)
-      return item ? reservaData.precio_unitario : 0
+      return item ? reservaData.precio_unitario - item.discount : 0
     }
     // Si es factura global, filtrar y sumar por tipo de impuesto
     return data.items
@@ -53,8 +53,9 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
   const calculateIVA = (taxType: string) => {
     const base = calculateTaxByType(taxType)
     console.log(base)
-    if (taxType === "iva5") return base * 0.05
-    if (taxType === "iva10") return base / 11
+    // Para ambos casos, el IVA está incluido en el precio
+    if (taxType === "iva5") return base - (base / 1.05)  // Extraer IVA 5% incluido
+    if (taxType === "iva10") return base / 11  // Extraer IVA 10% incluido
     return 0
   }
 
@@ -160,7 +161,7 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
                   <td className="border border-border p-2">{item.code}</td>
                   <td className="border border-border p-2">{item.description}</td>
                   <td className="border border-border p-2 text-center">{item.unitMeasure}</td>
-                  <td className="border border-border p-2 text-center">{selectedPasajeroId? '1': item.quantity}</td>
+                  <td className="border border-border p-2 text-center">{selectedPasajeroId ? '1' : item.quantity}</td>
                   <td className="border border-border p-2 text-right">
                     {selectedPasajeroId ? reservaData.precio_unitario.toLocaleString() : item.unitPrice.toLocaleString()}
                   </td>

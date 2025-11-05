@@ -15,7 +15,7 @@ import PaymentReceiptModal from './PaymentReceiptModal';
 import AsignarPasajeroModal from './AsignarPasajeroModal';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import GenerarFacturaModal from './GenerarFacturaModal';
-import type { ClienteFacturaData } from './InfoFacturaTitular';
+import type { ClienteFacturaData } from './FormularioFacturaTitular';
 
 interface DetallesReservaContainerProps{
     activeTab: 'general' | 'passengers' | 'payments';
@@ -39,7 +39,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const [descargandoVoucherId, setDescargandoVoucherId] = useState<number | undefined>(undefined);
     const [pagoSeniaRealizadaResponse, setPagoSeniaRealizadaResponse] = useState<any>(null);
     
-    const {data: dataDetalleTemp, isFetching: isFetchingDetalles,} = useQuery({
+    const {data: dataDetalleResp, isFetching: isFetchingDetalles,} = useQuery({
         queryKey: ['reserva-detalles', reservaId], //data cached
         queryFn: ({signal}) => fetchReservaDetallesById({signal, id: reservaId}),
         enabled: Boolean(reservaId),
@@ -60,7 +60,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: generarYDescargarVoucher, isPending: isPendingDescargaVoucher } = useDescargarVoucher();
 
 
-    console.log(dataDetalleTemp)
+    console.log(dataDetalleResp)
 
     const renderStars = (rating: number) => {
         return (
@@ -78,8 +78,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         );
     };
 
-    const paymentStatus = getPaymentStatus(dataDetalleTemp);
-    const paymentProgress = getPaymentPercentage(dataDetalleTemp);
+    const paymentStatus = getPaymentStatus(dataDetalleResp);
+    const paymentProgress = getPaymentPercentage(dataDetalleResp);
 
     const getAgeFromBirthDate = (birthDate: string) => {
         const today = new Date();
@@ -103,8 +103,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
     // Función para calcular el porcentaje de pago por pasajero
     const getPassengerPaymentPercentage = (pasajero: any): number => {
-        if (!pasajero || !dataDetalleTemp?.precio_unitario) return 0;
-        const precioTotal = dataDetalleTemp.precio_unitario;
+        if (!pasajero || !dataDetalleResp?.precio_unitario) return 0;
+        const precioTotal = dataDetalleResp.precio_unitario;
         if (precioTotal === 0) return 0;
         const montoPagado = precioTotal - (pasajero.saldo_pendiente || 0);
         return Math.min((montoPagado / precioTotal) * 100, 100);
@@ -211,6 +211,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
             handleShowToast('Comprobante descargado correctamente', 'success');
             // setIsReceiptModalOpen(false);
             // setReservaRealizadaResponse(null);
+            queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+            queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
         },
         onError: (error) => {
             console.error('❌ Error al descargar el PDF', error);
@@ -228,6 +230,17 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
             // setReservaRealizadaResponse(null);
             setIsGenerarFacturaOpen(false);
             setTipoFacturaAgenerarse("");
+
+            const paxFilter = dataDetalleResp.pasajeros.filter((p: any) => p.id.toString() === selectedPassengerId?.toString())
+            const pax = paxFilter[0];
+
+            console.log(pax)
+
+            if(!pax.factura_individual_generada){
+                queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
+            }
+            
             setSelectedPassengerId(undefined);
         },
         onError: (error) => {
@@ -244,12 +257,27 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         onSuccess: () => {
             console.log('✅ PDF descargado correctamente');
             handleShowToast('Factura descargada correctamente', 'success');
-            setSelectedPassengerId(undefined);
+            setIsGenerarFacturaOpen(false)
+            setTipoFacturaAgenerarse("");
             // setIsReceiptModalOpen(false);
             // setReservaRealizadaResponse(null);
+            if(selectedPassengerId){
+                const paxFilter = dataDetalleResp.pasajeros.filter((p: any) => p.id.toString() === selectedPassengerId?.toString())
+                console.log(paxFilter)
+                const pax = paxFilter[0];
+    
+                console.log(pax)
+    
+                if(!pax.factura_individual_generada){
+                    queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                    queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
+                }
+            }
+            
+            setSelectedPassengerId(undefined);
         },
         onError: (error) => {
-            console.error('❌ Error al descargar la factura', error);
+            console.error('❌ Error al descargar la factura', error ?? '');
             handleShowToast('Error al descargar la factura', 'error');
         },
         });
@@ -295,18 +323,18 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
      // Manejar la confirmación del modal
     const handleConfirmPagoParcial = (payload: any, paymentType: "deposit" | "full") => {
-        if (payload && dataDetalleTemp) {
+        if (payload && dataDetalleResp) {
             console.log('Payload generado:', payload);
             console.log('Tipo de pago:', paymentType);
 
             // Llamar a la función de pago con el ID de la reserva actual
-            handleRegistrarPagoParcial(dataDetalleTemp.id, payload);
+            handleRegistrarPagoParcial(dataDetalleResp.id, payload);
         }
     };
 
      // Manejar la confirmación del modal
     const handleConfirmAAsignarPasajero = (payload: any, pasajeroId: number | string) => {
-        if (payload && dataDetalleTemp && pasajeroId) {
+        if (payload && dataDetalleResp && pasajeroId) {
             console.log('Payload generado:', payload);
             console.log('Payload generado:', pasajeroId);
 
@@ -317,20 +345,65 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
      // Manejar la confirmación del modal
     const handleConfirmGenerarFacturaGlobal = (payload: ClienteFacturaData,) => {
-        if (payload && dataDetalleTemp) {
+        //  {
+        //     nombre: '',
+        //     ruc: '',
+        //     email: '',
+        //     telefono: '',
+        //     direccion: '',
+        //     tipo_documento: '4',
+        //     documento_original: '778341234-2',
+        //     factura_nombre: 'titular',
+        //     algunValorHaCambiado: true
+        // }
+        if (payload && dataDetalleResp) {
             console.log('Payload generado:', payload);
-            const params = `?tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
-            handleDescargarFacturaGlobal(dataDetalleTemp?.id, params)
+            let params= '';
+
+            if(payload.factura_nombre === 'titular'){
+                if(payload.algunValorHaCambiado) //titular con cambio de documento
+                    params += `?tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.documento_original}`;
+            }
+            else
+                params += `?tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
+
+
+            console.log(params)
+            // handleDescargarFacturaGlobal(dataDetalleResp?.id, params)
         }
     };
 
      // Manejar la confirmación del modal
     const handleConfirmGenerarFacturaIndividual = (payload: ClienteFacturaData,) => {
-        if (payload && dataDetalleTemp) {
+        if (payload && dataDetalleResp) {
             console.log('Payload generado:', payload);
-            console.log(selectedPassengerId);            
-            const params = `?pasajero_id=${selectedPassengerId}&tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
-            handleDescargarFacturaIndividual(dataDetalleTemp?.id, params)
+            console.log(selectedPassengerId); 
+            //  {
+            //     nombre: '',
+            //     ruc: '',
+            //     email: '',
+            //     telefono: '',
+            //     direccion: '',
+            //     tipo_documento: '4',
+            //     documento_original: '888777666-2',
+            //     factura_nombre: 'pasajero',
+            //     algunValorHaCambiado: true
+            // }
+
+            let params= `?pasajero_id=${selectedPassengerId}`;
+
+            if(payload.factura_nombre === 'pasajero'){ //FACTURA A NOMBRE DEL PASAJERO CON CAMBIO DE DOCUMENTO
+                if(payload.algunValorHaCambiado) //titular con cambio de documento
+                    params += `&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.documento_original}`;
+            }
+            else //FACTURA A NOMBRE DE UN TERCERO
+                params += `&tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
+
+
+            console.log(params)
+            
+            // const params = `?pasajero_id=${selectedPassengerId}&tercero_nombre=${payload.nombre}&tercero_tipo_documento=${payload.tipo_documento}&tercero_numero_documento=${payload.ruc}&tercero_direccion=${payload.direccion}&tercero_telefono=${payload.telefono}&tercero_email=${payload.email}`;
+            handleDescargarFacturaIndividual(dataDetalleResp?.id, params)
 
         }
     };
@@ -357,7 +430,7 @@ return   <>
                             <User className="w-5 h-5 text-gray-400" />
                             <div>
                             <p className="font-medium text-gray-900">
-                                {getPrimerNombreApellido(dataDetalleTemp?.titular?.nombre, dataDetalleTemp?.titular?.apellido)}
+                                {getPrimerNombreApellido(dataDetalleResp?.titular?.nombre, dataDetalleResp?.titular?.apellido)}
                             </p>
                             <p className="text-sm text-gray-500">Nombre completo</p>
                             </div>
@@ -366,7 +439,7 @@ return   <>
                             <FileText className="w-5 h-5 text-gray-400" />
                             <div>
                             <p className="font-medium text-gray-900">
-                                {dataDetalleTemp?.titular?.documento}
+                                {dataDetalleResp?.titular?.documento}
                             </p>
                             <p className="text-sm text-gray-500">Documento de identidad</p>
                             </div>
@@ -375,9 +448,9 @@ return   <>
                             <Calendar className="w-5 h-5 text-gray-400" />
                             <div>
                             <p className="font-medium text-gray-900">
-                                {formatearFecha(dataDetalleTemp.titular.fecha_nacimiento, false)} 
+                                {formatearFecha(dataDetalleResp.titular.fecha_nacimiento, false)} 
                                 <Badge className="ml-1 text-xs bg-blue-200  text-gray-700 text-center py-1">
-                                    {getAgeFromBirthDate(dataDetalleTemp.titular.fecha_nacimiento)} años
+                                    {getAgeFromBirthDate(dataDetalleResp.titular.fecha_nacimiento)} años
                                 </Badge>
                                 
                             </p>
@@ -391,7 +464,7 @@ return   <>
                             <Mail className="w-5 h-5 text-gray-400" />
                             <div>
                             <p className="font-medium text-gray-900">
-                                {dataDetalleTemp?.titular?.email}
+                                {dataDetalleResp?.titular?.email}
                             </p>
                             <p className="text-sm text-gray-500">Correo electrónico</p>
                             </div>
@@ -401,7 +474,7 @@ return   <>
                             <div>
                             <p className="font-medium text-gray-900">
                                 {/* {booking.persona.telefono} */}
-                                {dataDetalleTemp?.titular?.telefono}
+                                {dataDetalleResp?.titular?.telefono}
                             </p>
                             <p className="text-sm text-gray-500">Teléfono</p>
                             </div>
@@ -410,7 +483,7 @@ return   <>
                             <Globe className="w-5 h-5 text-gray-400" />
                             <div>
                             <p className="font-medium text-gray-900">
-                                {dataDetalleTemp.titular.nacionalidad_nombre}
+                                {dataDetalleResp.titular.nacionalidad_nombre}
                             </p>
                             <p className="text-sm text-gray-500">Nacionalidad</p>
                             </div>
@@ -446,20 +519,20 @@ return   <>
                                 <div className="space-y-3">
                                     <div>
                                     <p className="font-medium text-gray-900 text-lg">
-                                        {dataDetalleTemp?.paquete?.nombre}
+                                        {dataDetalleResp?.paquete?.nombre}
                                     </p>
                                     <p className="text-sm text-gray-500">Nombre del paquete</p>
                                     </div>
                                     <div>
                                     <p className="font-medium text-gray-900">
-                                        {dataDetalleTemp?.paquete.destino.ciudad},{' '}
-                                        {dataDetalleTemp?.paquete.destino.pais}
+                                        {dataDetalleResp?.paquete.destino.ciudad},{' '}
+                                        {dataDetalleResp?.paquete.destino.pais}
                                     </p>
                                     <p className="text-sm text-gray-500">Destino</p>
                                     </div>
                                     <div>
                                     <p className="font-medium text-gray-900">
-                                        {dataDetalleTemp?.paquete.tipo_paquete.nombre}
+                                        {dataDetalleResp?.paquete.tipo_paquete.nombre}
                                     </p>
                                     <p className="text-sm text-gray-500">Tipo de paquete</p>
                                     </div>
@@ -468,29 +541,29 @@ return   <>
                                 <div className="space-y-3">
                                     <div>
                                     <p className="font-medium text-gray-900">
-                                        {dataDetalleTemp?.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp.precio_unitario)} {dataDetalleTemp?.paquete.moneda?.codigo || 'USD'}
+                                        {dataDetalleResp?.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp.precio_unitario)} {dataDetalleResp?.paquete.moneda?.codigo || 'USD'}
                                     </p>
                                     <p className="text-sm text-gray-500">Precio por persona</p>
                                     </div>
                                     <div>
                                     <p className="font-medium text-gray-900">
                                         {/* {dataDetalle?.paquete.moneda?.simbolo || '$'}{dataDetalle?.paquete.sena.toLocaleString()} {dataDetalle?.paquete.moneda?.codigo || 'USD'} */}
-                                        {dataDetalleTemp?.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp.seña_total)} {dataDetalleTemp?.paquete.moneda?.codigo || 'USD'}
+                                        {dataDetalleResp?.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp.seña_total)} {dataDetalleResp?.paquete.moneda?.codigo || 'USD'}
                                     </p>
                                     <p className="text-sm text-gray-500">Seña requerida</p>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                    {dataDetalleTemp?.paquete.propio ? (
+                                    {dataDetalleResp?.paquete.propio ? (
                                         <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
                                         Paquete Propio
                                         </span>
                                     ) : (
                                         <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded">
-                                        {dataDetalleTemp?.paquete.distribuidora?.nombre || 'Distribuidor'}
+                                        {dataDetalleResp?.paquete.distribuidora?.nombre || 'Distribuidor'}
                                         </span>
                                     )}
 
-                                    {dataDetalleTemp?.paquete.personalizado && (
+                                    {dataDetalleResp?.paquete.personalizado && (
                                         <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">
                                         Personalizado
                                         </span>
@@ -515,8 +588,8 @@ return   <>
                                 <div>
                                     <h4 className="font-medium text-gray-900">Fecha de Inicio</h4>
                                     <p className="text-gray-600">
-                                        {/* {formatearFecha(dataDetalleTemp?.salida?.fecha_salida)} */}
-                                        {new Date(dataDetalleTemp?.salida?.fecha_salida).toLocaleDateString(
+                                        {/* {formatearFecha(dataDetalleResp?.salida?.fecha_salida)} */}
+                                        {new Date(dataDetalleResp?.salida?.fecha_salida).toLocaleDateString(
                                             'es',
                                             {
                                             weekday: 'long',
@@ -536,8 +609,8 @@ return   <>
                                 <div>
                                     <h4 className="font-medium text-gray-900">Fecha de Fin</h4>
                                     <p className="text-gray-600">
-                                        {/* {formatearFecha(dataDetalleTemp?.salida?.fecha_salida)} */}
-                                        {new Date(dataDetalleTemp?.salida?.fecha_regreso).toLocaleDateString(
+                                        {/* {formatearFecha(dataDetalleResp?.salida?.fecha_salida)} */}
+                                        {new Date(dataDetalleResp?.salida?.fecha_regreso).toLocaleDateString(
                                             'es',
                                             {
                                             weekday: 'long',
@@ -557,7 +630,7 @@ return   <>
                                 <div>
                                     <h4 className="font-medium text-gray-900">Precio de Salida</h4>
                                     <p className="text-gray-600 font-bold">
-                                        {formatearSeparadorMiles.format(dataDetalleTemp?.precio_unitario)}
+                                        {formatearSeparadorMiles.format(dataDetalleResp?.precio_unitario)}
                                     </p>
                                 </div>
                             </div>
@@ -578,11 +651,11 @@ return   <>
                                 <Building className="w-6 h-6 text-orange-600" />
                                 <div>
                                     <h4 className="font-semibold text-gray-900">
-                                        {dataDetalleTemp?.hotel?.nombre}
+                                        {dataDetalleResp?.hotel?.nombre}
                                     </h4>
                                     <div className="flex items-center space-x-1">
                                     <span className="text-sm text-gray-500 ml-1">
-                                        {renderStars(dataDetalleTemp.hotel.estrellas)}
+                                        {renderStars(dataDetalleResp.hotel.estrellas)}
                                     </span>
                                     </div>
                                 </div>
@@ -593,10 +666,10 @@ return   <>
                                 <Users className="w-6 h-6 text-orange-600" />
                                 <div>
                                     <h4 className="font-semibold text-gray-900">
-                                        {dataDetalleTemp?.habitacion?.tipo_display}
+                                        {dataDetalleResp?.habitacion?.tipo_display}
                                     </h4>
                                     <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                    <span>Capacidad: {dataDetalleTemp?.cantidad_pasajeros} personas</span>
+                                    <span>Capacidad: {dataDetalleResp?.cantidad_pasajeros} personas</span>
                                     <span className="font-medium">
                                         {/* {booking.habitacion_seleccionada.precio_adicional > 0 
                                         ? `+${booking.paquete.moneda?.simbolo || '$'}${booking.habitacion_seleccionada.precio_adicional.toLocaleString()}`
@@ -618,7 +691,7 @@ return   <>
                         <div>
                             <p className="font-medium text-gray-900">
                                 {/* {new Date(booking.fecha_reserva).toLocaleDateString()} */}
-                                {formatearFecha(dataDetalleTemp?.fecha_reserva, false)}
+                                {formatearFecha(dataDetalleResp?.fecha_reserva, false)}
                             </p>
                             <p className="text-sm text-gray-500">Fecha de reserva</p>
                         </div>
@@ -632,29 +705,29 @@ return   <>
                 <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <h3 className="text-2xl font-semibold text-gray-900">
-                    Lista de Pasajeros ({dataDetalleTemp?.cantidad_pasajeros})
+                    Lista de Pasajeros ({dataDetalleResp?.cantidad_pasajeros})
                     </h3>
                     {(() => {
-                    const pasajerosPorAsignar = dataDetalleTemp?.pasajeros?.filter(
+                    const pasajerosPorAsignar = dataDetalleResp?.pasajeros?.filter(
                         (pasajero: any) => pasajero.persona?.nombre?.toLowerCase().includes('por asignar')
                     )?.length || 0;
 
                     return (
                         <>
                           <div className='flex items-center gap-5'>
-                            {dataDetalleTemp?.puede_descargar_factura_global  &&
+                            {dataDetalleResp?.puede_descargar_factura_global  &&
                               <div>
                                   <Button
                                       disabled={isPendingDescargaFacturaGlobal}
                                       onClick={() => {
-                                            if(dataDetalleTemp.factura_global_generada){
-                                              handleDescargarFacturaGlobal(dataDetalleTemp?.id)
+                                            if(dataDetalleResp.factura_global_generada){
+                                              handleDescargarFacturaGlobal(dataDetalleResp?.id)
                                             }
                                             else{
                                               setIsGenerarFacturaOpen(true);
                                               setTipoFacturaAgenerarse("global");
                                             }
-                                          // handleDescargarFacturaGlobal(dataDetalleTemp?.id)
+                                          // handleDescargarFacturaGlobal(dataDetalleResp?.id)
                                       }}
                                       className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
                                       size="lg"
@@ -674,7 +747,7 @@ return   <>
 
                             <div>
                                 <Button
-                                    disabled={dataDetalleTemp?.esta_totalmente_pagada}
+                                    disabled={dataDetalleResp?.esta_totalmente_pagada}
                                     onClick={() => {
                                         setSelectedPassengerId(undefined);
                                         setIsPagoParcialModalOpen(true);
@@ -703,9 +776,9 @@ return   <>
                 })()}
                 </div>
 
-                {dataDetalleTemp?.pasajeros.length > 0 ? (
+                {dataDetalleResp?.pasajeros.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {dataDetalleTemp?.pasajeros.map((pasajero: any, index: number) => (
+                        {dataDetalleResp?.pasajeros.map((pasajero: any, index: number) => (
                         <div key={pasajero.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
                             <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center space-x-3">
@@ -753,7 +826,7 @@ return   <>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
                                   <span className="text-gray-500">
-                                    Pagado: {formatearSeparadorMiles.format(dataDetalleTemp.precio_unitario - (pasajero.saldo_pendiente || 0))}
+                                    Pagado: {formatearSeparadorMiles.format(dataDetalleResp.precio_unitario - (pasajero.saldo_pendiente || 0))}
                                   </span>
                                   <span className={`font-medium ${pasajero.saldo_pendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                     Saldo: {formatearSeparadorMiles.format(pasajero.saldo_pendiente || 0)}
@@ -945,7 +1018,7 @@ return   <>
                                                     if(pasajero.factura_individual_generada){
                                                         //DESCARGA DIRECTA (FACTURA YA GENERADA)
                                                         const params = `?pasajero_id=${pasajero.id}`;
-                                                        handleDescargarFacturaIndividual(dataDetalleTemp?.id, params)
+                                                        handleDescargarFacturaIndividual(dataDetalleResp?.id, params)
                                                     }
                                                     else{
                                                       //ABRE EL FOMRULARIO DE DESCARGA (FACTURA POR GENERARSE)
@@ -993,7 +1066,7 @@ return   <>
                         </h3>
                         <p className="text-gray-600 mb-4">
                             {/* Esta reserva fue creada en modo rápido con {booking.cantidad_pasajeros} pasajero{booking.cantidad_pasajeros !== 1 ? 's' : ''}. */}
-                            Esta reserva fue creada en modo rápido con ASFAS pasajero{dataDetalleTemp.cantidad_pasajeros !== 1 ? 's' : ''}.
+                            Esta reserva fue creada en modo rápido con ASFAS pasajero{dataDetalleResp.cantidad_pasajeros !== 1 ? 's' : ''}.
                         </p>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
                             <div className="flex items-center space-x-2 mb-2">
@@ -1019,7 +1092,7 @@ return   <>
                     {/* {booking.pagos && booking.pagos.length > 0 && ( */}
 
                     {/* Botón para registrar nuevo pago */}
-                    {dataDetalleTemp.saldo_pendiente > 0 && (
+                    {dataDetalleResp.saldo_pendiente > 0 && (
                         <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-xl border-2 border-blue-200">
                             <div className="flex items-center justify-between">
                                 <div className="flex-1">
@@ -1028,7 +1101,7 @@ return   <>
                                         Registrar Pago
                                     </h3>
                                     <p className="text-sm text-gray-600">
-                                        Saldo pendiente: {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp.saldo_pendiente)}
+                                        Saldo pendiente: {dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp.saldo_pendiente)}
                                     </p>
                                 </div>
                                 <Button
@@ -1052,18 +1125,18 @@ return   <>
                                 <DollarSign className="w-8 h-8 text-blue-600" />
                                 <span className="text-2xl font-bold text-blue-600">
                                 {/* {booking.paquete.moneda?.simbolo || '$'}{booking.monto_total.toLocaleString()} */}
-                                {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp.costo_total_estimado)}
+                                {dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp.costo_total_estimado)}
                                 </span>
                             </div>
                             <h3 className="font-semibold text-gray-900">Total</h3>
-                            <p className="text-sm text-gray-600">{dataDetalleTemp.paquete.moneda?.codigo || 'USD'}</p>
+                            <p className="text-sm text-gray-600">{dataDetalleResp.paquete.moneda?.codigo || 'USD'}</p>
                         </div>
 
                         <div className="bg-green-50 p-6 rounded-xl">
                             <div className="flex items-center justify-between mb-3">
                                 <CheckCircle className="w-8 h-8 text-green-600" />
                                 <span className="text-2xl font-bold text-green-600">
-                                {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp.monto_pagado)}
+                                {dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp.monto_pagado)}
                                 </span>
                             </div>
                             <div className="flex justify-between">
@@ -1078,16 +1151,16 @@ return   <>
                             </div>
                         </div>
 
-                        <div className={`p-6 rounded-xl ${dataDetalleTemp.saldo_pendiente > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                        <div className={`p-6 rounded-xl ${dataDetalleResp.saldo_pendiente > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
                             <div className="flex items-center justify-between mb-3">
-                                <AlertCircle className={`w-8 h-8 ${dataDetalleTemp.saldo_pendiente > 0 ? 'text-red-600' : 'text-gray-600'}`} />
-                                <span className={`text-2xl font-bold ${dataDetalleTemp.saldo_pendiente > 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                                {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp.saldo_pendiente)}
+                                <AlertCircle className={`w-8 h-8 ${dataDetalleResp.saldo_pendiente > 0 ? 'text-red-600' : 'text-gray-600'}`} />
+                                <span className={`text-2xl font-bold ${dataDetalleResp.saldo_pendiente > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                                {dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp.saldo_pendiente)}
                                 </span>
                             </div>
                             <h3 className="font-semibold text-gray-900">Pendiente</h3>
                             <p className="text-sm text-gray-600">
-                                {dataDetalleTemp.saldo_pendiente > 0 ? 'Por pagar' : 'Completado'}
+                                {dataDetalleResp.saldo_pendiente > 0 ? 'Por pagar' : 'Completado'}
                             </p>
                         </div>
                     </div>
@@ -1098,7 +1171,7 @@ return   <>
                             <FileText className="w-6 h-6 mr-3 text-gray-600" />
                             Modalidad de facturación:
                           </h3>
-                          <span className='text-gray-600 font-600'>{dataDetalleTemp.modalidad_facturacion_display}</span>
+                          <span className='text-gray-600 font-600'>{dataDetalleResp.modalidad_facturacion_display}</span>
                         </div>
                     </div>
 
@@ -1136,13 +1209,13 @@ return   <>
                                     <div>
                                         <p className="text-sm text-gray-500">Precio por persona</p>
                                         <p className="font-medium text-gray-900">
-                                            {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp?.precio_unitario)} {dataDetalleTemp.paquete.moneda?.codigo || 'USD'}
+                                            {dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp?.precio_unitario)} {dataDetalleResp.paquete.moneda?.codigo || 'USD'}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Seña requerida por persona</p>
                                         <p className="font-medium text-gray-900">
-                                            {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp?.salida?.senia)} {dataDetalleTemp.paquete.moneda?.codigo || 'USD'}
+                                            {dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp?.salida?.senia)} {dataDetalleResp.paquete.moneda?.codigo || 'USD'}
                                         </p>
                                     </div>
                                 </div>
@@ -1156,10 +1229,10 @@ return   <>
                         <div className="space-y-3">
                         <div className="flex justify-between items-center py-2">
                             <span className="text-gray-600">
-                            Precio base ({dataDetalleTemp?.cantidad_pasajeros} pasajero{dataDetalleTemp?.cantidad_pasajeros !== 1 ? 's' : ''})
+                            Precio base ({dataDetalleResp?.cantidad_pasajeros} pasajero{dataDetalleResp?.cantidad_pasajeros !== 1 ? 's' : ''})
                             </span>
                             <span className="font-medium">
-                            {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp?.costo_total_estimado)} {dataDetalleTemp.paquete.moneda?.codigo || 'USD'}
+                            {dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp?.costo_total_estimado)} {dataDetalleResp.paquete.moneda?.codigo || 'USD'}
                             </span>
                         </div>
                         <div className="flex justify-between items-center py-2">
@@ -1167,22 +1240,22 @@ return   <>
                                 Seña mínima requerida
                             </span>
                             <span className="font-medium text-orange-600">
-                                {dataDetalleTemp.paquete.moneda?.simbolo || '$'}{(formatearSeparadorMiles.format(dataDetalleTemp?.seña_total)).toLocaleString()} {dataDetalleTemp.paquete.moneda?.codigo || 'USD'}
+                                {dataDetalleResp.paquete.moneda?.simbolo || '$'}{(formatearSeparadorMiles.format(dataDetalleResp?.seña_total)).toLocaleString()} {dataDetalleResp.paquete.moneda?.codigo || 'USD'}
                             </span>
                         </div>
                         <div className="border-t border-gray-200 pt-3">
                             <div className="flex justify-between items-center text-lg font-semibold">
                             <span>Total</span>
-                            <span>{dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp?.costo_total_estimado)} {dataDetalleTemp.paquete.moneda?.codigo || 'USD'}</span>
+                            <span>{dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp?.costo_total_estimado)} {dataDetalleResp.paquete.moneda?.codigo || 'USD'}</span>
                             </div>
                         </div>
                         <div className="flex justify-between items-center text-green-600">
                             <span>Pagado</span>
-                            <span>{dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp?.monto_pagado)} {dataDetalleTemp.paquete.moneda?.codigo || 'USD'}</span>
+                            <span>{dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp?.monto_pagado)} {dataDetalleResp.paquete.moneda?.codigo || 'USD'}</span>
                         </div>
                         <div className="flex justify-between items-center text-red-600 font-medium">
                             <span>Saldo pendiente</span>
-                            <span>{dataDetalleTemp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleTemp?.saldo_pendiente)} {dataDetalleTemp.paquete.moneda?.codigo || 'USD'}</span>
+                            <span>{dataDetalleResp.paquete.moneda?.simbolo || '$'}{formatearSeparadorMiles.format(dataDetalleResp?.saldo_pendiente)} {dataDetalleResp.paquete.moneda?.codigo || 'USD'}</span>
                         </div>
                         </div>
                     </div>
@@ -1195,7 +1268,7 @@ return   <>
                       </h3>
                       <div className="space-y-3">
                           {/* {[booking.pagos].map((pago) => ( */}
-                          {dataDetalleTemp.comprobantes.map((pago: any) => (
+                          {dataDetalleResp.comprobantes.map((pago: any) => (
                           <div
                               key={pago.id}
                               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
@@ -1206,7 +1279,7 @@ return   <>
                                   </div>
                                   <div>
                                       <p className="font-medium text-gray-900">
-                                      {dataDetalleTemp.paquete.moneda?.simbolo || '$'}
+                                      {dataDetalleResp.paquete.moneda?.simbolo || '$'}
                                       {pago.monto.toLocaleString()}
                                       </p>
                                       <p className="text-sm text-gray-500">
@@ -1252,7 +1325,7 @@ return   <>
                 onClose={handleClosePagoParcialModal}
                 onConfirm={handleConfirmPagoParcial}
                 isPendingPago={isPendingPagaoParcial}
-                reservaData={dataDetalleTemp}
+                reservaData={dataDetalleResp}
                 selectedPassengerId={selectedPassengerId}
             />
         )}
@@ -1272,7 +1345,7 @@ return   <>
                 onClose={handleCloseAsigarPasajeroModal}
                 onConfirm={handleConfirmAAsignarPasajero}
                 isPending={isPendingAsignarPasajero}
-                reservaData={dataDetalleTemp}
+                reservaData={dataDetalleResp}
                 selectedPasajeroId={selectedPassengerId}
             />
         )}
@@ -1284,7 +1357,7 @@ return   <>
                 onClose={handleCloseGenerarFacturaModal}
                 onConfirm={tipoFacturaAgenerarse === "global" ? handleConfirmGenerarFacturaGlobal: handleConfirmGenerarFacturaIndividual}
                 isPending={isPendingDescargaFacturaGlobal || isPendingDescargaFacturaIndividual}
-                reservaData={dataDetalleTemp}
+                reservaData={dataDetalleResp}
                 selectedPasajeroId={selectedPassengerId}
             />
         )}

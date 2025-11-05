@@ -178,9 +178,11 @@ export interface Reserva {
   monto_pagado: number;
   estado: "pendiente" | "confirmada" |  "finalizada" | "cancelada";
   estado_display: string;
+  modalidad_facturacion: "global" | 'individual';
   pasajeros: Pasajero[];
   activo: boolean;
   fecha_modificacion: string; // ISO datetime
+  moneda: Moneda;
 
   monto_total: number;
   saldo_pendiente: number;

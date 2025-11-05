@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext } from 'react';
-import type { ClienteFacturaData } from '@/components/InfoFacturaTitular';
+import type { ClienteFacturaData } from '@/components/FormularioFacturaTitular';
 import type { InvoiceData } from '@/types/invoice';
 
 // 🧠 Context para compartir datos del modal

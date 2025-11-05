@@ -6,7 +6,7 @@ import { Card } from './ui/card';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { InfoFacturaTitular, type ClienteFacturaData } from './InfoFacturaTitular';
+import { FormularioFacturaTitular, type ClienteFacturaData } from './FormularioFacturaTitular';
 import { DescargarFacturaPreview } from './DescargarFacturaPreview';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDataConfigFactura } from './utils/httpFacturacion';
@@ -48,8 +48,14 @@ export default function GenerarFacturaModal({
   });
 
 
-  console.log(selectedPasajeroId)
+  console.log(selectedPasajeroId);
 
+  // Buscar el pasajero seleccionado si existe selectedPasajeroId
+  const pasajeroSeleccionado = selectedPasajeroId
+    ? reservaData?.pasajeros?.find((p: any) => p.id === selectedPasajeroId)?.persona
+    : null;
+
+  console.log('Pasajero seleccionado:', pasajeroSeleccionado);
   console.log('configFacturaData:', configFacturaData);
   console.log('reservaData:', reservaData);
 
@@ -70,6 +76,9 @@ export default function GenerarFacturaModal({
       telefono: data.telefono || '',
       direccion: data.direccion || '',
       tipo_documento: data.tipo_documento || '',
+      documento_original: data.documento_original,
+      factura_nombre: data.factura_nombre ?? '',
+      algunValorHaCambiado: data.algunValorHaCambiado ?? false,
     };
 
     setPayLoad(payload);
@@ -94,6 +103,14 @@ export default function GenerarFacturaModal({
     console.log('reservaData:', reservaData);
     console.log('clientData:', clientData);
 
+    // Determinar si se usa titular, pasajero o tercero
+    const esTitular = clientData.factura_nombre === 'titular';
+    const esPasajero = clientData.factura_nombre === 'pasajero';
+    const titular = reservaData.titular;
+
+    // Determinar qué persona usar (titular o pasajero)
+    const personaBase = esPasajero ? pasajeroSeleccionado : titular;
+
     return {
       // Datos de la empresa (desde config - usando los campos correctos del servicio)
       ruc: configFacturaData.empresa_nombre || '',
@@ -107,12 +124,32 @@ export default function GenerarFacturaModal({
       saleCondition: configFacturaData.condicion_venta === 'contado' ? 'Contado' : 'Crédito',
       currency: reservaData.moneda?.codigo || 'PYG',
 
-      // Datos del cliente (desde el formulario)
-      customerRuc: clientData.ruc,
-      customerName: clientData.nombre,
-      customerAddress: clientData.direccion || '',
-      customerPhone: clientData.telefono || '',
-      customerEmail: clientData.email,
+      // Datos del cliente
+      // Si es titular/pasajero: usar documento_original del formulario (puede estar modificado)
+      // Si es tercero: usar ruc del formulario
+      customerRuc: (esTitular || esPasajero)
+        ? (clientData.documento_original || personaBase?.documento || '')
+        : clientData.ruc,
+
+      // Si es titular/pasajero: usar datos de la persona base
+      // Si es tercero: usar nombre del formulario
+      customerName: (esTitular || esPasajero)
+        ? `${personaBase?.nombre || ''} ${personaBase?.apellido || ''}`.trim()
+        : clientData.nombre,
+
+      // Dirección solo para terceros (titular/pasajero no tienen dirección editable)
+      customerAddress: (esTitular || esPasajero)
+        ? (titular?.direccion || '') // Solo titular tiene dirección en el backend
+        : (clientData.direccion || ''),
+
+      // Teléfono y email de la persona base
+      customerPhone: (esTitular || esPasajero)
+        ? (personaBase?.telefono || '')
+        : (clientData.telefono || ''),
+
+      customerEmail: (esTitular || esPasajero)
+        ? (personaBase?.email || '')
+        : clientData.email,
 
       // Items (desde reservaData con datos reales)
       items: [{
@@ -123,7 +160,7 @@ export default function GenerarFacturaModal({
         unitPrice: reservaData.precio_unitario || 0,
         discount: 0,
         taxType: configFacturaData.subtipo_impuesto_nombre?.includes('10') ? 'iva10' :
-                 configFacturaData.subtipo_impuesto_nombre?.includes('5') ? 'iva5' : 'exenta'
+                configFacturaData.subtipo_impuesto_nombre?.includes('5') ? 'iva5' : 'exenta'
       }]
     };
   }
@@ -273,10 +310,13 @@ export default function GenerarFacturaModal({
                   <TabsContent value="form" className="mt-6">
                     <div className="max-w-4xl mx-auto">
                       {/* <InvoiceForm onInvoiceGenerated={handleInvoiceGenerated} /> */}
-                      <InfoFacturaTitular 
+                      <FormularioFacturaTitular
                         onInvoiceGenerated={handleInvoiceGenerated}
                         isPending={isPending}
                         onClose={onClose}
+                        titular={reservaData.titular}
+                        selectedPasajeroId={selectedPasajeroId}
+                        pasajeroSeleccionado={pasajeroSeleccionado}
                         />
                     </div>
                   </TabsContent>
