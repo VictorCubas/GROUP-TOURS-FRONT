@@ -189,6 +189,7 @@ export async function generarComprobante(reservaId: number | string) {
 }
 
 export async function pagarSenia(reservaId: number | string, payload: any) {
+  console.log(payload)
   const response = await axiosInstance.post(`/reservas/${reservaId}/registrar-senia/`, payload);
   return response.data;
 }

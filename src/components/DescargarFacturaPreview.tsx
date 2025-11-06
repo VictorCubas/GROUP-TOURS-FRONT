@@ -18,6 +18,7 @@ export function DescargarFacturaPreview({ data, onConfirm, isPending }: InvoiceP
   const { reservaData, setActiveTab, selectedPasajeroId } = useFacturaContext();
 
   console.log(reservaData)
+  console.log(data)
   console.log(selectedPasajeroId) 
 
   const calculateItemTotal = (item: (typeof data.items)[0]) => {

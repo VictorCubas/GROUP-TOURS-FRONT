@@ -48,6 +48,7 @@ export default function GenerarFacturaModal({
   });
 
 
+  console.log(reservaData)
   console.log(selectedPasajeroId);
 
   // Buscar el pasajero seleccionado si existe selectedPasajeroId
@@ -86,6 +87,7 @@ export default function GenerarFacturaModal({
     // Construir la vista previa inmediatamente
     const previewData = buildInvoicePreviewDataWithClient(data);
     if (previewData) {
+      console.log(previewData)
       setInvoiceData(previewData);
     }
 
@@ -121,7 +123,7 @@ export default function GenerarFacturaModal({
 
       // Metadata de la factura
       emissionDate: new Date().toISOString(),
-      saleCondition: configFacturaData.condicion_venta === 'contado' ? 'Contado' : 'Crédito',
+      saleCondition: reservaData.condicion_pago_display,
       currency: reservaData.moneda?.codigo || 'PYG',
 
       // Datos del cliente

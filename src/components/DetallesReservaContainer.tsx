@@ -231,12 +231,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
             setIsGenerarFacturaOpen(false);
             setTipoFacturaAgenerarse("");
 
-            const paxFilter = dataDetalleResp.pasajeros.filter((p: any) => p.id.toString() === selectedPassengerId?.toString())
-            const pax = paxFilter[0];
 
-            console.log(pax)
-
-            if(!pax.factura_individual_generada){
+            if(!dataDetalleResp.factura_global_generada){
                 queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
                 queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
             }
@@ -369,7 +365,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
 
             console.log(params)
-            // handleDescargarFacturaGlobal(dataDetalleResp?.id, params)
+            handleDescargarFacturaGlobal(dataDetalleResp?.id, params)
         }
     };
 
@@ -511,11 +507,17 @@ return   <>
                     {/* DETALLES DEL PAQUETE */}
                     <div>
                         <div className="bg-green-50 p-6 rounded-xl">
-                            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                            <Package className="w-6 h-6 mr-3 text-green-600" />
-                            Detalles del Paquete
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className='flex items-center justify-between'>
+                              <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                                <Package className="w-6 h-6 mr-3 text-green-600" />
+                                Detalles del Paquete
+                              </h3>
+
+                              <Badge className='bg-blue-500 text-blue-50 border-blue-200 h-10 font-bold text-xl'> 
+                                {dataDetalleResp.condicion_pago_display.toUpperCase()}
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-3">
                                 <div className="space-y-3">
                                     <div>
                                     <p className="font-medium text-gray-900 text-lg">
