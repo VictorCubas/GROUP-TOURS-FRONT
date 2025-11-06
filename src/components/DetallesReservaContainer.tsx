@@ -8,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState } from 'react';
-import { useAsignarPasajero, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarVoucher, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarVoucher, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
@@ -16,6 +16,7 @@ import AsignarPasajeroModal from './AsignarPasajeroModal';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import GenerarFacturaModal from './GenerarFacturaModal';
 import type { ClienteFacturaData } from './FormularioFacturaTitular';
+import AsignarTipoFacturaModal from './AsignarTipoFactura';
 
 interface DetallesReservaContainerProps{
     activeTab: 'general' | 'passengers' | 'payments';
@@ -32,6 +33,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const {handleShowToast} = use(ToastContext);
     const [isPagoParcialModalOpen, setIsPagoParcialModalOpen] = useState(false);
     const [isAsiganrPasajeroModalOpen, setIsAsiganrPasajeroModalOpen] = useState(false);
+    const [isAsiganrTipoFacturaModalOpen, setIsAsiganrTipoFacturaModalOpen] = useState(false);
     const [isGenerarFacturaOpen, setIsGenerarFacturaOpen] = useState(false);
     const [tipoFacturaAgenerarse, setTipoFacturaAgenerarse] = useState<'global' | "individual" | "">("");
     const [selectedPassengerId, setSelectedPassengerId] = useState<number | undefined>(undefined);
@@ -56,6 +58,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: generarYDescargarFacturaIndividual, isPending: isPendingDescargaFacturaIndividual } = useDescargarFacturaIndividual();
     
     const { mutate: fetchAsignarPasajero, isPending: isPendingAsignarPasajero } = useAsignarPasajero();
+
+    const { mutate: fetchAsignarTipoFacturaConModalidad, isPending: isPendingAsignarTipoFacturaModalidad } = useAsignarTipoFacturaModalidad();
     
     const { mutate: generarYDescargarVoucher, isPending: isPendingDescargaVoucher } = useDescargarVoucher();
 
@@ -203,6 +207,44 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         );
     }
 
+    const handleAsignarTipoFacturaConModalidad = (id: number, payload: any) => {
+        console.log('📦 Payload enviado al backend:', JSON.stringify(payload, null, 2));
+        console.log(payload);
+        console.log(id)
+
+        fetchAsignarTipoFacturaConModalidad(
+            { reservaId: id, payload },
+            {
+                onSuccess: (data) => {
+                console.log('✅ Persona asignada correctamente');
+                console.log('📄 Respuesta del servidor:', data);
+                handleShowToast('Persona asignada el tipo de factura satisfactoriamente', 'success'); 
+
+                // Cerrar modal
+                setIsAsiganrTipoFacturaModalOpen(false);
+                setSelectedPassengerId(undefined);
+                console.log(data)
+                // setIsReceiptModalOpen(true);
+                // setPagoSeniaRealizadaResponse(data)
+
+                // Refrescar los detalles de la reserva para ver el estado actualizado
+                queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
+                },
+                onError: (error: any) => {
+                    console.error('❌ Error al asignar persona:', error);
+                    console.error('📋 Detalles del error:', error.response?.data);
+
+                    const errorMessage = error.response?.data?.message
+                        || error.response?.data?.error
+                        || 'Error al asignar persona';
+
+                    handleShowToast(errorMessage, 'error');
+                },
+            }
+        );
+    }
+
 
     function handleDescargarPDF(id: number) {
         generarYDescargar(id, {
@@ -309,6 +351,13 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         // setPayloadReservationData(null);
     };
 
+    const handleCloseAsigarTipoFacturaModal = () => {
+        setIsAsiganrTipoFacturaModalOpen(false);
+        // setSelectedPassengerId(undefined);
+        // handleCancel()
+        // setPayloadReservationData(null);
+    };
+
     const handleCloseGenerarFacturaModal = () => {
         setIsGenerarFacturaOpen(false)
         setTipoFacturaAgenerarse("");
@@ -336,6 +385,23 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
             // Llamar a la función de pago con el ID de la reserva actual
             handleAsignarPasajero(Number(pasajeroId), payload);
+        }
+    };
+    
+     // Manejar la confirmación del modal
+    const handleConfirmAsignarTipoFactuta = (payLoad: any) => {
+        if (payLoad) {
+            console.log('modalidad:', payLoad);
+            console.log('reservaId:', reservaId);
+            // console.log('Payload generado:', pasajeroId);
+
+            // {
+            //   "modalidad_facturacion": "global",
+            //   "condicion_pago": "credito"
+            // }
+
+            // Llamar a la función de pago con el ID de la reserva actual
+            handleAsignarTipoFacturaConModalidad(Number(reservaId), payLoad);
         }
     };
 
@@ -513,9 +579,13 @@ return   <>
                                 Detalles del Paquete
                               </h3>
 
-                              <Badge className='bg-blue-500 text-blue-50 border-blue-200 h-10 font-bold text-xl'> 
-                                {dataDetalleResp.condicion_pago_display?.toUpperCase() ?? 'NO ESPECIFICADO'}
-                              </Badge>
+                              <button className="cursor-pointer px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 font-medium"
+                                  onClick={() => {
+                                    if(!dataDetalleResp?.condicion_pago)
+                                      setIsAsiganrTipoFacturaModalOpen(true)
+                                  }}> 
+                                {dataDetalleResp.condicion_pago_display?.toUpperCase() ?? 'ASIGNAR TIPO DE FACTURA'}
+                              </button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-3">
                                 <div className="space-y-3">
@@ -1313,7 +1383,7 @@ return   <>
                 onClick={() => {
                 onClose();
                 }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 font-medium"
+                className="cursor-pointer px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 font-medium"
             >
                 <CheckCircle className="w-4 h-4" />
                 <span>Aceptar</span>
@@ -1347,6 +1417,17 @@ return   <>
                 onClose={handleCloseAsigarPasajeroModal}
                 onConfirm={handleConfirmAAsignarPasajero}
                 isPending={isPendingAsignarPasajero}
+                reservaData={dataDetalleResp}
+                selectedPasajeroId={selectedPassengerId}
+            />
+        )}
+
+        {isAsiganrTipoFacturaModalOpen && (
+            <AsignarTipoFacturaModal
+                isOpen={isAsiganrTipoFacturaModalOpen}
+                onClose={handleCloseAsigarTipoFacturaModal}
+                onConfirm={handleConfirmAsignarTipoFactuta}
+                isPending={isPendingAsignarTipoFacturaModalidad}
                 reservaData={dataDetalleResp}
                 selectedPasajeroId={selectedPassengerId}
             />

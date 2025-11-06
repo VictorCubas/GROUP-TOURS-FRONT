@@ -209,6 +209,11 @@ export async function asignarPasajero(pasajeroId: number | string, payload: any)
   return response.data;
 }
 
+export async function asignarTipoFacturaModalidad(reservaId: number | string, payload: any) {
+  const response = await axiosInstance.patch(`/reservas/${reservaId}`, payload);
+  return response.data;
+}
+
 export async function descargarComprobanteById(comprobanteId: number | string) {
   const response = await axiosInstance.get(
     `/comprobantes/${comprobanteId}/descargar-pdf/`,
