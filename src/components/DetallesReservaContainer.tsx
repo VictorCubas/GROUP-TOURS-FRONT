@@ -514,7 +514,7 @@ return   <>
                               </h3>
 
                               <Badge className='bg-blue-500 text-blue-50 border-blue-200 h-10 font-bold text-xl'> 
-                                {dataDetalleResp.condicion_pago_display.toUpperCase()}
+                                {dataDetalleResp.condicion_pago_display?.toUpperCase() ?? 'NO ESPECIFICADO'}
                               </Badge>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-3">

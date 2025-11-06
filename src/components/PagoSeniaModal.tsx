@@ -61,6 +61,10 @@ export default function PagoSeniaModal({
     setPassengerDeposits(newDeposits)
   }
 
+
+  // console.log(reservationResponse);
+  console.log(reservationData);
+
   // Función para generar el payload del pago de seña
   const generarPayloadPago = () => {
     console.log(reservationResponse?.pasajeros);
@@ -153,6 +157,33 @@ export default function PagoSeniaModal({
     return payload;
   };
 
+  // Verificar si la fecha de salida permite facturación a crédito
+  // Crédito disponible cuando: fecha_actual < (fecha_salida - 15 días)
+  // Es decir, crédito solo disponible cuando faltan MÁS de 15 días para la salida
+  const fechaSalida = reservationData?.salida?.fecha_salida;
+  console.log(fechaSalida);
+  const creditoDisponible = (() => {
+    if (!fechaSalida) return false;
+
+    const fechaSalidaDate = new Date(fechaSalida);
+    const fechaActual = new Date();
+
+    // Calcular la fecha límite: fecha_salida - 15 días
+    const fechaLimite = new Date(fechaSalidaDate);
+    fechaLimite.setDate(fechaLimite.getDate() - 15);
+
+    // Crédito disponible si hoy < (fecha_salida - 15 días)
+    // Es decir, si aún faltan MÁS de 15 días para la salida
+    const disponible = fechaActual < fechaLimite;
+
+    console.log('Fecha actual:', fechaActual.toLocaleDateString());
+    console.log('Fecha salida:', fechaSalidaDate.toLocaleDateString());
+    console.log('Fecha límite (salida - 15 días):', fechaLimite.toLocaleDateString());
+    console.log('Crédito disponible:', disponible);
+
+    return disponible;
+  })();
+
   console.log('=== PagoSeniaModal Props ===')
   console.log('reservationData:', reservationData)
   console.log('reservationResponse:', reservationResponse)
@@ -162,6 +193,7 @@ export default function PagoSeniaModal({
   console.log('selectedPasajerosData:', selectedPasajerosData);
   console.log('titular:', titular);
   console.log('Titular viaja?:', reservationResponse?.pasajeros?.some((p: any) => p.es_titular));
+  console.log('Crédito disponible:', creditoDisponible);
   console.log('=== Payload Generado ===');
   console.log(JSON.stringify(generarPayloadPago(), null, 2));
 
@@ -379,34 +411,72 @@ export default function PagoSeniaModal({
                                                             // setModalidadFacturacionzzz(value);
                                                           }} className="space-y-4">
                       <div
-                        className={`mt-6 flex items-center space-x-2 rounded-lg p-4 cursor-pointer transition-all ${
-                          modalidadFacturacion === "credito"
-                            ? "border-2 border-blue-500 bg-blue-50"
-                            : "border-2 border-gray-200 hover:bg-blue-50"
+                        className={`mt-6 flex items-center space-x-2 rounded-lg p-4 transition-all ${
+                          !creditoDisponible
+                            ? "border-2 border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed"
+                            : modalidadFacturacion === "credito"
+                            ? "border-2 border-blue-500 bg-blue-50 cursor-pointer"
+                            : "border-2 border-gray-200 hover:bg-blue-50 cursor-pointer"
                         }`}
                       >
-                        <RadioGroupItem value="credito" id="credito" />
-                        <Label htmlFor="credito" className="flex items-center gap-3 cursor-pointer flex-1">
+                        <RadioGroupItem value="credito" id="credito" disabled={!creditoDisponible} />
+                        <Label htmlFor="credito" className={`flex items-center gap-3 flex-1 ${!creditoDisponible ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                           <div className='flex-col items-center gap-3 cursor-pointer flex-1'>
                             <div className='flex items-center justify-between gap-3 cursor-pointer flex-1'>
-                                <div className='flex items-center justify-between gap-3 cursor-pointer'>
+                                <div className='flex items-center justify-between gap-3'>
                                   <FileText
-                                  className={`h-6 w-6 transition-opacity ${modalidadFacturacion === "credito" ? "text-blue-600 opacity-100" : "text-blue-400 opacity-40"}`}
+                                  className={`h-6 w-6 transition-opacity ${
+                                    !creditoDisponible
+                                      ? "text-gray-400 opacity-40"
+                                      : modalidadFacturacion === "credito"
+                                      ? "text-blue-600 opacity-100"
+                                      : "text-blue-400 opacity-40"
+                                  }`}
                                 />
                                   <div>
-                                    <p className="font-semibold">Facturación a crédito</p>
-                                    <p className="text-sm text-gray-600">
+                                    <p className={`font-semibold ${!creditoDisponible ? 'text-gray-500' : ''}`}>
+                                      Facturación a crédito
+                                      {!creditoDisponible && <span className="ml-2 text-xs text-red-600">(No disponible)</span>}
+                                    </p>
+                                    <p className={`text-sm ${!creditoDisponible ? 'text-gray-400' : 'text-gray-600'}`}>
                                       Factura por el monto total de la reserva, pagando solo la seña inicial
                                     </p>
                                   </div>
                                 </div>
 
-                                <Badge className={` ${modalidadFacturacion === "credito" ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200' }`}>
+                                <Badge className={` ${
+                                  !creditoDisponible
+                                    ? 'bg-gray-200 text-gray-500 border-gray-300'
+                                    : modalidadFacturacion === "credito"
+                                    ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                    : 'bg-gray-100 text-gray-700 border-gray-200'
+                                }`}>
                                   CREDITO
                                 </Badge>
                             </div> 
 
-                            {modalidadFacturacion === "credito" && 
+                            {!creditoDisponible && (
+                              <div className="ml-9 mt-4 rounded-md border border-red-200 bg-red-50 p-3">
+                                <div className="flex items-start gap-2">
+                                  <AlertCircle className="mt-0.5 h-4 w-4 text-red-600" />
+                                  <div className="flex-1 text-sm">
+                                    <p className="font-medium text-red-900">Opción no disponible</p>
+                                    <p className="mt-1 text-red-700">
+                                      La facturación a crédito solo está disponible cuando faltan más de 15 días para la fecha de salida del paquete.
+                                    </p>
+                                    <p className="mt-2 text-xs text-red-600">
+                                      Fecha de salida: {fechaSalida ? new Date(fechaSalida).toLocaleDateString('es-PY', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                      }) : 'No disponible'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {modalidadFacturacion === "credito" && creditoDisponible &&
                               <div className="ml-9 mt-4 rounded-md border border-blue-200 bg-white p-3">
                                 <div className="flex items-start gap-2">
                                   <Clock className="mt-0.5 h-4 w-4 text-blue-600" />
