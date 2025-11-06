@@ -1429,7 +1429,6 @@ return   <>
                 onConfirm={handleConfirmAsignarTipoFactuta}
                 isPending={isPendingAsignarTipoFacturaModalidad}
                 reservaData={dataDetalleResp}
-                selectedPasajeroId={selectedPassengerId}
             />
         )}
 
