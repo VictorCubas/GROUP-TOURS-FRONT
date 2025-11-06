@@ -47,6 +47,7 @@ import {
   Heart,
   Share2,
   MapPin,
+  BoxIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -102,31 +103,8 @@ import ReservationConfirmModal from "@/components/ReservationConfirmModal"
 import PaymentReceiptModal from "@/components/PaymentReceiptModal"
 import { useDescargarComprobante, usePagarSenia, usePagoTotal } from "@/components/hooks/useDescargarPDF"
 import PagoSeniaModal from "@/components/PagoSeniaModal"
-import DetallesReservaContainer from "@/components/DetallesReservaContainer"
+import DetallesReservaContainer from "@/components/DetallesReservaContainer";
 
-// type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Reservas" | "Reservas" | "Roles" | "Reservas" | "Reportes"
-
-
-// const moduleColors = {
-//   Usuarios: "bg-emerald-50 text-emerald-600 border-emerald-200",
-//   Reservas: "bg-emerald-50 text-emerald-600 border-emerald-200",
-//   Reservas: "bg-orange-50 text-orange-600 border-orange-200",
-//   Roles: "bg-yellow-50 text-yellow-600 border-yellow-200",
-//   Reservas: "bg-pink-50 text-pink-600 border-pink-200",
-//   Reportes: "bg-indigo-50 text-indigo-600 border-indigo-200",
-// }
-
-// const tipoPersonaColores = {
-//   fisica: "bg-blue-100 text-blue-700 border-blue-200",
-//   juridica: "bg-emerald-100 text-emerald-700 border-emerald-200",
-// }
-
-
-// const tipoRemuneracionColores = {
-//   salario: "bg-blue-100 text-blue-700 border-blue-200",
-//   comision: "bg-blue-100 text-blue-700 border-blue-200",
-//   mixto: "bg-emerald-100 text-emerald-700 border-emerald-200",
-// }
 
 let dataList: Reserva[] = [];
 let tipoReservaFilterList: any[] = [];
@@ -3058,6 +3036,7 @@ export default function ReservaPage() {
                           <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                           <TableHead className="font-semibold text-gray-700">Pago</TableHead>
                           <TableHead className="font-semibold text-gray-700">Precio Unitario</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Facturación</TableHead>
                           <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3157,6 +3136,25 @@ export default function ReservaPage() {
                                 <div className="font-medium text-gray-900 truncate max-w-xs">{data.paquete.moneda.simbolo}{formatearSeparadorMiles.format(data?.precio_unitario ?? 0)}</div>
                                 {/* <div className="text-sm text-gray-500 truncate max-w-xs">{data.titular.telefono}</div> */}
                               </div>
+                            </TableCell>     
+
+                            <TableCell>
+                               <Badge className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                                {/* {capitalizePrimeraLetra(data.modalidad_facturacion === 'global' ?
+                                   'Por paquete' 
+                                   : 'Por pasajero')} */}
+
+                                   {data.modalidad_facturacion === 'global' ? 
+                                    <>
+                                       <BoxIcon  className="h-5 w-5 text-gray-500" />
+                                       <span>Paquete</span>
+                                    </>
+                                   :
+                                    <>
+                                      <User  className="h-5 w-5 text-gray-500" />
+                                       <span>Pasajero</span>
+                                    </>}
+                              </Badge>
                             </TableCell>     
                           
       

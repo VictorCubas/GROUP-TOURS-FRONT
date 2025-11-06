@@ -189,6 +189,7 @@ export async function generarComprobante(reservaId: number | string) {
 }
 
 export async function pagarSenia(reservaId: number | string, payload: any) {
+  console.log(payload)
   const response = await axiosInstance.post(`/reservas/${reservaId}/registrar-senia/`, payload);
   return response.data;
 }
@@ -205,6 +206,11 @@ export async function registrarPago(reservaId: number | string, payload: any) {
 
 export async function asignarPasajero(pasajeroId: number | string, payload: any) {
   const response = await axiosInstance.patch(`/reservas/pasajeros/${pasajeroId}`, payload);
+  return response.data;
+}
+
+export async function asignarTipoFacturaModalidad(reservaId: number | string, payload: any) {
+  const response = await axiosInstance.patch(`/reservas/${reservaId}`, payload);
   return response.data;
 }
 
@@ -231,9 +237,17 @@ export async function descargarComprobanteById(comprobanteId: number | string) {
   return response;
 }
 
-export async function descargarFacturaGlobalById(id: number | string) {
+export async function descargarFacturaGlobalById(id: number | string, params: string | null) {
+  let url_fetch = `/reservas/${id}/descargar-factura-global/`;
+
+  if(params)
+    url_fetch += `${params}`
+
+
+  console.log(url_fetch);
+
   const response = await axiosInstance.get(
-    `/reservas/${id}/descargar-factura-global/`,
+    url_fetch,
     { responseType: 'blob' } // 👈 importante: indica que es un archivo binario
   );
 
@@ -254,15 +268,21 @@ export async function descargarFacturaGlobalById(id: number | string) {
   return response;
 }
 
-export async function descargarFacturaIndividualById(reservaId: number | string, pasajeroId: number | string) {
+export async function descargarFacturaIndividualById(reservaId: number | string, params: string) {
+  let url_fetch = `/reservas/${reservaId}/descargar-factura-individual/`;
+
+  if(params)
+    url_fetch += `${params}`
+
+
   const response = await axiosInstance.get(
-    `/reservas/${reservaId}/descargar-factura-individual/?pasajero_id=${pasajeroId}`,
-    { responseType: 'blob' }
+      url_fetch,
+      { responseType: 'blob' }
   );
 
   // Intentar obtener el nombre desde el header Content-Disposition
   const disposition = response.headers['content-disposition'];
-  let filename = `factura-${pasajeroId}.pdf`; // valor por defecto
+  let filename = `factura-${reservaId}.pdf`; // valor por defecto
 
   if (disposition && disposition.includes('filename=')) {
     const filenameMatch = disposition.match(/filename="?([^"]+)"?/);

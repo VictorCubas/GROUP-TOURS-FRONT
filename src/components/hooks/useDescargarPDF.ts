@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from '@tanstack/react-query';
-import { asignarPasajero, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
+import { asignarPasajero, asignarTipoFacturaModalidad, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
 
 export function useDescargarPDF() {
     return useMutation({
@@ -28,8 +28,9 @@ export function useDescargarComprobante() {
 
 export function useDescargarFacturaGlobal() {
   return useMutation({
-    mutationFn: async (id: number | string) => {
-      await descargarFacturaGlobalById(id);
+    // mutationFn: async (id: number | string) => {
+    mutationFn: async ({id, params}: {id: number | string, params: string | null}) => {
+      await descargarFacturaGlobalById(id, params);
     },
     onSuccess: (data) => {
       console.log('✅ Factura generado y PDF descargado:', data);
@@ -44,8 +45,8 @@ export function useDescargarFacturaGlobal() {
 
 export function useDescargarFacturaIndividual() {
   return useMutation({
-    mutationFn: async ({ reservaId, pasajeroId }: { reservaId: number | string; pasajeroId: number | string }) => {
-      await descargarFacturaIndividualById(reservaId, pasajeroId);
+    mutationFn: async ({ reservaId, params }: { reservaId: number | string; params: string }) => {
+      await descargarFacturaIndividualById(reservaId, params);
     },
     onSuccess: (data) => {
       console.log('✅ Factura generada y PDF descargada:', data);
@@ -106,6 +107,15 @@ export function useAsignarPasajero() {
   return useMutation({
     mutationFn: async ({ pasajeroId, payload }: { pasajeroId: number | string; payload: any }) => {
       const data = await asignarPasajero(pasajeroId, payload);
+      return data;
+    },
+  });
+}
+
+export function useAsignarTipoFacturaModalidad() {
+  return useMutation({
+    mutationFn: async ({ reservaId, payload }: { reservaId: number | string; payload: any }) => {
+      const data = await asignarTipoFacturaModalidad(reservaId, payload);
       return data;
     },
   });

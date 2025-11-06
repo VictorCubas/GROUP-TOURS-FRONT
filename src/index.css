@@ -313,6 +313,11 @@ div:has(> table) {
   height: fit-content !important; 
 }
 
+.tabla-facturacion-preview:has(> table) {
+  height: fit-content !important; 
+  min-height: 20vh;
+}
+
 .absolute-center{
     position: absolute;
     top: 50%;
