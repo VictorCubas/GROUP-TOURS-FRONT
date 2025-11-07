@@ -70,25 +70,6 @@ export default function GenerarNotaCreditoModal({
 
   const {handleShowToast} = useContext(ToastContext);
 
-  // Verificar si la fecha de salida permite facturación a crédito
-  // Crédito disponible cuando: fecha_actual < (fecha_salida - 15 días)
-  // Es decir, crédito solo disponible cuando faltan MÁS de 15 días para la salida
-  const fechaSalida = reservaData?.salida?.fecha_salida;
-  const creditoDisponible = (() => {
-    if (!fechaSalida) return false;
-
-    const fechaSalidaDate = new Date(fechaSalida);
-    const fechaActual = new Date();
-
-    // Calcular la fecha límite: fecha_salida - 15 días
-    const fechaLimite = new Date(fechaSalidaDate);
-    fechaLimite.setDate(fechaLimite.getDate() - 15);
-
-    // Crédito disponible si hoy < (fecha_salida - 15 días)
-    // Es decir, si aún faltan MÁS de 15 días para la salida
-    return fechaActual < fechaLimite;
-  })();
-
   if (!isOpen) return null;
 
 
