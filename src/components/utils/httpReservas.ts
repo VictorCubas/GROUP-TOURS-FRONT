@@ -268,6 +268,66 @@ export async function descargarFacturaGlobalById(id: number | string, params: st
   return response;
 }
 
+export async function generarNotaCreditoGlobal(id: number | string, payload: any) {
+  const urlGenerar = `/facturacion/generar-nota-credito-total/${id}`;
+
+  try {
+    // 1️⃣ Generar la nota de crédito
+    const response = await axiosInstance.post(urlGenerar, payload);
+
+    // Asumimos que el backend devuelve el ID de la nota de crédito generada
+    const notaCreditoId = response.data?.nota_credito?.id;
+
+    if (!notaCreditoId) {
+      throw new Error('No se recibió el ID de la nota de crédito generada.');
+    }
+
+    // 2️⃣ Descargar el PDF correspondiente
+    await descargarPdfNotaCredito(notaCreditoId);
+
+    return response;
+  } catch (error) {
+    console.error('❌ Error al generar o descargar la nota de crédito:', error);
+    throw error;
+  }
+}
+
+// 🔽 Servicio auxiliar para descargar el PDF
+async function descargarPdfNotaCredito(notaCreditoId: number | string) {
+  const urlDescarga = `/facturacion/descargar-pdf-nota-credito/${notaCreditoId}`;
+
+  try {
+    const response = await axiosInstance.get(urlDescarga, {
+      responseType: 'blob',
+    });
+
+    // Intentar obtener el nombre del archivo
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = `nota-credito-${notaCreditoId}.pdf`;
+
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) {
+        fileName = decodeURIComponent(match[1]);
+      }
+    }
+
+    // Crear el archivo descargable
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('⚠️ Error al descargar el PDF de la nota de crédito:', error);
+    throw error;
+  }
+}
+
 export async function descargarFacturaIndividualById(reservaId: number | string, params: string) {
   let url_fetch = `/reservas/${reservaId}/descargar-factura-individual/`;
 

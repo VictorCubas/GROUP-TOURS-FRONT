@@ -50,6 +50,7 @@ import {
   BoxIcon,
 } from "lucide-react"
 
+import { MdOutlinePending } from "react-icons/md";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -104,6 +105,7 @@ import PaymentReceiptModal from "@/components/PaymentReceiptModal"
 import { useDescargarComprobante, usePagarSenia, usePagoTotal } from "@/components/hooks/useDescargarPDF"
 import PagoSeniaModal from "@/components/PagoSeniaModal"
 import DetallesReservaContainer from "@/components/DetallesReservaContainer";
+import { TbInvoice } from "react-icons/tb"
 
 
 let dataList: Reserva[] = [];
@@ -3036,7 +3038,7 @@ export default function ReservaPage() {
                           <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                           <TableHead className="font-semibold text-gray-700">Pago</TableHead>
                           <TableHead className="font-semibold text-gray-700">Precio Unitario</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Facturación</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Modalidad Factura</TableHead>
                           <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3139,23 +3141,57 @@ export default function ReservaPage() {
                             </TableCell>     
 
                             <TableCell>
-                               <Badge className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                               <Badge className={`${!data.modalidad_facturacion ? 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800': 
+                                      'text-xs bg-blue-100 text-blue-700 border-blue-200'
+                               }`}>
                                 {/* {capitalizePrimeraLetra(data.modalidad_facturacion === 'global' ?
                                    'Por paquete' 
                                    : 'Por pasajero')} */}
-
-                                   {data.modalidad_facturacion === 'global' ? 
+                                   {!data.modalidad_facturacion ? 
                                     <>
                                        <BoxIcon  className="h-5 w-5 text-gray-500" />
-                                       <span>Paquete</span>
+                                       <span>Por asignarse</span>
                                     </>
                                    :
                                     <>
-                                      <User  className="h-5 w-5 text-gray-500" />
-                                       <span>Pasajero</span>
+                                          {data.modalidad_facturacion === 'global' &&
+                                              <>
+                                                <BoxIcon  className="h-5 w-5 text-gray-500" />
+                                                <span>Paquete</span>
+                                              </>
+                                            }
+
+                                          {data.modalidad_facturacion === 'individual' &&
+                                              <>
+                                                <User  className="h-5 w-5 text-gray-500" />
+                                                <span>Pasajero</span>
+                                              </>}
                                     </>}
+                                    
                               </Badge>
                             </TableCell>     
+
+                            <TableCell>
+                               <Badge className={`${!data.condicion_pago ? 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800': 
+                                      'text-xs bg-blue-100 text-blue-700 border-blue-200'
+                               }`}>
+                                {/* {capitalizePrimeraLetra(data.modalidad_facturacion === 'global' ?
+                                   'Por paquete' 
+                                   : 'Por pasajero')} */}
+                                   {!data.condicion_pago ? 
+                                    <>
+                                       <MdOutlinePending  className="h-5 w-5 text-gray-500" />
+                                       <span>Por asignarse</span>
+                                    </>
+                                   :
+                                    <>
+                                    <TbInvoice className="h-5 w-5 text-gray-500" />
+                                    <span>{data.condicion_pago_display}</span>
+                                  </>}
+                                    
+                              </Badge>
+                            </TableCell>     
+                            {/* condicion_pago_display */}
                           
       
                             

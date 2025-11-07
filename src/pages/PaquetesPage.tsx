@@ -3322,7 +3322,7 @@ const handleSubmitClick = useCallback(async () => {
                                     >
                                       <div className="flex items-center mb-2">
                                         <Tag className="w-5 h-5 text-orange-600 mr-2" />
-                                        <span className="font-medium text-gray-900">Promoción Especial</span>
+                                        <span className="font-medium text-gray-900">Paquete cerrado</span>
                                       </div>
                                       <p className="text-sm text-gray-600">
                                         Hotel y habitación predefinidos con precio fijo.

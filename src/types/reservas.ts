@@ -181,6 +181,8 @@ export interface Reserva {
   modalidad_facturacion: "global" | 'individual';
   pasajeros: Pasajero[];
   activo: boolean;
+  condicion_pago: string;
+  condicion_pago_display: string;
   fecha_modificacion: string; // ISO datetime
   moneda: Moneda;
 
