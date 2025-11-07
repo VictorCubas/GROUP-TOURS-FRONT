@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from '@tanstack/react-query';
-import { asignarPasajero, asignarTipoFacturaModalidad, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
+import { asignarPasajero, asignarTipoFacturaModalidad, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, generarNotaCreditoGlobal, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
 
 export function useDescargarPDF() {
     return useMutation({
@@ -99,7 +99,7 @@ export function useRegistrarPagoParcial() {
     mutationFn: async ({ reservaId, payload }: { reservaId: number | string; payload: any }) => {
       const data = await registrarPago(reservaId, payload);
       return data;
-    },
+    }, 
   });
 }
 
@@ -120,3 +120,33 @@ export function useAsignarTipoFacturaModalidad() {
     },
   });
 }
+
+export function useGenerarNotaCreditoGlobal() {
+  return useMutation({
+    mutationFn: async ({ facturaId, payload }: { facturaId: number | string; payload: any }) => {
+      const data = await generarNotaCreditoGlobal(facturaId, payload);
+      return data;
+    },
+  });
+}
+
+// export function useDescargarFacturaGlobal() {
+//   return useMutation({
+//     // mutationFn: async (id: number | string) => {
+//     mutationFn: async ({id, params}: {id: number | string, params: string | null}) => {
+//       await descargarFacturaGlobalById(id, params);
+//     },
+//     onSuccess: (data) => {
+//       console.log('✅ Factura generado y PDF descargado:', data);
+//       // Ejemplo: toast.success('Comprobante generado correctamente');
+//     },
+//     onError: (error) => {
+//       console.error('❌ Error al generar o descargar la factura:', error);
+//       // toast.error('No se pudo generar el comprobante');
+//     },
+//   });
+// }
+
+
+
+// /api/facturacion/descargar-pdf-nota-credito/{nota_credito_id}/
