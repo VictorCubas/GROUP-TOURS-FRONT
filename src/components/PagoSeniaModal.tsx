@@ -17,7 +17,6 @@ interface PagoSeniaModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (payload: any, aymentType: "deposit" | "full") => void;
-  reservationData: any;
   isPendingPagarSenia: boolean;
   reservationResponse: any;
   seniaPorPersona: number;
@@ -31,7 +30,6 @@ export default function PagoSeniaModal({
   isOpen,
   onClose,
   onConfirm,
-  reservationData,
   isPendingPagarSenia,
   reservationResponse,
   seniaPorPersona,
@@ -62,8 +60,6 @@ export default function PagoSeniaModal({
   }
 
 
-  // console.log(reservationResponse);
-  console.log(reservationData);
 
   // Función para generar el payload del pago de seña
   const generarPayloadPago = () => {
@@ -160,7 +156,7 @@ export default function PagoSeniaModal({
   // Verificar si la fecha de salida permite facturación a crédito
   // Crédito disponible cuando: fecha_actual < (fecha_salida - 15 días)
   // Es decir, crédito solo disponible cuando faltan MÁS de 15 días para la salida
-  const fechaSalida = reservationData?.salida?.fecha_salida;
+  const fechaSalida = reservationResponse?.salida?.fecha_salida;
   console.log(fechaSalida);
   const creditoDisponible = (() => {
     if (!fechaSalida) return false;
@@ -185,7 +181,6 @@ export default function PagoSeniaModal({
   })();
 
   console.log('=== PagoSeniaModal Props ===')
-  console.log('reservationData:', reservationData)
   console.log('reservationResponse:', reservationResponse)
   console.log('seniaPorPersona:', seniaPorPersona)
   console.log('cantidadActualPasajeros:', cantidadActualPasajeros)
@@ -242,13 +237,13 @@ export default function PagoSeniaModal({
                 <CheckCircle2 className="mb-4 h-16 w-16 text-green-600" />
                 <h1 className="mb-2 text-2xl font-bold text-green-900">¡Reserva Creada Exitosamente!</h1>
                 <p className="text-gray-600">
-                  Tu número de reserva es: <span className="font-mono font-bold text-green-700">{reservationData.codigo}</span>
+                  Tu número de reserva es: <span className="font-mono font-bold text-green-700">{reservationResponse?.codigo}</span>
                 </p>
 
                 <div className="mb-6 flex justify-center items-center text-center mt-2 gap-1">
                   <span className="text-sm font-medium text-green-800">Estado actual:</span>
                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-                    {reservationData?.estado_display || 'PENDIENTE DE SEÑA'}
+                    {reservationResponse?.estado_display || 'PENDIENTE DE SEÑA'}
                   </span>
                 </div>
               </div>

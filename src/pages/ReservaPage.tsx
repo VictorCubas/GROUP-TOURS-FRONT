@@ -1318,152 +1318,6 @@ export default function ReservaPage() {
   //    handleDescargarPDF(reservaRealizadaResponse?.id)
   // }
 
-  const sampleReservation =  {
-    "id": 15,
-    "codigo": "RSV-2025-0015",
-    "observacion": "Reserva para grupo familiar",
-    "titular": {
-      "id": 8,
-      "nombre": "María",
-      "apellido": "González",
-      "documento": "4567890",
-      "email": "maria.gonzalez@example.com",
-      "telefono": "0981234567"
-    },
-    "paquete": {
-      "id": 3,
-      "nombre": "Tour a Encarnación - 3 días",
-      "descripcion": "Paquete turístico completo a la ciudad de Encarnación",
-      "duracion_dias": 3,
-      "duracion_noches": 2,
-      "tipo_transporte": "terrestre",
-      "incluye_almuerzo": true,
-      "incluye_cena": true,
-      "imagen": "/media/paquetes/encarnacion.jpg",
-      "tipo_paquete": {
-        "id": 1,
-        "nombre": "Nacional"
-      },
-      "destino": {
-        "id": 5,
-        "ciudad": {
-          "id": 10,
-          "nombre": "Encarnación"
-        }
-      },
-      "moneda": {
-        "id": 1,
-        "nombre": "Guaraníes",
-        "codigo": "PYG",
-        "simbolo": "₲"
-      },
-      "modalidad": "flexible",
-      "es_propio": true,
-      "activo": true
-    },
-    "salida": {
-      "id": 12,
-      "fecha_salida": "2025-11-15T08:00:00Z",
-      "fecha_regreso": "2025-11-17T18:00:00Z",
-      "precio_actual": 1500000.00,
-      "precio_final": 2000000.00,
-      "senia": 500000.00
-    },
-    "hotel": {
-      "id": 7,
-      "nombre": "Hotel Plaza Encarnación",
-      "direccion": "Av. Mariscal López 1234",
-      "estrellas": 4
-    },
-    "habitacion": {
-      "id": 22,
-      "numero": "305",
-      "tipo": "doble",
-      "capacidad": 2,
-      "precio_noche": 350000.00,
-      "hotel_nombre": "Hotel Plaza Encarnación"
-    },
-    "fecha_reserva": "2025-10-25T14:30:45.123456Z",
-    "cantidad_pasajeros": 3,
-    "precio_unitario": 1750000.00,
-    "precio_base_paquete": 1750000.00,
-    "costo_total_estimado": 5250000.00,
-    "seña_total": 1500000.00,
-    "monto_pagado": 0.00,
-    "estado": "pendiente",
-    "datos_completos": false,
-    "estado_display": "Pendiente",
-    "pasajeros": [
-      {
-        "id": 45,
-        "persona": {
-          "id": 8,
-          "nombre": "María",
-          "apellido": "González",
-          "documento": "4567890",
-          "email": "maria.gonzalez@example.com",
-          "telefono": "0981234567"
-        },
-        "es_titular": true,
-        "precio_asignado": 1750000.00,
-        "monto_pagado": 0.00,
-        "saldo_pendiente": 1750000.00,
-        "porcentaje_pagado": 0.00,
-        "seña_requerida": 500000.00,
-        "tiene_sena_pagada": false,
-        "esta_totalmente_pagado": false,
-        "ticket_numero": null,
-        "voucher_codigo": null,
-        "fecha_registro": "2025-10-25T14:30:45.234567Z"
-      },
-      {
-        "id": 46,
-        "persona": {
-          "id": 12,
-          "nombre": "Juan",
-          "apellido": "González",
-          "documento": "5678901",
-          "email": "juan.gonzalez@example.com",
-          "telefono": "0987654321"
-        },
-        "es_titular": false,
-        "precio_asignado": 1750000.00,
-        "monto_pagado": 0.00,
-        "saldo_pendiente": 1750000.00,
-        "porcentaje_pagado": 0.00,
-        "seña_requerida": 500000.00,
-        "tiene_sena_pagada": false,
-        "esta_totalmente_pagado": false,
-        "ticket_numero": null,
-        "voucher_codigo": null,
-        "fecha_registro": "2025-10-25T14:30:45.345678Z"
-      },
-      {
-        "id": 47,
-        "persona": {
-          "id": 15,
-          "nombre": "Ana",
-          "apellido": "González",
-          "documento": "6789012",
-          "email": "ana.gonzalez@example.com",
-          "telefono": "0976543210"
-        },
-        "es_titular": false,
-        "precio_asignado": 1750000.00,
-        "monto_pagado": 0.00,
-        "saldo_pendiente": 1750000.00,
-        "porcentaje_pagado": 0.00,
-        "seña_requerida": 500000.00,
-        "tiene_sena_pagada": false,
-        "esta_totalmente_pagado": false,
-        "ticket_numero": null,
-        "voucher_codigo": null,
-        "fecha_registro": "2025-10-25T14:30:45.456789Z"
-      }
-    ],
-    "activo": true,
-    "fecha_modificacion": "2025-10-25T14:30:45.567890Z"
-  }
 
 
   return (
@@ -3039,6 +2893,7 @@ export default function ReservaPage() {
                           <TableHead className="font-semibold text-gray-700">Pago</TableHead>
                           <TableHead className="font-semibold text-gray-700">Precio Unitario</TableHead>
                           <TableHead className="font-semibold text-gray-700">Modalidad Factura</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Condicion Pago</TableHead>
                           <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3506,7 +3361,6 @@ export default function ReservaPage() {
           onClose={handleCloseSeniaModal}
           onConfirm={handleConfirmSeniaPago}
           isPendingPagarSenia={isPendingPagarSenia || isPendingPagoTotal}
-          reservationData={sampleReservation}
           reservationResponse={reservaRealizadaResponse}
           seniaPorPersona={reservaRealizadaResponse?.pasajeros?.[0]?.seña_requerida || seniaPorPersona}
           cantidadActualPasajeros={reservaRealizadaResponse?.cantidad_pasajeros || reservaRealizadaResponse?.habitacion?.capacidad || cantidadActualPasajeros}
