@@ -61,6 +61,7 @@ export default function LoginPage() {
         usuario: dataForm.username,
         token: dataResp.data.access,
         debeResetearContrasenia: dataResp.data.debe_cambiar_contrasenia, // mapeo
+        cotizacionDiariaCargada: dataResp.data.cotizacion_diaria_cargada, // mapeo
         roles: dataResp.data.user.roles,
         permisos: dataResp.data.user.permisos,
         esAdmin: dataResp.data.user.es_admin,

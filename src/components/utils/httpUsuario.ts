@@ -85,3 +85,9 @@ export async function resetearContrasenia(new_password: string) {
   return resp?.data
 }
 
+
+export async function registrarCotizaccicon(payload: any) {
+  const resp = await axiosInstance.post(`/moneda/cotizaciones/`, {...payload});
+  return resp?.data
+}
+

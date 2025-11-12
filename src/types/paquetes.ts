@@ -60,6 +60,8 @@ export interface SalidaPaquete {
   temporada: string | null;  // Puede ser null
   precio_actual: number;     // Precio numérico
   precio_final?: number;     // Precio numérico
+  precio_moneda_alternativa?: PrecioAlternativo;     // Precio numérico
+  precio_venta_total_min?: number;       
   senia: number;     // Precio numérico
   cupo: number;              // Cupo numérico
   activo: boolean;           // Estado booleano
@@ -71,6 +73,19 @@ export interface SalidaPaquete {
   precios_catalogo?: any[];
   precios_catalogo_hoteles?: any[];
 }
+
+
+export interface PrecioAlternativo {
+  moneda: string;            // Ej: "PYG"
+  precio_actual: number;     // Precio actual del paquete
+  precio_final: number;      // Precio final calculado
+  precio_venta_min: number;  // Precio mínimo de venta
+  precio_venta_max: number;  // Precio máximo de venta
+  senia: number;             // Monto de la seña o adelanto
+  cotizacion: number;        // Valor de cotización (ej: USD -> PYG)
+  fecha_cotizacion: string;  // Fecha de la cotización (formato ISO: YYYY-MM-DD)
+}
+
 
 export interface Paquete {
   id: number;

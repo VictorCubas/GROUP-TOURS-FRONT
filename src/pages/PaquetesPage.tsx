@@ -2238,82 +2238,112 @@ const handleSubmitClick = useCallback(async () => {
                       </div>
 
                       {/* Servicios incluidos y excluidos */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                            <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
-                            Salidas
-                          </h3>
-                          <div className="space-y-4 max-h-60 overflow-y-auto">
-                            
-                            {[...dataDetalle!.salidas].map((item, index) => (
-                              <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
+                      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 mb-8">
+  {/* Columna: Salidas */}
+  <div>
+    <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+      <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
+      Salidas
+    </h3>
 
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-gradient-to-br from-green-100 to-emerald-100 p-2 rounded-xl">
-                                      <Plane className="text-green-600 transform rotate-45" size={16} /> 
-                                    </div>
-                                    <div>
-                                      <p className="text-sm text-slate-500">Salida</p>
-                                      <p className="font-semibold text-slate-800">
-                                        {formatearFecha(item?.fecha_salida, false)}
-                                      </p>
-                                    </div>
-                                  </div>
+    <div className="space-y-4 max-h-60 overflow-y-auto">
+      {dataDetalle?.salidas?.map((item, index) => (
+        <div key={index} className="flex flex-wrap justify-between gap-4 p-4 bg-green-50 rounded-lg">
+          
+          {/* Salida */}
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-green-100 to-emerald-100 p-2 rounded-xl">
+              <Plane className="text-green-600 transform rotate-45" size={16} /> 
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Salida</p>
+              <p className="font-semibold text-slate-800">
+                {formatearFecha(item?.fecha_salida, false)}
+              </p>
+            </div>
+          </div>
 
-                                  <div className="flex items-center gap-3">
-                                    <div className="bg-gradient-to-br from-orange-100 to-red-100 p-2 rounded-xl">
-                                      <Plane className="text-orange-600 transform -rotate-45" size={16} />
-                                    </div>
-                                    <div>
-                                      <p className="text-sm text-slate-500">Regreso</p>
-                                      <p className="font-semibold text-slate-800">
-                                        {formatearFecha(item?.fecha_regreso, false)}
-                                      </p>
-                                    </div>
-                                  </div>
+          {/* Regreso */}
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-orange-100 to-red-100 p-2 rounded-xl">
+              <Plane className="text-orange-600 transform -rotate-45" size={16} />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Regreso</p>
+              <p className="font-semibold text-slate-800">
+                {formatearFecha(item?.fecha_regreso, false)}
+              </p>
+            </div>
+          </div>
 
-                                  <div className="flex items-center gap-3">
-                                    <div className="bg-gradient-to-br from-blue-100 to-blue-100 p-2 rounded-xl text-blue-600">
-                                      {/* <DollarSignIcon className="text-blue-600" size={16} /> */}
-                                      {dataDetalle?.moneda?.simbolo}
-                                    </div>
-                                    <div>
-                                      <p className="text-sm text-slate-500">Precio</p>
-                                      <p className="font-semibold text-slate-800">
-                                        {formatearSeparadorMiles.format(item?.precio_actual)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  {/* <p className="font-medium text-green-900">{dataDetalle?.moneda.simbolo}{item.precio_actual}</p> */}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+          {/* Precio actual */}
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-blue-100 to-blue-100 p-2 rounded-xl text-blue-600">
+              {dataDetalle?.moneda?.simbolo}
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Precio actual</p>
+              <p className="font-semibold text-slate-800">
+                {/* {formatearSeparadorMiles.format(item?.precio_actual)} */}
+                {formatearSeparadorMiles.format(item?.precio_venta_total_min ?? 0)}
+              </p>
+            </div>
+          </div>
 
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                            <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
-                            Servicios Incluidos
-                          </h3>
-                          <div className="space-y-4 max-h-60 overflow-y-auto">
-                            
-                            {[...dataDetalle!.servicios].map((item, index) => (
-                              <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
-                                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  {index === 0 && <Hotel className="w-3 h-3 text-green-600" />}
-                                  {index === 1 && <Car className="w-3 h-3 text-green-600" />}
-                                  {index === 2 && <Users className="w-3 h-3 text-green-600" />}
-                                  {index > 2 && <div className="w-2 h-2 bg-green-600 rounded-full" />}
-                                </div>
-                                <div>
-                                  <p className="font-medium text-green-900">{item.nombre_servicio}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+          {/* Precio final en guaranies*/}
+          <div className="flex items-center gap-3">
+            {item?.precio_moneda_alternativa?.moneda === 'PYG' ?
+              <div className="bg-gradient-to-br from-blue-100 to-blue-100 p-2 rounded-xl text-blue-600">
+                Gs
+              </div>
+             :
+              <div className="bg-gradient-to-br from-blue-100 to-blue-100 p-2 rounded-xl text-blue-600">
+                $
+              </div>
+             }
+
+            
+            
+
+            {item?.moneda?.nombre?.toLowerCase() === 'dolar'}
+            <div>
+              <p className="text-sm text-slate-500">Precio (conversion)</p>
+              <p className="font-semibold text-slate-800">
+                {formatearSeparadorMiles.format(item?.precio_moneda_alternativa?.precio_final ?? 0)}
+              </p>
+            </div>
+          </div>
+
+        </div>
+      ))}
+    </div>
+  </div>
+
+  {/* Columna: Servicios Incluidos */}
+  <div>
+    <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+      <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
+      Servicios Incluidos
+    </h3>
+
+    <div className="space-y-4 max-h-60 overflow-y-auto">
+      {dataDetalle?.servicios?.map((item, index) => (
+        <div key={index} className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
+          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            {index === 0 && <Hotel className="w-3 h-3 text-green-600" />}
+            {index === 1 && <Car className="w-3 h-3 text-green-600" />}
+            {index === 2 && <Users className="w-3 h-3 text-green-600" />}
+            {index > 2 && <div className="w-2 h-2 bg-green-600 rounded-full" />}
+          </div>
+          <div>
+            <p className="font-medium text-green-900">{item.nombre_servicio}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
 
                       {/* Información adicional */}
                       <div className="bg-blue-50 p-6 rounded-xl mb-8">

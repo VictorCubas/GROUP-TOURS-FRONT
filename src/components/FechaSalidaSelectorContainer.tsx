@@ -40,45 +40,100 @@ export function FechaSalidaSelectorContainer({
   }
 
   console.log(fechaSalidasList)
-
-  //  id: 212,
-  //     fecha_salida: '2025-10-01',
-  //     fecha_regreso: '2025-10-10',
-  //     moneda: { id: 2, nombre: 'Dolar' },
+  // [
+  //   {
+  //     id: 250,
+  //     fecha_salida: '2025-11-29',
+  //     fecha_regreso: '2025-12-06',
+  //     moneda: { id: 1, nombre: 'Guaraní', simbolo: '₲', codigo: 'PYG' },
   //     temporada: null,
-  //     precio_actual: 1800,
-  //     precio_final: 2250,
-  //     ganancia: 10,
-  //     comision: null,
-  //     precio_venta_sugerido_min: 1980,
-  //     precio_venta_sugerido_max: 2475,
-  //     cupo: 45,
-  //     senia: 250,
+  //     precio_actual: 3200000,
+  //     precio_final: 3600000,
+  //     ganancia: null,
+  //     comision: 30,
+  //     precio_venta_sugerido_min: 4160000,
+  //     precio_venta_sugerido_max: 4680000,
+  //     precio_venta_total_min: 4160000,
+  //     precio_venta_total_max: 4680000,
+  //     cupo: null,
+  //     senia: 300000,
+  //     precio_moneda_alternativa: {
+  //       moneda: 'USD',
+  //       precio_actual: 448.8078541374474,
+  //       precio_final: 504.90883590462835,
+  //       precio_venta_min: 583.4502103786816,
+  //       precio_venta_max: 656.3814866760168,
+  //       senia: 42.07573632538569,
+  //       cotizacion: 7130,
+  //       fecha_cotizacion: '2025-11-11'
+  //     },
   //     activo: true,
-  //     hoteles: [
-  //       { id: 20, nombre: 'Hotel Prueba' },
-  //       { id: 19, nombre: 'Victor Holte 3' }
-  //     ],
+  //     hoteles: [ { id: 14, nombre: 'Hard Rock Rio' } ],
   //     habitacion_fija: null,
-  //     cupos_habitaciones: [
+  //     cupos_habitaciones: [],
+  //     precios_catalogo_hoteles: [],
+  //     precios_catalogo: [
   //       {
-  //         habitacion: { id: 30, tipo: 'doble', hotel: 'Hotel Prueba' },
-  //         cupo: 10
+  //         habitacion: { id: 2, tipo: 'doble', hotel: 'Hard Rock Rio' },
+  //         precio_catalogo: 3500000
   //       },
   //       {
-  //         habitacion: { id: 31, tipo: 'single', hotel: 'Hotel Prueba' },
-  //         cupo: 5
+  //         habitacion: { id: 3, tipo: 'triple', hotel: 'Hard Rock Rio' },
+  //         precio_catalogo: 3600000
   //       },
   //       {
-  //         habitacion: { id: 29, tipo: 'single', hotel: 'Victor Holte 3' },
-  //         cupo: 5
+  //         habitacion: { id: 1, tipo: 'single', hotel: 'Hard Rock Rio' },
+  //         precio_catalogo: 3200000
+  //       }
+  //     ]
+  //   },
+  //   {
+  //     id: 251,
+  //     fecha_salida: '2025-12-06',
+  //     fecha_regreso: '2025-12-13',
+  //     moneda: { id: 1, nombre: 'Guaraní', simbolo: '₲', codigo: 'PYG' },
+  //     temporada: null,
+  //     precio_actual: 3500000,
+  //     precio_final: 3750000,
+  //     ganancia: null,
+  //     comision: 30,
+  //     precio_venta_sugerido_min: 4550000,
+  //     precio_venta_sugerido_max: 4875000,
+  //     precio_venta_total_min: 4550000,
+  //     precio_venta_total_max: 4875000,
+  //     cupo: null,
+  //     senia: 350000,
+  //     precio_moneda_alternativa: {
+  //       moneda: 'USD',
+  //       precio_actual: 490.8835904628331,
+  //       precio_final: 525.9467040673212,
+  //       precio_venta_min: 638.148667601683,
+  //       precio_venta_max: 683.7307152875176,
+  //       senia: 49.08835904628331,
+  //       cotizacion: 7130,
+  //       fecha_cotizacion: '2025-11-11'
+  //     },
+  //     activo: true,
+  //     hoteles: [ { id: 14, nombre: 'Hard Rock Rio' } ],
+  //     habitacion_fija: null,
+  //     cupos_habitaciones: [],
+  //     precios_catalogo_hoteles: [],
+  //     precios_catalogo: [
+  //       {
+  //         habitacion: { id: 1, tipo: 'single', hotel: 'Hard Rock Rio' },
+  //         precio_catalogo: 3500000
   //       },
   //       {
-  //         habitacion: { id: 32, tipo: 'doble', hotel: 'Victor Holte 3' },
-  //         cupo: 8
+  //         habitacion: { id: 2, tipo: 'doble', hotel: 'Hard Rock Rio' },
+  //         precio_catalogo: 3600000
+  //       },
+  //       {
+  //         habitacion: { id: 3, tipo: 'triple', hotel: 'Hard Rock Rio' },
+  //         precio_catalogo: 3750000
   //       }
   //     ]
   //   }
+  // ]
 
   const getDaysRemainingStyle = (days: number) => {
     if (days <= 7) return { text: "text-red-600", weight: "font-semibold" }
@@ -174,6 +229,7 @@ export function FechaSalidaSelectorContainer({
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-lg text-blue-600">Desde {departure.moneda.simbolo}{formatearSeparadorMiles.format(departure.precio_venta_total_min)}</p>
+                    <p className="text-xs text-muted-foreground">Precio en {departure.precio_moneda_alternativa.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(departure.precio_moneda_alternativa.precio_venta_min)}</span></p> 
                     <p className="text-xs text-muted-foreground">por persona</p>
                   </div>
                 </div>

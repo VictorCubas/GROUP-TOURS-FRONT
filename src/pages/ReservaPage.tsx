@@ -99,7 +99,7 @@ import type { Persona } from "@/types/empleados"
 import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
 // import { NumericFormat } from "react-number-format"
 import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector";
-import { HotelHabitacionSelectorListMode } from "@/components/HotelHabitacionSelectorListMode";
+import { HotelHabitacionSelectorListMode, type MonedaAlternativaCotizada } from "@/components/HotelHabitacionSelectorListMode";
 import ReservationConfirmModal from "@/components/ReservationConfirmModal"
 import PaymentReceiptModal from "@/components/PaymentReceiptModal"
 import { useDescargarComprobante, usePagarSenia, usePagoTotal } from "@/components/hooks/useDescargarPDF"
@@ -108,7 +108,7 @@ import DetallesReservaContainer from "@/components/DetallesReservaContainer";
 import { TbInvoice } from "react-icons/tb"
 
 
-let dataList: Reserva[] = [];
+// let dataList: Reserva[] = [];
 let tipoReservaFilterList: any[] = [];
 let dataPasajerosList: any[] = [];
 let hotelesPorSalida: any = null;
@@ -123,7 +123,9 @@ export default function ReservaPage() {
   const [paymentType, setPaymentType] = useState<"minimum" | "total">("minimum")
   const [selectedPaqueteID, setSelectedPaqueteID] = useState<number | "">("");
   const [selectedSalidaID, setSelectedSalidaID] = useState<string>("");
+  const [dataList, setDataList] = useState<Reserva[]>([]);
   const [selectedSalidaData, setSelectedSalidaData] = useState<any>();
+  const [cotizacionMonedaAlternativa, setCotizacionMonedaAlternativa] = useState<MonedaAlternativaCotizada>();
   const [paqueteNoSeleccionada, setPaqueteNoSeleccionada] = useState<boolean | undefined>();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
@@ -420,11 +422,20 @@ export default function ReservaPage() {
   }
   
 
-  if(!isFetching && !isError){
-    if(data?.results){
-      dataList = data.results.map((per: ReservaListado, index: number) => ({...per, numero: index + 1}));
-    }
-  }
+  console.log(data);
+
+  
+  useEffect(() => {
+      if(!isFetching && !isError){
+        console.log(data?.results)
+        if(data?.results){
+          const dataList = data.results.map((per: ReservaListado, index: number) => ({...per, numero: index + 1}));
+          console.log(dataList)
+          setDataList(dataList)
+        }
+      }
+
+  }, [data, isError, isFetching]);
 
 
   useEffect(() => {
@@ -765,6 +776,7 @@ export default function ReservaPage() {
 
         setIsReceiptModalOpen(false);
         setReservaRealizadaResponse(null);
+        setCotizacionMonedaAlternativa(undefined);
 
 
         setIsConfirmModalOpen(false);
@@ -1160,6 +1172,8 @@ export default function ReservaPage() {
       setIsEditingSena(false);
       // setMontoInicialAAbonar(0);
 
+      console.log(selectedSalidaData)
+      console.log(selectedSalidaData?.precio_moneda_alternativa?.senia) 
       console.log(selectedSalidaData?.senia)
       console.log(selectedTipoHabitacionData?.capacidad)
 
@@ -1600,7 +1614,7 @@ export default function ReservaPage() {
                               </div>
                             </CardHeader>
                             <CardContent>
-                              {/* selectedSalidaID: {JSON.stringify(selectedSalidaID)} */}
+                              {/* SELECTOR DE FECHAS DE SALIDAS */}
                               <FechaSalidaSelectorContainer
                                 esDistribuidor={!selectedPaqueteData.propio}
                                 fechaSalidasList={selectedPaqueteData?.salidas}
@@ -1729,10 +1743,22 @@ export default function ReservaPage() {
                                         setSelectedHotelId(hotel.id);
                                         setSelectedHotelData(hotel);
 
+                                        //habitacion_id
+                                        console.log(habitacionesResumenPrecios)
+
                                         // Buscar la habitación correspondiente en habitacionesPorSalida del hotel seleccionado
                                         const habitacionEnHotel = hotel.habitaciones?.find(
                                           (h: any) => h.id.toString() === habitacion.habitacion_id.toString()
                                         );
+
+                                        //id
+                                        console.log(habitacionEnHotel)
+
+                                        const cotizacionDelHotelFiltered = habitacionesResumenPrecios.filter(resumen => resumen.habitacion_id === habitacionEnHotel.id)
+                                        const cotizacion = cotizacionDelHotelFiltered[0];
+                                        console.log(cotizacion);
+                                        console.log(cotizacion.precio_moneda_alternativa);
+                                        setCotizacionMonedaAlternativa(cotizacion.precio_moneda_alternativa);
 
                                         if (habitacionEnHotel) {
                                           setSelectedTipoHabitacionID(habitacionEnHotel.id.toString());
@@ -2490,26 +2516,6 @@ export default function ReservaPage() {
                               {/* Título y selector */}
                               <div className="flex items-center gap-2">
                                 <span className="text-lg font-bold text-gray-900">Seña Mínima:</span>
-
-                                {/* Selector de tipo de pago */}
-                                {/* <div className="flex rounded-lg border border-gray-300 bg-white overflow-hidden">
-                                  {['minimum', 'total'].map((type: any) => (
-                                    <button
-                                      key={type}
-                                      type="button" // ✅ evita enviar el form
-                                      onClick={() => handlePaymentTypeChange(type)}
-                                      className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${
-                                        paymentType === type
-                                          ? type === 'minimum'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-green-600 text-white'
-                                          : 'text-gray-600 hover:bg-gray-50'
-                                      }`}
-                                    >
-                                      {type === 'minimum' ? 'Mínima' : 'Total'}
-                                    </button>
-                                  ))}
-                                </div> */}
                               </div>
 
                               {/* Bloque de monto */}
@@ -2527,7 +2533,7 @@ export default function ReservaPage() {
                                         paymentType === 'total' ? 'text-green-600' : 'text-blue-600'
                                       }`}
                                     >
-                                      {formatearSeparadorMiles.format(
+                                      {selectedSalidaData.moneda.simbolo}{formatearSeparadorMiles.format(
                                         paymentType === 'total'
                                           ? Number(precioFinalPorPersona ?? 0) *
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
@@ -2535,35 +2541,16 @@ export default function ReservaPage() {
                                             Number(selectedTipoHabitacionData?.capacidad ?? 0)
                                       )}
                                     </span>
-
-                                    {/* Solo mostrar el botón de edición si NO es total */}
-                                    {/* {paymentType !== 'total' && (
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          setIsEditingSena(true);
-                                          setValue(
-                                            'senia',
-                                            (montoInicialAAbonar ?? 0) *
-                                              Number(selectedTipoHabitacionData?.capacidad ?? 0)
-                                          );
-                                        }}
-                                        className="h-8 w-8 bg-blue-400 cursor-pointer"
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                    )} */}
                                   </>
                                 )}
                               </div>
                             </div>
+                              
 
+                            <p className="text-xs text-muted-foreground text-right">Precio en {selectedSalidaData?.precio_moneda_alternativa?.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(selectedSalidaData?.precio_moneda_alternativa?.senia ?? 0)}</span></p> 
                             <p className="text-xs text-gray-600 text-right mt-1">
                               {formatearSeparadorMiles.format(Number(selectedSalidaData?.senia ?? 0))}{' '}
-                              por persona
+                              por persona 
                             </p>
                           </div>
 
@@ -2573,11 +2560,13 @@ export default function ReservaPage() {
                             <div className="flex justify-between items-center">
                               <span className="text-lg font-bold text-gray-900">Precio Total:</span>
                               <span className="text-3xl font-bold text-green-600">
-                                {formatearSeparadorMiles.format(
+                                {selectedSalidaData.moneda.simbolo}{formatearSeparadorMiles.format(
                                   precioFinalPorPersona * Number(selectedTipoHabitacionData?.capacidad ?? 0)
                                 )}
                               </span>
                             </div>
+
+                            <p className="text-xs text-muted-foreground text-right">Precio en {cotizacionMonedaAlternativa?.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(cotizacionMonedaAlternativa?.precio_venta_final ?? 0)}</span></p> 
                             <p className="text-xs text-gray-600 text-right mt-1">
                               {formatearSeparadorMiles.format(precioFinalPorPersona)} por persona
                             </p>
@@ -2905,7 +2894,7 @@ export default function ReservaPage() {
                                         </div>
                                       </TableCell>
                                     </TableRow>}
-                        {!isFetching && dataList.length > 0 && siTienePermiso("reservas", "leer") && dataList.map((data: Reserva) => (
+                        {!isFetching && dataList && dataList.length > 0 && siTienePermiso("reservas", "leer") && dataList.map((data: Reserva) => (
                           <TableRow
                             key={data.id}
                             className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -2925,22 +2914,22 @@ export default function ReservaPage() {
 
                             <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900 truncate max-w-xs">{data?.titular.nombre}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">{data?.titular.documento}</div>
+                                <div className="font-medium text-gray-900 truncate max-w-xs">{data?.titular?.nombre}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-xs">{data?.titular?.documento}</div>
                               </div>
                             </TableCell>
 
                             <TableCell>
                               <div className="flex items-center space-x-3">
                                 <img
-                                  src={data.paquete.imagen ?? imagePreview}
-                                  alt={data.paquete.nombre}
+                                  src={data?.paquete?.imagen ?? imagePreview}
+                                  alt={data?.paquete?.nombre}
                                   className="w-10 h-10 rounded-lg object-cover"
                                 />
                                 <div>
-                                  <div className="font-medium text-gray-900">{data.paquete.nombre}</div>
+                                  <div className="font-medium text-gray-900">{data?.paquete?.nombre}</div>
                                   <div className="text-sm text-gray-500">
-                                    {data.paquete.destino.ciudad}, {data.paquete.destino.pais}
+                                    {data?.paquete?.destino?.ciudad}, {data?.paquete?.destino?.pais}
                                   </div>
                                 </div>
                               </div>
@@ -2951,7 +2940,7 @@ export default function ReservaPage() {
                                     {/* <span>10/{data.cantidad_pasajeros}</span> */}
                                 <div className="font-medium text-gray-900 flex items-start gap-1.5 truncate max-w-xs">
                                   <RiGroupLine className="h-4 w-4 text-gray-400" />
-                                  <span >{data.cantidad_pasajeros}</span>
+                                  <span >{data?.cantidad_pasajeros}</span>
                                 </div>
                                 {/* <div className="text-sm text-gray-500 truncate max-w-xs">{data.paquete.destino.pais.nombre}</div> */}
                               </div>
@@ -2990,7 +2979,7 @@ export default function ReservaPage() {
 
                             <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.paquete.moneda.simbolo}{formatearSeparadorMiles.format(data?.precio_unitario ?? 0)}</div>
+                                <div className="font-medium text-gray-900 truncate max-w-xs">{data?.paquete?.moneda.simbolo}{formatearSeparadorMiles.format(data?.precio_unitario ?? 0)}</div>
                                 {/* <div className="text-sm text-gray-500 truncate max-w-xs">{data.titular.telefono}</div> */}
                               </div>
                             </TableCell>     

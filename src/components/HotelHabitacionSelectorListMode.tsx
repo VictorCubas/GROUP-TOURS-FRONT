@@ -41,6 +41,15 @@ interface HabitacionListItem {
   precio_noche: string;
   precio_venta_final: string;
   cupo: number;
+  precio_moneda_alternativa: MonedaAlternativaCotizada;
+  
+}
+
+export interface MonedaAlternativaCotizada {
+  moneda: string;              // Ej: "PYG"
+  precio_venta_final: number;  // Monto final de venta (viene como string con decimales)
+  cotizacion: string;          // Cotización (también string, puede contener decimales)
+  fecha_cotizacion: string;    // Fecha en formato ISO (YYYY-MM-DD)
 }
 
 interface SelectedHotelHabitacion {
@@ -261,23 +270,13 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
 
                      {/* Precio */}
                     <div className="flex flex-row gap-5 items-center">
-                        {/* {esDistribuidor &&
-                          <div className="text-right">
-                            <div className="text-xs text-blue-600 mb-1 uppercase">Cotización</div>
-                            <div className="text-2xl font-bold text-blue-600">
-                              A consultar
-                            </div>
-                            <div className="text-xs text-gray-600 mb-1">Sujeto a disponibilidad del proveedor</div>
-                          </div>
-                        } */}
-
-                        
                           <div className="text-right">
                             <div className="text-xs text-gray-600 mb-1">Precio total</div>
                             <div className="text-2xl font-bold text-blue-600">
                               ${" "}
                               {formatearSeparadorMiles.format(parseFloat(habitacion.precio_venta_final))}
                             </div>
+                            <p className="text-xs text-muted-foreground">Precio en {habitacion.precio_moneda_alternativa.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(habitacion.precio_moneda_alternativa.precio_venta_final)}</span></p> 
                             <div className="text-xs text-gray-600 mb-1">Por persona</div>
                           </div>
                         

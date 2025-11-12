@@ -386,3 +386,9 @@ input[aria-hidden="true"] {
 html{
   overflow: hidden;
 }
+
+
+.moneda{
+  width: 1.3rem;
+  height: 1.2rem;
+}

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // import type { Moneda } from '@/types/reservas';
-import { Users, CheckCircle2, Loader2Icon, DollarSign, Wallet, AlertCircle, CreditCard } from 'lucide-react';
+import { Users, CheckCircle2, Loader2Icon, DollarSign, Wallet, AlertCircle, CreditCard, Coins } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from '@radix-ui/react-label';
@@ -10,6 +10,7 @@ import { Input } from './ui/input';
 import { IoCashOutline } from 'react-icons/io5';
 import { formatearSeparadorMiles } from '@/helper/formatter';
 import { createPortal } from 'react-dom';
+import { Badge } from './ui/badge';
 
 
 interface PagoParcialModalProps {
@@ -37,6 +38,8 @@ export default function PagoParcialModal({
   const saldoPendiente = reservaData?.saldo_pendiente || 0;
   const [paymentType, setPaymentType] = useState<"deposit" | "full">("deposit")
   const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer" | 'cash'>("cash")
+
+  console.log(reservaData)
 
   // Determinar si es modo individual o múltiple
   const isSinglePassengerMode = selectedPassengerId !== undefined;
@@ -76,6 +79,37 @@ export default function PagoParcialModal({
     })
   )
 
+  // Estado para trackear errores de validación por pasajero
+  const [validationErrors, setValidationErrors] = useState<boolean[]>(
+    Array.from({ length: cantidadPasajeros }, () => false)
+  )
+
+  // Función helper para convertir string a número de forma segura
+  const safeParseNumber = (value: string): number => {
+    const numericValue = value.replace(/\D/g, ''); // Solo dígitos
+    const parsed = Number(numericValue);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  // Función para parsear valor formateado y extraer solo números
+  const parseFormattedValue = (value: string): string => {
+    // Remover todos los caracteres que no sean dígitos
+    return value.replace(/\D/g, '');
+  };
+
+  // Función para formatear valor con separador de miles
+  const formatValueWithThousands = (value: string): string => {
+    // Remover caracteres no numéricos
+    const numericValue = value.replace(/\D/g, '');
+
+    // Si está vacío, retornar vacío
+    if (!numericValue) return '';
+
+    // Convertir a número y formatear con separador de miles
+    const number = safeParseNumber(numericValue);
+    return number.toLocaleString('es-PY');
+  };
+
   // Bloquear scroll del modal padre cuando PagoParcialModal está abierto
   useEffect(() => {
     const modalDetalles = document.querySelector('.modal-detalles-reserva') as HTMLElement;
@@ -97,33 +131,65 @@ export default function PagoParcialModal({
     }
   }, [isOpen]);
 
+  // Resetear validaciones cuando cambia el tipo de pago
+  useEffect(() => {
+    // Limpiar todos los errores de validación
+    setValidationErrors(Array.from({ length: cantidadPasajeros }, () => false));
+  }, [paymentType, cantidadPasajeros]);
+
   // Calcular el total de depósitos
   const totalDepositAmount = isSinglePassengerMode && selectedPassengerIndex >= 0
-    ? Number(passengerDeposits[selectedPassengerIndex] || 0)
-    : passengerDeposits.reduce((sum, amount) => sum + Number(amount || 0), 0);
+    ? safeParseNumber(passengerDeposits[selectedPassengerIndex] || '0')
+    : passengerDeposits.reduce((sum, amount, index) => {
+        // Solo sumar montos de pasajeros que tienen saldo pendiente
+        const pasajero = reservaData?.pasajeros?.[index];
+        const saldoPendiente = pasajero?.saldo_pendiente || 0;
+
+        if (saldoPendiente > 0) {
+          return sum + safeParseNumber(amount || '0');
+        }
+        return sum;
+      }, 0);
 
   const totalDepositRequired = isSinglePassengerMode ? seniaPorPersona : seniaPorPersona * cantidadPasajeros;
 
-  const isValidDeposit = isSinglePassengerMode && selectedPassengerIndex >= 0
-    ? Number(passengerDeposits[selectedPassengerIndex] || 0) > 0
-    : passengerDeposits.every((amount, index) => {
-        const pasajero = reservaData?.pasajeros?.[index];
-        const saldoPendientePasajero = pasajero?.saldo_pendiente || 0;
-        const montoIngresado = Number(amount || 0);
+  const isValidDeposit = paymentType === 'full'
+    ? true // En modo pago total, siempre es válido porque se paga el saldo completo
+    : isSinglePassengerMode && selectedPassengerIndex >= 0
+      ? safeParseNumber(passengerDeposits[selectedPassengerIndex] || '0') > 0 && !validationErrors[selectedPassengerIndex]
+      : passengerDeposits.every((amount, index) => {
+          const pasajero = reservaData?.pasajeros?.[index];
+          const saldoPendientePasajero = pasajero?.saldo_pendiente || 0;
+          const montoIngresado = safeParseNumber(amount || '0');
 
-        // Si el pasajero no tiene saldo, no validar
-        if (saldoPendientePasajero === 0) return true;
+          // Si el pasajero no tiene saldo, no validar
+          if (saldoPendientePasajero === 0) return true;
 
-        // En modo múltiple (distribución), solo validar que el monto sea mayor a 0
-        return montoIngresado > 0;
-      });
+          // Validar que el monto sea mayor a 0 Y que no exceda el saldo pendiente
+          return montoIngresado > 0 && !validationErrors[index];
+        });
 
   // Manejar cambios en los inputs de seña por pasajero
   const handlePassengerDepositChange = (index: number, value: string) => {
     const newDeposits = [...passengerDeposits]
+    const newErrors = [...validationErrors]
+
+    // Parsear el valor para obtener solo números
+    const numericValue = parseFormattedValue(value);
+
     // Permitir strings vacíos, así el usuario puede borrar todo el contenido
-    newDeposits[index] = value
+    newDeposits[index] = numericValue;
+
+    // Validar que el monto no exceda el saldo pendiente
+    const pasajero = reservaData?.pasajeros?.[index];
+    const saldoPendientePasajero = pasajero?.saldo_pendiente || 0;
+    const montoIngresado = safeParseNumber(numericValue || '0');
+
+    // Marcar error si el monto excede el saldo pendiente
+    newErrors[index] = montoIngresado > saldoPendientePasajero;
+
     setPassengerDeposits(newDeposits)
+    setValidationErrors(newErrors)
   }
 
   // Función para generar el payload del pago
@@ -141,7 +207,7 @@ export default function PagoParcialModal({
     if (isSinglePassengerMode && selectedPassengerIndex >= 0) {
       const pasajero = reservaData?.pasajeros?.[selectedPassengerIndex];
       const monto = paymentType === 'deposit'
-        ? Number(passengerDeposits[selectedPassengerIndex] || 0)
+        ? safeParseNumber(passengerDeposits[selectedPassengerIndex] || '0')
         : getPassengerPendingBalance(); // En pago total, pagar el saldo pendiente del pasajero
 
       distribuciones.push({
@@ -156,7 +222,7 @@ export default function PagoParcialModal({
         // Solo agregar al payload si el pasajero tiene saldo pendiente
         if (saldoPendientePasajero > 0) {
           const monto = paymentType === 'deposit'
-            ? Number(passengerDeposits[index] || 0)
+            ? safeParseNumber(passengerDeposits[index] || '0')
             : saldoPendientePasajero; // En pago total, usar el saldo pendiente de cada pasajero
 
           distribuciones.push({
@@ -216,6 +282,7 @@ export default function PagoParcialModal({
     return `${nombre} ${apellido}${esTitular ? ' (Titular)' : ''}`;
   }
 
+
   return createPortal(
     <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
@@ -228,7 +295,9 @@ export default function PagoParcialModal({
                 <div className="space-y-6">
                   <div className="flex items-center justify-between border-b pb-4 ">
                     <h2 className="text-2xl font-bold">Opciones de Pago</h2>
-                    <DollarSign className="h-8 w-8 text-blue-600" />
+                    <Badge className='bg-blue-100 text-blue-700 border-blue-200 text-xl font-bold'>
+                      <Coins className="moneda h-10 w-10 text-2xl text-blue-600" /> <span>{reservaData?.paquete?.moneda?.nombre}</span>
+                    </Badge>
                   </div>
 
                   <div className="space-y-4 mt-6">
@@ -301,22 +370,33 @@ export default function PagoParcialModal({
                       <div className="space-y-3">
                         {isSinglePassengerMode && selectedPassengerIndex >= 0 ? (
                           // Modo individual: mostrar solo el pasajero seleccionado
-                          <div className="flex items-center gap-4 bg-white rounded-lg p-4 border">
-                            <Label className="font-medium min-w-[120px]">
-                              {getPassengerLabel(selectedPassengerIndex)}:
-                            </Label>
-                            <div className="flex-1 flex items-center gap-2">
-                              <span className="text-gray-600">$</span>
-                              <Input
-                                type="number"
-                                min={0}
-                                value={passengerDeposits[selectedPassengerIndex]}
-                                onChange={(e) => handlePassengerDepositChange(selectedPassengerIndex, e.target.value)}
-                                className="flex-1"
-                              />
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-4 bg-white rounded-lg p-4 border">
+                              <Label className="font-medium min-w-[120px]">
+                                {getPassengerLabel(selectedPassengerIndex)}:
+                              </Label>
+                              <div className="flex-1 flex items-center gap-2">
+                                <span className="text-gray-600">$</span>
+                                <Input
+                                  type="text"
+                                  value={formatValueWithThousands(passengerDeposits[selectedPassengerIndex])}
+                                  onChange={(e) => handlePassengerDepositChange(selectedPassengerIndex, e.target.value)}
+                                  className={`flex-1 ${validationErrors[selectedPassengerIndex] ? 'border-red-500 border-2' : ''}`}
+                                  placeholder="0"
+                                />
+                              </div>
+                              {!validationErrors[selectedPassengerIndex] && safeParseNumber(passengerDeposits[selectedPassengerIndex] || '0') <= 0 && (
+                                <span className="text-red-600 text-sm">Debe ingresar un monto</span>
+                              )}
                             </div>
-                            {Number(passengerDeposits[selectedPassengerIndex] || 0) <= 0 && (
-                              <span className="text-red-600 text-sm">Debe ingresar un monto</span>
+                            {validationErrors[selectedPassengerIndex] && (
+                              <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                <span>
+                                  El monto ingresado ({formatearSeparadorMiles.format(safeParseNumber(passengerDeposits[selectedPassengerIndex] || '0'))})
+                                  excede el saldo pendiente ({formatearSeparadorMiles.format(getPassengerPendingBalance())})
+                                </span>
+                              </div>
                             )}
                           </div>
                         ) : (
@@ -325,39 +405,56 @@ export default function PagoParcialModal({
                             const pasajero = reservaData?.pasajeros?.[index];
                             const saldoPendientePasajero = pasajero?.saldo_pendiente || 0;
                             const tieneSaldo = saldoPendientePasajero > 0;
+                            const tieneError = validationErrors[index];
 
                             return (
-                              <div
-                                key={index}
-                                className={`flex items-center gap-4 rounded-lg p-4 border ${
-                                  tieneSaldo ? 'bg-white' : 'bg-gray-50 border-gray-200'
-                                }`}
-                              >
-                                <Label className={`font-medium min-w-[120px] ${!tieneSaldo ? 'text-gray-400' : ''}`}>
-                                  {getPassengerLabel(index)}:
-                                </Label>
-                                <div className="flex-1 flex items-center gap-2">
-                                  <span className={`${!tieneSaldo ? 'text-gray-400' : 'text-gray-600'}`}>$</span>
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    disabled={!tieneSaldo}
-                                    value={tieneSaldo ? passengerDeposits[index] : precioUnitario}
-                                    onChange={(e) => handlePassengerDepositChange(index, e.target.value)}
-                                    className={`flex-1 ${!tieneSaldo ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                  />
+                              <div key={index} className="flex flex-col gap-2">
+                                <div
+                                  className={`flex items-center gap-4 rounded-lg p-4 border ${
+                                    tieneSaldo ? 'bg-white' : 'bg-gray-50 border-gray-200'
+                                  }`}
+                                >
+                                  <Label className={`font-medium min-w-[120px] ${!tieneSaldo ? 'text-gray-400' : ''}`}>
+                                    {getPassengerLabel(index)}:
+                                  </Label>
+                                  <div className="flex-1 flex items-center gap-2">
+                                    <span className={`${!tieneSaldo ? 'text-gray-400' : 'text-gray-600'}`}>$</span>
+                                    <Input
+                                      type="text"
+                                      disabled={!tieneSaldo}
+                                      value={tieneSaldo ? formatValueWithThousands(passengerDeposits[index]) : formatearSeparadorMiles.format(precioUnitario)}
+                                      onChange={(e) => handlePassengerDepositChange(index, e.target.value)}
+                                      className={`flex-1 ${
+                                        !tieneSaldo
+                                          ? 'bg-gray-100 cursor-not-allowed'
+                                          : tieneError
+                                            ? 'border-red-500 border-2'
+                                            : ''
+                                      }`}
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  {tieneSaldo && !tieneError && safeParseNumber(passengerDeposits[index] || '0') <= 0 && (
+                                    <span className="text-red-600 text-sm">Debe ingresar un monto</span>
+                                  )}
+                                  {tieneSaldo && !tieneError && safeParseNumber(passengerDeposits[index] || '0') > 0 && (
+                                    <span className="text-gray-600 text-sm">Saldo: {formatearSeparadorMiles.format(saldoPendientePasajero)}</span>
+                                  )}
+                                  {!tieneSaldo && (
+                                    <span className="text-green-600 text-sm font-medium flex items-center gap-1">
+                                      <CheckCircle2 className="h-4 w-4" />
+                                      Pagado
+                                    </span>
+                                  )}
                                 </div>
-                                {tieneSaldo && Number(passengerDeposits[index] || 0) <= 0 && (
-                                  <span className="text-red-600 text-sm">Debe ingresar un monto</span>
-                                )}
-                                {tieneSaldo && Number(passengerDeposits[index] || 0) > 0 && (
-                                  <span className="text-gray-600 text-sm">Saldo: {formatearSeparadorMiles.format(saldoPendientePasajero)}</span>
-                                )}
-                                {!tieneSaldo && (
-                                  <span className="text-green-600 text-sm font-medium flex items-center gap-1">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    Pagado
-                                  </span>
+                                {tieneError && tieneSaldo && (
+                                  <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                    <span>
+                                      El monto ingresado ({formatearSeparadorMiles.format(safeParseNumber(passengerDeposits[index] || '0'))})
+                                      excede el saldo pendiente ({formatearSeparadorMiles.format(saldoPendientePasajero)})
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                             );
@@ -412,7 +509,7 @@ export default function PagoParcialModal({
                             <p>Precio total del paquete por persona: {formatearSeparadorMiles.format(precioUnitario)}</p>
                             <p>Saldo pendiente actual: {formatearSeparadorMiles.format(getPassengerPendingBalance())}</p>
                             {getPassengerPendingBalance() < seniaPorPersona && getPassengerPendingBalance() > 0 && (
-                              <p className="text-amber-600 font-medium mt-2 flex items-center gap-1">
+                              <p className="font-medium mt-2 flex items-center gap-1">
                                 <AlertCircle className="h-4 w-4" />
                                 El saldo pendiente es menor a la seña mínima
                               </p>
@@ -473,7 +570,7 @@ export default function PagoParcialModal({
                                     disabled={!tieneSaldo}
                                     value={tieneSaldo ? saldoPendientePasajero : precioUnitario}
                                     readOnly
-                                    className={`flex-1 ${!tieneSaldo ? 'bg-gray-100 cursor-not-allowed' : 'bg-green-50'}`}
+                                    className={`flex-1 bg-red-300 ${!tieneSaldo ? 'bg-gray-100 cursor-not-allowed' : 'bg-green-50'}`}
                                   />
                                 </div>
                                 {!tieneSaldo && (

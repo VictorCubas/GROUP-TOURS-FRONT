@@ -17,6 +17,7 @@ export interface SessionDataStore {
   token: string
   usuario: string
   debeResetearContrasenia: boolean
+  cotizacionDiariaCargada: boolean
   roles: string[]
   permisos: PermisosModulo[] // <--- Nuevo campo
   esAdmin: boolean,
@@ -32,6 +33,8 @@ interface SessionStore {
   initializeSession: () => void
   setDebeResetearContrasenia: (value: boolean) => void
   getDebeResetearContrasenia: () => boolean | undefined
+  setCotizacionDiariaCargada: (value: boolean) => void
+  getCotizacionDiariaCargada: () => boolean | undefined
   hasRole: (role: string) => boolean
   siTienePermiso: (modulo: string, tipo: keyof PermisosModulo["permisos"]) => boolean
 }
@@ -48,6 +51,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       session: {
         ...data,
         debeResetearContrasenia: data.debeResetearContrasenia,
+        cotizacionDiariaCargada: data.cotizacionDiariaCargada,
         roles: data.roles,
         permisos: data.permisos,
         esAdmin: data.esAdmin,
@@ -85,6 +89,20 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   getDebeResetearContrasenia: () => {
     const currentSession = get().session
     return currentSession?.debeResetearContrasenia
+  },
+
+  setCotizacionDiariaCargada: (value: boolean) => {
+    const currentSession = get().session
+    if (!currentSession) return
+
+    const updatedSession = { ...currentSession, cotizacionDiariaCargada: value }
+    localStorage.setItem('session', JSON.stringify(updatedSession))
+    set({ session: updatedSession })
+  },
+
+  getCotizacionDiariaCargada: () => {
+    const currentSession = get().session
+    return currentSession?.cotizacionDiariaCargada
   },
 
   // ✅ Verificar si el usuario tiene un rol específico

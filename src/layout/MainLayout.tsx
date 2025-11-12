@@ -2,6 +2,7 @@
 // import CustomHeader from '@/components/CustomHeader'
 // import NavBar from '@/components/NavBar'
 import NavBar from '@/components/NavBar'
+import RegistrarCotizacionDelDiaModal from '@/components/RegistrarCotizacionDelDiaModal';
 import ResetearContrasenia from '@/components/ResetearContrasenia';
 import SideBar from '@/components/SideBar'
 import { useSessionStore } from '@/store/sessionStore';
@@ -53,6 +54,14 @@ const MainLayout = () => {
 
       {session?.debeResetearContrasenia && 
         <ResetearContrasenia />}
+
+      {!session?.cotizacionDiariaCargada && 
+        <RegistrarCotizacionDelDiaModal
+        />
+      }
+
+
+      
     </>
   )
 }
