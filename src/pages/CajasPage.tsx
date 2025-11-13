@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -18,18 +17,10 @@ import {
   Download,
   // RefreshCw,
   Eye,
-  Calendar,
-  // AlertCircle,
   Loader2Icon,
   CheckIcon,
-  // FileText,
-  // Activity,
-  // Tag,
-  // Boxes,
   User,
   X,
-  Mail,
-  UserCheck,
   Info,
 } from "lucide-react"
 
@@ -65,16 +56,14 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Caja, RespuestaPaginada, } from "@/types/cajas"
-import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataRoles } from "@/components/utils/httpCajas"
+import { capitalizePrimeraLetra, formatearSeparadorMiles } from "@/helper/formatter"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, } from "@/components/utils/httpCajas"
 import { Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { GenericSearchSelect } from "@/components/GenericSearchSelect"
-import { fetchDataEmpleadosTodos } from "@/components/utils/httpEmpleado"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useSessionStore } from "@/store/sessionStore"
 import { Textarea } from "@/components/ui/textarea"
@@ -93,9 +82,6 @@ let dataList: Caja[] = [];
 export default function CajasPage() {
   // const [setSearchTerm] = useState("")
   const {siTienePermiso } = useSessionStore();
-  const [empleadoNoSeleccionada, setEmpleadoNoSeleccionada] = useState<boolean | undefined>();
-  const [newDataPuntoExpedicionList, setNewDataPuntoExpedicionList] = useState<any[]>();
-  const [puntoExpedicionSelected, setPuntoExpedicionSelected] = useState<any>();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Caja>();
@@ -110,8 +96,6 @@ export default function CajasPage() {
                   estado: "all",
                   nombre: ""
                 });
-
-  const [onGuardar, setOnGuardar] = useState(false);
   
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -161,16 +145,6 @@ export default function CajasPage() {
     }
   }
 
-  useEffect(() => {  
-    if(dataPuntoExpedicionList){
-      if(dataAEditar){
-        setNewDataPuntoExpedicionList([...dataPuntoExpedicionList, {id: dataAEditar.punto_expedicion, nombre_completo: dataAEditar.punto_expedicion_nombre}]);
-      }
-      else{
-        setPuntoExpedicionSelected([...dataPuntoExpedicionList])
-      }
-    }
-  }, [dataAEditar, dataPuntoExpedicionList]);
   
   // Cálculos de paginación
   const totalItems = dataList?.length
@@ -286,8 +260,6 @@ export default function CajasPage() {
 
   const handleCancel = () => {
         setDataAEditar(undefined);
-        setNewDataPuntoExpedicionList([...dataPuntoExpedicionList]);
-        setPuntoExpedicionSelected(undefined);
         setOnDesactivarData(false);
         setDataADesactivar(undefined);
         reset({
@@ -315,7 +287,7 @@ export default function CajasPage() {
       delete payload.punto_expedicion;
 
     console.log(payload);
-    // mutate(payload);
+    mutate(payload);
     
   }
 
@@ -344,18 +316,6 @@ export default function CajasPage() {
     if (dataAEditar && dataPuntoExpedicionList && dataPuntoExpedicionList.length > 0) {
       console.log('reset data para editar: ', dataAEditar)
 
-      // Buscar el punto de expedición correspondiente
-      const puntoExpedicion = dataPuntoExpedicionList.find(
-        (punto: PuntoExpedicion) => punto.id.toString() === dataAEditar.punto_expedicion.toString()
-      );
-
-      console.log('Punto expedición encontrado: ', puntoExpedicion)
-
-      // Establecer el estado del punto seleccionado
-      if (puntoExpedicion) {
-        setPuntoExpedicionSelected(puntoExpedicion);
-      }
-
       // Resetear el formulario con todos los valores, incluyendo el punto_expedicion
       reset({
         nombre: dataAEditar.nombre,
@@ -364,8 +324,6 @@ export default function CajasPage() {
         emiteFactura: dataAEditar.emite_facturas,
         punto_expedicion: dataAEditar.punto_expedicion.toString(), // Convertir a string para el selector
       });
-
-      handleDataNoSeleccionada(true);
     }
   }, [dataAEditar, dataPuntoExpedicionList, reset]);
 
@@ -410,10 +368,6 @@ export default function CajasPage() {
       clearTimeout(handler) // limpia el timeout si se sigue escribiendo
     }
   }, [nombreABuscar]);
-
-  const handleDataNoSeleccionada = (value: boolean | undefined) => {
-    setEmpleadoNoSeleccionada(value);
-  }
 
   useEffect(() => {
     if(activeTab === 'list'){
@@ -761,9 +715,6 @@ export default function CajasPage() {
                                     }
 
                                     console.log('value: ', value);
-                                    const puntoExpediccion = dataPuntoExpedicionList.filter((doc: PuntoExpedicion) => doc.id.toString() === value)
-                                    console.log('tipo_paquete 1: ', puntoExpediccion[0])
-                                    setPuntoExpedicionSelected(puntoExpediccion[0]);
                                   }}
                                   onOpenChange={(open) => {
                                     if (!open && !field.value) {
