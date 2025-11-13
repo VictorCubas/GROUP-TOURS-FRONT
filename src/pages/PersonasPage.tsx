@@ -515,6 +515,7 @@ export default function ModulosPage() {
 
   const handleEditar = (data: Persona) => {
     setActiveTab('form');
+    console.log(data)
     setDataAEditar(data);
     setTipoDePersonaCreacion(data.tipo);
 

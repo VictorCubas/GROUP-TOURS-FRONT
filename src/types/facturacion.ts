@@ -25,6 +25,7 @@ export interface PuntoExpedicion {
   id: number,
   codigo: string,
   direccion?: string,
+  nombre: string,
   establecimiento: EstablecimientByPuntosExpedicion
 }
 
