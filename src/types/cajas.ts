@@ -54,7 +54,9 @@ export interface Caja {
   numero_caja: number;            // Número identificador de la caja
   punto_expedicion: number;       // Código del punto de expedición
   punto_expedicion_nombre: string; // Descripción completa del punto (ej. "001-001 - Casa Matriz")
-  descripcion: string; // Descripción completa del punto (ej. "001-001 - Casa Matriz")
+  establecimiento_nombre: string;
+  establecimiento_codigo: string;
+  descripcion: string; // Descripción completa del punto (ej. "001-001 - Casa Matriz")\
   emite_facturas: boolean;        // Indica si la caja puede emitir facturas
   ubicacion: string;              // Ubicación física (ej. "Piso 1 - Ventas")
   estado_actual: 'abierta' | 'cerrada' | 'bloqueada' | string; // Estado actual de la caja
@@ -74,4 +76,24 @@ export interface RespuestaPaginada {
   previous: string | null;
   totalPages: number;
   pageSize: number;
+}
+
+// Tipos para Apertura de Cajas
+export interface AperturaListado {
+  numero?: number;
+  id: number;
+  codigo_apertura: string;
+  caja: number;
+  caja_nombre: string;
+  caja_numero: number;
+  responsable: number;
+  responsable_nombre: string;
+  responsable_puesto: string;
+  fecha_hora_apertura: string;  // ISO 8601
+  monto_inicial: string;  // Decimal como string
+  monto_inicial_alternativo: string | null;  // Decimal como string
+  esta_abierta: boolean;
+  activo: boolean;
+  movimientos_count: number;
+  observaciones_apertura: string;
 }

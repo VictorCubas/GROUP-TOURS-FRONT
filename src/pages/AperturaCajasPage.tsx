@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -55,9 +56,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Caja, RespuestaPaginada, } from "@/types/cajas"
-import { capitalizePrimeraLetra, formatearSeparadorMiles } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, } from "@/components/utils/httpCajas"
+import type { AperturaListado, Caja, RespuestaPaginada, } from "@/types/cajas"
+import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles } from "@/helper/formatter"
+import { activarDesactivarData, fetchCajasDisponibles, fetchContizacion, fetchData, fetchDataResponsable, fetchResumen, guardarDataEditado, nuevoDataFetch, } from "@/components/utils/httpAperturasCajas"
 import { Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
@@ -69,6 +70,8 @@ import { useSessionStore } from "@/store/sessionStore"
 import { Textarea } from "@/components/ui/textarea"
 import { fetchDataPuntoExpedicionTodo } from "@/components/utils/httpFacturacion"
 import type { PuntoExpedicion } from "@/types/facturacion"
+import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
+import { NumericFormat } from "react-number-format"
 
 
 const usuariosStatusColors = {
@@ -77,18 +80,30 @@ const usuariosStatusColors = {
 }
 
 
-let dataList: Caja[] = [];
+let dataList: any[] = [];
+const filtrosParaCajas = {
+                  activo: true,   // null = todos, true = solo activos
+                  estado: "cerrada",
+                }
 
-export default function CajasPage() {
+export default function AperturaCajasPage() {
   // const [setSearchTerm] = useState("")
   const {siTienePermiso } = useSessionStore();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [dataAEditar, setDataAEditar] = useState<Caja>();
-  const [dataADesactivar, setDataADesactivar] = useState<Caja>();
+  const [dataAEditar, setDataAEditar] = useState<AperturaListado>();
+  const [dataADesactivar, setDataADesactivar] = useState<AperturaListado>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
-  const [dataDetalle, setDataDetalle] = useState<Caja>();
+  const [dataDetalle, setDataDetalle] = useState<AperturaListado>();
+  const [newDataPersonaList, setNewDataPersonaList] = useState<any[]>();
+  const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
+  const [montoAlternativo, setMontoAlternativo] = useState<number>(0);
+  const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
+  const [selectedTitularData, setSelectedTitularData] = useState<any | undefined>();
+  const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
+  const [onGuardar, setOnGuardar] = useState(false);
+  const [cajaListFinal, setCajaListFinal] = useState<Caja[]>([]);
   const {handleShowToast} = use(ToastContext);
 
   const [filtros, setFiltros] = useState({
@@ -109,7 +124,7 @@ export default function CajasPage() {
                                               });
 
   const {data, isFetching, isError} = useQuery({
-    queryKey: ['cajas', currentPage, paginacion.pageSize, filtros], //data cached
+    queryKey: ['aperturas', currentPage, paginacion.pageSize, filtros], //data cached
     queryFn: () => fetchData(currentPage, paginacion.pageSize, filtros),
     staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
     // enabled: !((filtros.fecha_desde && !filtros.fecha_hasta) || (!filtros.fecha_desde && filtros.fecha_hasta))
@@ -118,30 +133,41 @@ export default function CajasPage() {
   });
 
   const {data: dataResumen, isFetching: isFetchingResumen, isError: isErrorResumen} = useQuery({
-    queryKey: ['cajas-resumen'], //data cached
+    queryKey: ['aperturas-resumen'], //data cached
     queryFn: () => fetchResumen(),
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
-  const {data: dataPuntoExpedicionList, isFetching: isFetchingPuntoExpedicion,} = useQuery({
-        queryKey: ['puntos-expedicion-todos',], //data cached
-        queryFn: () => fetchDataPuntoExpedicionTodo(),
+  const {data: dataCotizacion, isFetching: isFetchingCotizacion, isError: isErrorContizacion} = useQuery({
+    queryKey: ['contizacion-al-dia'], //data cached
+    queryFn: () => fetchContizacion(),
+    staleTime: 30 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  });
+
+
+  console.log(dataCotizacion)
+
+  const {data: dataCajaList, isFetching: isFetchingCajas,} = useQuery({
+        queryKey: ['cajas-todos',], //data cached
+        queryFn: () =>fetchCajasDisponibles(1, 50, filtrosParaCajas),
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
   
 
-    // console.log('tengo mis permisos?: ', siTienePermiso("caja", "crear"))
-    // console.log('tengo mis permisos?: ', siTienePermiso("caja", "leer"))
-    console.log('tengo mis permisos?: ', siTienePermiso("cajas", "modificar"))
-    // console.log('tengo mis permisos?: ', siTienePermiso("caja", "eliminar"))
-    // console.log('tengo mis permisos?: ', siTienePermiso("caja", "exportar"))
+    console.log(dataCajaList);
+
+    // console.log('tengo mis permisos?: ', siTienePermiso("apertura", "crear"))
+    // console.log('tengo mis permisos?: ', siTienePermiso("apertura", "leer"))
+    console.log('tengo mis permisos?: ', siTienePermiso("aperturas", "modificar"))
+    // console.log('tengo mis permisos?: ', siTienePermiso("apertura", "eliminar"))
+    // console.log('tengo mis permisos?: ', siTienePermiso("apertura", "exportar"))
 
   // let filteredPermissions: Modulo[] = [];
   
 
   if(!isFetching && !isError){
     if(data?.results){
-      dataList = data.results.map((per: Caja, index: number) => ({...per, numero: index + 1}));
+      dataList = data.results.map((per: AperturaListado, index: number) => ({...per, numero: index + 1}));
     }
   }
 
@@ -164,6 +190,17 @@ export default function CajasPage() {
     setPaginacion(prevPagination => ({...prevPagination, pageSize: Number(value)}))
     setCurrentPage(1) // Reset a la primera página
   }
+
+  const {data: dataPersonaList, isFetching: isFetchingPersonas} = useQuery({
+      queryKey: ['responsables-disponibles', 1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}], //data cached 
+      queryFn: () => fetchDataResponsable(1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}),
+      staleTime: 5 * 60 * 1000, //despues de 5min los datos se consideran obsoletos
+      // enabled: !((filtros.fecha_desde && !filtros.fecha_hasta) || (!filtros.fecha_desde && filtros.fecha_hasta))
+      // enabled: Boolean(personaBusqueda)
+    // ,
+    });
+
+  console.log(dataPersonaList )
 
     useEffect(() => {
       if (!data) return;
@@ -190,6 +227,13 @@ export default function CajasPage() {
     setCurrentPage(1);
   }
 
+  useEffect(() => {
+    if(isFetchingPersonas){
+      setNewDataPersonaList([])
+    }
+  }, [isFetchingPersonas]);
+
+
 
   const {mutate, isPending: isPendingMutation} = useMutation({
     mutationFn: nuevoDataFetch,
@@ -199,12 +243,12 @@ export default function CajasPage() {
         handleCancel();
 
         queryClient.invalidateQueries({
-          queryKey: ['cajas'],
+          queryKey: ['aperturas'],
           exact: false
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['cajas-resumen'],
+          queryKey: ['aperturas-resumen'],
         });
     },
   }); 
@@ -217,12 +261,12 @@ export default function CajasPage() {
 
         setActiveTab('list');
         queryClient.invalidateQueries({
-          queryKey: ['cajas'],
+          queryKey: ['aperturas'],
           exact: false
         });
 
         queryClient.invalidateQueries({
-          queryKey: ['cajas-resumen'],
+          queryKey: ['aperturas-resumen'],
         });
     },
   });
@@ -235,25 +279,38 @@ export default function CajasPage() {
         handleCancel()
         //desactivamos todas las queies
         queryClient.invalidateQueries({
-          queryKey: ['cajas'],
+          queryKey: ['aperturas'],
           exact: false
         });
         queryClient.invalidateQueries({
-          queryKey: ['cajas-resumen'],
+          queryKey: ['aperturas-resumen'],
         });
     },
   });
 
 
-  // DATOS DEL FORMULARIO 
-    const {control, register, handleSubmit, watch, formState: {errors, }, clearErrors, reset} = 
+  // Función para obtener la fecha y hora local en formato YYYY-MM-DDTHH:mm
+  const getFechaHoraLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // DATOS DEL FORMULARIO
+    const {control, register, handleSubmit, watch, formState: {errors, }, clearErrors, reset, setValue} =
               useForm<any>({
                 mode: "onBlur",
                 defaultValues: {
                   nombre: "",
                   ubicacion: "",
-                  descripcion: "",
-                  emiteFactura: true
+                  observaciones_apertura: "",
+                  monto_inicial: null,
+                  monto_inicial_alternativo: null,
+                  fecha_hora_apertura: getFechaHoraLocal()
                 }
               });
 
@@ -262,48 +319,81 @@ export default function CajasPage() {
         setDataAEditar(undefined);
         setOnDesactivarData(false);
         setDataADesactivar(undefined);
+        setSelectedTitularData(undefined)
+        handleDataNoPersonaSeleccionada(undefined)
+        handleDataNoSeleccionada(undefined)
+        setNewDataPersonaList([]);
+        setSelectedPersonaID("");
+        setMontoAlternativo(0);
+        setCajaListFinal(dataCajaList || []); // Resetear a la lista original de cajas
         reset({
           nombre: "",
           ubicacion: "",
-          descripcion: "",
-          emiteFactura: true,
-          punto_expedicion: '',
+          observaciones_apertura: "",
+          caja: '',
+          monto_inicial: null,
+          monto_inicial_alternativo: null,
+          fecha_hora_apertura: getFechaHoraLocal()
         });
         setActiveTab('list');
 
   }
 
 
-  const handleGuardarNuevaData = async (dataForm: any) => { 
-    console.log(dataForm)
-    const payload = { 
-      ...dataForm,
-      activo: true
+  const handleGuardarNuevaData = async (dataForm: any) => {
+    if(!selectedPersonaID){
+        handleShowToast('Debes seleccionar el responsable', 'error');
+        return;
+      }
+
+    // Convertir la fecha del input datetime-local a formato ISO UTC
+    const fechaLocal = new Date(dataForm.fecha_hora_apertura);
+    const fechaISO = fechaLocal.toISOString();
+
+    // Construir el payload según lo que espera el backend
+    const payload = {
+      caja: Number(dataForm.caja),
+      responsable: Number(selectedPersonaID),
+      fecha_hora_apertura: fechaISO,
+      monto_inicial: Number(dataForm.monto_inicial).toFixed(2),
+      monto_inicial_alternativo: Number(dataForm.monto_inicial_alternativo).toFixed(2),
+      observaciones_apertura: dataForm.observaciones_apertura || ""
     }
 
-    delete payload.emiteFactura;
+    // {
+    //   "caja": 1,
+    //   "responsable": 9,
+    //   "fecha_hora_apertura": "2025-11-14T10:30:00.000Z",
+    //   "monto_inicial": "300000.00",
+    //   "monto_inicial_alternativo": "42.13",
+    //   "observaciones_apertura": ""
+    // }
 
-    if(!dataForm.emiteFactura)
-      delete payload.punto_expedicion;
-
-    console.log(payload);
+    console.log('Payload a enviar:', payload);
     mutate(payload);
-    
   }
 
   const handleGuardarDataEditado = async (dataForm: any) => {
-    console.log('dataForm editar: ', dataForm) 
+    console.log('dataForm editar: ', dataForm)
 
-    const payload = { 
-      nombre: dataForm.nombre,
-      ubicacion: dataForm.ubicacion,
-      descripcion: dataForm.descripcion,
-      id: dataAEditar?.id,
-      activo: dataAEditar?.activo,
-      emite_facturas: dataForm.emiteFactura,
-      punto_expedicion: dataForm.punto_expedicion
+    if(!selectedPersonaID){
+        handleShowToast('Debes seleccionar el responsable', 'error');
+        return;
     }
 
+    // Convertir la fecha del input datetime-local a formato ISO UTC
+    const fechaLocal = new Date(dataForm.fecha_hora_apertura);
+    const fechaISO = fechaLocal.toISOString();
+
+    const payload = {
+      id: dataAEditar?.id,
+      caja: Number(dataForm.caja),
+      responsable: Number(selectedPersonaID),
+      fecha_hora_apertura: fechaISO,
+      monto_inicial: Number(dataForm.monto_inicial).toFixed(2),
+      monto_inicial_alternativo: Number(dataForm.monto_inicial_alternativo).toFixed(2),
+      observaciones_apertura: dataForm.observaciones_apertura || ""
+    }
 
     console.log('dataAEditar: ', dataAEditar)
     console.log('payload editar: ', payload)
@@ -312,30 +402,137 @@ export default function CajasPage() {
   }
 
 
+  // Este useEffect ya no es necesario, se maneja en el useEffect de abajo
+  // useEffect(() => {
+  //   if (dataAEditar && dataCajaList && dataCajaList.length > 0) {
+  //     console.log('reset data para editar: ', dataAEditar)
+  //   }
+  // }, [dataAEditar, dataCajaList, reset]);
+
+
   useEffect(() => {
-    if (dataAEditar && dataPuntoExpedicionList && dataPuntoExpedicionList.length > 0) {
+    if(dataPersonaList){
+        console.log(dataPersonaList);
+
+        const dataPersonasResponsables = dataPersonaList.map((data: any) => ({
+          ...data, tipo_documento_nombre: data?.tipo_documento?.nombre
+        }))
+
+      if(dataAEditar){
+        // Verificar si el responsable actual ya está en la lista
+        const responsableYaEnLista = dataPersonasResponsables.some(
+          (persona: any) => persona.empleado_id === dataAEditar.responsable
+        );
+
+        // Si el responsable no está en la lista, crear un objeto temporal con los datos disponibles
+        if (!responsableYaEnLista) {
+          const responsableActual = {
+            empleado_id: dataAEditar.responsable,
+            nombre_completo: dataAEditar.responsable_nombre,
+            puesto: dataAEditar.responsable_puesto,
+            email: '', // No disponible en el listado
+            telefono: '', // No disponible en el listado
+            roles: []
+          };
+          setNewDataPersonaList([responsableActual, ...dataPersonasResponsables]);
+        } else {
+          setNewDataPersonaList([...dataPersonasResponsables]);
+        }
+      }
+      else{
+        console.log(dataPersonasResponsables)
+        console.log('dataPersonaList: ', dataPersonasResponsables)
+        setNewDataPersonaList([...dataPersonasResponsables])
+      }
+    }
+  }, [dataAEditar, dataPersonaList]); 
+
+  console.log(newDataPersonaList);
+
+  // Efecto para manejar la lista de cajas, incluyendo la caja actual si se está editando
+  useEffect(() => {
+    if (dataCajaList && dataCajaList.length > 0) {
+      if (dataAEditar) {
+        // Verificar si la caja actual ya está en la lista
+        const cajaYaEnLista = dataCajaList.some(
+          (caja: Caja) => caja.id === dataAEditar.caja
+        );
+
+        // Si la caja no está en la lista (porque está abierta), agregarla temporalmente
+        if (!cajaYaEnLista) {
+          const cajaActual: any = {
+            id: dataAEditar.caja,
+            nombre: dataAEditar.caja_nombre,
+            numero_caja: dataAEditar.caja_numero,
+            punto_expedicion: 0, // No disponible en el listado de aperturas
+            punto_expedicion_nombre: '',
+            establecimiento_nombre: '',
+            establecimiento_codigo: '',
+            observaciones_apertura: "",
+            emite_facturas: false,
+            ubicacion: '',
+            estado_actual: 'abierta',
+            saldo_actual: '0',
+            activo: true,
+            saldo_actual_alternativo: 0,
+            moneda_alternativa: 'USD'
+          };
+          setCajaListFinal([cajaActual, ...dataCajaList]);
+        } else {
+          setCajaListFinal([...dataCajaList]);
+        }
+      } else {
+        setCajaListFinal([...dataCajaList]);
+      }
+    } else {
+      setCajaListFinal([]);
+    }
+  }, [dataCajaList, dataAEditar]);
+
+  useEffect(() => {
+    if (dataAEditar) {
       console.log('reset data para editar: ', dataAEditar)
 
-      // Resetear el formulario con todos los valores, incluyendo el punto_expedicion
+      // Convertir la fecha ISO a formato datetime-local (YYYY-MM-DDTHH:mm)
+      let fechaLocal = getFechaHoraLocal();
+      if (dataAEditar.fecha_hora_apertura) {
+        const fecha = new Date(dataAEditar.fecha_hora_apertura);
+        const year = fecha.getFullYear();
+        const month = String(fecha.getMonth() + 1).padStart(2, '0');
+        const day = String(fecha.getDate()).padStart(2, '0');
+        const hours = String(fecha.getHours()).padStart(2, '0');
+        const minutes = String(fecha.getMinutes()).padStart(2, '0');
+        fechaLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
       reset({
-        nombre: dataAEditar.nombre,
-        ubicacion: dataAEditar.ubicacion,
-        descripcion: dataAEditar.descripcion,
-        emiteFactura: dataAEditar.emite_facturas,
-        punto_expedicion: dataAEditar.punto_expedicion.toString(), // Convertir a string para el selector
+        caja: dataAEditar.caja.toString(),
+        monto_inicial: Number(dataAEditar.monto_inicial),
+        monto_inicial_alternativo: dataAEditar.monto_inicial_alternativo ? Number(dataAEditar.monto_inicial_alternativo) : null,
+        fecha_hora_apertura: fechaLocal,
+        observaciones_apertura: dataAEditar.observaciones_apertura // Las observaciones no vienen en el listado
       });
+
+      console.log(dataAEditar.responsable)
+      setSelectedPersonaID(dataAEditar.responsable); 
+      handleDataNoSeleccionada(true);
     }
-  }, [dataAEditar, dataPuntoExpedicionList, reset]);
+  }, [dataAEditar, reset]);
 
 
-  const handleEditar = (data: Caja) => {
+  const handleEditar = (data: AperturaListado) => {
     console.log('data: ', data)
     setDataAEditar(data);
+    setSelectedPersonaID(data!.responsable)
     setActiveTab('form');
     
   }
 
-  const toggleActivar = (modulo: Caja) => {
+  const handleDataNoSeleccionada = (value: boolean | undefined) => {
+    console.log(value)
+  }
+
+  const toggleActivar = (modulo: AperturaListado) => {
     setOnDesactivarData(true);
     setDataADesactivar(modulo);
   }
@@ -348,7 +545,7 @@ export default function CajasPage() {
     mutateDesactivar({ dataId: dataADesactivar!.id, activo, })
   }
 
-  const handleVerDetalles = (data: Caja) => {
+  const handleVerDetalles = (data: AperturaListado) => {
     setDataDetalle(data);
     setOnVerDetalles(true);
   }
@@ -384,7 +581,53 @@ export default function CajasPage() {
   }, [activeTab]);
 
 
-  const emiteFactura = watch('emiteFactura');
+  const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
+    console.log(value)
+    setPersonaNoSeleccionada(value);
+  }
+
+
+  const montoInicial = watch('monto_inicial');
+
+  // Cálculo automático del monto alternativo en USD
+  useEffect(() => {
+    console.log(dataCotizacion)
+    console.log(montoInicial)
+    console.log(dataCotizacion?.valor_en_guaranies)
+    if (montoInicial && dataCotizacion?.valor_en_guaranies) {
+      
+      const montoEnDolares = Number(montoInicial) / Number(dataCotizacion.valor_en_guaranies);
+      console.log(montoEnDolares)
+      setValue('monto_inicial_alternativo', parseFloat(montoEnDolares.toFixed(2)));
+    } else {
+      setValue('monto_inicial_alternativo', null);
+    }
+  }, [montoInicial, dataCotizacion, setValue]);
+
+
+  console.log(dataDetalle)
+
+  // Cálculo automático del monto alternativo en USD
+  useEffect(() => {
+    console.log(dataCotizacion)
+    console.log(dataDetalle)
+    if (dataDetalle && dataCotizacion?.valor_en_guaranies) {
+      
+      const montoEnDolares = Number(dataDetalle.monto_inicial) / Number(dataCotizacion.valor_en_guaranies);
+      console.log(montoEnDolares)
+      setMontoAlternativo(parseFloat(montoEnDolares.toFixed(2)));
+    } else {
+      setMontoAlternativo(0);
+    }
+  }, [dataCotizacion, dataDetalle]);
+
+
+  const montoEnDolares = (monto: number) => {
+    if(!dataCotizacion) return;
+
+      const montoEnDolares = Number(monto) / Number(dataCotizacion.valor_en_guaranies);
+      return parseFloat(montoEnDolares.toFixed(2));
+  }
 
 
   return (
@@ -402,9 +645,9 @@ export default function CajasPage() {
                           </div>
                           <div>
                             <h2 className="text-xl font-semibold text-gray-900">
-                              {dataDetalle?.nombre}
+                              {dataDetalle?.codigo_apertura}
                             </h2>
-                            <p className="text-gray-600">Detalles completos de la caja</p>
+                            <p className="text-gray-600">Detalles completos de la apertura</p>
                           </div>
                         </div>
                       </div>
@@ -413,26 +656,28 @@ export default function CajasPage() {
                         <div className="space-y-6">
                           {/* Información básica */}
                           <div>
-                            <Label className="text-sm font-medium text-gray-500">Número de Caja</Label>
-                            <p className="mt-1 text-gray-900 font-semibold">{dataDetalle?.numero_caja}</p>
+                            <Label className="text-sm font-medium text-gray-500">Código de Apertura</Label>
+                            <p className="mt-1 text-gray-900 font-semibold">
+                              {dataDetalle?.codigo_apertura}
+                            </p>
                           </div>
 
                           {/* Estado y configuración */}
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label className="text-sm font-medium text-gray-500">Estado Actual</Label>
+                              <Label className="text-sm font-medium text-gray-500">Estado de la Caja</Label>
                               <div className="mt-1">
                                 <Badge
-                                  className={dataDetalle?.estado_actual === 'abierta'
+                                  className={dataDetalle?.esta_abierta
                                     ? 'bg-green-100 text-green-700 border-green-200'
-                                    : 'bg-gray-100 text-gray-700 border-gray-200'}
+                                    : 'bg-red-100 text-red-700 border-red-200'}
                                 >
-                                  {dataDetalle?.estado_actual === 'abierta' ? 'Abierta' : 'Cerrada'}
+                                  {dataDetalle?.esta_abierta ? 'Abierta' : 'Cerrada'}
                                 </Badge>
                               </div>
                             </div>
                             <div>
-                              <Label className="text-sm font-medium text-gray-500">Estado</Label>
+                              <Label className="text-sm font-medium text-gray-500">Estado de Registro</Label>
                               <div className="mt-1">
                                 <Badge
                                   className={usuariosStatusColors[dataDetalle?.activo.toString() as keyof typeof usuariosStatusColors]}
@@ -443,56 +688,61 @@ export default function CajasPage() {
                             </div>
                           </div>
 
-                          {/* Punto de expedición */}
+                          {/* Información de la caja y responsable */}
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label className="text-sm font-medium text-gray-500">Punto de Expedición</Label>
-                              <p className="mt-1 text-gray-900">{dataDetalle?.punto_expedicion_nombre}</p>
+                              <Label className="text-sm font-medium text-gray-500">Caja</Label>
+                              <p className="mt-1 text-gray-900 font-medium">
+                                {dataDetalle?.caja_nombre}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                Número: {dataDetalle?.caja_numero}
+                              </p>
                             </div>
                             <div>
-                              <Label className="text-sm font-medium text-gray-500">Emite Facturas</Label>
-                              <div className="mt-1">
-                                <Badge className={dataDetalle?.emite_facturas
-                                  ? 'bg-green-100 text-green-700 border-green-200'
-                                  : 'bg-red-100 text-red-700 border-red-200'}>
-                                  {dataDetalle?.emite_facturas ? 'Sí' : 'No'}
-                                </Badge>
-                              </div>
+                              <Label className="text-sm font-medium text-gray-500">Responsable</Label>
+                              <p className="mt-1 text-gray-900 font-medium">
+                                {dataDetalle?.responsable_nombre}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {dataDetalle?.responsable_puesto}
+                              </p>
                             </div>
                           </div>
 
-                          {/* Saldos */}
+                          {/* Montos */}
                           <div className="bg-blue-50 p-4 rounded-lg">
-                            <Label className="text-sm font-medium text-gray-700 mb-3 block">Información de Saldos</Label>
+                            <Label className="text-sm font-medium text-gray-700 mb-3 block">Información de Montos Iniciales</Label>
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <Label className="text-sm font-medium text-gray-500">Saldo Actual (Gs.)</Label>
+                                <Label className="text-sm font-medium text-gray-500">Monto Inicial (Gs.)</Label>
                                 <p className="mt-1 text-lg font-semibold text-gray-900">
-                                  {dataDetalle?.saldo_actual?.toLocaleString() ?? '0'}
+                                  {formatearSeparadorMiles.format(Number(dataDetalle?.monto_inicial ?? 0))}
                                 </p>
                               </div>
                               <div>
-                                <Label className="text-sm font-medium text-gray-500">
-                                  Saldo Alternativo ({dataDetalle?.moneda_alternativa})
-                                </Label>
+                                <Label className="text-sm font-medium text-gray-500">Monto Alternativo (USD)</Label>
                                 <p className="mt-1 text-lg font-semibold text-gray-900">
-                                  {dataDetalle?.saldo_actual_alternativo !== undefined
-                                    ? Number(dataDetalle.saldo_actual_alternativo).toFixed(2)
-                                    : '0.00'}
+                                  $ {montoAlternativo}
                                 </p>
                               </div>
                             </div>
                           </div>
 
-                          {/* Ubicación y descripción */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-500">Ubicación</Label>
-                            <p className="mt-1 text-gray-900">{dataDetalle?.ubicacion || 'No especificada'}</p>
-                          </div>
-
-                          <div>
-                            <Label className="text-sm font-medium text-gray-500">Descripción</Label>
-                            <p className="mt-1 text-gray-900">{dataDetalle?.descripcion || 'Sin descripción'}</p>
+                          {/* Información adicional */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">Fecha y Hora de Apertura</Label>
+                              <p className="mt-1 text-gray-900">
+                                {formatearFecha(dataDetalle?.fecha_hora_apertura ?? '')}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-gray-500">Cantidad de Movimientos</Label>
+                              <p className="mt-1 text-gray-900 font-semibold">
+                                {dataDetalle?.movimientos_count ?? 0}
+                              </p>
+                            </div>
                           </div>
                         </div>
 
@@ -523,10 +773,10 @@ export default function CajasPage() {
                       </div>
                       <h2 className='text-center'>Confirmacion de operación</h2>
                     <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-                      ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al caja con nombre
+                      ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} la apertura con código
                       <b>
-                          {' ' + capitalizePrimeraLetra((dataADesactivar?.nombre?? ''))}
-                      </b>? 
+                          {' ' + dataADesactivar?.codigo_apertura}
+                      </b>?
                     </p>
 
                     <div className='modal-actions'>
@@ -551,12 +801,12 @@ export default function CajasPage() {
                 <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
                   <User className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-3xl font-semibold text-gray-900">Cajas</h1>
+                <h1 className="text-3xl font-semibold text-gray-900">Aperturas</h1>
               </div>
-              <p className="text-gray-600">Gestiona los datos de los cajas del sistema y su estado.</p>
+              <p className="text-gray-600">Gestiona los datos de los aperturas del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              {siTienePermiso("cajas", "exportar") && 
+              {siTienePermiso("aperturas", "exportar") && 
                   <Button
                     variant="outline"
                     className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -566,11 +816,11 @@ export default function CajasPage() {
                   </Button>
               }
 
-              {siTienePermiso("cajas", "crear") && (
+              {siTienePermiso("aperturas", "crear") && (
                 <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
                   onClick={() => setActiveTab('form')}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nueva Caja
+                  Nueva Apertura Caja
                 </Button>
               )}
             </div>
@@ -583,13 +833,13 @@ export default function CajasPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2 lg:w-80 bg-gray-100">
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
-                Lista de Caja
+                Lista de Aperturas
               </TabsTrigger>
-              <TabsTrigger disabled={!siTienePermiso("cajas", "crear")} 
-                  title={siTienePermiso("cajas", "crear") ? 'Crear Caja' : 'No tienes los permisos para crear'}
-                  value="form" 
+              <TabsTrigger disabled={!siTienePermiso("aperturas", "crear")}
+                  title={siTienePermiso("aperturas", "crear") ? 'Crear Apertura' : 'No tienes los permisos para crear'}
+                  value="form"
                   className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
-                {dataAEditar ?  'Editar Caja' : 'Crear Caja'}
+                {dataAEditar ?  'Editar Apertura' : 'Crear Apertura'}
               </TabsTrigger>
             </TabsList>
 
@@ -603,88 +853,26 @@ export default function CajasPage() {
                         <Check className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <CardTitle className="text-emerald-900">Crear Nueva Caja</CardTitle>
+                        <CardTitle className="text-emerald-900">
+                          {dataAEditar ? 'Editar Apertura' : 'Crear Nueva Apertura'}
+                        </CardTitle>
                         <CardDescription className="text-emerald-700">
-                          Complete la información para crear una nueva caja
+                          {dataAEditar
+                            ? 'Modifique los datos de la apertura seleccionada'
+                            : 'Complete la información para crear una nueva apertura'}
                         </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* CAJA */}
                       <div className="space-y-2">
-                        <Label htmlFor="nombre" className="text-gray-700 font-medium">
-                          Nombre de la caja *
-                        </Label>
-                        <Input
-                          id="nombre"
-                          autoComplete="nombre"
-                          placeholder="Nombre de la caja"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('nombre', {
-                          required: true, 
-                          validate: {blankSpace: (value) => !!value.trim()},
-                          minLength: 3})}
-                        />
-                        <div>
-                          {(errors?.nombre?.type === 'required' || errors?.nombre?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.nombre?.type === 'minLength' && <span className='text-red-400 text-sm'>El username debe tener minimo 3 caracteres</span>}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="ubicacion" className="text-gray-700 font-medium">
-                          Ubicación de la caja *
-                        </Label>
-                        <Input
-                          id="ubicacion"
-                          autoComplete="ubicacion"
-                          placeholder="Ubicación de la caja"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('ubicacion', {
-                            required: true, 
-                            validate: {blankSpace: (value) => !!value.trim()},
-                            minLength: 3})}
-                        />
-                        <div>
-                          {(errors?.ubicacion?.type === 'required' || errors?.ubicacion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.ubicacion?.type === 'minLength' && <span className='text-red-400 text-sm'>La ubicación debe tener minimo 3 caracteres</span>}
-                        </div>
-                      </div>
-                      
-                        {/* EMITE FACTURA */}
-                      <div className="space-y-2">
-                        <Controller
-                          name="emiteFactura"
-                          control={control}
-                          defaultValue={false}
-                          render={({ field }) => (
-                            <div className="flex flex-col items-start gap-3 cursor-pointer mt-2">
-                              <div className="flex items-center gap-3">
-                                <Checkbox
-                                  disabled={!!dataAEditar}
-                                  id="emiteFactura"
-                                  checked={field.value}
-                                  onCheckedChange={(checked) => field.onChange(!!checked)}
-                                  className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
-                                />
-                                <Label htmlFor="emiteFactura" className="cursor-pointer">Emite Factura Electrónica</Label>
-                              </div>
-                              <p className="text-gray-600 text-sm">Si la caja emite facturas, debe tener un punto de expedición asociado.</p>
-                            </div>
-
-                          )}
-                        />
-
-                      </div>
-
-                       {/* PUNTO DE EXPEDICION */}
-                      <div className="space-y-2">
-                        <Label htmlFor="punto_expedicion" className="text-gray-700 font-medium">
-                          Punto de Expedición {emiteFactura && '*'}
+                        <Label htmlFor="caja" className="text-gray-700 font-medium">
+                          Caja *
                         </Label>
 
-                        {isFetchingPuntoExpedicion && (
+                        {isFetchingCajas && (
                           <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
                             <Select>
                               <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
@@ -696,22 +884,22 @@ export default function CajasPage() {
                           </div>
                         )}
 
-                        {!isFetchingPuntoExpedicion &&
+                        {!isFetchingCajas &&
                           <Controller
-                            name="punto_expedicion"
+                            name="caja"
                             control={control}
                             rules={{
-                              required: emiteFactura ? "Este campo es requerido cuando la caja emite facturas" : false
+                              required: "Este campo es requerido"
                             }}
                             render={({ field }) => (
                               <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                 <Select
-                                  disabled={!!dataAEditar || !emiteFactura}
+                                  disabled={!!dataAEditar}
                                   value={field.value}
                                   onValueChange={(value) => {
                                     field.onChange(value)
                                     if (value) {
-                                      clearErrors("punto_expedicion")
+                                      clearErrors("caja")
                                     }
 
                                     console.log('value: ', value);
@@ -723,10 +911,10 @@ export default function CajasPage() {
                                   }}
                                 >
                                   <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                                    <SelectValue placeholder="Selecciona el tipo de paquete" />
+                                    <SelectValue placeholder="Selecciona la caja" />
                                   </SelectTrigger>
                                   <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
-                                    {dataPuntoExpedicionList.map((data: PuntoExpedicion) => 
+                                    {cajaListFinal.map((data: Caja) => 
                                       <SelectItem 
                                         key={data.id} 
                                         value={data.id.toString()}
@@ -738,7 +926,7 @@ export default function CajasPage() {
 
                                           <span>
                                             <Badge className={`text-xs bg-gray-100 text-gray-600 border-gray-200 `}>
-                                              {data.establecimiento.nombre}
+                                              {data.establecimiento_nombre}
                                             </Badge>
                                             </span>
                                         </div>
@@ -751,36 +939,177 @@ export default function CajasPage() {
                           />
                         }
 
-                        {errors.punto_expedicion && (
-                          <p className="text-red-400 text-sm">{errors.punto_expedicion.message as string}</p>
+                        {errors.caja && (
+                          <p className="text-red-400 text-sm">{errors.caja.message as string}</p>
                         )}
-                        {!emiteFactura && (
-                          <p className="text-gray-500 text-sm flex items-center gap-1">
-                            <Info className="h-3 w-3" />
-                            Este campo solo es necesario cuando la caja emite facturas.
-                          </p>
+                        
+                    </div>
+
+                    <div className="space-y-2 mi-select-wrapper">
+                        <Label htmlFor="persona" className="text-gray-700 font-medium">
+                          Responsable *
+                        </Label>
+
+                        <DinamicSearchSelect
+                          // disabled={!!dataAEditar}
+                          dataList={newDataPersonaList || []}
+                          value={selectedPersonaID}
+                          onValueChange={setSelectedPersonaID}
+                          setSelectedTitularData={setSelectedTitularData}
+                          handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                          onSearchChange={setPersonaBusqueda}
+                          isFetchingPersonas={isFetchingPersonas}
+                          placeholder="Buscar un responsable por documento o nombre..."
+                          labelKey='nombre_completo'
+                          secondaryLabelKey='email'
+                          // thirdLabelKey='tipo_documento_nombre'
+                          valueKey="empleado_id"
+                        />
+
+                        {(personaNoSeleccionada === false ||
+                          (onGuardar === true && personaNoSeleccionada === undefined)) && (
+                          <p className="text-red-400 text-sm">Este campo es requerido</p>
                         )}
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="monto_inicial" className="text-gray-700 font-medium">
+                        Monto inicial (Gs) *
+                      </Label>
+
+                    <div className="col-span-3 flex gap-2">  
+                      <Controller
+                        name="monto_inicial"
+                        control={control}
+                        rules={{
+                          required: 'Debes completar este campo',
+                          validate: (value) => {
+                            if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                              return 'Valor inválido';
+                            }
+                            if (Number(value) <= 0) {
+                              return 'El valor debe ser mayor que cero';
+                            }
+                            return true;
+                          },
+                        }}
+                        render={({ field, fieldState: { error } }) => (
+                          <div className="flex flex-col w-full">
+                            <NumericFormat
+                              value={field.value ?? ''}
+                              onValueChange={(values) => {
+                                const val = values.floatValue ?? null;
+                                if (val === null || val <= 0) {
+                                  field.onChange(null);
+                                } else {
+                                  field.onChange(val);
+                                }
+                              }}
+                              onBlur={field.onBlur}
+                              thousandSeparator="."
+                              decimalSeparator=","
+                              allowNegative={false}          // ❌ no permite números negativos
+                              decimalScale={0}               // ❌ sin decimales
+                              allowLeadingZeros={false}      // evita números tipo 0001
+                              placeholder="ej: 300.000"
+                              className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
+                                error
+                                  ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                  : 'border-blue-200 focus:border-blue-500'
+                              }`}
+                            />
+                            {error && (
+                              <span className="text-red-400 text-sm mt-1">{error.message}</span>
+                            )}
+                          </div>
+                        )}
+                      />
+                    </div>
+                  </div>  
+                  
+                  {/* {
+  "id": 8,
+  "moneda": 2,
+  "moneda_nombre": "Dolar",
+  "moneda_codigo": "USD",
+  "moneda_simbolo": "$",
+  "valor_en_guaranies": 7120,
+  "fecha_vigencia": "2025-11-14",
+  "usuario_registro": 10,
+  "usuario_nombre": "andrea.tutoriaescurra",
+  "observaciones": "",
+  "fecha_creacion": "2025-11-14T01:37:21+0000",
+  "fecha_modificacion": "2025-11-14T01:37:21+0000"
+} */}
+                     {/* MONTO ALTERNATIVO (CALCULADO AUTOMÁTICAMENTE) */}
+                    <div className="space-y-2">
+                      <Label htmlFor="monto_inicial_alternativo" className="text-gray-700 font-medium">
+                        Monto Alternativo (USD)
+                      </Label>
+
+                    <div className="col-span-3 flex gap-2">
+                      <Controller
+                        name="monto_inicial_alternativo"
+                        control={control}
+                        render={({ field }) => (
+                          <div className="flex flex-col w-full">
+                            <NumericFormat
+                              value={field.value ?? ''}
+                              disabled={true}
+                              onBlur={field.onBlur}
+                              thousandSeparator="."
+                              decimalSeparator=","
+                              allowNegative={false}
+                              decimalScale={2}
+                              fixedDecimalScale={true}
+                              allowLeadingZeros={false}
+                              placeholder="Se calcula automáticamente"
+                              className="flex-1 p-1 pl-2.5 rounded-md border-2 border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Calculado automáticamente según la cotización del día (1 USD = Gs. {dataCotizacion?.valor_en_guaranies ? Number(dataCotizacion.valor_en_guaranies).toLocaleString('es-PY') : '---'})
+                            </p>
+                          </div>
+                        )}
+                      />
+                    </div>
+                  </div>  
+
+                    {/* FECHA Y HORA DE APERTURA */}
+                    <div className="space-y-2">
+                      <Label htmlFor="fecha_hora_apertura" className="text-gray-700 font-medium">
+                        Fecha y hora de apertura *
+                      </Label>
+                      <Input
+                        disabled
+                        id="fecha_hora_apertura"
+                        type="datetime-local"
+                        className="flex-1 p-1 pl-2.5 rounded-md border-2 border-gray-300 bg-gray-50 text-gray-900 cursor-not-allowed"
+                        {...register('fecha_hora_apertura', {
+                          required: 'Este campo es requerido'
+                        })}
+                      />
+                      {errors?.fecha_hora_apertura && (
+                        <span className='text-red-400 text-sm'>{errors.fecha_hora_apertura.message as string}</span>
+                      )}
+                    </div>
+                    
                       
-                    {/* DESCRIPCION */}
+                    {/*OBSERVACIONES */}
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="descripcion" className="text-gray-700 font-medium">
-                        Descripción *
+                      <Label htmlFor="observaciones_apertura" className="text-gray-700 font-medium">
+                        Observaciones (opcional)
                       </Label>
                       <Textarea
-                        id="descripcion"
-                        autoComplete="descripcion"
-                        placeholder="Describe de la caja"
+                        id="observaciones_apertura"
+                        autoComplete="observaciones_apertura"
+                        placeholder="Observaciones o comentarios sobre la apertura"
                         className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        {...register('descripcion', {
-                        required: true, 
-                        validate: {blankSpace: (value) => !!value.trim()},
-                        minLength: 15})}
+                        {...register('observaciones_apertura', {
+                          required: false,
+                          })
+                        }
                         />
-                        <div>
-                          {(errors?.descripcion?.type === 'required' || errors?.descripcion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.descripcion?.type === 'minLength' && <span className='text-red-400 text-sm'>La descripcion debe tener minimo 15 caracteres</span>}
-                        </div>
                     </div>
                   </div>
 
@@ -800,7 +1129,7 @@ export default function CajasPage() {
                               </> : 
                               <>
                                 <Check className="h-4 w-4 mr-2" />
-                                Crear Caja
+                                Crear Apertura
                               </>}
                         </Button>
                       }
@@ -816,7 +1145,7 @@ export default function CajasPage() {
                             </> : 
                             <>
                               <Check className="h-4 w-4 mr-2" />
-                              Guardar Caja  
+                              Guardar Apertura
                             </>}
                       </Button>}
 
@@ -844,9 +1173,9 @@ export default function CajasPage() {
                           <Shield className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <CardTitle className="text-blue-900">Lista de Cajas</CardTitle>
+                          <CardTitle className="text-blue-900">Lista de Aperturas</CardTitle>
                           <CardDescription className="text-blue-700">
-                            Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems} cajas
+                            Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems} aperturas
                           </CardDescription>
                         </div>
                       </div>
@@ -937,13 +1266,16 @@ export default function CajasPage() {
                     <TableHeader>
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
                         <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Información</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Ubicación</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Sucursal</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Punto Expedicion</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Facturación</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Saldo actual</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Estado actual</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Código</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Caja</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Usuario</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Apertura</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Monto Inicial</TableHead>
+                        {/* <TableHead className="font-semibold text-gray-700">Ingresos</TableHead> */}
+                        {/* <TableHead className="font-semibold text-gray-700">Egresos</TableHead>
+                        <TableHead className="font-semibold text-gray-700">Balance Final</TableHead> */}
+                        {/* <TableHead className="font-semibold text-gray-700">Diferencia</TableHead> */}
+                        <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                         <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -955,15 +1287,15 @@ export default function CajasPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 &&  siTienePermiso("cajas", "leer") && dataList.map((data: Caja) => (
+                      {!isFetching && dataList.length > 0 &&  siTienePermiso("aperturas", "leer") && dataList.map((data: AperturaListado) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
                         >
                           <TableCell>
                             <div>
-                              <div className="font-medium text-gray-900 pl-2">{
-                                data?.numero}
+                              <div className="font-medium text-gray-900 pl-2">
+                                {data?.numero}
                               </div>
                             </div>
                           </TableCell>
@@ -971,11 +1303,7 @@ export default function CajasPage() {
                           <TableCell>
                             <div>
                               <div className="font-medium text-gray-900 truncate max-w-xs">
-                                {data?.nombre}
-                              </div>
-
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
-                                {data?.numero_caja}
+                                {data?.codigo_apertura}
                               </div>
                             
                             </div>
@@ -984,8 +1312,9 @@ export default function CajasPage() {
                           <TableCell>
                             <div>
                               <div className="text-sm text-gray-500 truncate max-w-xs">
-                                {data?.ubicacion} 
-                                </div>
+                                {/* {data?.ubicacion}  */}
+                                {data?.caja_nombre}
+                              </div>
                             </div>
 
                           </TableCell>
@@ -993,51 +1322,43 @@ export default function CajasPage() {
                           <TableCell>
                             <div>
                               <div className="font-medium text-gray-900 truncate max-w-xs">
-                                {data?.establecimiento_nombre}
-                                </div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
-                                {data?.establecimiento_codigo}
-                                </div>
+                                {/* {data?.establecimiento_nombre} */}
+                                {data?.responsable_nombre}
+                              </div>
                             </div>
                           </TableCell>
 
                           <TableCell>
                             <div>
                               <div className="font-medium text-gray-900 truncate max-w-xs">
-                                {data?.punto_expedicion_nombre}
-                                </div>
-                              {/* <div className="text-sm text-gray-500 truncate max-w-xs">
-                                Punto {data?.punto_expedicion}
-                                </div> */}
+                                {formatearFecha(data?.fecha_hora_apertura)}
+                              </div>
                             </div>
                           </TableCell>
                           
                           {/* <TableCell> */}
                           <TableCell>
-                            <Badge className={`text-xs ${data.emite_facturas ? 'bg-green-100 text-green-600 border-green-200': 'bg-gray-100 text-gray-600 border-gray-200'}  `}>
+                            {/* <Badge className={`text-xs ${data.emite_facturas ? 'bg-green-100 text-green-600 border-green-200': 'bg-gray-100 text-gray-600 border-gray-200'}  `}>
                               {data.emite_facturas ? 'Habilitada' : 'Deshabilitada'}
-                            </Badge>
+                            </Badge> */}
+                            <div className="font-medium text-gray-900 truncate max-w-xs">
+                                Gs. {formatearSeparadorMiles.format(Number(data?.monto_inicial ?? 0))}
+                              </div>
+
+                              
+                              <div className="text-sm text-gray-500 truncate max-w-xs">
+                                $ {montoEnDolares(Number(data?.monto_inicial ?? 0))} 
+                              </div>
                           </TableCell>
 
                           {/* </TableCell> */}
                           
-                          <TableCell>
-                            <div>
-                              <div className="font-medium text-gray-900 truncate max-w-xs">
-                                {data?.moneda_alternativa === 'USD' ? 'Gs.' : '$'} {formatearSeparadorMiles.format(Number(data?.saldo_actual ?? 0))}
-                              </div>
-
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
-                                {data?.moneda_alternativa} {data?.saldo_actual_alternativo}
-                                </div>
-                            </div>
-
-                          </TableCell>
+                        
 
 
                           <TableCell>
-                            <Badge className={`text-xs ${data?.estado_actual === 'abierta' ? 'bg-green-100 text-green-600 border-green-200': data?.estado_actual === 'cerrada'? 'bg-red-100 text-red-600 border-red-200': 'bg-gray-100 text-gray-600 border-gray-200'}  `}>
-                              {capitalizePrimeraLetra(data?.estado_actual)}
+                            <Badge className={`text-xs ${data?.esta_abierta ? 'bg-green-100 text-green-600 border-green-200': 'bg-red-100 text-red-600 border-red-200'}  `}>
+                              {data?.esta_abierta ? 'Abierta': 'Cerrada'}
                             </Badge>
                           </TableCell>
     
@@ -1050,21 +1371,21 @@ export default function CajasPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="border-gray-200">
-                                {siTienePermiso("cajas", "leer") &&
+                                {siTienePermiso("aperturas", "leer") &&
                                   <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
                                     onClick={() => handleVerDetalles(data)}>
                                     <Eye className="h-4 w-4 mr-2 text-blue-500" />
                                     Ver detalles
                                   </DropdownMenuItem>
                                 }
-                                {siTienePermiso("cajas", "modificar") &&
+                                {siTienePermiso("aperturas", "modificar") &&
                                   <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
                                     <Edit className="h-4 w-4 mr-2 text-emerald-500" />
                                     Editar
                                   </DropdownMenuItem>
                                 }
                                 <DropdownMenuSeparator />
-                                {siTienePermiso("cajas", "eliminar") &&
+                                {siTienePermiso("aperturas", "eliminar") &&
                                   <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
                                     onClick={() => toggleActivar(data)}>
                                     
