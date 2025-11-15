@@ -56,6 +56,11 @@ export async function fetchDataPuntoExpedicionTodo() {
   return resp?.data
 }
 
+export async function fetchEstablecimientoTodo() {
+  const resp = await axiosInstance.get(`facturacion/establecimientos/todos/`);
+  return resp?.data
+}
+
 export async function fetchDataTimbradosTodo() {
   const resp = await axiosInstance.get(`facturacion/timbrados/todos/`);
   return resp?.data

@@ -64,11 +64,13 @@ import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useSessionStore } from "@/store/sessionStore"
 import { Textarea } from "@/components/ui/textarea"
-import { fetchDataPuntoExpedicionTodo } from "@/components/utils/httpFacturacion"
+import { fetchDataPuntoExpedicionTodo, fetchEstablecimientoTodo } from "@/components/utils/httpFacturacion"
 import type { PuntoExpedicion } from "@/types/facturacion"
+import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
+import { NumericFormat } from "react-number-format"
+import { fetchContizacion, fetchDataResponsable, nuevoDataFetch as nuevoAperturaFetch } from "@/components/utils/httpAperturasCajas"
 
 
 const usuariosStatusColors = {
@@ -89,6 +91,14 @@ export default function CajasPage() {
   const [onDesactivarData, setOnDesactivarData] = useState(false);
   const [onVerDetalles, setOnVerDetalles] = useState(false);
   const [dataDetalle, setDataDetalle] = useState<Caja>();
+  const [onAbrirCaja, setOnAbrirCaja] = useState(false);
+  const [cajaParaApertura, setCajaParaApertura] = useState<Caja>();
+  const [selectedPersonaID, setSelectedPersonaID] = useState<number | "">("");
+  const [selectedTitularData, setSelectedTitularData] = useState<any | undefined>();
+  const [personaBusqueda, setPersonaBusqueda] = useState<string>("");
+  const [newDataPersonaList, setNewDataPersonaList] = useState<any[]>();
+  const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
+  const [puntosExpedicionFiltrados, setPuntosExpedicionFiltrados] = useState<any[]>([]);
   const {handleShowToast} = use(ToastContext);
 
   const [filtros, setFiltros] = useState({
@@ -128,7 +138,28 @@ export default function CajasPage() {
         queryFn: () => fetchDataPuntoExpedicionTodo(),
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
-  
+
+  const {data: dataEstablecimientoList, isFetching: isFetchingEstablecimiento,} = useQuery({
+        queryKey: ['establecimiento-todos',], //data cached
+        queryFn: () => fetchEstablecimientoTodo(),
+        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+      });
+
+  // Queries para modal de apertura de caja
+  const {data: dataCotizacion} = useQuery({
+    queryKey: ['contizacion-al-dia'],
+    queryFn: () => fetchContizacion(),
+    staleTime: 30 * 60 * 1000,
+    enabled: onAbrirCaja
+  });
+
+  const {data: dataPersonaList, isFetching: isFetchingPersonas} = useQuery({
+      queryKey: ['responsables-disponibles', 1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}],
+      queryFn: () => fetchDataResponsable(1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}),
+      staleTime: 5 * 60 * 1000,
+      enabled: onAbrirCaja
+    });
+
 
     // console.log('tengo mis permisos?: ', siTienePermiso("caja", "crear"))
     // console.log('tengo mis permisos?: ', siTienePermiso("caja", "leer"))
@@ -244,18 +275,64 @@ export default function CajasPage() {
     },
   });
 
+  // Mutación para crear apertura de caja
+  const {mutate: mutateCrearApertura, isPending: isPendingCrearApertura} = useMutation({
+    mutationFn: nuevoAperturaFetch,
+    onSuccess: () => {
+        handleShowToast('Se ha creado la apertura de caja satisfactoriamente', 'success');
+        handleCancelApertura();
+        queryClient.invalidateQueries({
+          queryKey: ['cajas'],
+          exact: false
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['cajas-resumen'],
+        });
+    },
+  });
 
-  // DATOS DEL FORMULARIO 
-    const {control, register, handleSubmit, watch, formState: {errors, }, clearErrors, reset} = 
+
+  // Función para obtener la fecha y hora local en formato YYYY-MM-DDTHH:mm
+  const getFechaHoraLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // FORMULARIO PARA CAJAS (crear/editar)
+    const {control, register, handleSubmit, watch, formState: {errors, }, clearErrors, reset, setValue} =
               useForm<any>({
                 mode: "onBlur",
                 defaultValues: {
                   nombre: "",
-                  ubicacion: "",
                   descripcion: "",
-                  emiteFactura: true
+                  establecimiento: "",
+                  punto_expedicion: '',
                 }
               });
+
+  // FORMULARIO SEPARADO PARA APERTURA DE CAJA
+    const {
+      control: controlApertura,
+      register: registerApertura,
+      handleSubmit: handleSubmitApertura,
+      watch: watchApertura,
+      formState: {errors: errorsApertura},
+      reset: resetApertura,
+      setValue: setValueApertura
+    } = useForm<any>({
+      mode: "onBlur",
+      defaultValues: {
+        monto_inicial: null,
+        monto_inicial_alternativo: null,
+        fecha_hora_apertura: getFechaHoraLocal(),
+        observaciones_apertura: ""
+      }
+    });
 
 
   const handleCancel = () => {
@@ -264,43 +341,93 @@ export default function CajasPage() {
         setDataADesactivar(undefined);
         reset({
           nombre: "",
-          ubicacion: "",
           descripcion: "",
-          emiteFactura: true,
           punto_expedicion: '',
+          establecimiento: '',
         });
         setActiveTab('list');
+  }
 
+  const handleCancelApertura = () => {
+        setOnAbrirCaja(false);
+        setCajaParaApertura(undefined);
+        setSelectedPersonaID("");
+        setSelectedTitularData(undefined);
+        setPersonaNoSeleccionada(undefined);
+        setPersonaBusqueda("");
+        setNewDataPersonaList([]);
+        resetApertura({
+          monto_inicial: null,
+          monto_inicial_alternativo: null,
+          fecha_hora_apertura: getFechaHoraLocal(),
+          observaciones_apertura: ""
+        });
+  }
+
+  const handleAbrirCajaModal = (caja: Caja) => {
+    setCajaParaApertura(caja);
+    setOnAbrirCaja(true);
+    resetApertura({
+      monto_inicial: null,
+      monto_inicial_alternativo: null,
+      fecha_hora_apertura: getFechaHoraLocal(),
+      observaciones_apertura: ""
+    });
+  }
+
+  const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
+    setPersonaNoSeleccionada(value);
+  }
+
+  const handleGuardarApertura = async (dataForm: any) => {
+    console.log(dataForm)
+    if(!selectedPersonaID){
+        handleShowToast('Debes seleccionar el responsable', 'error');
+        setPersonaNoSeleccionada(false);
+        return;
+    }
+
+    // Convertir la fecha del input datetime-local a formato ISO UTC
+    const fechaLocal = new Date(dataForm.fecha_hora_apertura);
+    const fechaISO = fechaLocal.toISOString();
+
+    // Construir el payload según lo que espera el backend
+    const payload = {
+      caja: Number(cajaParaApertura?.id),
+      responsable: Number(selectedPersonaID),
+      fecha_hora_apertura: fechaISO,
+      monto_inicial: Number(dataForm.monto_inicial).toFixed(2),
+      monto_inicial_alternativo: Number(dataForm.monto_inicial_alternativo).toFixed(2),
+      observaciones_apertura: dataForm.observaciones_apertura || ""
+    }
+
+    console.log('Payload apertura:', payload);
+    mutateCrearApertura(payload);
   }
 
 
-  const handleGuardarNuevaData = async (dataForm: any) => { 
+  const handleGuardarNuevaData = async (dataForm: any) => {
     console.log(dataForm)
-    const payload = { 
-      ...dataForm,
+    const payload = {
+      nombre: dataForm.nombre,
+      descripcion: dataForm.descripcion,
+      punto_expedicion: dataForm.punto_expedicion,
       activo: true
     }
 
-    delete payload.emiteFactura;
-
-    if(!dataForm.emiteFactura)
-      delete payload.punto_expedicion;
-
     console.log(payload);
     mutate(payload);
-    
+
   }
 
   const handleGuardarDataEditado = async (dataForm: any) => {
-    console.log('dataForm editar: ', dataForm) 
+    console.log('dataForm editar: ', dataForm)
 
-    const payload = { 
+    const payload = {
       nombre: dataForm.nombre,
-      ubicacion: dataForm.ubicacion,
       descripcion: dataForm.descripcion,
       id: dataAEditar?.id,
       activo: dataAEditar?.activo,
-      emite_facturas: dataForm.emiteFactura,
       punto_expedicion: dataForm.punto_expedicion
     }
 
@@ -316,16 +443,41 @@ export default function CajasPage() {
     if (dataAEditar && dataPuntoExpedicionList && dataPuntoExpedicionList.length > 0) {
       console.log('reset data para editar: ', dataAEditar)
 
-      // Resetear el formulario con todos los valores, incluyendo el punto_expedicion
-      reset({
-        nombre: dataAEditar.nombre,
-        ubicacion: dataAEditar.ubicacion,
-        descripcion: dataAEditar.descripcion,
-        emiteFactura: dataAEditar.emite_facturas,
-        punto_expedicion: dataAEditar.punto_expedicion.toString(), // Convertir a string para el selector
-      });
+      // Encontrar el punto de expedición para obtener su establecimiento
+      const puntoExpedicion = dataPuntoExpedicionList.find(
+        (pe: any) => pe.id === dataAEditar.punto_expedicion
+      );
+
+      if (puntoExpedicion) {
+        // Establecer los puntos de expedición filtrados para el establecimiento de la caja
+        const puntosDelEstablecimiento = dataPuntoExpedicionList.filter(
+          (pe: any) => pe.establecimiento.id === puntoExpedicion.establecimiento.id
+        );
+        setPuntosExpedicionFiltrados(puntosDelEstablecimiento);
+
+        // Resetear el formulario con todos los valores
+        reset({
+          nombre: dataAEditar.nombre,
+          descripcion: dataAEditar.descripcion,
+          establecimiento: puntoExpedicion.establecimiento.id.toString(),
+          punto_expedicion: dataAEditar.punto_expedicion.toString(),
+        });
+      }
     }
   }, [dataAEditar, dataPuntoExpedicionList, reset]);
+
+  // useEffect(() => {
+  //   if (dataAEditar && dataEstablecimientoList && dataEstablecimientoList.length > 0) {
+  //     console.log('reset data para editar: ', dataAEditar)
+
+  //     // Resetear el formulario con todos los valores, incluyendo el punto_expedicion
+  //     reset({
+  //       nombre: dataAEditar.nombre,
+  //       descripcion: dataAEditar.descripcion,
+  //       punto_expedicion: dataAEditar.punto_expedicion.toString(), // Convertir a string para el selector
+  //     });
+  //   }
+  // }, [dataAEditar, dataEstablecimientoList, reset]);
 
 
   const handleEditar = (data: Caja) => {
@@ -358,6 +510,34 @@ export default function CajasPage() {
     setDataDetalle(undefined);
   }
 
+  // Efecto para procesar la lista de personas/responsables
+  useEffect(() => {
+    if(dataPersonaList){
+        const dataPersonasResponsables = dataPersonaList.map((data: any) => ({
+          ...data, tipo_documento_nombre: data?.tipo_documento?.nombre
+        }))
+        setNewDataPersonaList([...dataPersonasResponsables])
+    }
+  }, [dataPersonaList]);
+
+  // Efecto para limpiar lista de personas cuando está cargando
+  useEffect(() => {
+    if(isFetchingPersonas){
+      setNewDataPersonaList([])
+    }
+  }, [isFetchingPersonas]);
+
+  // Cálculo automático del monto alternativo en USD (para formulario de apertura)
+  const montoInicialApertura = watchApertura('monto_inicial');
+  useEffect(() => {
+    if (montoInicialApertura && dataCotizacion?.valor_en_guaranies) {
+      const montoEnDolares = Number(montoInicialApertura) / Number(dataCotizacion.valor_en_guaranies);
+      setValueApertura('monto_inicial_alternativo', parseFloat(montoEnDolares.toFixed(2)));
+    } else {
+      setValueApertura('monto_inicial_alternativo', null);
+    }
+  }, [montoInicialApertura, dataCotizacion, setValueApertura]);
+
   useEffect(() => {
     const handler = setTimeout(() => {
       console.log('cambiando nombre')
@@ -384,7 +564,30 @@ export default function CajasPage() {
   }, [activeTab]);
 
 
-  const emiteFactura = watch('emiteFactura');
+  const establecimientoSelected = watch('establecimiento');
+  const puntoExpedicionSelected = watch('punto_expedicion');
+
+  useEffect(() => {
+    if(establecimientoSelected && dataPuntoExpedicionList){
+      console.log('Establecimiento seleccionado:', establecimientoSelected)
+      console.log('Lista de puntos de expedición:', dataPuntoExpedicionList);
+
+      // Filtrar puntos de expedición según el establecimiento seleccionado
+      const listPE = dataPuntoExpedicionList.filter((pe: any) =>
+        pe.establecimiento.id.toString() === establecimientoSelected.toString()
+      );
+      console.log('Puntos de expedición filtrados:', listPE);
+
+      setPuntosExpedicionFiltrados(listPE);
+
+      // Limpiar el punto de expedición seleccionado cuando cambia el establecimiento
+      setValue('punto_expedicion', '');
+    } else {
+      // Si no hay establecimiento seleccionado, limpiar la lista de puntos de expedición
+      setPuntosExpedicionFiltrados([]);
+      setValue('punto_expedicion', '');
+    }
+  }, [establecimientoSelected, dataPuntoExpedicionList, setValue]);
 
 
   return (
@@ -444,21 +647,9 @@ export default function CajasPage() {
                           </div>
 
                           {/* Punto de expedición */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm font-medium text-gray-500">Punto de Expedición</Label>
-                              <p className="mt-1 text-gray-900">{dataDetalle?.punto_expedicion_nombre}</p>
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-500">Emite Facturas</Label>
-                              <div className="mt-1">
-                                <Badge className={dataDetalle?.emite_facturas
-                                  ? 'bg-green-100 text-green-700 border-green-200'
-                                  : 'bg-red-100 text-red-700 border-red-200'}>
-                                  {dataDetalle?.emite_facturas ? 'Sí' : 'No'}
-                                </Badge>
-                              </div>
-                            </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-500">Punto de Expedición</Label>
+                            <p className="mt-1 text-gray-900">{dataDetalle?.punto_expedicion_nombre}</p>
                           </div>
 
                           {/* Saldos */}
@@ -484,12 +675,7 @@ export default function CajasPage() {
                             </div>
                           </div>
 
-                          {/* Ubicación y descripción */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-500">Ubicación</Label>
-                            <p className="mt-1 text-gray-900">{dataDetalle?.ubicacion || 'No especificada'}</p>
-                          </div>
-
+                          {/* Descripción */}
                           <div>
                             <Label className="text-sm font-medium text-gray-500">Descripción</Label>
                             <p className="mt-1 text-gray-900">{dataDetalle?.descripcion || 'Sin descripción'}</p>
@@ -539,6 +725,214 @@ export default function CajasPage() {
                                           {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
                           </Button>
                     </div>
+              </Modal>
+            </div>
+      </div>}
+
+      {/* Modal de Apertura de Caja */}
+      {onAbrirCaja &&
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+            <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-3xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
+              <Modal onClose={handleCancelApertura} claseCss="modal-detalles">
+                <form onSubmit={handleSubmitApertura(handleGuardarApertura)}>
+                  <div className="bg-white rounded-lg shadow-lg p-6">
+                    {/* Header */}
+                    <div className="mb-6 border-b pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                          <Plus className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-semibold text-gray-900">
+                            Apertura de Caja
+                          </h2>
+                          <p className="text-gray-600">
+                            Caja: <span className="font-medium">{cajaParaApertura?.nombre}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Formulario */}
+                    <div className="space-y-6">
+                      {/* Responsable */}
+                      <div className="space-y-2">
+                        <Label htmlFor="responsable" className="text-gray-700 font-medium">
+                          Responsable *
+                        </Label>
+                        <DinamicSearchSelect
+                          dataList={newDataPersonaList || []}
+                          value={selectedPersonaID}
+                          onValueChange={setSelectedPersonaID}
+                          setSelectedTitularData={setSelectedTitularData}
+                          handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                          onSearchChange={setPersonaBusqueda}
+                          isFetchingPersonas={isFetchingPersonas}
+                          placeholder="Buscar un responsable por documento o nombre..."
+                          labelKey='nombre_completo'
+                          secondaryLabelKey='email'
+                          valueKey="empleado_id"
+                        />
+                        {(personaNoSeleccionada === false) && (
+                          <p className="text-red-400 text-sm">Este campo es requerido</p>
+                        )}
+                      </div>
+
+                      {/* Monto Inicial (Gs) */}
+                      <div className="space-y-2">
+                        <Label htmlFor="monto_inicial" className="text-gray-700 font-medium">
+                          Monto inicial (Gs) *
+                        </Label>
+                        <Controller
+                          name="monto_inicial"
+                          control={controlApertura}
+                          rules={{
+                            required: 'Debes completar este campo',
+                            validate: (value) => {
+                              if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+                                return 'Valor inválido';
+                              }
+                              if (Number(value) <= 0) {
+                                return 'El valor debe ser mayor que cero';
+                              }
+                              return true;
+                            },
+                          }}
+                          render={({ field, fieldState: { error } }) => (
+                            <div className="flex flex-col w-full">
+                              <NumericFormat
+                                value={field.value ?? ''}
+                                onValueChange={(values) => {
+                                  const val = values.floatValue ?? null;
+                                  if (val === null || val <= 0) {
+                                    field.onChange(null);
+                                  } else {
+                                    field.onChange(val);
+                                  }
+                                }}
+                                onBlur={field.onBlur}
+                                thousandSeparator="."
+                                decimalSeparator=","
+                                allowNegative={false}
+                                decimalScale={0}
+                                allowLeadingZeros={false}
+                                placeholder="ej: 300.000"
+                                className={`flex-1 p-2 pl-2.5 rounded-md border-2 ${
+                                  error
+                                    ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
+                                    : 'border-gray-300 focus:border-blue-500'
+                                }`}
+                              />
+                              {error && (
+                                <span className="text-red-400 text-sm mt-1">{error.message}</span>
+                              )}
+                            </div>
+                          )}
+                        />
+                      </div>
+
+                      {/* Monto Alternativo (USD) - Calculado automáticamente */}
+                      <div className="space-y-2">
+                        <Label htmlFor="monto_inicial_alternativo" className="text-gray-700 font-medium">
+                          Monto Alternativo (USD)
+                        </Label>
+                        <Controller
+                          name="monto_inicial_alternativo"
+                          control={controlApertura}
+                          render={({ field }) => (
+                            <div className="flex flex-col w-full">
+                              <NumericFormat
+                                value={field.value ?? ''}
+                                disabled={true}
+                                onBlur={field.onBlur}
+                                thousandSeparator="."
+                                decimalSeparator=","
+                                allowNegative={false}
+                                decimalScale={2}
+                                fixedDecimalScale={true}
+                                allowLeadingZeros={false}
+                                placeholder="Se calcula automáticamente"
+                                className="flex-1 p-2 pl-2.5 rounded-md border-2 border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Calculado automáticamente según la cotización del día (1 USD = Gs. {dataCotizacion?.valor_en_guaranies ? Number(dataCotizacion.valor_en_guaranies).toLocaleString('es-PY') : '---'})
+                              </p>
+                            </div>
+                          )}
+                        />
+                      </div>
+
+                      {/* Fecha y Hora de Apertura */}
+                      <div className="space-y-2">
+                        <Label htmlFor="fecha_hora_apertura" className="text-gray-700 font-medium">
+                          Fecha y hora de apertura *
+                        </Label>
+                        <Input
+                          disabled
+                          id="fecha_hora_apertura"
+                          type="datetime-local"
+                          className="p-2 pl-2.5 rounded-md border-2 border-gray-300 bg-gray-50 text-gray-900 cursor-not-allowed"
+                          {...registerApertura('fecha_hora_apertura', {
+                            required: 'Este campo es requerido'
+                          })}
+                        />
+                        {errorsApertura?.fecha_hora_apertura && (
+                          <span className='text-red-400 text-sm'>{errorsApertura.fecha_hora_apertura.message as string}</span>
+                        )}
+                      </div>
+
+                      {/* Observaciones */}
+                      <div className="space-y-2">
+                        <Label htmlFor="observaciones_apertura" className="text-gray-700 font-medium">
+                          Observaciones (opcional)
+                        </Label>
+                        <Textarea
+                          id="observaciones_apertura"
+                          autoComplete="observaciones_apertura"
+                          placeholder="Observaciones o comentarios sobre la apertura"
+                          className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...registerApertura('observaciones_apertura', {
+                            required: false,
+                          })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex justify-end gap-3 mt-6">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleCancelApertura}
+                        className="cursor-pointer border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isPendingCrearApertura}
+                        onClick={() => {
+                          console.log('🔘 Click en botón Crear Apertura');
+                          console.log('Errores del formulario de apertura:', errorsApertura);
+                          console.log('selectedPersonaID:', selectedPersonaID);
+                        }}
+                        className="cursor-pointer bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+                      >
+                        {isPendingCrearApertura ? (
+                          <>
+                            <Loader2Icon className="animate-spin w-4 h-4 mr-2"/>
+                            Creando...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Crear Apertura
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
               </Modal>
             </div>
       </div>}
@@ -632,56 +1026,87 @@ export default function CajasPage() {
                         </div>
                       </div>
 
+                       {/* ESTABLECIMIENTO */}
                       <div className="space-y-2">
-                        <Label htmlFor="ubicacion" className="text-gray-700 font-medium">
-                          Ubicación de la caja *
+                        <Label htmlFor="establecimiento" className="text-gray-700 font-medium">
+                          Establecimiento *
                         </Label>
-                        <Input
-                          id="ubicacion"
-                          autoComplete="ubicacion"
-                          placeholder="Ubicación de la caja"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...register('ubicacion', {
-                            required: true, 
-                            validate: {blankSpace: (value) => !!value.trim()},
-                            minLength: 3})}
-                        />
-                        <div>
-                          {(errors?.ubicacion?.type === 'required' || errors?.ubicacion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.ubicacion?.type === 'minLength' && <span className='text-red-400 text-sm'>La ubicación debe tener minimo 3 caracteres</span>}
-                        </div>
-                      </div>
-                      
-                        {/* EMITE FACTURA */}
-                      <div className="space-y-2">
-                        <Controller
-                          name="emiteFactura"
-                          control={control}
-                          defaultValue={false}
-                          render={({ field }) => (
-                            <div className="flex flex-col items-start gap-3 cursor-pointer mt-2">
-                              <div className="flex items-center gap-3">
-                                <Checkbox
-                                  disabled={!!dataAEditar}
-                                  id="emiteFactura"
-                                  checked={field.value}
-                                  onCheckedChange={(checked) => field.onChange(!!checked)}
-                                  className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
-                                />
-                                <Label htmlFor="emiteFactura" className="cursor-pointer">Emite Factura Electrónica</Label>
+
+                        {isFetchingEstablecimiento && (
+                          <div className="w-full"> {/* Contenedor adicional para controlar el ancho */}
+                            <Select>
+                              <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 flex">
+                              <div className="w-full flex items-center justify-center">
+                                <Loader2Icon className="animate-spin w-6 h-6 text-gray-300"/>
                               </div>
-                              <p className="text-gray-600 text-sm">Si la caja emite facturas, debe tener un punto de expedición asociado.</p>
-                            </div>
+                              </SelectTrigger>
+                            </Select>
+                          </div>
+                        )}
 
-                          )}
-                        />
+                        {!isFetchingEstablecimiento &&
+                          <Controller
+                            name="establecimiento"
+                            control={control}
+                            rules={{
+                              required: "Este campo es requerido"
+                            }}
+                            render={({ field }) => (
+                              <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
+                                <Select
+                                  disabled={!!dataAEditar}
+                                  value={field.value}
+                                  onValueChange={(value) => {
+                                    field.onChange(value)
+                                    if (value) {
+                                      clearErrors("establecimiento")
+                                    }
 
-                      </div>
+                                    console.log('value: ', value);
+                                  }}
+                                  onOpenChange={(open) => {
+                                    if (!open && !field.value) {
+                                      field.onBlur();
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
+                                    <SelectValue placeholder="Selecciona el establecimiento" />
+                                  </SelectTrigger>
+                                  <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
+                                    {dataEstablecimientoList.map((data: any) =>
+                                      <SelectItem
+                                        key={data.id}
+                                        value={data.id.toString()}
+                                        className="pl-2 pr-4"
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
+                                          <span className="truncate">{data.nombre}</span>
+                                          <span>
+                                              <Badge className={`text-xs bg-gray-100 text-gray-600 border-gray-200 `}>
+                                                {data.codigo}
+                                              </Badge>
+                                            </span>
+                                        </div>
+                                      </SelectItem>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          />
+                        }
+
+                        {errors.establecimiento && (
+                          <p className="text-red-400 text-sm">{errors.establecimiento.message as string}</p>
+                        )}
+                    </div>
 
                        {/* PUNTO DE EXPEDICION */}
                       <div className="space-y-2">
                         <Label htmlFor="punto_expedicion" className="text-gray-700 font-medium">
-                          Punto de Expedición {emiteFactura && '*'}
+                          Punto de Expedición *
                         </Label>
 
                         {isFetchingPuntoExpedicion && (
@@ -701,12 +1126,12 @@ export default function CajasPage() {
                             name="punto_expedicion"
                             control={control}
                             rules={{
-                              required: emiteFactura ? "Este campo es requerido cuando la caja emite facturas" : false
+                              required: "Este campo es requerido"
                             }}
                             render={({ field }) => (
                               <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                 <Select
-                                  disabled={!!dataAEditar || !emiteFactura}
+                                  disabled={!!dataAEditar || !establecimientoSelected}
                                   value={field.value}
                                   onValueChange={(value) => {
                                     field.onChange(value)
@@ -718,31 +1143,36 @@ export default function CajasPage() {
                                   }}
                                   onOpenChange={(open) => {
                                     if (!open && !field.value) {
-                                      field.onBlur(); 
+                                      field.onBlur();
                                     }
                                   }}
                                 >
                                   <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                                    <SelectValue placeholder="Selecciona el tipo de paquete" />
+                                    <SelectValue placeholder={!establecimientoSelected ? "Primero selecciona un establecimiento" : "Selecciona el punto de expedición"} />
                                   </SelectTrigger>
                                   <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
-                                    {dataPuntoExpedicionList.map((data: PuntoExpedicion) => 
-                                      <SelectItem 
-                                        key={data.id} 
-                                        value={data.id.toString()}
-                                        className="pl-2 pr-4"
-                                      >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                          <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
-                                          <span className="truncate">{data.nombre}</span>
-
-                                          <span>
-                                            <Badge className={`text-xs bg-gray-100 text-gray-600 border-gray-200 `}>
-                                              {data.establecimiento.nombre}
-                                            </Badge>
+                                    {puntosExpedicionFiltrados.length === 0 ? (
+                                      <div className="px-2 py-4 text-center text-sm text-gray-500">
+                                        No hay puntos de expedición disponibles para este establecimiento
+                                      </div>
+                                    ) : (
+                                      puntosExpedicionFiltrados.map((data: PuntoExpedicion) =>
+                                        <SelectItem
+                                          key={data.id}
+                                          value={data.id.toString()}
+                                          className="pl-2 pr-4"
+                                        >
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
+                                            <span className="truncate">{data.nombre}</span>
+                                            <span>
+                                              <Badge className={`text-xs bg-gray-100 text-gray-600 border-gray-200 `}>
+                                                {data.codigo}
+                                              </Badge>
                                             </span>
-                                        </div>
-                                      </SelectItem>
+                                          </div>
+                                        </SelectItem>
+                                      )
                                     )}
                                   </SelectContent>
                                 </Select>
@@ -754,32 +1184,60 @@ export default function CajasPage() {
                         {errors.punto_expedicion && (
                           <p className="text-red-400 text-sm">{errors.punto_expedicion.message as string}</p>
                         )}
-                        {!emiteFactura && (
-                          <p className="text-gray-500 text-sm flex items-center gap-1">
+                        {!establecimientoSelected && (
+                          <p className="text-amber-600 text-sm flex items-center gap-1">
                             <Info className="h-3 w-3" />
-                            Este campo solo es necesario cuando la caja emite facturas.
+                            Debes seleccionar un establecimiento primero.
                           </p>
                         )}
                     </div>
-                      
+
+                    {/* NÚMERO DE CAJA (CÓDIGO DEL PUNTO DE EXPEDICIÓN) */}
+                    <div className="space-y-2">
+                      <Label htmlFor="numero_caja" className="text-gray-700 font-medium flex items-center gap-2">
+                        Número de Caja
+                        <Info className="h-4 w-4 text-blue-500" />
+                      </Label>
+                      <Input
+                        id="numero_caja"
+                        disabled
+                        value={puntoExpedicionSelected
+                          ? puntosExpedicionFiltrados.find((pe: any) => pe.id.toString() === puntoExpedicionSelected)?.codigo || ''
+                          : ''
+                        }
+                        placeholder="Seleccione un punto de expedición"
+                        className="border-gray-300 bg-gray-50 text-gray-900 font-medium cursor-not-allowed"
+                      />
+                      <p className="text-blue-600 text-sm flex items-center gap-1">
+                        <Info className="h-3 w-3" />
+                        El número de caja será el mismo que el código del punto de expedición seleccionado
+                      </p>
+                    </div>
+
                     {/* DESCRIPCION */}
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="descripcion" className="text-gray-700 font-medium">
-                        Descripción *
+                        Descripción (opcional)
                       </Label>
                       <Textarea
                         id="descripcion"
                         autoComplete="descripcion"
-                        placeholder="Describe de la caja"
+                        placeholder="Describe de la caja (opcional)"
                         className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                         {...register('descripcion', {
-                        required: true, 
-                        validate: {blankSpace: (value) => !!value.trim()},
-                        minLength: 15})}
+                        validate: {
+                          minLength: (value) => {
+                            // Solo validar longitud mínima si el campo tiene contenido
+                            if (value && value.trim().length > 0) {
+                              return value.trim().length >= 10 || 'La descripción debe tener mínimo 10 caracteres';
+                            }
+                            return true;
+                          }
+                        }
+                      })}
                         />
                         <div>
-                          {(errors?.descripcion?.type === 'required' || errors?.descripcion?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
-                          {errors?.descripcion?.type === 'minLength' && <span className='text-red-400 text-sm'>La descripcion debe tener minimo 15 caracteres</span>}
+                          {errors?.descripcion && <span className='text-red-400 text-sm'>{errors.descripcion.message as string}</span>}
                         </div>
                     </div>
                   </div>
@@ -938,10 +1396,8 @@ export default function CajasPage() {
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
                         <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
                         <TableHead className="font-semibold text-gray-700">Información</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Ubicación</TableHead>
                         <TableHead className="font-semibold text-gray-700">Sucursal</TableHead>
                         <TableHead className="font-semibold text-gray-700">Punto Expedicion</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Facturación</TableHead>
                         <TableHead className="font-semibold text-gray-700">Saldo actual</TableHead>
                         <TableHead className="font-semibold text-gray-700">Estado actual</TableHead>
                         <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
@@ -977,17 +1433,8 @@ export default function CajasPage() {
                               <div className="text-sm text-gray-500 truncate max-w-xs">
                                 {data?.numero_caja}
                               </div>
-                            
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
-                                {data?.ubicacion} 
-                                </div>
-                            </div>
 
+                            </div>
                           </TableCell>
 
                           <TableCell>
@@ -997,7 +1444,7 @@ export default function CajasPage() {
                                 </div>
                               <div className="text-sm text-gray-500 truncate max-w-xs">
                                 {data?.establecimiento_codigo}
-                                </div>
+                              </div>
                             </div>
                           </TableCell>
 
@@ -1005,21 +1452,12 @@ export default function CajasPage() {
                             <div>
                               <div className="font-medium text-gray-900 truncate max-w-xs">
                                 {data?.punto_expedicion_nombre}
-                                </div>
-                              {/* <div className="text-sm text-gray-500 truncate max-w-xs">
-                                Punto {data?.punto_expedicion}
-                                </div> */}
+                              </div>
+                              <div className="text-sm text-gray-500 truncate max-w-xs">
+                                {data?.punto_expedicion_codigo}
+                              </div>
                             </div>
                           </TableCell>
-                          
-                          {/* <TableCell> */}
-                          <TableCell>
-                            <Badge className={`text-xs ${data.emite_facturas ? 'bg-green-100 text-green-600 border-green-200': 'bg-gray-100 text-gray-600 border-gray-200'}  `}>
-                              {data.emite_facturas ? 'Habilitada' : 'Deshabilitada'}
-                            </Badge>
-                          </TableCell>
-
-                          {/* </TableCell> */}
                           
                           <TableCell>
                             <div>
@@ -1055,6 +1493,13 @@ export default function CajasPage() {
                                     onClick={() => handleVerDetalles(data)}>
                                     <Eye className="h-4 w-4 mr-2 text-blue-500" />
                                     Ver detalles
+                                  </DropdownMenuItem>
+                                }
+                                {siTienePermiso("cajas", "crear") && data.estado_actual === 'cerrada' &&
+                                  <DropdownMenuItem className="hover:bg-green-50 cursor-pointer"
+                                    onClick={() => handleAbrirCajaModal(data)}>
+                                    <Plus className="h-4 w-4 mr-2 text-green-500" />
+                                    Abrir caja
                                   </DropdownMenuItem>
                                 }
                                 {siTienePermiso("cajas", "modificar") &&

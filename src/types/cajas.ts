@@ -56,6 +56,7 @@ export interface Caja {
   punto_expedicion_nombre: string; // Descripción completa del punto (ej. "001-001 - Casa Matriz")
   establecimiento_nombre: string;
   establecimiento_codigo: string;
+  punto_expedicion_codigo: string;
   descripcion: string; // Descripción completa del punto (ej. "001-001 - Casa Matriz")\
   emite_facturas: boolean;        // Indica si la caja puede emitir facturas
   ubicacion: string;              // Ubicación física (ej. "Piso 1 - Ventas")
