@@ -145,7 +145,7 @@ export async function activarDesactivarData({ dataId, activo }: { dataId: number
 }
 
 export async function fetchResumen() {
-  const resp = await axiosInstance.get(`/arqueo-caja/aperturas/resumen/`);
+  const resp = await axiosInstance.get(`/arqueo-caja/aperturas/resumen-general/`);
   return resp?.data
 }
 
@@ -184,6 +184,17 @@ export async function resetearContrasenia(new_password: string) {
 
 export async function registrarCotizaccicon(payload: any) {
   const resp = await axiosInstance.post(`/moneda/cotizaciones/`, {...payload});
+  return resp?.data
+}
+
+// SERVICIOS PARA CIERRE DE CAJA
+export async function fetchResumenApertura(aperturaId: number) {
+  const resp = await axiosInstance.get(`/arqueo-caja/aperturas/${aperturaId}/resumen/`);
+  return resp?.data
+}
+
+export async function cerrarCajaSimple(payload: any) {
+  const resp = await axiosInstance.post(`/arqueo-caja/cierres/cerrar-simple/`, payload);
   return resp?.data
 }
 

@@ -61,9 +61,11 @@ import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nue
 import { Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
-import Modal from "@/components/Modal"
+// import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
+import CajaAbiertaCard from "@/components/CajaAbiertaCard"
+import CerrarCajaModal from "@/components/CerrarCajaModal"
 import { useSessionStore } from "@/store/sessionStore"
 import { Textarea } from "@/components/ui/textarea"
 import { fetchDataPuntoExpedicionTodo, fetchEstablecimientoTodo } from "@/components/utils/httpFacturacion"
@@ -104,6 +106,7 @@ export default function CajasPage() {
   const [cajaBusqueda, setCajaBusqueda] = useState<string>("");
   const [newDataCajaList, setNewDataCajaList] = useState<any[]>();
   const [cajaNoSeleccionada, setCajaNoSeleccionada] = useState<boolean | undefined>();
+  const [onCerrarCaja, setOnCerrarCaja] = useState(false);
   const {handleShowToast} = use(ToastContext);  
 
   const [filtros, setFiltros] = useState({
@@ -168,7 +171,6 @@ export default function CajasPage() {
   const {data: dataCajasDisponibles, isFetching: isFetchingCajas} = useQuery({
       queryKey: ['cajas-cerradas-disponibles', 1, 10, {activo: true, estado: 'cerrada', nombre: cajaBusqueda}],
       queryFn: () => fetchData(1, 10, {activo: true, estado: 'cerrada', nombre: cajaBusqueda}),
-      staleTime: 5 * 60 * 1000,
       enabled: onAbrirCaja && abrirCajaGlobal
     });
 
@@ -397,7 +399,7 @@ export default function CajasPage() {
         setSelectedCajaData(undefined);
         setCajaNoSeleccionada(undefined);
         setCajaBusqueda("");
-        setNewDataCajaList([]);
+        // No limpiamos newDataCajaList aquí para que los datos en caché estén disponibles al reabrir
         setAbrirCajaGlobal(false);
         resetApertura({
           monto_inicial: null,
@@ -433,6 +435,8 @@ export default function CajasPage() {
       fecha_hora_apertura: getFechaHoraLocal(),
       observaciones_apertura: ""
     });
+  
+    setValueApertura('responsable', session?.nombreUsuario);
   }
 
   const handleDataNoPersonaSeleccionada = (value: boolean | undefined) => {
@@ -619,8 +623,11 @@ export default function CajasPage() {
           punto_expedicion_info: `${caja?.punto_expedicion_nombre} - ${caja?.punto_expedicion_codigo}`
         }))
         setNewDataCajaList([...dataCajasCerradas])
+    } else if (onAbrirCaja && abrirCajaGlobal && !isFetchingCajas) {
+      // Si el modal está abierto pero no hay datos y no está cargando, limpiar la lista
+      setNewDataCajaList([])
     }
-  }, [dataCajasDisponibles]);
+  }, [dataCajasDisponibles, onAbrirCaja, abrirCajaGlobal, isFetchingCajas]);
 
   // Efecto para limpiar lista de cajas cuando está cargando
   useEffect(() => {
@@ -694,10 +701,9 @@ export default function CajasPage() {
 
   return (
     <>
-        {onVerDetalles && 
+        {onVerDetalles &&
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
-              <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
                   <div className=" bg-white rounded-lg shadow-lg p-6">
                       {/* Header */}
                       <div className="mb-6 border-b pb-4">
@@ -795,15 +801,12 @@ export default function CajasPage() {
                         </button>
                       </div>
                     </div>
-
-              </Modal>
             </div>
       </div>}
 
-      {onDesactivarData && 
+      {onDesactivarData &&
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
-              <Modal onClose={handleCloseModal} claseCss="modal">
                       <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${dataADesactivar!.activo ? 'bg-red-100 dark:bg-red-900/20': 'bg-green-100 dark:bg-green-900/20'} `}>
                           {dataADesactivar!.activo && <IoWarningOutline className="h-8 w-8 text-red-600 dark:text-red-400" />}
                           {!dataADesactivar!.activo && <IoCheckmarkCircleOutline className="h-8 w-8 text-green-600 dark:text-green-400" />}
@@ -827,7 +830,6 @@ export default function CajasPage() {
                                           {!isPendingDesactivar ? 'Aceptar': 'Procesando..'}
                           </Button>
                     </div>
-              </Modal>
             </div>
       </div>}
 
@@ -835,7 +837,6 @@ export default function CajasPage() {
       {onAbrirCaja &&
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-3xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
-              <Modal onClose={handleCancelApertura} claseCss="modal-detalles">
                 <form onSubmit={handleSubmitApertura(handleGuardarApertura)}>
                   <div className="bg-white rounded-lg shadow-lg p-6">
                     {/* Header */}
@@ -903,6 +904,7 @@ export default function CajasPage() {
                               labelKey='nombre'
                               secondaryLabelKey='punto_expedicion_info'
                               valueKey="id"
+                              mostrarPreview={true}
                             />
                             {(cajaNoSeleccionada === false) && (
                               <p className="text-red-400 text-sm">Este campo es requerido</p>
@@ -1086,7 +1088,6 @@ export default function CajasPage() {
                     </div>
                   </div>
                 </form>
-              </Modal>
             </div>
       </div>}
 
@@ -1127,7 +1128,10 @@ export default function CajasPage() {
                     disabled={isVerificandoCajaAbierta}
                     onClick={() => {
                       handleAbrirCajaModal(undefined, true)
-                      setValueApertura('responsable', session?.nombreUsuario);
+                      // setTimeout(() => {
+                      //   console.log(session?.nombreUsuario);
+                      //   setValueApertura('responsable', session?.nombreUsuario);
+                      // }, 200);
                     }}>
                     {isVerificandoCajaAbierta ? (
                       <>
@@ -1159,6 +1163,24 @@ export default function CajasPage() {
 
           {/* Stats Cards */}
           <ResumenCardsDinamico resumen={dataResumen} isFetchingResumen={isFetchingResumen} isErrorResumen={isErrorResumen}/>
+
+          {/* Card de Caja Abierta */}
+          <CajaAbiertaCard
+            dataCajaAbierta={dataCajaAbierta}
+            isVerificandoCajaAbierta={isVerificandoCajaAbierta}
+            onCerrarCaja={() => setOnCerrarCaja(true)}
+          />
+
+          {/* Modal de Cierre de Caja */}
+          {/* {onCerrarCaja && dataCajaAbierta?.tiene_caja_abierta && ( */}
+            <CerrarCajaModal
+              isOpen={onCerrarCaja}
+              onClose={() => setOnCerrarCaja(false)}
+              aperturaId={dataCajaAbierta?.apertura_id}
+              cajaNombre={dataCajaAbierta?.caja_nombre}
+              codigoApertura={dataCajaAbierta?.codigo_apertura}
+            />
+          {/* )} */}
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

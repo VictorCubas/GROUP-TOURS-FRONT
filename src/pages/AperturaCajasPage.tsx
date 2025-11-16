@@ -817,7 +817,10 @@ export default function AperturaCajasPage() {
               }
 
               {siTienePermiso("aperturas", "crear") && (
-                <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                <Button
+                  disabled={true}
+                  title="Las aperturas solo se pueden crear desde la vista de Cajas"
+                  className="bg-blue-500 hover:bg-blue-600 cursor-not-allowed opacity-50"
                   onClick={() => setActiveTab('form')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nueva Apertura Caja
@@ -835,10 +838,10 @@ export default function AperturaCajasPage() {
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
                 Lista de Aperturas
               </TabsTrigger>
-              <TabsTrigger disabled={!siTienePermiso("aperturas", "crear")}
-                  title={siTienePermiso("aperturas", "crear") ? 'Crear Apertura' : 'No tienes los permisos para crear'}
+              <TabsTrigger disabled={true}
+                  title="Las aperturas solo se pueden crear desde la vista de Cajas"
                   value="form"
-                  className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
+                  className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-not-allowed">
                 {dataAEditar ?  'Editar Apertura' : 'Crear Apertura'}
               </TabsTrigger>
             </TabsList>
@@ -1378,7 +1381,7 @@ export default function AperturaCajasPage() {
                                     Ver detalles
                                   </DropdownMenuItem>
                                 }
-                                {siTienePermiso("aperturas", "modificar") &&
+                                {/* {siTienePermiso("aperturas", "modificar") &&
                                   <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
                                     <Edit className="h-4 w-4 mr-2 text-emerald-500" />
                                     Editar
@@ -1392,7 +1395,7 @@ export default function AperturaCajasPage() {
                                     {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
                                     {data.activo ? 'Desactivar' : 'Activar'}
                                   </DropdownMenuItem>
-                                }
+                                } */}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
