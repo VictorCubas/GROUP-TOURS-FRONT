@@ -57,7 +57,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Caja, RespuestaPaginada, } from "@/types/cajas"
 import { capitalizePrimeraLetra, formatearSeparadorMiles } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, } from "@/components/utils/httpCajas"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, verificarUsuarioTieneCajaAbierta } from "@/components/utils/httpCajas"
 import { Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
@@ -82,8 +82,7 @@ const usuariosStatusColors = {
 let dataList: Caja[] = [];
 
 export default function CajasPage() {
-  // const [setSearchTerm] = useState("")
-  const {siTienePermiso } = useSessionStore();
+  const {siTienePermiso, session } = useSessionStore();
   const [nombreABuscar, setNombreABuscar] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [dataAEditar, setDataAEditar] = useState<Caja>();
@@ -99,7 +98,13 @@ export default function CajasPage() {
   const [newDataPersonaList, setNewDataPersonaList] = useState<any[]>();
   const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
   const [puntosExpedicionFiltrados, setPuntosExpedicionFiltrados] = useState<any[]>([]);
-  const {handleShowToast} = use(ToastContext);
+  const [abrirCajaGlobal, setAbrirCajaGlobal] = useState<boolean>(false);
+  const [selectedCajaID, setSelectedCajaID] = useState<number | "">("");
+  const [selectedCajaData, setSelectedCajaData] = useState<any | undefined>();
+  const [cajaBusqueda, setCajaBusqueda] = useState<string>("");
+  const [newDataCajaList, setNewDataCajaList] = useState<any[]>();
+  const [cajaNoSeleccionada, setCajaNoSeleccionada] = useState<boolean | undefined>();
+  const {handleShowToast} = use(ToastContext);  
 
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
@@ -157,7 +162,23 @@ export default function CajasPage() {
       queryKey: ['responsables-disponibles', 1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}],
       queryFn: () => fetchDataResponsable(1, 10, {activo: true, tipo: 'fisica', sexo: 'all', busqueda: personaBusqueda}),
       staleTime: 5 * 60 * 1000,
-      enabled: onAbrirCaja
+      enabled: onAbrirCaja && !abrirCajaGlobal
+    });
+
+  const {data: dataCajasDisponibles, isFetching: isFetchingCajas} = useQuery({
+      queryKey: ['cajas-cerradas-disponibles', 1, 10, {activo: true, estado: 'cerrada', nombre: cajaBusqueda}],
+      queryFn: () => fetchData(1, 10, {activo: true, estado: 'cerrada', nombre: cajaBusqueda}),
+      staleTime: 5 * 60 * 1000,
+      enabled: onAbrirCaja && abrirCajaGlobal
+    });
+
+  // Query para verificar si el usuario tiene una caja abierta
+  const {data: dataCajaAbierta, isFetching: isVerificandoCajaAbierta, refetch: refetchCajaAbierta} = useQuery({
+      queryKey: ['usuario-tiene-caja-abierta'],
+      queryFn: verificarUsuarioTieneCajaAbierta,
+      staleTime: 2 * 60 * 1000, // 2 minutos
+      refetchOnWindowFocus: true, // Refetch cuando la ventana gana foco
+      enabled: !!session?.usuarioId // Solo ejecutar si hay sesión
     });
 
 
@@ -197,6 +218,7 @@ export default function CajasPage() {
   }
 
     useEffect(() => {
+      console.log(data)
       if (!data) return;
       setPaginacion({
               next: data?.next ?? null,
@@ -214,6 +236,14 @@ export default function CajasPage() {
         setNombreABuscar("")
       });
   }
+
+
+
+  console.log('Session:', session);
+  console.log('Usuario ID:', session?.usuarioId);
+  console.log('Caja abierta:', dataCajaAbierta);
+
+  
 
   const handleActiveOnly = () => {
     setShowActiveOnly(prev => !prev)
@@ -288,6 +318,12 @@ export default function CajasPage() {
         queryClient.invalidateQueries({
           queryKey: ['cajas-resumen'],
         });
+        queryClient.invalidateQueries({
+          queryKey: ['cajas-cerradas-disponibles'],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['usuario-tiene-caja-abierta'],
+        });
     },
   });
 
@@ -328,6 +364,7 @@ export default function CajasPage() {
       mode: "onBlur",
       defaultValues: {
         monto_inicial: null,
+        responsable: null,
         monto_inicial_alternativo: null,
         fecha_hora_apertura: getFechaHoraLocal(),
         observaciones_apertura: ""
@@ -356,16 +393,39 @@ export default function CajasPage() {
         setPersonaNoSeleccionada(undefined);
         setPersonaBusqueda("");
         setNewDataPersonaList([]);
+        setSelectedCajaID("");
+        setSelectedCajaData(undefined);
+        setCajaNoSeleccionada(undefined);
+        setCajaBusqueda("");
+        setNewDataCajaList([]);
+        setAbrirCajaGlobal(false);
         resetApertura({
           monto_inicial: null,
           monto_inicial_alternativo: null,
+          responsable: null,
           fecha_hora_apertura: getFechaHoraLocal(),
           observaciones_apertura: ""
         });
   }
 
-  const handleAbrirCajaModal = (caja: Caja) => {
-    setCajaParaApertura(caja);
+  const handleAbrirCajaModal = async (caja?: Caja, global = false) => {
+    // Refetch para asegurar que tenemos los datos más recientes
+    const { data: verificacion } = await refetchCajaAbierta();
+
+    // Verificar si el usuario ya tiene una caja abierta
+    if(verificacion?.tiene_caja_abierta) {
+      handleShowToast(
+        `Ya tienes una caja abierta: ${verificacion.caja_nombre} (${verificacion.codigo_apertura})`,
+        'warning'
+      );
+      return;
+    }
+
+    // Si no tiene caja abierta, continuar con la apertura
+    if(caja) {
+      setCajaParaApertura(caja);
+    }
+    setAbrirCajaGlobal(global);
     setOnAbrirCaja(true);
     resetApertura({
       monto_inicial: null,
@@ -379,12 +439,28 @@ export default function CajasPage() {
     setPersonaNoSeleccionada(value);
   }
 
+  const handleDataNoCajaSeleccionada = (value: boolean | undefined) => {
+    setCajaNoSeleccionada(value);
+  }
+
   const handleGuardarApertura = async (dataForm: any) => {
     console.log(dataForm)
-    if(!selectedPersonaID){
-        handleShowToast('Debes seleccionar el responsable', 'error');
-        setPersonaNoSeleccionada(false);
-        return;
+
+    // Validación según el tipo de apertura
+    if(abrirCajaGlobal){
+        // Si es apertura global, debe seleccionar una caja
+        if(!selectedCajaID){
+            handleShowToast('Debes seleccionar una caja', 'error');
+            setCajaNoSeleccionada(false);
+            return;
+        }
+    } else {
+        // Si es apertura individual, debe seleccionar un responsable
+        if(!selectedPersonaID){
+            handleShowToast('Debes seleccionar el responsable', 'error');
+            setPersonaNoSeleccionada(false);
+            return;
+        }
     }
 
     // Convertir la fecha del input datetime-local a formato ISO UTC
@@ -393,14 +469,22 @@ export default function CajasPage() {
 
     // Construir el payload según lo que espera el backend
     const payload = {
-      caja: Number(cajaParaApertura?.id),
-      responsable: Number(selectedPersonaID),
+      caja: abrirCajaGlobal ? Number(selectedCajaID) : Number(cajaParaApertura?.id),
       fecha_hora_apertura: fechaISO,
       monto_inicial: Number(dataForm.monto_inicial).toFixed(2),
       monto_inicial_alternativo: Number(dataForm.monto_inicial_alternativo).toFixed(2),
-      observaciones_apertura: dataForm.observaciones_apertura || ""
+      observaciones_apertura: dataForm.observaciones_apertura || "",
+      responsable: session?.usuarioId //SIEMPRE ES DEL USUARIO ACTUAL
     }
 
+  //    {
+  //   caja: 5,
+  //   fecha_hora_apertura: '2025-11-16T00:26:00.000Z',
+  //   monto_inicial: '300000.00',
+  //   monto_inicial_alternativo: '42.19',
+  //   observaciones_apertura: '',
+  //   responsable: 10
+  // }
     console.log('Payload apertura:', payload);
     mutateCrearApertura(payload);
   }
@@ -526,6 +610,24 @@ export default function CajasPage() {
       setNewDataPersonaList([])
     }
   }, [isFetchingPersonas]);
+
+  // Efecto para procesar la lista de cajas cerradas
+  useEffect(() => {
+    if(dataCajasDisponibles?.results){
+        const dataCajasCerradas = dataCajasDisponibles.results.map((caja: any) => ({
+          ...caja,
+          punto_expedicion_info: `${caja?.punto_expedicion_nombre} - ${caja?.punto_expedicion_codigo}`
+        }))
+        setNewDataCajaList([...dataCajasCerradas])
+    }
+  }, [dataCajasDisponibles]);
+
+  // Efecto para limpiar lista de cajas cuando está cargando
+  useEffect(() => {
+    if(isFetchingCajas){
+      setNewDataCajaList([])
+    }
+  }, [isFetchingCajas]);
 
   // Cálculo automático del monto alternativo en USD (para formulario de apertura)
   const montoInicialApertura = watchApertura('monto_inicial');
@@ -744,10 +846,13 @@ export default function CajasPage() {
                         </div>
                         <div>
                           <h2 className="text-xl font-semibold text-gray-900">
-                            Apertura de Caja
+                            Apertura de Caja {abrirCajaGlobal ? 'Global' : ''}
                           </h2>
                           <p className="text-gray-600">
-                            Caja: <span className="font-medium">{cajaParaApertura?.nombre}</span>
+                            {abrirCajaGlobal ?
+                              'Selecciona la caja que deseas abrir' :
+                              <>Caja: <span className="font-medium">{cajaParaApertura?.nombre}</span></>
+                            }
                           </p>
                         </div>
                       </div>
@@ -755,26 +860,74 @@ export default function CajasPage() {
 
                     {/* Formulario */}
                     <div className="space-y-6">
-                      {/* Responsable */}
+                      {/* RESPONSABLED */}
                       <div className="space-y-2">
-                        <Label htmlFor="responsable" className="text-gray-700 font-medium">
-                          Responsable *
+                          <Label htmlFor="responsable" className="text-gray-700 font-medium">
+                            Responsable *
+                          </Label>
+                          <Input
+                            id="responsable"
+                            disabled
+                            autoComplete="responsable"
+                            placeholder="Responsable"
+                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            {...registerApertura('responsable', {
+                            required: true, 
+                            validate: {blankSpace: (value) => !!value.trim()},
+                            minLength: 3})}
+                          />
+                          <div>
+                            {(errors?.responsable?.type === 'required' || errors?.responsable?.type === 'blankSpace') && <span className='text-red-400 text-sm'>Este campo es requerido</span>}
+                            {errors?.responsable?.type === 'minLength' && <span className='text-red-400 text-sm'>El nombre debe tener minimo 3 caracteres</span>}
+                          </div>
+                        </div>
+
+                        {/* SELECTOR CONDICIONAL: CAJA O RESPONSABLE */}
+                      <div className="space-y-2">
+                        <Label htmlFor="selector_caja_responsable" className="text-gray-700 font-medium">
+                          {abrirCajaGlobal ? 'Caja *' : 'Responsable *'}
                         </Label>
-                        <DinamicSearchSelect
-                          dataList={newDataPersonaList || []}
-                          value={selectedPersonaID}
-                          onValueChange={setSelectedPersonaID}
-                          setSelectedTitularData={setSelectedTitularData}
-                          handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
-                          onSearchChange={setPersonaBusqueda}
-                          isFetchingPersonas={isFetchingPersonas}
-                          placeholder="Buscar un responsable por documento o nombre..."
-                          labelKey='nombre_completo'
-                          secondaryLabelKey='email'
-                          valueKey="empleado_id"
-                        />
-                        {(personaNoSeleccionada === false) && (
-                          <p className="text-red-400 text-sm">Este campo es requerido</p>
+
+                        {abrirCajaGlobal ? (
+                          /* SELECTOR DE CAJAS CERRADAS - Para apertura global */
+                          <>
+                            <DinamicSearchSelect
+                              dataList={newDataCajaList || []}
+                              value={selectedCajaID}
+                              onValueChange={setSelectedCajaID}
+                              setSelectedTitularData={setSelectedCajaData}
+                              handleDataNoSeleccionada={handleDataNoCajaSeleccionada}
+                              onSearchChange={setCajaBusqueda}
+                              isFetchingPersonas={isFetchingCajas}
+                              placeholder="Buscar una caja cerrada..."
+                              labelKey='nombre'
+                              secondaryLabelKey='punto_expedicion_info'
+                              valueKey="id"
+                            />
+                            {(cajaNoSeleccionada === false) && (
+                              <p className="text-red-400 text-sm">Este campo es requerido</p>
+                            )}
+                          </>
+                        ) : (
+                          /* SELECTOR DE RESPONSABLES - Para apertura individual */
+                          <>
+                            <DinamicSearchSelect
+                              dataList={newDataPersonaList || []}
+                              value={selectedPersonaID}
+                              onValueChange={setSelectedPersonaID}
+                              setSelectedTitularData={setSelectedTitularData}
+                              handleDataNoSeleccionada={handleDataNoPersonaSeleccionada}
+                              onSearchChange={setPersonaBusqueda}
+                              isFetchingPersonas={isFetchingPersonas}
+                              placeholder="Buscar un responsable por documento o nombre..."
+                              labelKey='nombre_completo'
+                              secondaryLabelKey='email'
+                              valueKey="empleado_id"
+                            />
+                            {(personaNoSeleccionada === false) && (
+                              <p className="text-red-400 text-sm">Este campo es requerido</p>
+                            )}
+                          </>
                         )}
                       </div>
 
@@ -966,6 +1119,40 @@ export default function CajasPage() {
                   <Plus className="h-4 w-4 mr-2" />
                   Nueva Caja
                 </Button>
+              )}
+              {siTienePermiso("cajas", "crear") && (
+                <div className="relative">
+                  <Button
+                    className={`${dataCajaAbierta?.tiene_caja_abierta ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} cursor-pointer font-bold`}
+                    disabled={isVerificandoCajaAbierta}
+                    onClick={() => {
+                      handleAbrirCajaModal(undefined, true)
+                      setValueApertura('responsable', session?.nombreUsuario);
+                    }}>
+                    {isVerificandoCajaAbierta ? (
+                      <>
+                        <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                        Verificando...
+                      </>
+                    ) : dataCajaAbierta?.tiene_caja_abierta ? (
+                      <>
+                        <CheckIcon className="h-4 w-4 mr-2" />
+                        CAJA ABIERTA
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        ABRIR CAJA
+                      </>
+                    )}
+                  </Button>
+                  {dataCajaAbierta?.tiene_caja_abierta && (
+                    <span className="absolute -top-2 -right-2 flex h-5 w-5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-5 w-5 bg-green-500"></span>
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           </div>

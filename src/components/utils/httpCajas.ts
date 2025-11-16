@@ -93,3 +93,8 @@ export async function registrarCotizaccicon(payload: any) {
   return resp?.data
 }
 
+export async function verificarUsuarioTieneCajaAbierta() {
+  const resp = await axiosInstance.get(`/arqueo-caja/aperturas/tengo-caja-abierta/`);
+  return resp?.data
+}
+

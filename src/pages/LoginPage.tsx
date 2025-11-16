@@ -66,6 +66,7 @@ export default function LoginPage() {
         permisos: dataResp.data.user.permisos,
         esAdmin: dataResp.data.user.es_admin,
         nombreUsuario: dataResp.data.user.nombre_persona,
+        usuarioId: dataResp.data.user.id,
       }
 
 
