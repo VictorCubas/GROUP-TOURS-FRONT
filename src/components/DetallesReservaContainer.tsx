@@ -147,7 +147,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                 onSuccess: (data) => {
                 console.log('✅ Pago registrado correctamente');
                 console.log('📄 Respuesta del servidor:', data);
-                handleShowToast('Pago registrado correctamente', 'success'); 
+                handleShowToast('Pago registrado correctamente', 'success');  
 
                 // Cerrar modal
                 setIsPagoParcialModalOpen(false);
@@ -159,8 +159,11 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                 // Refrescar los detalles de la reserva para ver el estado actualizado
                 queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
                 queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
+                // Refrescar el resumen de movimientos de caja
+                queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
+                queryClient.invalidateQueries({queryKey: ['movimientos'],exact: false});
             },
-                onError: (error: any) => {
+                onError: (error: any) => { 
                     console.error('❌ Error al registrar el pago:', error);
                     console.error('📋 Detalles del error:', error.response?.data);
 

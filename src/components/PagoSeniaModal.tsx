@@ -5,12 +5,14 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from '@radix-ui/react-label';
 import { RadioGroup, RadioGroupItem } from '@radix-ui/react-radio-group';
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { Input } from './ui/input';
 import { IoCashOutline } from 'react-icons/io5';
 import { formatearSeparadorMiles } from '@/helper/formatter';
 import { ToastContext } from '@/context/ToastContext';
 import { Badge } from './ui/badge';
+import { AlertEstadoCaja } from './caja/AlertEstadoCaja';
+import { verificarUsuarioTieneCajaAbierta } from '@/components/utils/httpCajas';
 
 
 interface PagoSeniaModalProps {
@@ -45,6 +47,28 @@ export default function PagoSeniaModal({
   const [passengerDeposits, setPassengerDeposits] = useState<string[]>(
     Array.from({ length: cantidadActualPasajeros }, () => seniaPorPersona.toString())
   )
+
+  // Estado para guardar información de la caja
+  const [estadoCaja, setEstadoCaja] = useState<any>(null);
+  const [loadingEstadoCaja, setLoadingEstadoCaja] = useState(false);
+
+  // Verificar estado de caja cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingEstadoCaja(true);
+      verificarUsuarioTieneCajaAbierta()
+        .then((data) => {
+          setEstadoCaja(data);
+        })
+        .catch((error) => {
+          console.error('Error verificando estado de caja:', error);
+          setEstadoCaja(null);
+        })
+        .finally(() => {
+          setLoadingEstadoCaja(false);
+        });
+    }
+  }, [isOpen]);
 
   // Calcular el total de depósitos
   const totalDepositAmount = passengerDeposits.reduce((sum, amount) => sum + Number(amount || 0), 0)
@@ -248,6 +272,18 @@ export default function PagoSeniaModal({
                 </div>
               </div>
             </Card>
+
+            {/* Alert de Estado de Caja */}
+            {!loadingEstadoCaja && estadoCaja && (
+              <div className="px-6 pt-6">
+                <AlertEstadoCaja
+                  tieneCajaAbierta={estadoCaja.tiene_caja_abierta}
+                  cajaNombre={estadoCaja.caja_nombre}
+                  saldoActual={estadoCaja.saldo_actual}
+                  notificacion={estadoCaja.notificacion}
+                />
+              </div>
+            )}
 
             {/* Content */}
             <div className="px-6 py-6 space-y-6">

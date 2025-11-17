@@ -67,7 +67,7 @@ const sidebarItems = [
       // { label: "Permisos", href: "/seguridad/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
     ],
   },
-  { icon: FileText, label: "Documentos", href: "#", color: "text-teal-400" },
+  // { icon: FileText, label: "Documentos", href: "#", color: "text-teal-400" },
 ]
 
 interface SiderBarProps{
@@ -146,26 +146,31 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
                   </Tooltip>
                   {!isCollapsed && (
                     <CollapsibleContent className="ml-8 mt-2 space-y-1">
-                      {item.submenu.map((subItem) => (
-                        <>
-                          {siTienePermiso(subItem.label.toLowerCase(), 'leer') &&     
-                          <Tooltip key={subItem.label}> 
-                            <TooltipTrigger asChild>
-                              <span>
-                                <NavLink
-                                  to={subItem.href}
-                                className={({isActive}) => isActive ? `${cssDefault}  bg-blue-600/20 text-blue-300 border-l-2 border-blue-400`
-                                : `${cssDefault} hover:bg-slate-800` } 
-                                >
-                                  <div className={`w-2 h-2 rounded-full ${subItem.bgcolor}`}></div> 
-                                  <span className="text-sm">{subItem.label}</span>
-                                </NavLink>
-                              </span>
-                            </TooltipTrigger>
-                          </Tooltip>
-                          }
-                        </>
-                      ))}
+                      {item.submenu.map((subItem) => {
+                        // Extraer el nombre del módulo desde la URL (última parte del path)
+                        const moduleName = subItem.href.split('/').pop() || '';
+
+                        return (
+                          <>
+                            {siTienePermiso(moduleName, 'leer') &&
+                            <Tooltip key={subItem.label}>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <NavLink
+                                    to={subItem.href}
+                                  className={({isActive}) => isActive ? `${cssDefault}  bg-blue-600/20 text-blue-300 border-l-2 border-blue-400`
+                                  : `${cssDefault} hover:bg-slate-800` }
+                                  >
+                                    <div className={`w-2 h-2 rounded-full ${subItem.bgcolor}`}></div>
+                                    <span className="text-sm">{subItem.label}</span>
+                                  </NavLink>
+                                </span>
+                              </TooltipTrigger>
+                            </Tooltip>
+                            }
+                          </>
+                        )
+                      })}
                     </CollapsibleContent>
                   )}
                 </Collapsible>

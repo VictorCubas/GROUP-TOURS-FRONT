@@ -478,7 +478,8 @@ export default function CajasPage() {
       monto_inicial: Number(dataForm.monto_inicial).toFixed(2),
       monto_inicial_alternativo: Number(dataForm.monto_inicial_alternativo).toFixed(2),
       observaciones_apertura: dataForm.observaciones_apertura || "",
-      responsable: session?.usuarioId //SIEMPRE ES DEL USUARIO ACTUAL
+      // responsable: session?.usuarioId //SIEMPRE ES DEL USUARIO ACTUAL
+      responsable: null //SIEMPRE ES DEL USUARIO ACTUAL
     }
 
   //    {

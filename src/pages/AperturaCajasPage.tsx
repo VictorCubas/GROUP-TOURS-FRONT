@@ -353,7 +353,8 @@ export default function AperturaCajasPage() {
     // Construir el payload según lo que espera el backend
     const payload = {
       caja: Number(dataForm.caja),
-      responsable: Number(selectedPersonaID),
+      // responsable: Number(selectedPersonaID),
+      responsable: null,
       fecha_hora_apertura: fechaISO,
       monto_inicial: Number(dataForm.monto_inicial).toFixed(2),
       monto_inicial_alternativo: Number(dataForm.monto_inicial_alternativo).toFixed(2),
@@ -388,7 +389,8 @@ export default function AperturaCajasPage() {
     const payload = {
       id: dataAEditar?.id,
       caja: Number(dataForm.caja),
-      responsable: Number(selectedPersonaID),
+      responsable: null,
+      // responsable: Number(selectedPersonaID),
       fecha_hora_apertura: fechaISO,
       monto_inicial: Number(dataForm.monto_inicial).toFixed(2),
       monto_inicial_alternativo: Number(dataForm.monto_inicial_alternativo).toFixed(2),

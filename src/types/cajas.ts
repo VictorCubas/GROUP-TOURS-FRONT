@@ -98,3 +98,37 @@ export interface AperturaListado {
   movimientos_count: number;
   observaciones_apertura: string;
 }
+
+// Tipos para Movimientos de Caja
+export interface MovimientoCaja {
+  numero?: number;
+  id: number;
+  numero_movimiento: string;
+  apertura_caja: number;
+  apertura_codigo: string;
+  caja_nombre: string;
+  comprobante: number | null;
+  comprobante_numero: string | null;
+  tiene_comprobante: boolean;
+  tipo_movimiento: string;  // "ingreso" | "egreso"
+  tipo_movimiento_display: string;
+  concepto: string;
+  concepto_display: string;
+  monto: string;  // Decimal como string
+  metodo_pago: string;
+  metodo_pago_display: string;
+  referencia: string | null;
+  descripcion: string;
+  fecha_hora_movimiento: string;  // ISO 8601
+  usuario_registro: number;
+  usuario_nombre: string;
+  activo: boolean;
+}
+
+export type MovimientosCaja = MovimientoCaja[];
+
+// Tipo para resumen de movimientos
+export interface ResumenMovimiento {
+  texto: string;
+  valor: string;
+}
