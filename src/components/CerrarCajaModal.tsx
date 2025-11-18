@@ -52,6 +52,10 @@ const CerrarCajaModal: React.FC<CerrarCajaModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['cajas'] });
       queryClient.invalidateQueries({ queryKey: ['cajas-resumen'] });
       queryClient.invalidateQueries({ queryKey: ['usuario-tiene-caja-abierta'] });
+      queryClient.invalidateQueries({
+        queryKey: ['movimientos'],
+        exact: false
+      });
 
       // Mostrar toast de éxito
       if (data?.requiere_autorizacion) {

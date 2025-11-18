@@ -133,7 +133,55 @@ export const fetchDataResponsable = async (page: number, page_size: number = 5,
 
 //tanstackquery ya maneja el error y en el interceptor tambien
 export async function nuevoDataFetch(data: any) {
-    await axiosInstance.post(`/arqueo-caja/aperturas/`, data); 
+    const response = await axiosInstance.post(`/arqueo-caja/aperturas/`, data);
+
+    // Obtener el ID de la apertura creada
+    const aperturaId = response.data?.id;
+
+    if (aperturaId) {
+        // Descargar automáticamente el PDF de la apertura
+        await descargarPDFApertura(aperturaId);
+    }
+
+    return response.data;
+}
+
+// Servicio auxiliar para descargar el PDF de apertura de caja
+async function descargarPDFApertura(aperturaId: number | string) {
+    try {
+        const response = await axiosInstance.get(
+            `/arqueo-caja/aperturas/${aperturaId}/pdf/`,
+            { responseType: 'blob' }
+        );
+
+        // Intentar obtener el nombre del archivo desde el header Content-Disposition
+        const contentDisposition = response.headers['content-disposition'];
+        let fileName = `apertura-caja-${aperturaId}.pdf`;
+
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="?([^"]+)"?/);
+            if (match && match[1]) {
+                fileName = decodeURIComponent(match[1]);
+            }
+        }
+
+        // Crear el blob y la URL para descargar
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+
+        // Limpieza
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('⚠️ Error al descargar el PDF de la apertura:', error);
+        // No lanzamos el error para que no afecte el flujo principal
+        // La apertura ya fue creada exitosamente
+    }
 }
 
 export async function guardarDataEditado(data: any) {
@@ -194,7 +242,78 @@ export async function fetchResumenApertura(aperturaId: number) {
 }
 
 export async function cerrarCajaSimple(payload: any) {
-  const resp = await axiosInstance.post(`/arqueo-caja/cierres/cerrar-simple/`, payload);
-  return resp?.data
+  const response = await axiosInstance.post(`/arqueo-caja/cierres/cerrar-simple/`, payload);
+
+  // Obtener el ID del cierre creado
+  const cierreId = response.data?.id;
+
+  if (cierreId) {
+    // Descargar automáticamente el PDF del cierre
+    await descargarPDFCierre(cierreId);
+  }
+
+  return response?.data;
+}
+
+// Servicio auxiliar para descargar el PDF de cierre de caja
+async function descargarPDFCierre(cierreId: number | string) {
+  try {
+    const response = await axiosInstance.get(
+      `/arqueo-caja/cierres/${cierreId}/pdf/`,
+      { responseType: 'blob' }
+    );
+
+    // Intentar obtener el nombre del archivo desde el header Content-Disposition
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = `cierre-caja-${cierreId}.pdf`;
+
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) {
+        fileName = decodeURIComponent(match[1]);
+      }
+    }
+
+    // Crear el blob y la URL para descargar
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+
+    // Limpieza
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('⚠️ Error al descargar el PDF del cierre:', error);
+    // No lanzamos el error para que no afecte el flujo principal
+    // El cierre ya fue creado exitosamente
+  }
+}
+
+// Función pública para re-descargar el PDF de una apertura existente
+export async function descargarPDFAperturaById(aperturaId: number | string) {
+  return await descargarPDFApertura(aperturaId);
+}
+
+// Función pública para re-descargar el PDF de un cierre existente
+export async function descargarPDFCierreById(cierreId: number | string) {
+  return await descargarPDFCierre(cierreId);
+}
+
+/**
+ * Obtiene la apertura de caja activa del usuario actual
+ * @returns Datos de la apertura activa o null si no tiene caja abierta
+ */
+export async function fetchAperturaActiva() {
+  try {
+    const resp = await axiosInstance.get(`/arqueo-caja/aperturas/tengo-caja-abierta/`);
+    return resp?.data ?? null;
+  } catch (error) {
+    console.log('Error al obtener apertura activa:', error);
+    return null;
+  }
 }
 

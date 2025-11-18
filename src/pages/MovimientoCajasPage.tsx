@@ -27,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FaAngleDoubleLeft, FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { FaAngleDoubleRight } from "react-icons/fa";
 import { useQuery } from '@tanstack/react-query';
+import { queryClient } from "@/components/utils/http"
 
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ import {
 import type { MovimientoCaja, RespuestaPaginada } from "@/types/cajas"
 import { formatearFecha, formatearSeparadorMiles } from "@/helper/formatter"
 import { fetchMovimientos, fetchResumenMovimientos } from "@/components/utils/httpMovimientos"
+import { fetchAperturaActiva } from "@/components/utils/httpAperturasCajas"
 import Modal from "@/components/Modal"
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { useSessionStore } from "@/store/sessionStore"
@@ -52,11 +54,17 @@ const usuariosStatusColors = {
 let dataList: any[] = [];
 
 export default function MovimientoCajasPage() {
-  const {siTienePermiso } = useSessionStore();
+  const {siTienePermiso, hasRole, session } = useSessionStore();
   const [busqueda, setBusqueda] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [onVerDetalles, setOnVerDetalles] = useState(false);
   const [dataDetalle, setDataDetalle] = useState<MovimientoCaja>();
+  const [aperturaActivaId, setAperturaActivaId] = useState<number | undefined>(undefined);
+  const [cargandoApertura, setCargandoApertura] = useState(false);
+
+  // Si el usuario tiene rol de Cajero, solo puede ver sus propios movimientos
+  const esCajero = hasRole('Cajero');
+  const usuarioId = session?.usuarioId;
 
   const [filtros, setFiltros] = useState({
     activo: true,
@@ -64,7 +72,9 @@ export default function MovimientoCajasPage() {
     metodo_pago: "all",
     concepto: "all",
     busqueda: "",
-    tiene_comprobante: undefined as boolean | undefined
+    tiene_comprobante: undefined as boolean | undefined,
+    usuario_registro: esCajero ? usuarioId : undefined,
+    apertura: undefined as number | undefined
   });
 
 
@@ -77,10 +87,13 @@ export default function MovimientoCajasPage() {
     pageSize: 10
   });
 
+
+  console.log(filtros)
   const {data, isFetching, isError} = useQuery({
     queryKey: ['movimientos', currentPage, paginacion.pageSize, filtros],
     queryFn: () => fetchMovimientos(currentPage, paginacion.pageSize, filtros),
     staleTime: 5 * 60 * 1000,
+    enabled: !cargandoApertura, // No ejecutar query hasta que se cargue la apertura activa
   });
 
   const {data: dataResumen, isFetching: isFetchingResumen, isError: isErrorResumen} = useQuery({
@@ -151,6 +164,36 @@ export default function MovimientoCajasPage() {
       clearTimeout(handler)
     }
   }, [busqueda]);
+
+  // Obtener la apertura activa cuando el usuario es cajero
+  useEffect(() => {
+    const obtenerAperturaActiva = async () => {
+      if (esCajero) {
+        setCargandoApertura(true);
+        const aperturaActiva = await fetchAperturaActiva();
+        if (aperturaActiva?.apertura_id) {
+          setAperturaActivaId(aperturaActiva.apertura_id);
+          setFiltros(filtrosPrevios => ({
+            ...filtrosPrevios,
+            apertura: aperturaActiva.apertura_id
+          }));
+        }
+        setCargandoApertura(false);
+      }
+    };
+
+    obtenerAperturaActiva();
+  }, [esCajero]);
+
+  // Refrescar movimientos cuando se obtiene la apertura activa
+  useEffect(() => {
+    if (aperturaActivaId) {
+      queryClient.invalidateQueries({
+        queryKey: ['movimientos'],
+        exact: false
+      });
+    }
+  }, [aperturaActivaId]);
 
   return (
     <>
@@ -429,7 +472,9 @@ export default function MovimientoCajasPage() {
                       metodo_pago: "all",
                       concepto: "all",
                       busqueda: "",
-                      tiene_comprobante: undefined
+                      tiene_comprobante: undefined,
+                      usuario_registro: esCajero ? usuarioId : undefined,
+                      apertura: esCajero ? aperturaActivaId : undefined
                     });
                     setBusqueda("");
                   }}
@@ -571,7 +616,9 @@ export default function MovimientoCajasPage() {
                               metodo_pago: "all",
                               concepto: "all",
                               busqueda: "",
-                              tiene_comprobante: undefined
+                              tiene_comprobante: undefined,
+                              usuario_registro: esCajero ? usuarioId : undefined,
+                              apertura: esCajero ? aperturaActivaId : undefined
                             });
                             setBusqueda("");
                           }}

@@ -253,50 +253,6 @@ export default function ModulosPage() {
         setTipoDePersonaCreacion(undefined);
         setTipoDocumentoRuc(undefined);
         setActiveTab('list');
-        queryClient.invalidateQueries({
-          queryKey: ['personas'],
-          exact: false
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['personas-resumen'],
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['personas-disponibles'],
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['empleados'],
-          exact: false
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['empleados-resumen'],
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['usuarios'],
-          exact: false
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['usuarios-resumen'],
-        });
-
-
-        queryClient.invalidateQueries({
-          queryKey: ['usuarios-resumen'],
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['pasajeros-disponibles'],
-        });
-        
-        queryClient.invalidateQueries({
-          queryKey: ['personas-disponibles'],
-        });
-
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
         //   exact: false
@@ -338,19 +294,8 @@ export default function ModulosPage() {
 
         setTipoDePersonaCreacion(undefined);
         setTipoDocumentoRuc(undefined);
-        setActiveTab('list');
-        queryClient.invalidateQueries({
-          queryKey: ['personas'],
-          exact: false
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['personas-resumen'],
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['personas-disponibles'],
-        });
+        handleCancel();
+        
 
         // queryClient.invalidateQueries({
         //   queryKey: ['permisos'],
@@ -437,6 +382,51 @@ export default function ModulosPage() {
         setTipoDocumentoRuc(undefined);
         
         setActiveTab('list');
+
+        queryClient.invalidateQueries({
+          queryKey: ['personas'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['personas-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['personas-disponibles'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['empleados'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['empleados-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
+        });
+
+
+        queryClient.invalidateQueries({
+          queryKey: ['usuarios-resumen'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['pasajeros-disponibles'],
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: ['personas-disponibles'],
+        });
+
   }
 
 

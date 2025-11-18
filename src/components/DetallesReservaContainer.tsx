@@ -18,20 +18,22 @@ import GenerarFacturaModal from './GenerarFacturaModal';
 import type { ClienteFacturaData } from './FormularioFacturaTitular';
 import AsignarTipoFacturaModal from './AsignarTipoFactura';
 import GenerarNotaCreditoModal from './GenerarNotaCreditoModal';
+import { useSessionStore } from '@/store/sessionStore';
 
 interface DetallesReservaContainerProps{
     activeTab: 'general' | 'passengers' | 'payments';
     reservaId: number | string;
     onClose: () => void
-    
-} 
+
+}
 const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
-        activeTab, 
+        activeTab,
         reservaId,
         onClose
     }) => {
 
     const {handleShowToast} = use(ToastContext);
+    const { siTienePermiso } = useSessionStore();
     const [isPagoParcialModalOpen, setIsPagoParcialModalOpen] = useState(false);
     const [isAsiganrPasajeroModalOpen, setIsAsiganrPasajeroModalOpen] = useState(false);
     const [isAsiganrTipoFacturaModalOpen, setIsAsiganrTipoFacturaModalOpen] = useState(false);
@@ -68,6 +70,9 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     
     const { mutate: generarYDescargarVoucher, isPending: isPendingDescargaVoucher } = useDescargarVoucher();
 
+    // Verificar si el usuario tiene permiso para registrar pagos
+    // Solo Cajero y Admin pueden registrar pagos
+    const puedeRegistrarPagos = siTienePermiso('pagos', 'crear');
 
     console.log(dataDetalleResp)
 
@@ -938,20 +943,23 @@ return   <>
                               
                             }
 
-                            <div>
-                                <Button
-                                    disabled={dataDetalleResp?.esta_totalmente_pagada}
-                                    onClick={() => {
-                                        setSelectedPassengerId(undefined);
-                                        setIsPagoParcialModalOpen(true);
-                                    }}
-                                    className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
-                                    size="lg"
-                                >
-                                    <DollarSign className="w-4 h-4" />
-                                    <span>Registrar pago</span>
-                                </Button>
-                            </div>
+                            {/* Solo mostrar botón si tiene permiso para registrar pagos */}
+                            {puedeRegistrarPagos && (
+                              <div>
+                                  <Button
+                                      disabled={dataDetalleResp?.esta_totalmente_pagada}
+                                      onClick={() => {
+                                          setSelectedPassengerId(undefined);
+                                          setIsPagoParcialModalOpen(true);
+                                      }}
+                                      className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
+                                      size="lg"
+                                  >
+                                      <DollarSign className="w-4 h-4" />
+                                      <span>Registrar pago</span>
+                                  </Button>
+                              </div>
+                            )}
                             {pasajerosPorAsignar > 0 &&
                                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                     <div className="flex items-center space-x-2">
@@ -1137,35 +1145,38 @@ return   <>
                                 </div>
                                 
                                 <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                                      
-                                      <Tooltip>
-                                      <TooltipTrigger asChild>
-                                          <Button
-                                              variant="outline"
-                                              disabled={!pasajero?.saldo_pendiente}
-                                              onClick={() => {
-                                                  setSelectedPassengerId(pasajero.id);
-                                                  setIsPagoParcialModalOpen(true);
-                                              }}
-                                              className={`cursor-pointer disabled:cursor-not-allowed
-                                                          w-full px-6 py-3 border-1 rounded-lg hover:bg-blue-100 
-                                                          disabled:hover:bg-transparent transition-colors duration-200
-                                                          flex items-center justify-center space-x-2 font-medium
-                                                          ${!pasajero?.saldo_pendiente ? 'bg-emerald-600 text-white': ''}`}
-                                              size="lg"
-                                          >
-                                              <DollarSign className="w-4 h-4" />
-                                              {pasajero?.saldo_pendiente ?
-                                                  <span>Pagar</span>
-                                                  :
-                                                  <span>Pago completo</span>
-                                              }
-                                          </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Regstrar un pago por pasajero</p>
-                                      </TooltipContent>
-                                    </Tooltip>
+
+                                      {/* Solo mostrar botón si tiene permiso para registrar pagos */}
+                                      {puedeRegistrarPagos && (
+                                        <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                disabled={!pasajero?.saldo_pendiente}
+                                                onClick={() => {
+                                                    setSelectedPassengerId(pasajero.id);
+                                                    setIsPagoParcialModalOpen(true);
+                                                }}
+                                                className={`cursor-pointer disabled:cursor-not-allowed
+                                                            w-full px-6 py-3 border-1 rounded-lg hover:bg-blue-100
+                                                            disabled:hover:bg-transparent transition-colors duration-200
+                                                            flex items-center justify-center space-x-2 font-medium
+                                                            ${!pasajero?.saldo_pendiente ? 'bg-emerald-600 text-white': ''}`}
+                                                size="lg"
+                                            >
+                                                <DollarSign className="w-4 h-4" />
+                                                {pasajero?.saldo_pendiente ?
+                                                    <span>Pagar</span>
+                                                    :
+                                                    <span>Pago completo</span>
+                                                }
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Registrar un pago por pasajero</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      )}
 
                                     <Tooltip>
                                       <TooltipTrigger asChild>
@@ -1333,7 +1344,7 @@ return   <>
                     {/* {booking.pagos && booking.pagos.length > 0 && ( */}
 
                     {/* Botón para registrar nuevo pago */}
-                    {dataDetalleResp.saldo_pendiente > 0 && (
+                    {puedeRegistrarPagos && dataDetalleResp.saldo_pendiente > 0 && (
                         <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-xl border-2 border-blue-200">
                             <div className="flex items-center justify-between">
                                 <div className="flex-1">

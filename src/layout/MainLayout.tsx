@@ -11,12 +11,15 @@ import { Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom'
 
 const MainLayout = () => {
-  const { session, } = useSessionStore();
+  const { session, siTienePermiso } = useSessionStore();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  
+
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed)
   }
+
+  // Verificar si el usuario tiene permiso para cargar cotizaciones
+  const puedeCargarCotizacion = siTienePermiso('cotizaciones', 'crear');
 
   useEffect(() => {
     // if(session?.debeResetearContrasenia){
@@ -52,12 +55,12 @@ const MainLayout = () => {
       </div>
 
 
-      {session?.debeResetearContrasenia && 
+      {session?.debeResetearContrasenia &&
         <ResetearContrasenia />}
 
-      {!session?.cotizacionDiariaCargada && 
-        <RegistrarCotizacionDelDiaModal
-        />
+      {/* Solo mostrar modal de cotización si tiene permiso Y no ha cargado la cotización del día */}
+      {puedeCargarCotizacion && !session?.cotizacionDiariaCargada &&
+        <RegistrarCotizacionDelDiaModal />
       }
 
 

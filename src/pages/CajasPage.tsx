@@ -326,6 +326,10 @@ export default function CajasPage() {
         queryClient.invalidateQueries({
           queryKey: ['usuario-tiene-caja-abierta'],
         });
+        queryClient.invalidateQueries({
+          queryKey: ['movimientos'],
+          exact: false
+        });
     },
   });
 

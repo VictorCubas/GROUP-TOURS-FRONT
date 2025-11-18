@@ -32,9 +32,9 @@ export const fetchMovimientos = async (page: number, page_size: number = 10, fil
     url = url + `&caja=${filtros.caja}`;
   }
 
-  // Filtro por apertura
+  // Filtro por apertura de caja
   if (filtros.apertura) {
-    url = url + `&apertura=${filtros.apertura}`;
+    url = url + `&apertura_caja=${filtros.apertura}`;
   }
 
   // Filtro por fecha desde/hasta
@@ -51,6 +51,11 @@ export const fetchMovimientos = async (page: number, page_size: number = 10, fil
   // Filtro por tiene comprobante
   if (filtros.tiene_comprobante !== null && filtros.tiene_comprobante !== undefined) {
     url = url + `&tiene_comprobante=${filtros.tiene_comprobante}`;
+  }
+
+  // Filtro por usuario registro (para cajeros)
+  if (filtros.usuario_registro) {
+    url = url + `&usuario_id=${filtros.usuario_registro}`;
   }
 
   try {
