@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -6,8 +5,6 @@ import { startTransition, use, useEffect, useState } from "react"
 import {
   Search,
   Plus,
-  Edit,
-  Trash2,
   MoreHorizontal,
   Check,
   // X,
@@ -19,10 +16,8 @@ import {
   // RefreshCw,
   Eye,
   Loader2Icon,
-  CheckIcon,
   User,
   X,
-  Info,
 } from "lucide-react"
 
 // import {
@@ -52,12 +47,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { AperturaListado, Caja, RespuestaPaginada, } from "@/types/cajas"
-import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles } from "@/helper/formatter"
+import { formatearFecha, formatearSeparadorMiles } from "@/helper/formatter"
 import { activarDesactivarData, fetchCajasDisponibles, fetchContizacion, fetchData, fetchDataResponsable, fetchResumen, guardarDataEditado, nuevoDataFetch, } from "@/components/utils/httpAperturasCajas"
 import { Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -65,11 +59,8 @@ import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useSessionStore } from "@/store/sessionStore"
 import { Textarea } from "@/components/ui/textarea"
-import { fetchDataPuntoExpedicionTodo } from "@/components/utils/httpFacturacion"
-import type { PuntoExpedicion } from "@/types/facturacion"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import { NumericFormat } from "react-number-format"
 
@@ -112,6 +103,8 @@ export default function AperturaCajasPage() {
                   nombre: ""
                 });
   
+  console.log(selectedTitularData);
+  console.log(setOnGuardar)
 
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('list');
@@ -143,6 +136,10 @@ export default function AperturaCajasPage() {
     queryFn: () => fetchContizacion(),
     staleTime: 30 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
+
+  console.log(isFetchingCotizacion);
+  console.log(isErrorContizacion);
+
 
 
   console.log(dataCotizacion)
@@ -522,22 +519,22 @@ export default function AperturaCajasPage() {
   }, [dataAEditar, reset]);
 
 
-  const handleEditar = (data: AperturaListado) => {
-    console.log('data: ', data)
-    setDataAEditar(data);
-    setSelectedPersonaID(data!.responsable)
-    setActiveTab('form');
+  // const handleEditar = (data: AperturaListado) => {
+  //   console.log('data: ', data)
+  //   setDataAEditar(data);
+  //   setSelectedPersonaID(data!.responsable)
+  //   setActiveTab('form');
     
-  }
+  // }
 
   const handleDataNoSeleccionada = (value: boolean | undefined) => {
     console.log(value)
   }
 
-  const toggleActivar = (modulo: AperturaListado) => {
-    setOnDesactivarData(true);
-    setDataADesactivar(modulo);
-  }
+  // const toggleActivar = (modulo: AperturaListado) => {
+  //   setOnDesactivarData(true);
+  //   setDataADesactivar(modulo);
+  // }
 
   const handleCloseModal = () => {
     setOnDesactivarData(false);

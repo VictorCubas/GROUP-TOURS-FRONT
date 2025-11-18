@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "@/service/axiosInterceptor";
 // import type { NuevoModuloFormData } from "@/types/empleados";
@@ -80,6 +79,7 @@ export const fetchData = async (page: number, page_size: number = 5,
 //usuarios/responsables/?roles=cajero,admin
 export const fetchDataResponsable = async (page: number, page_size: number = 5, 
     filtros: any) => {
+      console.log(page_size, page);
     // let url = `/personas/?page=${page}&page_size=${page_size}`;
     let url = `usuarios/responsables/`;
 

@@ -109,6 +109,9 @@ export default function CajasPage() {
   const [onCerrarCaja, setOnCerrarCaja] = useState(false);
   const {handleShowToast} = use(ToastContext);  
 
+  console.log(selectedTitularData)
+  console.log(selectedCajaData)
+
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
                   estado: "all",
