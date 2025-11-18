@@ -40,6 +40,9 @@ const CerrarCajaModal: React.FC<CerrarCajaModalProps> = ({
     staleTime: 0, // Siempre obtener datos frescos
   });
 
+  console.log(cajaNombre);
+  console.log(codigoApertura);
+
   // Mutation para cerrar la caja
   const { mutate: cerrarCaja, isPending: procesandoCierre } = useMutation({
     mutationFn: cerrarCajaSimple,
