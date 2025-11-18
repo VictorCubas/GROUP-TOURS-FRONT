@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from '@tanstack/react-query';
-import { asignarPasajero, asignarTipoFacturaModalidad, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, generarNotaCreditoGlobal, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
+import { asignarPasajero, asignarTipoFacturaModalidad, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, descargarNotaCreditoYaGenerada, generarNotaCreditoGlobal, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
 
 export function useDescargarPDF() {
     return useMutation({
@@ -126,6 +126,20 @@ export function useGenerarNotaCreditoGlobal() {
     mutationFn: async ({ facturaId, payload }: { facturaId: number | string; payload: any }) => {
       const data = await generarNotaCreditoGlobal(facturaId, payload);
       return data;
+    },
+  });
+}
+
+export function useDescargarNotaCreditoYaGenerada() {
+  return useMutation({
+    mutationFn: async (notaCreditoId: number | string) => {
+      await descargarNotaCreditoYaGenerada(notaCreditoId);
+    },
+    onSuccess: (data) => {
+      console.log('✅ Nota de crédito descargada:', data);
+    },
+    onError: (error) => {
+      console.error('❌ Error al descargar la nota de crédito:', error);
     },
   });
 }

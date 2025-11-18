@@ -163,6 +163,8 @@ export interface Pasajero {
   ticket_numero?: string | null;
   voucher_codigo?: string | null;
   fecha_registro: string; // ISO datetime string
+  nota_credito_individual_ya_generada?: boolean; // Indica si tiene NC activa (modalidad individual)
+  nota_credito_individual_id?: number; // ID de la nota de crédito individual activa
 }
 
 export interface Reserva {
@@ -189,6 +191,8 @@ export interface Reserva {
   monto_total: number;
   saldo_pendiente: number;
   porcentaje_pagado: number;
+  nota_credito_global_ya_generada?: boolean; // Indica si la factura global tiene NC activa (modalidad global)
+  nota_credito_global_id?: number; // ID de la nota de crédito global activa
 }
 
 export interface ReservaListado {

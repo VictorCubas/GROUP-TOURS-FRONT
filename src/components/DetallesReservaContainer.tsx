@@ -8,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState } from 'react';
-import { useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarVoucher, useGenerarNotaCreditoGlobal, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
@@ -19,6 +19,8 @@ import type { ClienteFacturaData } from './FormularioFacturaTitular';
 import AsignarTipoFacturaModal from './AsignarTipoFactura';
 import GenerarNotaCreditoModal from './GenerarNotaCreditoModal';
 import { useSessionStore } from '@/store/sessionStore';
+// import { verificarUsuarioTieneCajaAbierta } from './utils/httpCajas';
+// import type { VerificacionCajaAbierta } from '@/types/cajas';
 
 interface DetallesReservaContainerProps{
     activeTab: 'general' | 'passengers' | 'payments';
@@ -53,6 +55,13 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
+    // Query para verificar si el usuario tiene una caja abierta
+    // const {data: dataCajaAbierta} = useQuery<VerificacionCajaAbierta>({
+    //     queryKey: ['usuario-tiene-caja-abierta'],
+    //     queryFn: verificarUsuarioTieneCajaAbierta,
+    //     staleTime: 2 * 60 * 1000, // 2 minutos
+    //     refetchOnWindowFocus: true
+    // });
 
     const { mutate: fetchRegistrarPagoParcial, isPending: isPendingPagaoParcial } = useRegistrarPagoParcial();
     
@@ -67,7 +76,9 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: fetchAsignarTipoFacturaConModalidad, isPending: isPendingAsignarTipoFacturaModalidad } = useAsignarTipoFacturaModalidad();
 
     const { mutate: fetchGenerarNotaCreditoGlobal, isPending: isPendingGenerarNotaCreditoGlobal } = useGenerarNotaCreditoGlobal();
-    
+
+    const { mutate: fetchDescargarNotaCreditoYaGenerada, isPending: isPendingDescargarNC } = useDescargarNotaCreditoYaGenerada();
+
     const { mutate: generarYDescargarVoucher, isPending: isPendingDescargaVoucher } = useDescargarVoucher();
 
     // Verificar si el usuario tiene permiso para registrar pagos
@@ -270,7 +281,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                 onSuccess: (data) => {
                 console.log('✅ Persona asignada correctamente');
                 console.log('📄 Respuesta del servidor:', data);
-                handleShowToast('La nota de credito se ha generado y descargado satisfactoriamente', 'success'); 
+                handleShowToast('La nota de credito se ha generado y descargado satisfactoriamente', 'success');
 
                 // Cerrar modal
                 setIsGenerarNotaCreditoModalOpen(false);
@@ -282,6 +293,12 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                 // Refrescar los detalles de la reserva para ver el estado actualizado
                 queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
                 queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
+                // Refrescar el resumen de movimientos de caja
+                queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
+                queryClient.invalidateQueries({queryKey: ['movimientos'],exact: false});
+                // Refrescar paquetes para actualizar cupos
+                queryClient.invalidateQueries({queryKey: ['paquetes'],exact: false});
+                queryClient.invalidateQueries({queryKey: ['salidas-paquete'],exact: false});
                 },
                 onError: (error: any) => {
                     console.error('❌ Error al asignar persona:', error);
@@ -315,7 +332,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         });
     }
 
-    function handleDescargarFacturaGlobal(id: number, params: string | null = null) {
+    function handleDescargarFacturaGlobal(id: number, params: string | null = null) { 
         generarYDescargarFacturaGlobal({id, params}, {
         onSuccess: () => {
             console.log('✅ PDF descargado correctamente');
@@ -394,6 +411,19 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         });
     }
 
+    const handleDescargarNotaCreditoYaGenerada = (notaCreditoId: number) => {
+        fetchDescargarNotaCreditoYaGenerada(notaCreditoId, {
+            onSuccess: () => {
+                console.log('✅ Nota de crédito descargada correctamente');
+                handleShowToast('Nota de crédito descargada correctamente', 'success');
+            },
+            onError: (error) => {
+                console.error('❌ Error al descargar la nota de crédito', error);
+                handleShowToast('Error al descargar la nota de crédito', 'error');
+            },
+        });
+    }
+
     const handleClosePagoParcialModal = () => {
         setIsPagoParcialModalOpen(false);
         setSelectedPassengerId(undefined);
@@ -465,8 +495,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
           console.log('reservaId:', reservaId);
           console.log(dataDetalleResp.factura_global_id)
             // console.log('Payload generado:', pasajeroId);
-            
-            //  { tipo_nota_credito: 'total', motivo: 2, observaciones: '' }  
+
+            //  { tipo_nota_credito: 'total', motivo: 2, observaciones: '' }
             delete payLoad.tipo_nota_credito;
             console.log('modalidad:', payLoad);
             console.log(tipoNotaCreditoAgenerarse)
@@ -482,9 +512,9 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
               const paxFilter = dataDetalleResp.pasajeros.filter((p: any) => p.id.toString() === selectedPassengerId?.toString())
               console.log(paxFilter)
               const pax = paxFilter[0];
-              
+
               console.log(pax)
-              
+
               if(pax.factura_individual_generada){
                 factura_id = pax.factura_id;
               }
@@ -494,7 +524,7 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
             handleGenerarNotaCreditoGlobal(Number(factura_id), payLoad);
               // handleGenerarNotaCreditoIndividual(Number(dataDetalleResp.factura_global_id), payLoad);
-              
+
         }
     };
 
@@ -880,33 +910,39 @@ return   <>
                     return (
                         <>
                           <div className='flex items-center gap-5'>
-                             {dataDetalleResp?.factura_global_generada && dataDetalleResp?.factura_global_id  && 
+                             {dataDetalleResp?.factura_global_generada && dataDetalleResp?.factura_global_id  &&
                               <div>
                                     <Button
-                                        disabled={isPendingDescargaFacturaGlobal}
+                                        disabled={isPendingDescargaFacturaGlobal || isPendingDescargarNC}
                                         onClick={() => {
-                                          setIsGenerarNotaCreditoModalOpen(true);
-                                          setTipoNotaCreditoAgenerarse('global'); 
-                                              // if(dataDetalleResp.factura_global_generada){
-                                              //   handleDescargarFacturaGlobal(dataDetalleResp?.id)
-                                              // }
-                                              // else{
-                                              //   setIsGenerarFacturaOpen(true);
-                                              //   setTipoFacturaAgenerarse("global");
-                                              // }
-                                            // handleDescargarFacturaGlobal(dataDetalleResp?.id)
+                                          console.log('🔍 Debug NC Global:', {
+                                            reservaId: dataDetalleResp.id,
+                                            nota_credito_ya_generada: dataDetalleResp.nota_credito_global_ya_generada,
+                                            nota_credito_id: dataDetalleResp.nota_credito_global_id
+                                          });
+
+                                          // Si ya existe una NC generada, descargarla directamente
+                                          if(dataDetalleResp.nota_credito_global_ya_generada && dataDetalleResp.nota_credito_global_id) {
+                                            console.log('✅ Descargando NC Global existente, ID:', dataDetalleResp.nota_credito_global_id);
+                                            handleDescargarNotaCreditoYaGenerada(dataDetalleResp.nota_credito_global_id);
+                                          } else {
+                                            // Si no existe, abrir modal para generar nueva NC
+                                            console.log('📝 Abriendo modal para generar nueva NC Global');
+                                            setIsGenerarNotaCreditoModalOpen(true);
+                                            setTipoNotaCreditoAgenerarse('global');
+                                          }
                                         }}
                                         className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
                                         size="lg"
                                     >
-                                        {isPendingDescargaFacturaGlobal ? 
+                                        {(isPendingDescargaFacturaGlobal || isPendingDescargarNC) ?
                                           <>
                                               <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
-                                              Generando...
-                                          </> : 
+                                              {dataDetalleResp.nota_credito_global_ya_generada ? 'Descargando...' : 'Generando...'}
+                                          </> :
                                           <>
                                             <Download className="h-4 w-4 mr-2" />
-                                            Generar NC
+                                            {dataDetalleResp.nota_credito_global_ya_generada ? 'Descargar NC' : 'Generar NC'}
                                           </>}
                                     </Button>
                               </div>
@@ -1259,48 +1295,52 @@ return   <>
                                         </Tooltip>
                                       }
 
-                                      {pasajero?.factura_individual_generada && pasajero?.factura_id  && 
+                                      {pasajero?.factura_individual_generada && pasajero?.factura_id  &&
                                         <Tooltip>
                                           <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                disabled={isPendingGenerarNotaCreditoGlobal}
+                                                disabled={isPendingGenerarNotaCreditoGlobal || isPendingDescargarNC}
                                                 onClick={() => {
-                                                    // if(pasajero.factura_individual_generada){
-                                                    //     //DESCARGA DIRECTA (FACTURA YA GENERADA)
-                                                    //     const params = `?pasajero_id=${pasajero.id}`;
-                                                    //     handleDescargarFacturaIndividual(dataDetalleResp?.id, params, pasajero.id)
-                                                    // }
-                                                    // else{
-                                                    //   //ABRE EL FOMRULARIO DE DESCARGA (FACTURA POR GENERARSE)
-                                                    //   setIsGenerarFacturaOpen(true);
-                                                    //   setTipoFacturaAgenerarse("individual");
-                                                    // }
-                                                    
                                                   setSelectedPassengerId(pasajero.id);
-                                                  setIsGenerarNotaCreditoModalOpen(true);
-                                                  setTipoNotaCreditoAgenerarse('individual');
+
+                                                  console.log('🔍 Debug NC Individual:', {
+                                                    pasajeroId: pasajero.id,
+                                                    nota_credito_ya_generada: pasajero.nota_credito_individual_ya_generada,
+                                                    nota_credito_id: pasajero.nota_credito_individual_id
+                                                  });
+
+                                                  // Si ya existe una NC generada para este pasajero, descargarla directamente
+                                                  if(pasajero.nota_credito_individual_ya_generada && pasajero.nota_credito_individual_id) {
+                                                    console.log('✅ Descargando NC existente, ID:', pasajero.nota_credito_individual_id);
+                                                    handleDescargarNotaCreditoYaGenerada(pasajero.nota_credito_individual_id);
+                                                  } else {
+                                                    // Si no existe, abrir modal para generar nueva NC
+                                                    console.log('📝 Abriendo modal para generar nueva NC');
+                                                    setIsGenerarNotaCreditoModalOpen(true);
+                                                    setTipoNotaCreditoAgenerarse('individual');
+                                                  }
                                                 }}
                                                 className={`cursor-pointer disabled:cursor-not-allowed
-                                                            w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
+                                                            w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100
                                                             disabled:hover:bg-transparent transition-colors duration-200
                                                             flex items-center justify-center space-x-2 font-medium
                                                             `}
                                                 size="lg"
                                             >
-                                              {isPendingGenerarNotaCreditoGlobal ? 
+                                              {(isPendingGenerarNotaCreditoGlobal || isPendingDescargarNC) ?
                                                   <>
                                                       <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
-                                                      Generando...
-                                                  </> : 
+                                                      {pasajero.nota_credito_individual_ya_generada ? 'Descargando...' : 'Generando...'}
+                                                  </> :
                                                   <>
                                                     <RefreshCcwIcon className="h-4 w-4 mr-2" />
-                                                    Generar NC
-                                                </>} 
+                                                    {pasajero.nota_credito_individual_ya_generada ? 'Descargar NC' : 'Generar NC'}
+                                                </>}
                                             </Button>
                                           </TooltipTrigger>
                                           <TooltipContent>
-                                            <p>Descargar Nota de Crédito por pasajero</p>
+                                            <p>{pasajero.nota_credito_individual_ya_generada ? 'Descargar Nota de Crédito del pasajero' : 'Generar Nota de Crédito para el pasajero'}</p>
                                           </TooltipContent>
                                         </Tooltip>
                                       }

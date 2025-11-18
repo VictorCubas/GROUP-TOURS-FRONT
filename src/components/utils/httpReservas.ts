@@ -268,7 +268,8 @@ export async function descargarFacturaGlobalById(id: number | string, params: st
   return response;
 }
 
-export async function generarNotaCreditoGlobal(id: number | string, payload: any) {
+export async function 
+generarNotaCreditoGlobal(id: number | string, payload: any) {
   const urlGenerar = `/facturacion/generar-nota-credito-total/${id}`;
 
   try {
@@ -292,7 +293,7 @@ export async function generarNotaCreditoGlobal(id: number | string, payload: any
   }
 }
 
-// 🔽 Servicio auxiliar para descargar el PDF
+// 🔽 Servicio auxiliar para descargar el PDF de una NC
 async function descargarPdfNotaCredito(notaCreditoId: number | string) {
   const urlDescarga = `/facturacion/descargar-pdf-nota-credito/${notaCreditoId}`;
 
@@ -326,6 +327,11 @@ async function descargarPdfNotaCredito(notaCreditoId: number | string) {
     console.error('⚠️ Error al descargar el PDF de la nota de crédito:', error);
     throw error;
   }
+}
+
+// 🔽 Servicio para descargar directamente una NC ya generada (exportado)
+export async function descargarNotaCreditoYaGenerada(notaCreditoId: number | string) {
+  await descargarPdfNotaCredito(notaCreditoId);
 }
 
 export async function descargarFacturaIndividualById(reservaId: number | string, params: string) {

@@ -132,3 +132,13 @@ export interface ResumenMovimiento {
   texto: string;
   valor: string;
 }
+
+// Tipo para la respuesta de verificación de caja abierta
+export interface VerificacionCajaAbierta {
+  tiene_caja_abierta: boolean;
+  caja_id?: number;
+  caja_nombre?: string;
+  codigo_apertura?: string;
+  saldo_actual?: string;
+  notificacion?: string;
+}
