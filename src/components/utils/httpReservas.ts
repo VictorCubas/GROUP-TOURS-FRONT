@@ -268,7 +268,7 @@ export async function descargarFacturaGlobalById(id: number | string, params: st
   return response;
 }
 
-export async function 
+export async function
 generarNotaCreditoGlobal(id: number | string, payload: any) {
   const urlGenerar = `/facturacion/generar-nota-credito-total/${id}`;
 
@@ -289,6 +289,31 @@ generarNotaCreditoGlobal(id: number | string, payload: any) {
     return response;
   } catch (error) {
     console.error('❌ Error al generar o descargar la nota de crédito:', error);
+    throw error;
+  }
+}
+
+// 🆕 Función para generar Nota de Crédito PARCIAL
+export async function generarNotaCreditoParcial(id: number | string, payload: any) {
+  const urlGenerar = `/facturacion/generar-nota-credito-parcial/${id}`;
+
+  try {
+    // 1️⃣ Generar la nota de crédito parcial
+    const response = await axiosInstance.post(urlGenerar, payload);
+
+    // Asumimos que el backend devuelve el ID de la nota de crédito generada
+    const notaCreditoId = response.data?.nota_credito?.id;
+
+    if (!notaCreditoId) {
+      throw new Error('No se recibió el ID de la nota de crédito generada.');
+    }
+
+    // 2️⃣ Descargar el PDF correspondiente
+    await descargarPdfNotaCredito(notaCreditoId);
+
+    return response;
+  } catch (error) {
+    console.error('❌ Error al generar o descargar la nota de crédito parcial:', error);
     throw error;
   }
 }

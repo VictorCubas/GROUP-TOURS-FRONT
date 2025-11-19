@@ -8,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState } from 'react';
-import { useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useGenerarNotaCreditoParcial, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
@@ -76,6 +76,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: fetchAsignarTipoFacturaConModalidad, isPending: isPendingAsignarTipoFacturaModalidad } = useAsignarTipoFacturaModalidad();
 
     const { mutate: fetchGenerarNotaCreditoGlobal, isPending: isPendingGenerarNotaCreditoGlobal } = useGenerarNotaCreditoGlobal();
+
+    const { mutate: fetchGenerarNotaCreditoParcial, isPending: isPendingGenerarNotaCreditoParcial } = useGenerarNotaCreditoParcial();
 
     const { mutate: fetchDescargarNotaCreditoYaGenerada, isPending: isPendingDescargarNC } = useDescargarNotaCreditoYaGenerada();
 
@@ -274,21 +276,28 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         console.log(payload);
         console.log(id)
 
-        // fetchAsignarTipoFacturaConModalidad(
-        fetchGenerarNotaCreditoGlobal(
-            { facturaId: id, payload },
+        // 🆕 Determinar qué tipo de NC generar según el payload
+        const tipoNC = payload.tipo_nota_credito;
+        const isNCParcial = tipoNC === 'parcial';
+
+        // Limpiar el campo tipo_nota_credito del payload antes de enviarlo
+        const payloadLimpio = { ...payload };
+        delete payloadLimpio.tipo_nota_credito;
+
+        // 🔀 Usar el hook correcto según el tipo de NC
+        const mutationFn = isNCParcial ? fetchGenerarNotaCreditoParcial : fetchGenerarNotaCreditoGlobal;
+
+        mutationFn(
+            { facturaId: id, payload: payloadLimpio },
             {
                 onSuccess: (data) => {
-                console.log('✅ Persona asignada correctamente');
+                console.log(`✅ Nota de Crédito ${isNCParcial ? 'Parcial' : 'Total'} generada correctamente`);
                 console.log('📄 Respuesta del servidor:', data);
                 handleShowToast('La nota de credito se ha generado y descargado satisfactoriamente', 'success');
 
                 // Cerrar modal
                 setIsGenerarNotaCreditoModalOpen(false);
-                // setSelectedPassengerId(undefined);
                 console.log(data)
-                // setIsReceiptModalOpen(true);
-                // setPagoSeniaRealizadaResponse(data)
 
                 // Refrescar los detalles de la reserva para ver el estado actualizado
                 queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
@@ -301,12 +310,12 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                 queryClient.invalidateQueries({queryKey: ['salidas-paquete'],exact: false});
                 },
                 onError: (error: any) => {
-                    console.error('❌ Error al asignar persona:', error);
+                    console.error(`❌ Error al generar NC ${isNCParcial ? 'Parcial' : 'Total'}:`, error);
                     console.error('📋 Detalles del error:', error.response?.data);
 
                     const errorMessage = error.response?.data?.message
                         || error.response?.data?.error
-                        || 'Error al asignar persona';
+                        || `Error al generar la nota de crédito ${isNCParcial ? 'parcial' : 'total'}`;
 
                     handleShowToast(errorMessage, 'error');
                 },
@@ -492,39 +501,37 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
      // Manejar la confirmación del modal
     const handleConfirmGenerarNotaCredito  = (payLoad: any) => {
         if (payLoad) {
-          console.log('reservaId:', reservaId);
-          console.log(dataDetalleResp.factura_global_id)
-            // console.log('Payload generado:', pasajeroId);
+          console.log('🔍 Debug handleConfirmGenerarNotaCredito:');
+          console.log('  - reservaId:', reservaId);
+          console.log('  - factura_global_id:', dataDetalleResp.factura_global_id);
+          console.log('  - Payload recibido del modal:', payLoad);
+          console.log('  - tipo_nota_credito:', payLoad.tipo_nota_credito);
+          console.log('  - tipoNotaCreditoAgenerarse:', tipoNotaCreditoAgenerarse);
+          console.log('  - selectedPassengerId:', selectedPassengerId);
 
-            //  { tipo_nota_credito: 'total', motivo: 2, observaciones: '' }
-            delete payLoad.tipo_nota_credito;
-            console.log('modalidad:', payLoad);
-            console.log(tipoNotaCreditoAgenerarse)
-            console.log(selectedPassengerId)
+            // ⚠️ NO ELIMINAR tipo_nota_credito aquí
+            // La función handleGenerarNotaCreditoGlobal necesita este campo para decidir qué endpoint usar
+            // Ella se encargará de limpiarlo antes de enviarlo al backend
 
-            // Llamar a la función de pago con el ID de la reserva actual
-            // handleAsignarTipoFacturaConModalidad(Number(dataDetalleResp.factura_global_id), payLoad);
+            // Determinar el ID de la factura a afectar
             let factura_id = dataDetalleResp?.factura_global_id;
 
-            if(tipoNotaCreditoAgenerarse === 'global')
-              factura_id = dataDetalleResp.factura_global_id
-            else{
-              const paxFilter = dataDetalleResp.pasajeros.filter((p: any) => p.id.toString() === selectedPassengerId?.toString())
-              console.log(paxFilter)
+            if(tipoNotaCreditoAgenerarse === 'global') {
+              factura_id = dataDetalleResp.factura_global_id;
+            } else {
+              // NC Individual - buscar la factura del pasajero
+              const paxFilter = dataDetalleResp.pasajeros.filter((p: any) => p.id.toString() === selectedPassengerId?.toString());
               const pax = paxFilter[0];
 
-              console.log(pax)
-
-              if(pax.factura_individual_generada){
+              if(pax?.factura_individual_generada){
                 factura_id = pax.factura_id;
               }
             }
 
-            console.log(factura_id)
+            console.log('✅ Factura ID final a usar:', factura_id);
 
+            // Llamar a la función que maneja tanto NC Total como Parcial
             handleGenerarNotaCreditoGlobal(Number(factura_id), payLoad);
-              // handleGenerarNotaCreditoIndividual(Number(dataDetalleResp.factura_global_id), payLoad);
-
         }
     };
 
@@ -913,7 +920,7 @@ return   <>
                              {dataDetalleResp?.factura_global_generada && dataDetalleResp?.factura_global_id  &&
                               <div>
                                     <Button
-                                        disabled={isPendingDescargaFacturaGlobal || isPendingDescargarNC}
+                                        disabled={isPendingDescargaFacturaGlobal || isPendingDescargarNC || isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial}
                                         onClick={() => {
                                           console.log('🔍 Debug NC Global:', {
                                             reservaId: dataDetalleResp.id,
@@ -935,7 +942,7 @@ return   <>
                                         className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
                                         size="lg"
                                     >
-                                        {(isPendingDescargaFacturaGlobal || isPendingDescargarNC) ?
+                                        {(isPendingDescargaFacturaGlobal || isPendingDescargarNC || isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial) ?
                                           <>
                                               <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
                                               {dataDetalleResp.nota_credito_global_ya_generada ? 'Descargando...' : 'Generando...'}
@@ -1300,7 +1307,7 @@ return   <>
                                           <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                disabled={isPendingGenerarNotaCreditoGlobal || isPendingDescargarNC}
+                                                disabled={isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial || isPendingDescargarNC}
                                                 onClick={() => {
                                                   setSelectedPassengerId(pasajero.id);
 
@@ -1328,7 +1335,7 @@ return   <>
                                                             `}
                                                 size="lg"
                                             >
-                                              {(isPendingGenerarNotaCreditoGlobal || isPendingDescargarNC) ?
+                                              {(isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial || isPendingDescargarNC) ?
                                                   <>
                                                       <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
                                                       {pasajero.nota_credito_individual_ya_generada ? 'Descargando...' : 'Generando...'}
@@ -1657,7 +1664,7 @@ return   <>
                 isOpen={isGenerarNotaCreditoModalOpen}
                 onClose={handleCloseGenerarNotaCreditoModal}
                 onConfirm={handleConfirmGenerarNotaCredito}
-                isPending={isPendingGenerarNotaCreditoGlobal}
+                isPending={isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial}
                 reservaData={dataDetalleResp}
                 selectedPasajeroId={selectedPassengerId}
             />
