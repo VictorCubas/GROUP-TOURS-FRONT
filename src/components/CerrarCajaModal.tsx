@@ -83,7 +83,7 @@ const CerrarCajaModal: React.FC<CerrarCajaModalProps> = ({
   });
 
   // Calcular diferencia en tiempo real
-  const saldoEsperado = resumen?.totales?.saldo_calculado || 0;
+  const saldoEsperado = resumen?.totales?.saldo_esperado_efectivo || 0;
   const diferencia = montoRealEfectivo !== null ? montoRealEfectivo - saldoEsperado : 0;
   const diferenciaPorcentaje = saldoEsperado > 0
     ? ((diferencia / saldoEsperado) * 100).toFixed(2)
