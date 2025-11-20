@@ -10,6 +10,7 @@ import {
   LogOut,
   Plane,
   ChartColumnBig,
+  Receipt,
 } from "lucide-react";
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
@@ -47,8 +48,21 @@ const sidebarItems = [
     submenu: [
       { label: "Gestion Cajas", href: "/arqueo/cajas", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Aperturas", href: "/arqueo/aperturas", color: "text-orange-400", bgcolor: "bg-orange-400" },
-      { label: "Cierres", href: "/arqueo/cierres", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      // { label: "Cierres", href: "/arqueo/cierres", color: "text-pink-400", bgcolor: "bg-pink-400" },
       { label: "Movimientos", href: "/arqueo/movimientos", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      // { label: "Permisos", href: "/arqueo/cajas", color: "text-blue-400", bgcolor: "bg-blue-400" },
+    ],
+  },
+  {
+    icon: Receipt,
+    label: "Facturación",
+    href: "#",
+    color: "text-blue-400",
+    submenu: [
+      { label: "Facturaciónn", href: "/facturacion/facturas", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      // { label: "Aperturas", href: "/arqueo/aperturas", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      // { label: "Cierres", href: "/arqueo/cierres", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      // { label: "Movimientos", href: "/arqueo/movimientos", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
       // { label: "Permisos", href: "/arqueo/cajas", color: "text-blue-400", bgcolor: "bg-blue-400" },
     ],
   },
