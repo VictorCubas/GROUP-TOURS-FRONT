@@ -16,7 +16,16 @@ const RegistrarCotizacionDelDiaModal = () => {
   const [cotizacion, setCotizacion] = useState<string>(
     currentRate > 0 ? currentRate.toLocaleString("es-PY") : ""
   )
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split("T")[0])
+  // Obtener fecha local en formato YYYY-MM-DD sin conversión UTC
+  const obtenerFechaLocal = () => {
+    const hoy = new Date();
+    const año = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    return `${año}-${mes}-${dia}`;
+  };
+
+  const [fecha, setFecha] = useState<string>(obtenerFechaLocal())
   const [observaciones, setObservaciones] = useState<string>("")
   const [error, setError] = useState<string>("")
 

@@ -5,6 +5,7 @@ import MobileSidebar from "./MobileSidebar";
 import { Button } from "./ui/button";
 import { Separator } from "@/components/ui/separator"
 import { useSessionStore } from "@/store/sessionStore";
+import { IndicadorCajaNavbar } from "./caja/IndicadorCajaNavbar";
 
 interface NavBarProps{
   onToggle: () => void
@@ -31,6 +32,10 @@ const NavBar: React.FC<NavBarProps> = ({onToggle}) => {
             </div>
 
             <div className="flex items-center gap-4">
+              {/* Indicador de estado de caja */}
+              <IndicadorCajaNavbar />
+              <Separator orientation="vertical" className="h-6" />
+
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-400 rounded-full"></div>

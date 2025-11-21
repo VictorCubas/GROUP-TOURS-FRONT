@@ -5,10 +5,11 @@ interface ModalProps{
     children: ReactNode,
     claseCss: string,
     onClose: () => void,
+    preventClickOutsideClose?: boolean,
 }
 
 
-const Modal: React.FC<ModalProps> = ({children, onClose, claseCss}) => {
+const Modal: React.FC<ModalProps> = ({children, onClose, claseCss, preventClickOutsideClose = false}) => {
 
     useEffect(() => {
         // Bloquear scroll del body cuando el modal está abierto
@@ -39,7 +40,7 @@ const Modal: React.FC<ModalProps> = ({children, onClose, claseCss}) => {
             className={claseCss}
             onClick={(e) => {
                 // Cerrar si se hace clic en el overlay (fuera del contenido)
-                if (e.target === e.currentTarget) {
+                if (!preventClickOutsideClose && e.target === e.currentTarget) {
                     onClose();
                 }
             }}

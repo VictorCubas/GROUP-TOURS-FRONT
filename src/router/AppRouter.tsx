@@ -10,6 +10,10 @@ const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const PermisosPage = lazy(() => import('@/pages/PermisosPage'));
 const RolesPage = lazy(() => import('@/pages/RolesPage'));
+const CajasPage = lazy(() => import('@/pages/CajasPage'));
+const MovimientoCajasPage = lazy(() => import('@/pages/MovimientoCajasPage'));
+const AperturaCajasPage = lazy(() => import('@/pages/AperturaCajasPage'));
+const FacturacionPage = lazy(() => import('@/pages/FacturacionPage'));
 const ModuloPage = lazy(() => import('@/pages/ModulosPage'));
 const NacionalidadesPage = lazy(() => import('@/pages/NacionalidadesPage'));
 const DestinoPage = lazy(() => import('@/pages/DestinoPage'));
@@ -54,6 +58,15 @@ const AppRouter = () => {
                         <Route path="paquetes" element={<PaquetesPage />} />
                         <Route path="hoteles" element={<HotelPage />} />
                       </Route>
+
+                      <Route path="/arqueo">
+                        <Route path="cajas" element={<CajasPage />} />
+                        <Route path="aperturas" element={<AperturaCajasPage />} />
+                        <Route path="cierres" element={<PersonasPage />} />
+                        <Route path="movimientos" element={<MovimientoCajasPage />} />
+                        {/* <Route path="usuarios" element={<UsuariosPage />} /> */}
+                      </Route>
+
                       <Route path="/seguridad">
                         <Route path="permisos" element={<PermisosPage />} />
                         <Route path="roles" element={<RolesPage />} />
@@ -68,6 +81,14 @@ const AppRouter = () => {
                         <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
                         <Route path="nacionalidades" element={<NacionalidadesPage />} />
                         <Route path="tipo_paquetes" element={<TipoPaquetesPage />} />
+                      </Route>
+
+                      <Route path="/facturacion">
+                        <Route path="facturas" element={<FacturacionPage />} />
+                        {/* <Route path="modulos" element={<ModuloPage />} />
+                        <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
+                        <Route path="nacionalidades" element={<NacionalidadesPage />} />
+                        <Route path="tipo_paquetes" element={<TipoPaquetesPage />} /> */}
                       </Route>
                     </Route>
                   </Route>

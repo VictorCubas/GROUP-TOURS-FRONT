@@ -317,11 +317,18 @@ export default function GenerarNotaCreditoModal({
                     observaciones: observaciones || '',
                   };
 
+                  // 🆕 Para NC Parcial, construir el array de items según la especificación del backend
                   if (tipoNC === "parcial") {
-                    payload.monto = parseFloat(monto);
+                    payload.items = [
+                      {
+                        descripcion: observaciones || "Nota de crédito parcial",
+                        cantidad: 1,
+                        precio_unitario: parseFloat(monto)
+                      }
+                    ];
                   }
 
-                  console.log(payload)
+                  console.log('📦 Payload NC generado:', payload);
 
                   onConfirm(payload);
                 }}

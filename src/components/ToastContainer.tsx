@@ -63,6 +63,14 @@ const ToastContainer = () => {
         {<Toaster
             position="bottom-center"
             reverseOrder={false}
+            containerStyle={{
+              zIndex: 999999,
+            }}
+            toastOptions={{
+              style: {
+                zIndex: 999999,
+              },
+            }}
             />}
     </>
   )

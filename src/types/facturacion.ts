@@ -25,6 +25,7 @@ export interface PuntoExpedicion {
   id: number,
   codigo: string,
   direccion?: string,
+  nombre: string,
   establecimiento: EstablecimientByPuntosExpedicion
 }
 
@@ -66,4 +67,25 @@ export interface RespuestaPaginada {
   previous: string | null;
   totalPages: number;
   pageSize: number;
+}
+
+export interface FacturaListado {
+  id: number;
+  numero_factura: string;
+  fecha_emision: string;
+  cliente_nombre: string;
+  total_general: string;
+  activo: boolean;
+  fecha_anulacion: string | null;
+  motivo_anulacion: string | null;
+  tipo_facturacion: string;
+  condicion_venta: string;
+  numero?: number; // Para la numeración en la tabla
+}
+
+export interface FacturaResumen {
+  total_facturas: number;
+  facturas_activas: number;
+  facturas_anuladas: number;
+  monto_total_facturado: string;
 }

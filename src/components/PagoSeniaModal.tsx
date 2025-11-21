@@ -5,12 +5,14 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from '@radix-ui/react-label';
 import { RadioGroup, RadioGroupItem } from '@radix-ui/react-radio-group';
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { Input } from './ui/input';
 import { IoCashOutline } from 'react-icons/io5';
 import { formatearSeparadorMiles } from '@/helper/formatter';
 import { ToastContext } from '@/context/ToastContext';
 import { Badge } from './ui/badge';
+import { AlertEstadoCaja } from './caja/AlertEstadoCaja';
+import { verificarUsuarioTieneCajaAbierta } from '@/components/utils/httpCajas';
 
 
 interface PagoSeniaModalProps {
@@ -45,6 +47,28 @@ export default function PagoSeniaModal({
   const [passengerDeposits, setPassengerDeposits] = useState<string[]>(
     Array.from({ length: cantidadActualPasajeros }, () => seniaPorPersona.toString())
   )
+
+  // Estado para guardar información de la caja
+  const [estadoCaja, setEstadoCaja] = useState<any>(null);
+  const [loadingEstadoCaja, setLoadingEstadoCaja] = useState(false);
+
+  // Verificar estado de caja cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingEstadoCaja(true);
+      verificarUsuarioTieneCajaAbierta()
+        .then((data) => {
+          setEstadoCaja(data);
+        })
+        .catch((error) => {
+          console.error('Error verificando estado de caja:', error);
+          setEstadoCaja(null);
+        })
+        .finally(() => {
+          setLoadingEstadoCaja(false);
+        });
+    }
+  }, [isOpen]);
 
   // Calcular el total de depósitos
   const totalDepositAmount = passengerDeposits.reduce((sum, amount) => sum + Number(amount || 0), 0)
@@ -157,27 +181,32 @@ export default function PagoSeniaModal({
   // Crédito disponible cuando: fecha_actual < (fecha_salida - 15 días)
   // Es decir, crédito solo disponible cuando faltan MÁS de 15 días para la salida
   const fechaSalida = reservationResponse?.salida?.fecha_salida;
-  console.log(fechaSalida);
   const creditoDisponible = (() => {
     if (!fechaSalida) return false;
 
-    const fechaSalidaDate = new Date(fechaSalida);
-    const fechaActual = new Date();
+    try {
+      // Parsear la fecha manualmente para evitar problemas de zona horaria
+      // La fecha viene en formato 'YYYY-MM-DD'
+      const [year, month, day] = fechaSalida.split("-").map(Number);
+      if (!year || !month || !day) return false;
+      
+      // Crear fecha en zona local (evita desfase UTC)
+      const fechaSalidaDate = new Date(year, month - 1, day);
+      fechaSalidaDate.setHours(0, 0, 0, 0);
+      
+      // Fecha actual en zona local
+      const fechaActual = new Date();
+      fechaActual.setHours(0, 0, 0, 0);
 
-    // Calcular la fecha límite: fecha_salida - 15 días
-    const fechaLimite = new Date(fechaSalidaDate);
-    fechaLimite.setDate(fechaLimite.getDate() - 15);
+      // Calcular días restantes
+      const diasRestantes = Math.floor((fechaSalidaDate.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Crédito disponible si hoy < (fecha_salida - 15 días)
-    // Es decir, si aún faltan MÁS de 15 días para la salida
-    const disponible = fechaActual < fechaLimite;
-
-    console.log('Fecha actual:', fechaActual.toLocaleDateString());
-    console.log('Fecha salida:', fechaSalidaDate.toLocaleDateString());
-    console.log('Fecha límite (salida - 15 días):', fechaLimite.toLocaleDateString());
-    console.log('Crédito disponible:', disponible);
-
-    return disponible;
+      // Crédito disponible si faltan MÁS de 15 días (16 o más días)
+      return diasRestantes > 15;
+    } catch (error) {
+      console.error('Error al calcular crédito disponible:', error);
+      return false;
+    }
   })();
 
   console.log('=== PagoSeniaModal Props ===')
@@ -248,6 +277,18 @@ export default function PagoSeniaModal({
                 </div>
               </div>
             </Card>
+
+            {/* Alert de Estado de Caja */}
+            {!loadingEstadoCaja && estadoCaja && (
+              <div className="px-6 pt-6">
+                <AlertEstadoCaja
+                  tieneCajaAbierta={estadoCaja.tiene_caja_abierta}
+                  cajaNombre={estadoCaja.caja_nombre}
+                  saldoActual={estadoCaja.saldo_actual}
+                  notificacion={estadoCaja.notificacion}
+                />
+              </div>
+            )}
 
             {/* Content */}
             <div className="px-6 py-6 space-y-6">
@@ -449,7 +490,7 @@ export default function PagoSeniaModal({
                                   CREDITO
                                 </Badge>
                             </div> 
-
+                            
                             {!creditoDisponible && (
                               <div className="ml-9 mt-4 rounded-md border border-red-200 bg-red-50 p-3">
                                 <div className="flex items-start gap-2">

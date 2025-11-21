@@ -11,6 +11,8 @@ import { IoCashOutline } from 'react-icons/io5';
 import { formatearSeparadorMiles } from '@/helper/formatter';
 import { createPortal } from 'react-dom';
 import { Badge } from './ui/badge';
+import { AlertEstadoCaja } from './caja/AlertEstadoCaja';
+import { verificarUsuarioTieneCajaAbierta } from '@/components/utils/httpCajas';
 
 
 interface PagoParcialModalProps {
@@ -48,6 +50,28 @@ export default function PagoParcialModal({
   const selectedPassengerIndex = isSinglePassengerMode
     ? reservaData?.pasajeros?.findIndex((p: any) => p.id === selectedPassengerId)
     : -1;
+
+  // Estado para guardar información de la caja
+  const [estadoCaja, setEstadoCaja] = useState<any>(null);
+  const [loadingEstadoCaja, setLoadingEstadoCaja] = useState(false);
+
+  // Verificar estado de caja cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingEstadoCaja(true);
+      verificarUsuarioTieneCajaAbierta()
+        .then((data) => {
+          setEstadoCaja(data);
+        })
+        .catch((error) => {
+          console.error('Error verificando estado de caja:', error);
+          setEstadoCaja(null);
+        })
+        .finally(() => {
+          setLoadingEstadoCaja(false);
+        });
+    }
+  }, [isOpen]);
 
   // Obtener el saldo pendiente del pasajero seleccionado
   const getPassengerPendingBalance = (): number => {
@@ -289,6 +313,18 @@ export default function PagoParcialModal({
       style={{ zIndex: 99999 }}
     >
         <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            {/* Alert de Estado de Caja */}
+            {!loadingEstadoCaja && estadoCaja && (
+              <div className="px-6 pt-6">
+                <AlertEstadoCaja
+                  tieneCajaAbierta={estadoCaja.tiene_caja_abierta}
+                  cajaNombre={estadoCaja.caja_nombre}
+                  saldoActual={estadoCaja.saldo_actual}
+                  notificacion={estadoCaja.notificacion}
+                />
+              </div>
+            )}
+
             {/* Content */}
             <div className="px-6 py-6 space-y-6">
               <Card className="p-8 bg-white border-2 border-blue-200 ">

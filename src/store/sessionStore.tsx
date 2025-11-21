@@ -22,6 +22,7 @@ export interface SessionDataStore {
   permisos: PermisosModulo[] // <--- Nuevo campo
   esAdmin: boolean,
   nombreUsuario: string,
+  usuarioId: number,
 }
 
 interface SessionStore {
@@ -46,6 +47,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   nombreUsuario: '',
 
   login: (data: SessionDataStore) => {
+    console.log(data)
     localStorage.setItem('session', JSON.stringify(data))
     set({
       session: {

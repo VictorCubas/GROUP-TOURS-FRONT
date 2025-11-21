@@ -320,10 +320,13 @@ export default function ReservaPage() {
           setIsSenialModalOpen(false);
           // setReservaRealizadaResponse(null);
           setIsReceiptModalOpen(true);
-          setPagoSeniaRealizadaResponse(data); 
+          setPagoSeniaRealizadaResponse(data);
 
           // Refrescar la lista de reservas para ver el estado actualizado
           queryClient.invalidateQueries({ queryKey: ['reservas'] });
+          // Refrescar el resumen de movimientos de caja
+          queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
+          queryClient.invalidateQueries({queryKey: ['movimientos'],exact: false});
         },
         onError: (error: any) => {
           console.error('❌ Error al realizar la seña:', error);
@@ -354,10 +357,13 @@ export default function ReservaPage() {
           setIsSenialModalOpen(false);
           // setReservaRealizadaResponse(null);
           setIsReceiptModalOpen(true);
-          setPagoSeniaRealizadaResponse(data); 
+          setPagoSeniaRealizadaResponse(data);
 
           // Refrescar la lista de reservas para ver el estado actualizado
           queryClient.invalidateQueries({ queryKey: ['reservas'] });
+          // Refrescar el resumen de movimientos de caja
+          queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
+          queryClient.invalidateQueries({queryKey: ['movimientos'],exact: false});
         },
         onError: (error: any) => {
           console.error('❌ Error al realizar la seña:', error);
@@ -1498,11 +1504,11 @@ export default function ReservaPage() {
                 </Button>
               }
 
-              {siTienePermiso("reservas", "exportar") && 
+              {siTienePermiso("reservas", "crear") && 
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
                 onClick={() => setActiveTabCatalogo('form')}>
                 <Plus className="h-4 w-4 mr-2" />
-                Nuevo Reserva
+                Nueva Reserva
               </Button>
               }
             </div>

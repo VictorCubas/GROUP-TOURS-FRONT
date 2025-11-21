@@ -268,7 +268,8 @@ export async function descargarFacturaGlobalById(id: number | string, params: st
   return response;
 }
 
-export async function generarNotaCreditoGlobal(id: number | string, payload: any) {
+export async function
+generarNotaCreditoGlobal(id: number | string, payload: any) {
   const urlGenerar = `/facturacion/generar-nota-credito-total/${id}`;
 
   try {
@@ -292,7 +293,32 @@ export async function generarNotaCreditoGlobal(id: number | string, payload: any
   }
 }
 
-// 🔽 Servicio auxiliar para descargar el PDF
+// 🆕 Función para generar Nota de Crédito PARCIAL
+export async function generarNotaCreditoParcial(id: number | string, payload: any) {
+  const urlGenerar = `/facturacion/generar-nota-credito-parcial/${id}`;
+
+  try {
+    // 1️⃣ Generar la nota de crédito parcial
+    const response = await axiosInstance.post(urlGenerar, payload);
+
+    // Asumimos que el backend devuelve el ID de la nota de crédito generada
+    const notaCreditoId = response.data?.nota_credito?.id;
+
+    if (!notaCreditoId) {
+      throw new Error('No se recibió el ID de la nota de crédito generada.');
+    }
+
+    // 2️⃣ Descargar el PDF correspondiente
+    await descargarPdfNotaCredito(notaCreditoId);
+
+    return response;
+  } catch (error) {
+    console.error('❌ Error al generar o descargar la nota de crédito parcial:', error);
+    throw error;
+  }
+}
+
+// 🔽 Servicio auxiliar para descargar el PDF de una NC
 async function descargarPdfNotaCredito(notaCreditoId: number | string) {
   const urlDescarga = `/facturacion/descargar-pdf-nota-credito/${notaCreditoId}`;
 
@@ -326,6 +352,11 @@ async function descargarPdfNotaCredito(notaCreditoId: number | string) {
     console.error('⚠️ Error al descargar el PDF de la nota de crédito:', error);
     throw error;
   }
+}
+
+// 🔽 Servicio para descargar directamente una NC ya generada (exportado)
+export async function descargarNotaCreditoYaGenerada(notaCreditoId: number | string) {
+  await descargarPdfNotaCredito(notaCreditoId);
 }
 
 export async function descargarFacturaIndividualById(reservaId: number | string, params: string) {
