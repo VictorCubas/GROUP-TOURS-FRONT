@@ -2,13 +2,13 @@
 import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from '@/helper/formatter';
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Loader2Icon, Mail, Package, Phone, RefreshCcwIcon, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users } from 'lucide-react';
+import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Loader2Icon, Mail, Package, Phone, RefreshCcwIcon, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users, XCircle } from 'lucide-react';
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState } from 'react';
-import { useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useGenerarNotaCreditoParcial, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useCancelarReserva, useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useGenerarNotaCreditoParcial, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
@@ -18,6 +18,8 @@ import GenerarFacturaModal from './GenerarFacturaModal';
 import type { ClienteFacturaData } from './FormularioFacturaTitular';
 import AsignarTipoFacturaModal from './AsignarTipoFactura';
 import GenerarNotaCreditoModal from './GenerarNotaCreditoModal';
+import CancelarReservaModal from './CancelarReservaModal';
+import ComprobanteDevolucionModal from './ComprobanteDevolucionModal';
 import { useSessionStore } from '@/store/sessionStore';
 // import { verificarUsuarioTieneCajaAbierta } from './utils/httpCajas';
 // import type { VerificacionCajaAbierta } from '@/types/cajas';
@@ -47,6 +49,9 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
     const [descargandoVoucherId, setDescargandoVoucherId] = useState<number | undefined>(undefined);
     const [pagoSeniaRealizadaResponse, setPagoSeniaRealizadaResponse] = useState<any>(null);
+    const [isCancelarReservaModalOpen, setIsCancelarReservaModalOpen] = useState(false);
+    const [isComprobanteDevolucionModalOpen, setIsComprobanteDevolucionModalOpen] = useState(false);
+    const [cancelacionResponse, setCancelacionResponse] = useState<any>(null);
     
     const {data: dataDetalleResp, isFetching: isFetchingDetalles,} = useQuery({
         queryKey: ['reserva-detalles', reservaId], //data cached
@@ -82,6 +87,8 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: fetchDescargarNotaCreditoYaGenerada, isPending: isPendingDescargarNC } = useDescargarNotaCreditoYaGenerada();
 
     const { mutate: generarYDescargarVoucher, isPending: isPendingDescargaVoucher } = useDescargarVoucher();
+
+    const { mutate: fetchCancelarReserva, isPending: isPendingCancelarReserva } = useCancelarReserva();
 
     // Verificar si el usuario tiene permiso para registrar pagos
     // Solo Cajero y Admin pueden registrar pagos
@@ -450,6 +457,55 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
             },
         });
     }
+
+    const handleCancelarReserva = (payload: any) => {
+        console.log('📦 Payload enviado para cancelar reserva:', JSON.stringify(payload, null, 2));
+
+        fetchCancelarReserva(
+            { reservaId: reservaId, payload },
+            {
+                onSuccess: (data) => {
+                    console.log('✅ Reserva cancelada correctamente');
+                    console.log('📄 Respuesta del servidor:', data);
+                    handleShowToast('Reserva cancelada correctamente', 'success');
+
+                    // Guardar respuesta y abrir modal de comprobante
+                    setCancelacionResponse(data);
+                    setIsCancelarReservaModalOpen(false);
+                    setIsComprobanteDevolucionModalOpen(true);
+
+                    // Refrescar queries
+                    queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                    queryClient.invalidateQueries({ queryKey: ['reservas'], exact: false });
+                    queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
+                    queryClient.invalidateQueries({ queryKey: ['movimientos'], exact: false });
+                    queryClient.invalidateQueries({ queryKey: ['paquetes'], exact: false });
+                    queryClient.invalidateQueries({ queryKey: ['salidas-paquete'], exact: false });
+                },
+                onError: (error: any) => {
+                    console.error('❌ Error al cancelar la reserva:', error);
+                    console.error('📋 Detalles del error:', error.response?.data);
+
+                    const errorMessage = error.response?.data?.message
+                        || error.response?.data?.error
+                        || 'Error al cancelar la reserva';
+
+                    handleShowToast(errorMessage, 'error');
+                },
+            }
+        );
+    };
+
+    const handleCloseCancelarReservaModal = () => {
+        setIsCancelarReservaModalOpen(false);
+    };
+
+    const handleCloseComprobanteDevolucionModal = () => {
+        setIsComprobanteDevolucionModalOpen(false);
+        setCancelacionResponse(null);
+        // Cerrar el modal principal de detalles
+        onClose();
+    };
 
     const handleClosePagoParcialModal = () => {
         setIsPagoParcialModalOpen(false);
@@ -1623,7 +1679,21 @@ return   <>
             )}
 
              {/* Botones de acción */}
-            <div className="flex items-center justify-end space-x-4 p-2 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-between space-x-4 p-2 pt-6 border-t border-gray-200">
+            {/* Botón Cancelar Reserva - Solo si puede cancelar */}
+            {dataDetalleResp?.info_cancelacion?.puede_cancelar && (
+                <button
+                    onClick={() => {
+                        setIsCancelarReservaModalOpen(true);
+                    }}
+                    className="cursor-pointer px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center space-x-2 font-medium"
+                >
+                    <XCircle className="w-4 h-4" />
+                    <span>Cancelar Reserva</span>
+                </button>
+            )}
+
+            {/* Botón Aceptar */}
             <button
                 onClick={() => {
                 onClose();
@@ -1697,6 +1767,27 @@ return   <>
                 isPending={isPendingDescargaFacturaGlobal || isPendingDescargaFacturaIndividual}
                 reservaData={dataDetalleResp}
                 selectedPasajeroId={selectedPassengerId}
+            />
+        )}
+
+        {isCancelarReservaModalOpen && (
+            <CancelarReservaModal
+                isOpen={isCancelarReservaModalOpen}
+                onClose={handleCloseCancelarReservaModal}
+                onConfirm={handleCancelarReserva}
+                isPending={isPendingCancelarReserva}
+                reservaData={dataDetalleResp}
+            />
+        )}
+
+        {isComprobanteDevolucionModalOpen && (
+            <ComprobanteDevolucionModal
+                isOpen={isComprobanteDevolucionModalOpen}
+                onClose={handleCloseComprobanteDevolucionModal}
+                responseData={cancelacionResponse}
+                reservaData={dataDetalleResp}
+                onDescargarComprobante={handleDescargarPDF}
+                isPendingDescarga={isPendingDescargaComprobante}
             />
         )}
 </>
