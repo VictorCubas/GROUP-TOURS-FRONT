@@ -358,6 +358,15 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                 queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
             }
             
+            // Invalidar queries de facturas después de generar/descargar
+            queryClient.invalidateQueries({
+                queryKey: ['facturas'],
+                exact: false
+            });
+            queryClient.invalidateQueries({
+                queryKey: ['facturas-resumen'],
+            });
+            
             setSelectedPassengerId(undefined);
         },
         onError: (error) => {
@@ -394,6 +403,15 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                     queryClient.invalidateQueries({queryKey: ['reservas'],exact: false});
                 }
             }
+            
+            // Invalidar queries de facturas después de generar/descargar
+            queryClient.invalidateQueries({
+                queryKey: ['facturas'],
+                exact: false
+            });
+            queryClient.invalidateQueries({
+                queryKey: ['facturas-resumen'],
+            });
             
             setSelectedPassengerId(undefined);
         },

@@ -38,16 +38,29 @@ export default function AsignarTipoFacturaModal({
   const creditoDisponible = (() => {
     if (!fechaSalida) return false;
 
-    const fechaSalidaDate = new Date(fechaSalida);
-    const fechaActual = new Date();
+    try {
+      // Parsear la fecha manualmente para evitar problemas de zona horaria
+      // La fecha viene en formato 'YYYY-MM-DD'
+      const [year, month, day] = fechaSalida.split("-").map(Number);
+      if (!year || !month || !day) return false;
+      
+      // Crear fecha en zona local (evita desfase UTC)
+      const fechaSalidaDate = new Date(year, month - 1, day);
+      fechaSalidaDate.setHours(0, 0, 0, 0);
+      
+      // Fecha actual en zona local
+      const fechaActual = new Date();
+      fechaActual.setHours(0, 0, 0, 0);
 
-    // Calcular la fecha límite: fecha_salida - 15 días
-    const fechaLimite = new Date(fechaSalidaDate);
-    fechaLimite.setDate(fechaLimite.getDate() - 15);
+      // Calcular días restantes
+      const diasRestantes = Math.floor((fechaSalidaDate.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Crédito disponible si hoy < (fecha_salida - 15 días)
-    // Es decir, si aún faltan MÁS de 15 días para la salida
-    return fechaActual < fechaLimite;
+      // Crédito disponible si faltan MÁS de 15 días (16 o más días)
+      return diasRestantes > 15;
+    } catch (error) {
+      console.error('Error al calcular crédito disponible:', error);
+      return false;
+    }
   })();
 
   if (!isOpen) return null;

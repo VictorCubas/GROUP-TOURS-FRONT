@@ -159,12 +159,23 @@ export default function FacturacionPage() {
         handleShowToast('La factura ha sido anulada satisfactoriamente', 'success');
         handleCancel()
 
+        // Invalidar queries de facturas
         queryClient.invalidateQueries({
           queryKey: ['facturas'],
           exact: false
         });
         queryClient.invalidateQueries({
           queryKey: ['facturas-resumen'],
+        });
+        
+        // Invalidar queries de reservas después de anular factura
+        queryClient.invalidateQueries({
+          queryKey: ['reservas'],
+          exact: false
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['reserva-detalles'],
+          exact: false
         });
     },
   });
@@ -211,6 +222,15 @@ export default function FacturacionPage() {
     try {
       await descargarFacturaPDF(factura.id);
       handleShowToast('Factura descargada exitosamente', 'success');
+      
+      // Invalidar queries de facturas después de descargar
+      queryClient.invalidateQueries({
+        queryKey: ['facturas'],
+        exact: false
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['facturas-resumen'],
+      });
     } catch (error) {
       console.log(error);
       handleShowToast('Error al descargar la factura', 'error');
