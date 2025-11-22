@@ -74,26 +74,59 @@ export const fetchCajasParaFiltro = async () => {
 };
 
 /**
- * Exportar reporte a PDF (cuando esté implementado)
+ * Exportar reporte a PDF
+ * Endpoint: /api/dashboard/reportes/movimientos-cajas/exportar-pdf/
  */
 export const exportarReporteMovimientosPDF = async (filtros: FiltrosReporteMovimientos) => {
   try {
-    const response = await axiosInstance.get('/dashboard/reportes/movimientos-cajas/', {
-      params: {
-        ...filtros,
-        export: 'pdf'
-      },
+    // Validar que las fechas estén presentes (OBLIGATORIO para este reporte)
+    if (!filtros.fecha_desde || !filtros.fecha_hasta) {
+      throw new Error('Las fechas desde y hasta son obligatorias para exportar');
+    }
+
+    const params: Record<string, any> = {
+      fecha_desde: filtros.fecha_desde,
+      fecha_hasta: filtros.fecha_hasta,
+    };
+
+    // Agregar filtros opcionales solo si tienen valor
+    if (filtros.caja_id) params.caja_id = filtros.caja_id;
+    if (filtros.tipo_movimiento && filtros.tipo_movimiento !== 'todas') {
+      params.tipo_movimiento = filtros.tipo_movimiento;
+    }
+    if (filtros.metodo_pago) params.metodo_pago = filtros.metodo_pago;
+    if (filtros.concepto) params.concepto = filtros.concepto;
+    if (filtros.busqueda) params.busqueda = filtros.busqueda;
+
+    const response = await axiosInstance.get('/dashboard/reportes/movimientos-cajas/exportar-pdf/', {
+      params,
       responseType: 'blob'
     });
 
     // Crear URL para descargar
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `reporte_movimientos_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    // Obtener el nombre del archivo desde el header Content-Disposition o usar uno por defecto
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = `movimientos_cajas_${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = fileNameMatch[1].replace(/['"]/g, '');
+      }
+    }
+    
+    link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     link.remove();
+    
+    // Limpiar la URL del blob
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Error exportando PDF:', error);
     throw error;
@@ -101,25 +134,61 @@ export const exportarReporteMovimientosPDF = async (filtros: FiltrosReporteMovim
 };
 
 /**
- * Exportar reporte a Excel (cuando esté implementado)
+ * Exportar reporte a Excel
+ * Endpoint: /api/dashboard/reportes/movimientos-cajas/exportar-excel/
  */
 export const exportarReporteMovimientosExcel = async (filtros: FiltrosReporteMovimientos) => {
   try {
-    const response = await axiosInstance.get('/dashboard/reportes/movimientos-cajas/', {
-      params: {
-        ...filtros,
-        export: 'excel'
-      },
+    // Validar que las fechas estén presentes (OBLIGATORIO para este reporte)
+    if (!filtros.fecha_desde || !filtros.fecha_hasta) {
+      throw new Error('Las fechas desde y hasta son obligatorias para exportar');
+    }
+
+    const params: Record<string, any> = {
+      fecha_desde: filtros.fecha_desde,
+      fecha_hasta: filtros.fecha_hasta,
+    };
+
+    // Agregar filtros opcionales solo si tienen valor
+    if (filtros.caja_id) params.caja_id = filtros.caja_id;
+    if (filtros.tipo_movimiento && filtros.tipo_movimiento !== 'todas') {
+      params.tipo_movimiento = filtros.tipo_movimiento;
+    }
+    if (filtros.metodo_pago) params.metodo_pago = filtros.metodo_pago;
+    if (filtros.concepto) params.concepto = filtros.concepto;
+    if (filtros.busqueda) params.busqueda = filtros.busqueda;
+
+    const response = await axiosInstance.get('/dashboard/reportes/movimientos-cajas/exportar-excel/', {
+      params,
       responseType: 'blob'
     });
 
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    // Crear URL para descargar
+    const blob = new Blob([response.data], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `reporte_movimientos_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    // Obtener el nombre del archivo desde el header Content-Disposition o usar uno por defecto
+    const contentDisposition = response.headers['content-disposition'];
+    let fileName = `movimientos_cajas_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = fileNameMatch[1].replace(/['"]/g, '');
+      }
+    }
+    
+    link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     link.remove();
+    
+    // Limpiar la URL del blob
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Error exportando Excel:', error);
     throw error;

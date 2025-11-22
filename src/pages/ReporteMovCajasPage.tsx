@@ -46,6 +46,7 @@ export default function ReporteMovCajasPage() {
   
   const [onVerDetalles, setOnVerDetalles] = useState(false)
   const [dataDetalle, setDataDetalle] = useState<MovimientoCajaListado>()
+  const [exportando, setExportando] = useState(false)
 
   // Obtener fechas por defecto (últimos 30 días)
   const getFechaDefecto = () => {
@@ -153,6 +154,8 @@ export default function ReporteMovCajasPage() {
 
   const handleExportar = async (formato: 'pdf' | 'excel') => {
     try {
+      setExportando(true)
+      
       if (formato === 'pdf') {
         await exportarReporteMovimientosPDF(filtros)
         handleShowToast('Reporte PDF descargado exitosamente', 'success')
@@ -160,8 +163,12 @@ export default function ReporteMovCajasPage() {
         await exportarReporteMovimientosExcel(filtros)
         handleShowToast('Reporte Excel descargado exitosamente', 'success')
       }
-    } catch (error) {
-      handleShowToast('Error al exportar el reporte', 'error')
+    } catch (error: any) {
+      console.error('Error al exportar:', error)
+      const errorMessage = error?.response?.data?.message || error?.message || 'Error al exportar el reporte'
+      handleShowToast(errorMessage, 'error')
+    } finally {
+      setExportando(false)
     }
   }
 
@@ -329,17 +336,35 @@ export default function ReporteMovCajasPage() {
                   <Button
                     variant="outline"
                     className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
+                    disabled={exportando || !filtros.fecha_desde || !filtros.fecha_hasta}
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    {exportando ? (
+                      <>
+                        <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                        Exportando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => handleExportar('pdf')} className="cursor-pointer">
+                  <DropdownMenuItem 
+                    onClick={() => handleExportar('pdf')} 
+                    className="cursor-pointer"
+                    disabled={exportando}
+                  >
                     <FileText className="h-4 w-4 mr-2" />
                     Exportar PDF
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExportar('excel')} className="cursor-pointer">
+                  <DropdownMenuItem 
+                    onClick={() => handleExportar('excel')} 
+                    className="cursor-pointer"
+                    disabled={exportando}
+                  >
                     <FileText className="h-4 w-4 mr-2" />
                     Exportar Excel
                   </DropdownMenuItem>
