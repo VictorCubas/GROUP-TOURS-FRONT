@@ -22,9 +22,17 @@ const ComprobanteDevolucionModal: React.FC<ComprobanteDevolucionModalProps> = ({
   onDescargarComprobante,
   isPendingDescarga = false,
 }) => {
+  // Log de verificación de datos
+  if (isOpen) {
+    console.log('📊 ComprobanteDevolucionModal - Datos recibidos:', {
+      pasajeros_cancelados: responseData?.pasajeros_cancelados,
+      fueron_liberados: responseData?.cupos_info?.fueron_liberados,
+      monto_reembolsable: responseData?.monto_reembolsable,
+    });
+  }
+
   const comprobante = responseData?.comprobante_devolucion;
-  const detalles = responseData?.detalles;
-  const huboDevolucion = comprobante && detalles?.monto_devuelto > 0;
+  const huboDevolucion = comprobante && responseData?.monto_reembolsable > 0;
 
   // Bloquear scroll del modal padre cuando ComprobanteDevolucionModal está abierto
   useEffect(() => {
@@ -154,32 +162,40 @@ const ComprobanteDevolucionModal: React.FC<ComprobanteDevolucionModalProps> = ({
                   <Users className="w-4 h-4 mr-2" />
                   Pasajeros cancelados:
                 </span>
-                <span className="font-semibold text-gray-900">{detalles?.pasajeros_cancelados || 0}</span>
+                <span className="font-semibold text-gray-900">{responseData?.pasajeros_cancelados || 0}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-gray-200">
                 <span className="text-gray-600">Cupos liberados:</span>
-                <span className="font-semibold text-green-600">
-                  {detalles?.cupos_liberados ? '✅ Sí' : '❌ No'}
+                <span className={`font-semibold ${responseData?.cupos_info?.fueron_liberados ? 'text-green-600' : 'text-red-600'}`}>
+                  {responseData?.cupos_info?.fueron_liberados ? '✅ Sí' : '❌ No'}
                 </span>
               </div>
+              {responseData?.cupos_info?.observacion && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Observación:</span>
+                  <span className="font-medium text-gray-700 text-sm italic">
+                    {responseData.cupos_info.observacion}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between py-2 border-b border-gray-200">
-                <span className="text-gray-600">Motivo:</span>
+                <span className="text-gray-600">Tipo de paquete:</span>
                 <span className="font-semibold text-gray-900">
-                  {responseData?.motivo || 'Cancelación de reserva'}
+                  {responseData?.cupos_info?.es_paquete_propio ? '🏠 Propio' : '🏢 Distribuidor'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-gray-200">
                 <span className="text-gray-600">Política aplicada:</span>
                 <span className="font-semibold text-gray-900">
-                  {reservaData?.info_cancelacion?.dias_hasta_salida > 20
+                  {responseData?.politica_aplicada || (reservaData?.info_cancelacion?.dias_hasta_salida > 20
                     ? '> 20 días (con devolución)'
-                    : '≤ 20 días (sin devolución)'}
+                    : '≤ 20 días (sin devolución)')}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2">
                 <span className="text-gray-600">Facturas afectadas:</span>
                 <span className="font-semibold text-green-600">
-                  ✅ {detalles?.facturas_afectadas || 0}
+                  ✅ {responseData?.facturas_afectadas || 0}
                 </span>
               </div>
             </div>
@@ -192,37 +208,80 @@ const ComprobanteDevolucionModal: React.FC<ComprobanteDevolucionModalProps> = ({
               PROCESO COMPLETO
             </h4>
             <p className="text-sm text-gray-700">
-              No se requieren acciones adicionales. La reserva no tenía facturas generadas,
-              por lo tanto no es necesario generar Notas de Crédito.
+              {responseData?.facturas_afectadas === 0 ? (
+                <>
+                  No se requieren acciones adicionales. La reserva no tenía facturas generadas,
+                  por lo tanto no es necesario generar Notas de Crédito.
+                </>
+              ) : (
+                <>
+                  Se procesaron {responseData?.facturas_afectadas} factura(s) y se generaron las 
+                  Notas de Crédito correspondientes.
+                </>
+              )}
             </p>
           </div>
 
-          {/* Nota Importante */}
+          {/* Desglose de Montos */}
           <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-            <h4 className="font-semibold text-blue-800 mb-2">💡 NOTA IMPORTANTE</h4>
+            <h4 className="font-semibold text-blue-800 mb-3">💰 DESGLOSE DE MONTOS</h4>
+            <div className="text-sm text-gray-700 space-y-2">
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-600">Seña pagada:</span>
+                <span className="font-medium text-gray-900">
+                  {reservaData?.paquete?.moneda?.simbolo || '$'}
+                  {formatearSeparadorMiles.format(responseData?.monto_sena || 0)}
+                  <span className="ml-2 text-xs text-red-600">(no reembolsable)</span>
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-600">Pagos adicionales:</span>
+                <span className="font-medium text-gray-900">
+                  {reservaData?.paquete?.moneda?.simbolo || '$'}
+                  {formatearSeparadorMiles.format(responseData?.monto_pagos_adicionales || 0)}
+                </span>
+              </div>
+              <div className="border-t-2 border-dashed border-gray-300 my-2"></div>
+              <div className="flex justify-between items-center py-1">
+                <span className="font-semibold text-gray-900">Monto reembolsado:</span>
+                <span className={`text-lg font-bold ${
+                  responseData?.monto_reembolsable > 0 ? 'text-green-700' : 'text-gray-700'
+                }`}>
+                  {reservaData?.paquete?.moneda?.simbolo || '$'}
+                  {formatearSeparadorMiles.format(responseData?.monto_reembolsable || 0)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Nota Importante */}
+          <div className="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
+            <h4 className="font-semibold text-yellow-800 mb-2">💡 NOTA IMPORTANTE</h4>
             <div className="text-sm text-gray-700 space-y-2">
               {huboDevolucion ? (
                 <>
                   <p>
-                    La seña de {reservaData?.paquete?.moneda?.simbolo || '$'}
-                    {formatearSeparadorMiles.format(reservaData?.seña_total || 0)} NO fue devuelta
-                    según política de cancelación.
-                  </p>
-                  <p>
                     Se generó un movimiento de EGRESO en caja por el monto devuelto (
                     {reservaData?.paquete?.moneda?.simbolo || '$'}
-                    {formatearSeparadorMiles.format(detalles?.monto_devuelto || 0)}).
+                    {formatearSeparadorMiles.format(responseData?.monto_reembolsable || 0)}).
+                  </p>
+                  <p>
+                    La seña de {reservaData?.paquete?.moneda?.simbolo || '$'}
+                    {formatearSeparadorMiles.format(responseData?.monto_sena || 0)} NO fue devuelta
+                    según política de cancelación.
                   </p>
                 </>
               ) : (
                 <>
                   <p>
                     No se generó devolución porque la cancelación se realizó con{' '}
-                    {reservaData?.info_cancelacion?.dias_hasta_salida} días o menos de anticipación.
+                    {responseData?.dias_hasta_salida || reservaData?.info_cancelacion?.dias_hasta_salida} días o menos de anticipación.
                   </p>
                   <p className="font-medium text-red-700">
                     Monto pagado no reembolsado: {reservaData?.paquete?.moneda?.simbolo || '$'}
-                    {formatearSeparadorMiles.format(reservaData?.monto_pagado || 0)}
+                    {formatearSeparadorMiles.format(
+                      (responseData?.monto_sena || 0) + (responseData?.monto_pagos_adicionales || 0)
+                    )}
                   </p>
                 </>
               )}

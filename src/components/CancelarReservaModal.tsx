@@ -175,37 +175,78 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
                 </div>
               </div>
 
-              {infoCancelacion?.aplica_reembolso ? (
-                <div className="mt-3 pt-3 border-t border-yellow-200 bg-green-50 rounded p-3">
-                  <div className="flex items-center space-x-2 mb-2">
+              {/* Desglose de Devolución */}
+              <div className={`mt-3 pt-3 border-t border-yellow-200 rounded p-4 ${
+                infoCancelacion?.aplica_reembolso ? 'bg-green-50' : 'bg-gray-50'
+              }`}>
+                <div className="flex items-center space-x-2 mb-3">
+                  {infoCancelacion?.aplica_reembolso ? (
                     <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="font-semibold text-green-800">DEVOLUCIÓN APLICABLE:</span>
+                  ) : (
+                    <XCircle className="w-5 h-5 text-gray-600" />
+                  )}
+                  <span className="font-semibold text-gray-900">DESGLOSE DE PAGOS:</span>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  {/* Seña pagada */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Seña pagada:</span>
+                    <span className="font-medium text-gray-900">
+                      {reservaData?.paquete?.moneda?.simbolo || '$'}
+                      {formatearSeparadorMiles.format(infoCancelacion?.monto_sena || 0)}
+                      <span className="ml-2 text-xs text-red-600">(no reembolsable)</span>
+                    </span>
                   </div>
-                  <div className="ml-7">
-                    <span className="text-2xl font-bold text-green-700">
+
+                  {/* Pagos adicionales */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Pagos adicionales:</span>
+                    <span className="font-medium text-gray-900">
+                      {reservaData?.paquete?.moneda?.simbolo || '$'}
+                      {formatearSeparadorMiles.format(infoCancelacion?.monto_pagos_adicionales || 0)}
+                    </span>
+                  </div>
+
+                  {/* Línea divisoria */}
+                  <div className="border-t-2 border-dashed border-gray-300 my-2"></div>
+
+                  {/* Monto a devolver */}
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="font-semibold text-gray-900">Monto a devolver:</span>
+                    <span className={`text-xl font-bold ${
+                      infoCancelacion?.aplica_reembolso && infoCancelacion?.monto_reembolsable > 0
+                        ? 'text-green-700'
+                        : 'text-gray-700'
+                    }`}>
                       {reservaData?.paquete?.moneda?.simbolo || '$'}
                       {formatearSeparadorMiles.format(infoCancelacion?.monto_reembolsable || 0)}
                     </span>
                   </div>
-                  <div className="ml-7 mt-2 text-xs text-gray-600">
-                    ℹ️ La seña NO es reembolsable
-                  </div>
+
+                  {/* Tipo de devolución */}
+                  {infoCancelacion?.tipo_devolucion && (
+                    <div className="mt-3 pt-2 border-t border-gray-200">
+                      <p className="text-xs text-gray-600 italic">
+                        ℹ️ {infoCancelacion.tipo_devolucion}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="mt-3 pt-3 border-t border-yellow-200 bg-red-50 rounded p-3">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <XCircle className="w-5 h-5 text-red-600" />
-                    <span className="font-semibold text-red-800">NO CORRESPONDE DEVOLUCIÓN</span>
+
+                {/* Advertencia o política según corresponda */}
+                {!infoCancelacion?.aplica_reembolso && (
+                  <div className="mt-3 pt-3 border-t border-gray-300 bg-red-50 rounded p-2">
+                    <div className="flex items-start space-x-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-red-700">
+                        <p className="font-medium mb-1">Política de cancelación:</p>
+                        <p>{infoCancelacion?.politica}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="ml-7 text-sm text-gray-700">
-                    {infoCancelacion?.politica}
-                  </div>
-                  <div className="ml-7 mt-2 text-sm font-medium text-red-700">
-                    ⚠️ Se perderán los {reservaData?.paquete?.moneda?.simbolo || '$'}
-                    {formatearSeparadorMiles.format(reservaData?.monto_pagado || 0)} pagados
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 

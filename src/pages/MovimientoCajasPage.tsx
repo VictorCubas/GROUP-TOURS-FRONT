@@ -277,12 +277,30 @@ export default function MovimientoCajasPage() {
                     </div>
                   </div>
 
-                  {/* Monto */}
+                  {/* Monto - Dual Currency */}
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <Label className="text-sm font-medium text-gray-700 mb-3 block">Monto</Label>
-                    <p className="text-2xl font-bold text-gray-900">
-                      Gs. {formatearSeparadorMiles.format(Number(dataDetalle?.monto ?? 0))}
-                    </p>
+                    
+                    {/* Moneda original destacada */}
+                    {dataDetalle?.moneda_original === 'USD' ? (
+                      <>
+                        <p className="text-2xl font-bold text-blue-900">
+                          USD {Number(dataDetalle?.monto_usd ?? dataDetalle?.monto ?? 0).toFixed(2)}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Gs. {formatearSeparadorMiles.format(Number(dataDetalle?.monto_gs ?? 0))}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-gray-900">
+                          Gs. {formatearSeparadorMiles.format(Number(dataDetalle?.monto_gs ?? dataDetalle?.monto ?? 0))}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          USD {Number(dataDetalle?.monto_usd ?? 0).toFixed(2)}
+                        </p>
+                      </>
+                    )}
                   </div>
 
                   {/* Comprobante */}
@@ -550,9 +568,26 @@ export default function MovimientoCajasPage() {
                     </TableCell>
 
                     <TableCell>
-                      <div className="font-medium text-gray-900">
-                        Gs. {formatearSeparadorMiles.format(Number(mov?.monto ?? 0))}
-                      </div>
+                      {/* Monto en moneda original (destacado) */}
+                      {mov.moneda_original === 'USD' ? (
+                        <>
+                          <div className="font-bold text-blue-900">
+                            USD {Number(mov.monto_usd ?? mov.monto ?? 0).toFixed(2)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Gs. {formatearSeparadorMiles.format(Number(mov.monto_gs ?? 0))}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="font-medium text-gray-900">
+                            Gs. {formatearSeparadorMiles.format(Number(mov.monto_gs ?? mov.monto ?? 0))}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            USD {Number(mov.monto_usd ?? 0).toFixed(2)}
+                          </div>
+                        </>
+                      )}
                     </TableCell>
 
                     <TableCell>

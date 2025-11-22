@@ -114,7 +114,10 @@ export interface MovimientoCaja {
   tipo_movimiento_display: string;
   concepto: string;
   concepto_display: string;
-  monto: string;  // Decimal como string
+  monto: number;                  // Valor RAW en moneda original
+  moneda_original: string;        // ✅ NUEVO: "PYG", "USD", etc.
+  monto_gs: number;               // SIEMPRE en Guaraníes (convertido)
+  monto_usd: number | null;       // SIEMPRE en USD (convertido)
   metodo_pago: string;
   metodo_pago_display: string;
   referencia: string | null;

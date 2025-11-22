@@ -11,6 +11,9 @@ const HomePage = lazy(() => import('@/pages/HomePage'));
 const PermisosPage = lazy(() => import('@/pages/PermisosPage'));
 const RolesPage = lazy(() => import('@/pages/RolesPage'));
 const CajasPage = lazy(() => import('@/pages/CajasPage'));
+const ReporteMovCajasPage = lazy(() => import('@/pages/ReporteMovCajasPage'));
+const ReporteReservaPage = lazy(() => import('@/pages/ReporteReservaPage'));
+const ReportePaquetePage = lazy(() => import('@/pages/ReportePaquetePage'));
 const MovimientoCajasPage = lazy(() => import('@/pages/MovimientoCajasPage'));
 const AperturaCajasPage = lazy(() => import('@/pages/AperturaCajasPage'));
 const FacturacionPage = lazy(() => import('@/pages/FacturacionPage'));
@@ -81,6 +84,14 @@ const AppRouter = () => {
                         <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
                         <Route path="nacionalidades" element={<NacionalidadesPage />} />
                         <Route path="tipo_paquetes" element={<TipoPaquetesPage />} />
+                      </Route>
+
+                      <Route path="/reportes">
+                        <Route path="cajas" element={<ReporteMovCajasPage />} />
+                        <Route path="reservas" element={<ReporteReservaPage />} />
+                        <Route path="paquetes" element={<ReportePaquetePage />} />
+                        {/* <Route path="nacionalidades" element={<NacionalidadesPage />} />
+                        <Route path="tipo_paquetes" element={<TipoPaquetesPage />} /> */}
                       </Route>
 
                       <Route path="/facturacion">
