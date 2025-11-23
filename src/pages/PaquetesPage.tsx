@@ -4263,8 +4263,6 @@ const handleSubmitClick = useCallback(async () => {
                                                 <TableRow key={salida.id}>
                                                   <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
                                                   <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
-                                                  {/* <TableCell>{JSON.stringify(salida)}</TableCell> */}
-                                                  {/* <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_desde)}</TableCell> */}
                                                   <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_actual)}</TableCell>
                                                   <TableCell>{salida?.precio_final ? 
                                                           formatearSeparadorMiles.format(salida?.precio_final) : 
@@ -4558,20 +4556,20 @@ const handleSubmitClick = useCallback(async () => {
                       <TableHeader>
                         <TableRow className="bg-gray-50 hover:bg-gray-50">
                           <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Código</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Información</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Destino</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Precio Desde</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[120px]">Código</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[280px]">Información</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[140px]">Tipo</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[150px]">Destino</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[150px]">Precio Desde</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Tipo</TableHead> */}
-                          <TableHead className="font-semibold text-gray-700">Fechas</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Propiedad</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[140px]">Fechas</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[140px]">Propiedad</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Genero</TableHead> */}
-                          <TableHead className="font-semibold text-gray-700">Modalidad</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Estado</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[110px]">Modalidad</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[100px]">Estado</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Uso</TableHead> */}
                           {/* <TableHead className="font-semibold text-gray-700">Prioridad</TableHead> */}
-                          <TableHead className="font-semibold text-gray-700">Pasajeros</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[110px]">Pasajeros</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Fecha Modificación</TableHead> */}
                           <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                         </TableRow>
@@ -4595,7 +4593,7 @@ const handleSubmitClick = useCallback(async () => {
                               </div>
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell className="min-w-[120px]">
                               <div>
                                 <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-mono font-semibold">
                                   {data?.codigo || 'N/A'}
@@ -4603,16 +4601,16 @@ const handleSubmitClick = useCallback(async () => {
                               </div>
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell className="min-w-[280px]">
                               {/* <div className="flex items-center gap-3"> */}
-                              <div className="flex items-center gap-3 font-medium text-gray-900 max-w-6xl">
+                              <div className="flex items-center gap-3">
                                 <img
                                     src={data.imagen || placeholderViaje}
                                     alt={data.nombre || "Imagen de paquete de viaje"}
-                                    className="w-12 h-12 rounded-lg object-cover"
+                                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                                 />
-                                <div>
-                                  <div className="font-medium text-gray-900 font-sans">{data.nombre}</div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium text-gray-900 font-sans truncate max-w-[200px]">{data.nombre}</div>
                                   <div className="text-sm text-gray-500 font-sans">
                                     {data.personalizado ? "Personalizado" : "Fechas fijas"}
                                   </div>
@@ -4620,7 +4618,7 @@ const handleSubmitClick = useCallback(async () => {
                               </div>
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell className="min-w-[140px]">
                               {/* <Badge
                                 className={tipoPersonaColores[`${data?.persona?.tipo}`]}
                               > */}
@@ -4646,41 +4644,41 @@ const handleSubmitClick = useCallback(async () => {
                                 </Badge>
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell className="min-w-[150px]">
                               <div>
-                                <div className="font-medium text-gray-900 truncate max-w-xs">{data.destino.ciudad}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">{data.destino.pais}</div>
+                                <div className="font-medium text-gray-900 truncate max-w-[130px]">{data.destino.ciudad}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-[130px]">{data.destino.pais}</div>
                               </div>
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell className="min-w-[150px]">
                               <div>
-                                <div className="font-medium text-green-600 truncate max-w-xs">{data.moneda.simbolo} 
+                                <div className="font-medium text-green-600 truncate max-w-[130px]">{data.moneda.simbolo} 
                                                   {formatearSeparadorMiles.format(data.precio_venta_desde)}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.senia)}</div>
+                                <div className="text-sm text-gray-500 truncate max-w-[130px]">Seña: {data.moneda.simbolo} {formatearSeparadorMiles.format(data.senia)}</div>
                               </div>
                             </TableCell>
                             
 
-                            <TableCell>
+                            <TableCell className="min-w-[140px]">
                                 <div>
                                   {data.personalizado && !data?.fecha_inicio ?
                                     <Badge className='bg-emerald-100 text-emerald-700 border-emerald-200'>
                                         Personalizado
                                     </Badge>
                                     : <>
-                                      <div className="font-medium text-gray-900 truncate max-w-xs">{formatearFecha(data?.fecha_inicio ?? '', false)}</div>
-                                      <div className="text-sm text-gray-500 truncate max-w-xs">{formatearFecha(data?.fecha_fin ?? '', false)}</div>
+                                      <div className="font-medium text-gray-900 truncate max-w-[120px]">{formatearFecha(data?.fecha_inicio ?? '', false)}</div>
+                                      <div className="text-sm text-gray-500 truncate max-w-[120px]">{formatearFecha(data?.fecha_fin ?? '', false)}</div>
                                     </>}
                                 </div>
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell className="min-w-[140px]">
                               <div>
-                                <Badge className={`border font-sans ${data.propio ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-orange-100 text-orange-700 border-orange-200'} truncate max-w-xs`}>
+                                <Badge className={`border font-sans ${data.propio ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-orange-100 text-orange-700 border-orange-200'}`}>
                                   {data.propio ? 'Propio' : 'Distruidor'}
                                 </Badge>
-                                {!data.propio &&  <div className="text-xs text-gray-500 mt-1 font-sans">{data?.distribuidora?.nombre}</div>}
+                                {!data.propio &&  <div className="text-xs text-gray-500 mt-1 font-sans truncate max-w-[120px]">{data?.distribuidora?.nombre}</div>}
                               </div>
                             </TableCell>
 
@@ -4719,7 +4717,7 @@ const handleSubmitClick = useCallback(async () => {
                               
                             </TableCell> */}
 
-                            <TableCell>
+                            <TableCell className="min-w-[110px]">
                               <Badge
                                 className={
                                   data.modalidad === 'flexible'
@@ -4731,7 +4729,7 @@ const handleSubmitClick = useCallback(async () => {
                               </Badge>
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell className="min-w-[100px]">
                               <Badge
                                 className={
                                   data.activo
@@ -4744,7 +4742,7 @@ const handleSubmitClick = useCallback(async () => {
                             </TableCell>
       
                             
-                            <TableCell>
+                            <TableCell className="min-w-[110px]">
                               <div className="text-sm text-gray-500">
                                 <div className="flex items-center gap-1">
                                   {data.propio ? 

@@ -175,16 +175,43 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
                         // Extraer el nombre del módulo desde la URL (última parte del path)
                         const moduleName = subItem.href.split('/').pop() || '';
 
-                        // 🔥 Si es un item de Reportes, verificar rol Gerencial
+                        // 🔥 LÓGICA PARA USUARIOS GERENCIALES
+                        const esGerencial = hasRole('Gerencial');
                         const isReportItem = subItem.href.startsWith('/reportes');
-                        if (isReportItem && !hasRole('Gerencial')) {
+
+                        // Si es Gerencial:
+                        if (esGerencial) {
+                          // Solo mostrar items de Reportes
+                          if (!isReportItem) {
+                            return null; // Ocultar items que NO son reportes
+                          }
+                          // Mostrar items de reportes sin verificar permisos
+                          return (
+                            <Tooltip key={subItem.label}>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <NavLink
+                                    to={subItem.href}
+                                    className={({isActive}) => isActive ? `${cssDefault}  bg-blue-600/20 text-blue-300 border-l-2 border-blue-400`
+                                    : `${cssDefault} hover:bg-slate-800` }
+                                  >
+                                    <div className={`w-2 h-2 rounded-full ${subItem.bgcolor}`}></div>
+                                    <span className="text-sm">{subItem.label}</span>
+                                  </NavLink>
+                                </span>
+                              </TooltipTrigger>
+                            </Tooltip>
+                          );
+                        }
+
+                        // Para usuarios NO gerenciales:
+                        // Ocultar items de reportes
+                        if (isReportItem) {
                           return null;
                         }
 
-                        // 🔥 Si tiene rol Gerencial y es un item de reportes, mostrarlo sin verificar permisos
-                        const shouldShow = isReportItem 
-                          ? hasRole('Gerencial') 
-                          : siTienePermiso(moduleName, 'leer');
+                        // Verificar permisos normalmente
+                        const shouldShow = siTienePermiso(moduleName, 'leer');
 
                         return (
                           <>

@@ -54,7 +54,7 @@ import { ToastContext } from "@/context/ToastContext"
 let dataList: PaqueteListado[] = []
 
 export default function ReportePaquetePage() {
-  const { siTienePermiso } = useSessionStore()
+  const { siTienePermiso, hasRole } = useSessionStore()
   const { handleShowToast } = use(ToastContext)
   
   const [onVerDetalles, setOnVerDetalles] = useState(false)
@@ -442,7 +442,8 @@ export default function ReportePaquetePage() {
             <p className="text-gray-600">Visualiza y analiza todos los paquetes turísticos disponibles.</p>
           </div>
           <div className="flex gap-3">
-            {siTienePermiso("reportes", "exportar") && (
+            {/* Botón de exportar para usuarios con permiso o rol Gerencial */}
+            {(siTienePermiso("reportes", "exportar") || hasRole('Gerencial')) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
