@@ -2880,16 +2880,16 @@ export default function ReservaPage() {
                       <TableHeader>
                         <TableRow className="bg-gray-50 hover:bg-gray-50">
                           <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Numéro</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Titular</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Paquete</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Código Paquete</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Pasajeros</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Estado</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Pago</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Precio Unitario</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Modalidad Factura</TableHead>
-                          <TableHead className="font-semibold text-gray-700">Condicion Pago</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[120px]">Numéro</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[150px]">Titular</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[280px]">Paquete</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[140px]">Código Paquete</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[100px]">Pasajeros</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[120px]">Estado</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[150px]">Pago</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[130px]">Precio Unitario</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[140px]">Modalidad Factura</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[130px]">Condicion Pago</TableHead>
                           <TableHead className="w-20 font-semibold text-gray-700">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -2926,26 +2926,24 @@ export default function ReservaPage() {
                               </div>
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell className="min-w-[280px]">
                               <div className="flex items-center space-x-3">
                                 <img
                                   src={data?.paquete?.imagen ?? imagePreview}
                                   alt={data?.paquete?.nombre}
-                                  className="w-10 h-10 rounded-lg object-cover"
+                                  className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                                 />
-                                <div>
-                                  <div className="font-medium text-gray-900">{data?.paquete?.nombre}</div>
-                                  <div className="text-sm text-gray-500">
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium text-gray-900 truncate max-w-[200px]">{data?.paquete?.nombre}</div>
+                                  <div className="text-sm text-gray-500 truncate max-w-[200px]">
                                     {data?.paquete?.destino?.ciudad}, {data?.paquete?.destino?.pais}
                                   </div>
                                 </div>
                               </div>
                             </TableCell>
 
-                            <TableCell>
-                              <div>
+                            <TableCell className="min-w-[140px]">
                                 <div className="font-medium text-gray-900">{data?.paquete_codigo || '-'}</div>
-                              </div>
                             </TableCell>
 
                             <TableCell>

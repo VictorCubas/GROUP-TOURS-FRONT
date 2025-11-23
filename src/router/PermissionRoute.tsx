@@ -59,15 +59,24 @@ const PermissionRoute = () => {
     return <Outlet />;
   }
 
-  // 🔥 CASO ESPECIAL: Reportes solo para rol Gerencial
-  if (location.pathname.startsWith('/reportes')) {
-    if (!hasRole('Gerencial')) {
-      return <Navigate to="/" replace />;
+  // 🔥 CASO ESPECIAL: Usuarios con rol Gerencial
+  const esGerencial = hasRole('Gerencial');
+  
+  if (esGerencial) {
+    // Si es Gerencial, solo puede acceder a /reportes
+    if (location.pathname.startsWith('/reportes')) {
+      return <Outlet />;
     }
-    return <Outlet />;
+    // Cualquier otra ruta → redirigir a home
+    return <Navigate to="/" replace />;
   }
 
-  // Para el resto de rutas, usar el sistema de permisos normal
+  // 🔥 Para usuarios NO gerenciales: Reportes están bloqueados
+  if (location.pathname.startsWith('/reportes')) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Para el resto de rutas (usuarios NO gerenciales), usar el sistema de permisos normal
   const pathParts = location.pathname.split("/").filter(Boolean);
   const lastSegment = pathParts[pathParts.length - 1]?.toLowerCase();
 

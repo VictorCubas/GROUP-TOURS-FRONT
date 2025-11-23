@@ -41,7 +41,7 @@ import { ToastContext } from "@/context/ToastContext"
 let dataList: MovimientoCajaListado[] = []
 
 export default function ReporteMovCajasPage() {
-  const { siTienePermiso } = useSessionStore()
+  const { siTienePermiso, hasRole } = useSessionStore()
   const { handleShowToast } = use(ToastContext)
   
   const [onVerDetalles, setOnVerDetalles] = useState(false)
@@ -343,7 +343,7 @@ export default function ReporteMovCajasPage() {
             <p className="text-gray-600">Visualiza y analiza todos los movimientos (ingresos y egresos) de las cajas.</p>
           </div>
           <div className="flex gap-3">
-            {siTienePermiso("reportes", "exportar") && (
+            {(siTienePermiso("reportes", "exportar") || hasRole('Gerencial')) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
