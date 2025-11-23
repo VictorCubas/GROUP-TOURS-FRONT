@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from '@/helper/formatter';
-import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, } from '@/types/reservas';
+import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, RESERVATION_STATES } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Loader2Icon, Mail, Package, Phone, RefreshCcwIcon, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users } from 'lucide-react';
+import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Loader2Icon, Mail, Package, Phone, RefreshCcwIcon, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users, XCircle } from 'lucide-react';
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
-import { use, useState } from 'react';
-import { useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useGenerarNotaCreditoParcial, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { use, useState, useEffect } from 'react';
+import { useCancelarReserva, useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useGenerarNotaCreditoParcial, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
@@ -18,6 +18,8 @@ import GenerarFacturaModal from './GenerarFacturaModal';
 import type { ClienteFacturaData } from './FormularioFacturaTitular';
 import AsignarTipoFacturaModal from './AsignarTipoFactura';
 import GenerarNotaCreditoModal from './GenerarNotaCreditoModal';
+import CancelarReservaModal from './CancelarReservaModal';
+import ComprobanteDevolucionModal from './ComprobanteDevolucionModal';
 import { useSessionStore } from '@/store/sessionStore';
 // import { verificarUsuarioTieneCajaAbierta } from './utils/httpCajas';
 // import type { VerificacionCajaAbierta } from '@/types/cajas';
@@ -47,6 +49,9 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
     const [descargandoVoucherId, setDescargandoVoucherId] = useState<number | undefined>(undefined);
     const [pagoSeniaRealizadaResponse, setPagoSeniaRealizadaResponse] = useState<any>(null);
+    const [isCancelarReservaModalOpen, setIsCancelarReservaModalOpen] = useState(false);
+    const [isComprobanteDevolucionModalOpen, setIsComprobanteDevolucionModalOpen] = useState(false);
+    const [cancelacionResponse, setCancelacionResponse] = useState<any>(null);
     
     const {data: dataDetalleResp, isFetching: isFetchingDetalles,} = useQuery({
         queryKey: ['reserva-detalles', reservaId], //data cached
@@ -83,11 +88,48 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 
     const { mutate: generarYDescargarVoucher, isPending: isPendingDescargaVoucher } = useDescargarVoucher();
 
+    const { mutate: fetchCancelarReserva, isPending: isPendingCancelarReserva } = useCancelarReserva();
+
     // Verificar si el usuario tiene permiso para registrar pagos
     // Solo Cajero y Admin pueden registrar pagos
     const puedeRegistrarPagos = siTienePermiso('pagos', 'crear');
 
-    console.log(dataDetalleResp)
+    // Verificar si la reserva está cancelada - Deshabilitar todas las funcionalidades
+    const reservaCancelada = dataDetalleResp?.estado === 'cancelada';
+
+    console.log('📊 DATOS COMPLETOS DE LA RESERVA:', dataDetalleResp);
+    console.log('🚫 Reserva cancelada:', reservaCancelada);
+    
+    // Debug específico para info_cancelacion
+    if (dataDetalleResp?.info_cancelacion) {
+        console.log('🔍 INFO CANCELACIÓN:', {
+            puede_cancelar: dataDetalleResp.info_cancelacion.puede_cancelar,
+            tipo_cancelacion: dataDetalleResp.info_cancelacion.tipo_cancelacion,
+            pasajeros_afectados: dataDetalleResp.info_cancelacion.pasajeros_afectados,
+            cantidad_pasajeros_en_reserva: dataDetalleResp.cantidad_pasajeros,
+            total_pasajeros_array: dataDetalleResp.pasajeros?.length,
+            aplica_reembolso: dataDetalleResp.info_cancelacion.aplica_reembolso,
+            dias_hasta_salida: dataDetalleResp.info_cancelacion.dias_hasta_salida,
+        });
+        
+        // Mostrar detalles de cada pasajero
+        console.log('👥 DETALLES DE PASAJEROS:', dataDetalleResp.pasajeros?.map((p: any) => ({
+            id: p.id,
+            nombre: p.persona?.nombre,
+            apellido: p.persona?.apellido,
+            es_titular: p.es_titular,
+            por_asignar: p.por_asignar,
+            saldo_pendiente: p.saldo_pendiente,
+            factura_individual_generada: p.factura_individual_generada,
+        })));
+    }
+
+    // Efecto para abrir automáticamente el modal si califica para cancelación automática
+    useEffect(() => {
+        if (dataDetalleResp?.califica_cancelacion_automatica && !reservaCancelada && !isCancelarReservaModalOpen) {
+            setIsCancelarReservaModalOpen(true);
+        }
+    }, [dataDetalleResp?.califica_cancelacion_automatica, reservaCancelada, isCancelarReservaModalOpen]);
 
     const renderStars = (rating: number) => {
         return (
@@ -451,6 +493,60 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         });
     }
 
+    const handleCancelarReserva = (payload: any) => {
+        console.log('📦 Payload enviado para cancelar reserva:', JSON.stringify(payload, null, 2));
+
+        fetchCancelarReserva(
+            { reservaId: reservaId, payload },
+            {
+                onSuccess: (data) => {
+                    console.log('✅ Reserva cancelada correctamente');
+                    console.log('📄 Respuesta del servidor (nueva estructura):', {
+                        pasajeros_cancelados: data?.pasajeros_cancelados,
+                        cupos_info: data?.cupos_info,
+                        monto_reembolsable: data?.monto_reembolsable,
+                        facturas_afectadas: data?.facturas_afectadas,
+                    });
+                    handleShowToast('Reserva cancelada correctamente', 'success');
+
+                    // Guardar respuesta y abrir modal de comprobante
+                    setCancelacionResponse(data);
+                    setIsCancelarReservaModalOpen(false);
+                    setIsComprobanteDevolucionModalOpen(true);
+
+                    // Refrescar queries
+                    queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                    queryClient.invalidateQueries({ queryKey: ['reservas'], exact: false });
+                    queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
+                    queryClient.invalidateQueries({ queryKey: ['movimientos'], exact: false });
+                    queryClient.invalidateQueries({ queryKey: ['paquetes'], exact: false });
+                    queryClient.invalidateQueries({ queryKey: ['salidas-paquete'], exact: false });
+                },
+                onError: (error: any) => {
+                    console.error('❌ Error al cancelar la reserva:', error);
+                    console.error('📋 Detalles del error:', error.response?.data);
+
+                    const errorMessage = error.response?.data?.message
+                        || error.response?.data?.error
+                        || 'Error al cancelar la reserva';
+
+                    handleShowToast(errorMessage, 'error');
+                },
+            }
+        );
+    };
+
+    const handleCloseCancelarReservaModal = () => {
+        setIsCancelarReservaModalOpen(false);
+    };
+
+    const handleCloseComprobanteDevolucionModal = () => {
+        setIsComprobanteDevolucionModalOpen(false);
+        setCancelacionResponse(null);
+        // Cerrar el modal principal de detalles
+        onClose();
+    };
+
     const handleClosePagoParcialModal = () => {
         setIsPagoParcialModalOpen(false);
         setSelectedPassengerId(undefined);
@@ -626,6 +722,24 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
 return   <>
     {/* Contenido de tabs */}
     <div className="p-8">
+            {/* Banner de Advertencia - Reserva Cancelada */}
+            {reservaCancelada && (
+                <div className="bg-red-50 border-2 border-red-500 rounded-xl p-4 mb-6">
+                    <div className="flex items-center space-x-3">
+                        <AlertCircle className="w-8 h-8 text-red-600 flex-shrink-0" />
+                        <div>
+                            <h3 className="text-lg font-semibold text-red-900">
+                                Esta reserva ha sido cancelada
+                            </h3>
+                            <p className="text-sm text-red-700 mt-1">
+                                No se pueden realizar acciones sobre una reserva cancelada. 
+                                Solo puedes visualizar la información.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {activeTab === 'general' && (
                 <div className="space-y-8">
                     {/* Información del Titular */}
@@ -727,11 +841,18 @@ return   <>
                                 Detalles del Paquete
                               </h3>
 
-                              <button className="cursor-pointer px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 font-medium"
+                              <button 
+                                  className={`px-6 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 font-medium ${
+                                    reservaCancelada 
+                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                      : 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
+                                  }`}
                                   onClick={() => {
-                                    if(!dataDetalleResp?.condicion_pago)
+                                    if(!reservaCancelada && !dataDetalleResp?.condicion_pago)
                                       setIsAsiganrTipoFacturaModalOpen(true)
-                                  }}> 
+                                  }}
+                                  disabled={reservaCancelada}
+                              > 
                                 {dataDetalleResp.condicion_pago_display?.toUpperCase() ?? 'ASIGNAR TIPO DE FACTURA'}
                               </button>
                             </div>
@@ -742,6 +863,12 @@ return   <>
                                         {dataDetalleResp?.paquete?.nombre}
                                     </p>
                                     <p className="text-sm text-gray-500">Nombre del paquete</p>
+                                    </div>
+                                    <div>
+                                    <p className="font-medium text-gray-900">
+                                        {dataDetalleResp?.paquete_codigo || '-'}
+                                    </p>
+                                    <p className="text-sm text-gray-500">Código del paquete</p>
                                     </div>
                                     <div>
                                     <p className="font-medium text-gray-900">
@@ -915,7 +1042,17 @@ return   <>
                             </p>
                             <p className="text-sm text-gray-500">Fecha de reserva</p>
                         </div>
-                        
+                        <div>
+                            <div className="flex items-center space-x-2">
+                                <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                                    RESERVATION_STATES[dataDetalleResp?.estado as keyof typeof RESERVATION_STATES]?.color || 'bg-gray-100 text-gray-800'
+                                }`}>
+                                    {RESERVATION_STATES[dataDetalleResp?.estado as keyof typeof RESERVATION_STATES]?.icon}{' '}
+                                    {dataDetalleResp?.estado_display || 'N/A'}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1">Estado de la reserva</p>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -935,10 +1072,10 @@ return   <>
                     return (
                         <>
                           <div className='flex items-center gap-5'>
-                             {dataDetalleResp?.factura_global_generada && dataDetalleResp?.factura_global_id  &&
+                             {dataDetalleResp?.factura_global_generada && dataDetalleResp?.factura_global_id && !reservaCancelada &&
                               <div>
                                     <Button
-                                        disabled={isPendingDescargaFacturaGlobal || isPendingDescargarNC || isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial}
+                                        disabled={reservaCancelada || isPendingDescargaFacturaGlobal || isPendingDescargarNC || isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial}
                                         onClick={() => {
                                           console.log('🔍 Debug NC Global:', {
                                             reservaId: dataDetalleResp.id,
@@ -973,10 +1110,10 @@ return   <>
                               </div>
                              }
 
-                            {dataDetalleResp?.puede_descargar_factura_global  &&
+                            {dataDetalleResp?.puede_descargar_factura_global && !reservaCancelada &&
                               <div>
                                   <Button
-                                      disabled={isPendingDescargaFacturaGlobal}
+                                      disabled={reservaCancelada || isPendingDescargaFacturaGlobal}
                                       onClick={() => {
                                             if(dataDetalleResp.factura_global_generada){
                                               handleDescargarFacturaGlobal(dataDetalleResp?.id)
@@ -1005,13 +1142,15 @@ return   <>
                             }
 
                             {/* Solo mostrar botón si tiene permiso para registrar pagos */}
-                            {puedeRegistrarPagos && (
+                            {puedeRegistrarPagos && !reservaCancelada && (
                               <div>
                                   <Button
-                                      disabled={dataDetalleResp?.esta_totalmente_pagada}
+                                      disabled={reservaCancelada || dataDetalleResp?.esta_totalmente_pagada}
                                       onClick={() => {
-                                          setSelectedPassengerId(undefined);
-                                          setIsPagoParcialModalOpen(true);
+                                          if (!reservaCancelada) {
+                                              setSelectedPassengerId(undefined);
+                                              setIsPagoParcialModalOpen(true);
+                                          }
                                       }}
                                       className="cursor-pointer w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2 font-medium"
                                       size="lg"
@@ -1213,10 +1352,12 @@ return   <>
                                         <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                disabled={!pasajero?.saldo_pendiente}
+                                                disabled={reservaCancelada || !pasajero?.saldo_pendiente}
                                                 onClick={() => {
-                                                    setSelectedPassengerId(pasajero.id);
-                                                    setIsPagoParcialModalOpen(true);
+                                                    if (!reservaCancelada) {
+                                                        setSelectedPassengerId(pasajero.id);
+                                                        setIsPagoParcialModalOpen(true);
+                                                    }
                                                 }}
                                                 className={`cursor-pointer disabled:cursor-not-allowed
                                                             w-full px-6 py-3 border-1 rounded-lg hover:bg-blue-100
@@ -1243,10 +1384,12 @@ return   <>
                                       <TooltipTrigger asChild>
                                           <Button
                                             variant="outline"
-                                            disabled={!pasajero?.por_asignar}
+                                            disabled={reservaCancelada || !pasajero?.por_asignar}
                                             onClick={() => {
-                                                setSelectedPassengerId(pasajero.id);
-                                                setIsAsiganrPasajeroModalOpen(true);
+                                                if (!reservaCancelada) {
+                                                    setSelectedPassengerId(pasajero.id);
+                                                    setIsAsiganrPasajeroModalOpen(true);
+                                                }
                                             }}
                                             className={`cursor-pointer disabled:cursor-not-allowed
                                                         w-full px-6 py-3 border-1 border-bray-800 rounded-lg hover:bg-blue-100 
@@ -1273,12 +1416,12 @@ return   <>
                                       </TooltipContent>
                                     </Tooltip>
                                       
-                                      {pasajero?.puede_descargar_factura &&
+                                      {pasajero?.puede_descargar_factura && !reservaCancelada &&
                                         <Tooltip>
                                           <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                disabled={isPendingDescargaFacturaIndividual}
+                                                disabled={reservaCancelada || isPendingDescargaFacturaIndividual}
                                                 onClick={() => {
                                                   console.log(pasajero.id)
                                                     setSelectedPassengerId(pasajero.id);
@@ -1320,12 +1463,12 @@ return   <>
                                         </Tooltip>
                                       }
 
-                                      {pasajero?.factura_individual_generada && pasajero?.factura_id  &&
+                                      {pasajero?.factura_individual_generada && pasajero?.factura_id && !reservaCancelada &&
                                         <Tooltip>
                                           <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                disabled={isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial || isPendingDescargarNC}
+                                                disabled={reservaCancelada || isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial || isPendingDescargarNC}
                                                 onClick={() => {
                                                   setSelectedPassengerId(pasajero.id);
 
@@ -1409,7 +1552,7 @@ return   <>
                     {/* {booking.pagos && booking.pagos.length > 0 && ( */}
 
                     {/* Botón para registrar nuevo pago */}
-                    {puedeRegistrarPagos && dataDetalleResp.saldo_pendiente > 0 && (
+                    {puedeRegistrarPagos && dataDetalleResp.saldo_pendiente > 0 && !reservaCancelada && (
                         <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-xl border-2 border-blue-200">
                             <div className="flex items-center justify-between">
                                 <div className="flex-1">
@@ -1422,9 +1565,12 @@ return   <>
                                     </p>
                                 </div>
                                 <Button
+                                    disabled={reservaCancelada}
                                     onClick={() => {
-                                        setSelectedPassengerId(undefined);
-                                        setIsPagoParcialModalOpen(true);
+                                        if (!reservaCancelada) {
+                                            setSelectedPassengerId(undefined);
+                                            setIsPagoParcialModalOpen(true);
+                                        }
                                     }}
                                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
                                 >
@@ -1623,7 +1769,28 @@ return   <>
             )}
 
              {/* Botones de acción */}
-            <div className="flex items-center justify-end space-x-4 p-2 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-between space-x-4 p-2 pt-6 border-t border-gray-200">
+            {/* Botón Cancelar Reserva - Solo si puede cancelar y NO está cancelada */}
+            {dataDetalleResp?.info_cancelacion?.puede_cancelar && !reservaCancelada && (
+                <button
+                    onClick={() => {
+                        if (!reservaCancelada) {
+                            setIsCancelarReservaModalOpen(true);
+                        }
+                    }}
+                    disabled={reservaCancelada}
+                    className={`px-6 py-3 rounded-lg transition-colors duration-200 flex items-center space-x-2 font-medium ${
+                        reservaCancelada
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'cursor-pointer bg-red-600 text-white hover:bg-red-700'
+                    }`}
+                >
+                    <XCircle className="w-4 h-4" />
+                    <span>Cancelar Reserva</span>
+                </button>
+            )}
+
+            {/* Botón Aceptar */}
             <button
                 onClick={() => {
                 onClose();
@@ -1697,6 +1864,28 @@ return   <>
                 isPending={isPendingDescargaFacturaGlobal || isPendingDescargaFacturaIndividual}
                 reservaData={dataDetalleResp}
                 selectedPasajeroId={selectedPassengerId}
+            />
+        )}
+
+        {isCancelarReservaModalOpen && (
+            <CancelarReservaModal
+                isOpen={isCancelarReservaModalOpen}
+                onClose={handleCloseCancelarReservaModal}
+                onConfirm={handleCancelarReserva}
+                isPending={isPendingCancelarReserva}
+                reservaData={dataDetalleResp}
+                forzarCancelacion={dataDetalleResp?.califica_cancelacion_automatica || false}
+            />
+        )}
+
+        {isComprobanteDevolucionModalOpen && (
+            <ComprobanteDevolucionModal
+                isOpen={isComprobanteDevolucionModalOpen}
+                onClose={handleCloseComprobanteDevolucionModal}
+                responseData={cancelacionResponse}
+                reservaData={dataDetalleResp}
+                onDescargarComprobante={handleDescargarPDF}
+                isPendingDescarga={isPendingDescargaComprobante}
             />
         )}
 </>

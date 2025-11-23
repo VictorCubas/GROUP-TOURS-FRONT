@@ -11,6 +11,7 @@ import {
   Plane,
   ChartColumnBig,
   Receipt,
+  BarChart2,
 } from "lucide-react";
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
@@ -31,7 +32,7 @@ const sidebarItems = [
     icon: Shield,
     label: "Seguridad",
     href: "#",
-    color: "text-blue-400",
+    color: "text-emerald-400",
     submenu: [
       { label: "Usuarios", href: "/seguridad/usuarios", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Empleados", href: "/seguridad/empleados", color: "text-orange-400", bgcolor: "bg-orange-400" },
@@ -41,10 +42,10 @@ const sidebarItems = [
     ],
   },
   {
-    icon: ChartColumnBig,
+    icon: BarChart2,
     label: "Arqueo de cajas",
     href: "#",
-    color: "text-blue-400",
+    color: "text-cyan-400",
     submenu: [
       { label: "Gestion Cajas", href: "/arqueo/cajas", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Aperturas", href: "/arqueo/aperturas", color: "text-orange-400", bgcolor: "bg-orange-400" },
@@ -66,9 +67,20 @@ const sidebarItems = [
       // { label: "Permisos", href: "/arqueo/cajas", color: "text-blue-400", bgcolor: "bg-blue-400" },
     ],
   },
+  {
+    icon: ChartColumnBig,
+    label: "Reportes",
+    href: "#",
+    color: "text-purple-400",
+    submenu: [
+      { label: "Mov Cajas", href: "/reportes/cajas", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      { label: "Paquetes", href: "/reportes/paquetes", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      { label: "Reservas", href: "/reportes/reservas", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+    ],
+  },
   // { icon: FileText, label: "Ventas", href: "#", color: "text-amber-400" },
   // { icon: Settings, label: "Proveedores", href: "#", color: "text-indigo-400" },
-  { icon: Settings, label: "Configuración", href: "#", color: "text-indigo-400" ,
+  { icon: Settings, label: "Configuración", href: "#", color: "text-slate-400" ,
       submenu: [
       { label: "Facturacion", href: "/configuracion/facturacion", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Modulos", href: "/configuracion/modulos", color: "text-orange-400", bgcolor: "bg-orange-400" },

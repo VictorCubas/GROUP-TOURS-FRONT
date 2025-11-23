@@ -503,3 +503,14 @@ export async function fetchDataPaqueteTodos() {
   const resp = await axiosInstance.get(`/paquete/todos/`);
   return resp?.data
 }
+
+// Función para cancelar una reserva
+export async function cancelarReserva(reservaId: number | string, payload: any) {
+  try {
+    const response = await axiosInstance.post(`/reservas/${reservaId}/cancelar/`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error al cancelar la reserva:', error);
+    throw error;
+  }
+}

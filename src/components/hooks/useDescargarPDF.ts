@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from '@tanstack/react-query';
-import { asignarPasajero, asignarTipoFacturaModalidad, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, descargarNotaCreditoYaGenerada, generarNotaCreditoGlobal, generarNotaCreditoParcial, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
+import { asignarPasajero, asignarTipoFacturaModalidad, cancelarReserva, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, descargarNotaCreditoYaGenerada, generarNotaCreditoGlobal, generarNotaCreditoParcial, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
 
 export function useDescargarPDF() {
     return useMutation({
@@ -150,6 +150,16 @@ export function useDescargarNotaCreditoYaGenerada() {
     },
     onError: (error) => {
       console.error('❌ Error al descargar la nota de crédito:', error);
+    },
+  });
+}
+
+// Hook para cancelar una reserva
+export function useCancelarReserva() {
+  return useMutation({
+    mutationFn: async ({ reservaId, payload }: { reservaId: number | string; payload: any }) => {
+      const data = await cancelarReserva(reservaId, payload);
+      return data;
     },
   });
 }

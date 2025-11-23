@@ -90,6 +90,7 @@ export interface PrecioAlternativo {
 export interface Paquete {
   id: number;
   numero?: number
+  codigo?: string; // Código del paquete (ej: PAQ-2024-0142)
   nombre: string;
   tipo_paquete: TipoPaquete;
   destino: Destino;

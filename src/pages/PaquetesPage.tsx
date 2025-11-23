@@ -1233,6 +1233,8 @@ useEffect(() => {
 
   const handleOpenModal = () => {
     const monedaValue = watch('moneda');
+    const esPersonalizado = watch('personalizado');
+    
     if (!selectedDestinoID) {
       handleShowToast('Debes seleccionar primero el destino', 'error');
       return;
@@ -1240,6 +1242,12 @@ useEffect(() => {
 
     if (!monedaValue) {
       handleShowToast('Debes seleccionar primero la moneda', 'error');
+      return;
+    }
+
+    // Validación para paquetes personalizados: solo una salida
+    if (esPersonalizado && salidas.length >= 1) {
+      handleShowToast('Los paquetes personalizados solo pueden tener una salida', 'error');
       return;
     }
 
@@ -2026,6 +2034,13 @@ const handleSubmitClick = useCallback(async () => {
                               </div>
                             </div> */}
                             <h1 className="text-4xl font-bold text-white mb-2">{dataDetalle?.nombre}</h1>
+                            {dataDetalle?.codigo && (
+                              <div className="mb-2">
+                                <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30 font-mono text-lg px-3 py-1">
+                                  {dataDetalle.codigo}
+                                </Badge>
+                              </div>
+                            )}
                             <div className="flex items-center text-white/90 text-lg">
                               <MapPin className="w-5 h-5 mr-2" />
                               <span>{dataDetalle?.destino.ciudad}</span>
@@ -2350,6 +2365,14 @@ const handleSubmitClick = useCallback(async () => {
                         <h3 className="text-xl font-semibold text-gray-900 mb-4">Información Adicional</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                           <div>
+                            {dataDetalle?.codigo && (
+                              <p className="text-gray-600 mb-2">
+                                <strong>Código:</strong> 
+                                <Badge className="ml-2 bg-blue-100 text-blue-700 border-blue-200 font-mono font-semibold">
+                                  {dataDetalle.codigo}
+                                </Badge>
+                              </p>
+                            )}
                             <p className="text-gray-600 mb-2"><strong>Creado:</strong> {new Date(dataDetalle!.fecha_creacion).toLocaleDateString()}</p>
                             <p className="text-gray-600"><strong>Última actualización:</strong> {new Date(dataDetalle!.fecha_modificacion).toLocaleDateString()}</p>
                           </div>
@@ -2700,7 +2723,14 @@ const handleSubmitClick = useCallback(async () => {
                                     disabled={!!dataAEditar}
                                     id="personalizado"
                                     checked={field.value}
-                                    onCheckedChange={(checked) => field.onChange(!!checked)}
+                                    onCheckedChange={(checked) => {
+                                      const isChecked = !!checked;
+                                      field.onChange(isChecked);
+                                      // Si personalizado es true, establecer modalidad a 'fijo'
+                                      if (isChecked) {
+                                        setPaqueteModalidad('fijo');
+                                      }
+                                    }}
                                     className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
                                   />
                                   <Label htmlFor="personalizado" className="cursor-pointer">Personalizado</Label>
@@ -3314,15 +3344,24 @@ const handleSubmitClick = useCallback(async () => {
 
                                 <div className="bg-white rounded-lg shadow-md p-6">
                                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Modalidad de Paquete</h2>
+                                  {watch('personalizado') && (
+                                    <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                      <p className="text-sm text-orange-800">
+                                        <strong>Nota:</strong> Los paquetes personalizados siempre usan modalidad "Paquete cerrado" con precio fijo.
+                                      </p>
+                                    </div>
+                                  )}
                                   <div className="grid md:grid-cols-2 gap-4">
                                     <div
                                       onClick={() => {
-                                        if(dataAEditar)
+                                        if(dataAEditar || watch('personalizado'))
                                           return;
 
                                         setPaqueteModalidad('flexible')
                                       }}
-                                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                                      className={`border-2 rounded-lg p-4 transition-all ${
+                                        watch('personalizado') ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                                      } ${
                                         paqueteModalidad === 'flexible' 
                                           ? 'border-blue-500 bg-blue-50' 
                                           : 'border-gray-200 hover:border-gray-300'
@@ -3339,13 +3378,15 @@ const handleSubmitClick = useCallback(async () => {
 
                                     <div
                                       onClick={() => {
-                                        if(dataAEditar)
+                                        if(dataAEditar || watch('personalizado'))
                                           return;
                                         
                                         setPaqueteModalidad('fijo')
                                       }}
-                                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all 
-                                        ${paqueteModalidad === 'fijo' 
+                                      className={`border-2 rounded-lg p-4 transition-all ${
+                                        watch('personalizado') ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                                      } ${
+                                        paqueteModalidad === 'fijo' 
                                           ? 'border-orange-500 bg-orange-50' 
                                           : 'border-gray-200 hover:border-gray-300'
                                       }  ${(dataAEditar && paqueteModalidad === 'fijo') ? 'opacity-45' : 'opacity-80'} `}
@@ -3376,7 +3417,8 @@ const handleSubmitClick = useCallback(async () => {
                                               <p className="text-red-400">Debes agregar al menos una salida</p>
                                             }
                                           </div>
-                                          <Dialog 
+                                          <div className="flex flex-col items-end gap-2">
+                                            <Dialog 
                                             open={isAddSalidaOpen}
                                               onOpenChange={(open) => {
                                                 if (!open) resetSalidaForm()
@@ -3385,12 +3427,22 @@ const handleSubmitClick = useCallback(async () => {
                                             >
                                               <Button
                                                 type="button"
-                                                className="bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                                                className={`cursor-pointer ${
+                                                  personalizado && salidas.length >= 1
+                                                    ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed opacity-60'
+                                                    : 'bg-emerald-500 hover:bg-emerald-600'
+                                                }`}
+                                                disabled={personalizado && salidas.length >= 1}
                                                 onClick={handleOpenModal} // 👈 validación antes de abrir
                                               >
                                                 <Plus className="h-4 w-4 mr-2" />
                                                 Agregar Salidas
                                               </Button>
+                                              {personalizado && salidas.length >= 1 && (
+                                                <p className="text-xs text-orange-600 font-medium">
+                                                  Los paquetes personalizados solo pueden tener una salida
+                                                </p>
+                                              )}
                                               <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-hidden p-0">
                                                 <div className="max-h-[90vh] overflow-y-auto p-6">
                                                     <form 
@@ -4190,6 +4242,7 @@ const handleSubmitClick = useCallback(async () => {
                                               </DialogContent>
                                           </Dialog>
                                         </div>
+                                        </div>
                                       </CardHeader>
                                       <CardContent>
                                         <div className="rounded-md border">
@@ -4505,6 +4558,7 @@ const handleSubmitClick = useCallback(async () => {
                       <TableHeader>
                         <TableRow className="bg-gray-50 hover:bg-gray-50">
                           <TableHead className="flex items-center justify-center w-10 font-semibold text-gray-700">#</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Código</TableHead>
                           <TableHead className="font-semibold text-gray-700">Información</TableHead>
                           <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
                           <TableHead className="font-semibold text-gray-700">Destino</TableHead>
@@ -4538,6 +4592,14 @@ const handleSubmitClick = useCallback(async () => {
                             <TableCell>
                               <div>
                                 <div className="font-medium text-gray-900 pl-2">{data?.numero}</div>
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <div>
+                                <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-mono font-semibold">
+                                  {data?.codigo || 'N/A'}
+                                </Badge>
                               </div>
                             </TableCell>
 

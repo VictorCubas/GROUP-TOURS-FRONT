@@ -182,6 +182,7 @@ export interface Reserva {
   estado_display: string;
   modalidad_facturacion: "global" | 'individual';
   pasajeros: Pasajero[];
+  paquete_codigo: string;
   activo: boolean;
   condicion_pago: string;
   condicion_pago_display: string;
@@ -281,3 +282,66 @@ export const DOCUMENT_TYPES: Record<string, string> = {
   'cedula': 'Cédula de Identidad',
   'tarjeta_identidad': 'Tarjeta de Identidad'
 } as const;
+
+// Constantes para cancelación de reservas
+export const MOTIVOS_CANCELACION = [
+  { id: '1', label: 'Cancelación voluntaria del cliente' },
+  { id: '2', label: 'Cambio de planes del cliente' },
+  { id: '3', label: 'Problemas de salud' },
+  { id: '4', label: 'Problemas con documentación' },
+  { id: '5', label: 'Cancelación automática por falta de pago' },
+  { id: '6', label: 'Fuerza mayor / Caso fortuito' },
+  { id: '7', label: 'Error en la reserva' },
+  { id: '8', label: 'Otro motivo' }
+] as const;
+
+export const METODOS_DEVOLUCION = [
+  { id: 'efectivo', label: 'Efectivo' },
+  { id: 'transferencia', label: 'Transferencia' },
+  { id: 'tarjeta_debito', label: 'Tarjeta de Débito' },
+  { id: 'tarjeta_credito', label: 'Tarjeta de Crédito' },
+  { id: 'cheque', label: 'Cheque' }
+] as const;
+
+// Interfaz para información de cancelación
+export interface InfoCancelacion {
+  puede_cancelar: boolean;
+  tipo_cancelacion: 'total' | 'parcial';
+  modalidad_facturacion: 'global' | 'individual';
+  pasajeros_afectados: number;
+  facturas_activas: number;
+  dias_hasta_salida: number;
+  aplica_reembolso: boolean;
+  monto_reembolsable: number;
+  politica: string;
+  advertencia: string | null;
+}
+
+// Interfaz para el payload de cancelación
+export interface CancelarReservaPayload {
+  motivo_cancelacion_id: string;
+  motivo_observaciones: string;
+  metodo_devolucion?: string;
+  observaciones?: string;
+  referencia?: string;
+}
+
+// Interfaz para la respuesta de cancelación
+export interface CancelarReservaResponse {
+  message: string;
+  reserva_id: number;
+  estado: string;
+  comprobante_devolucion?: {
+    id: number;
+    numero: string;
+    monto: number;
+    metodo_pago: string;
+    fecha_creacion: string;
+  };
+  detalles: {
+    pasajeros_cancelados: number;
+    cupos_liberados: boolean;
+    monto_devuelto: number;
+    facturas_afectadas: number;
+  };
+}
