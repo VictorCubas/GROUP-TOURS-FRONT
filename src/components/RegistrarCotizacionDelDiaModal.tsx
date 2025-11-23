@@ -304,7 +304,7 @@ const RegistrarCotizacionDelDiaModal = () => {
               <Button
                 type="button"
                 onClick={handleGuardar}
-                disabled={!!error || !cotizacion || isPending}
+                disabled={!!error || !cotizacion || isPending || isFetchingMoneda}
                 className="px-6 py-5 bg-green-600 text-white font-medium rounded-lg
                         cursor-pointer hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
