@@ -7,7 +7,7 @@ import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useCancelarReserva, useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useGenerarNotaCreditoParcial, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
@@ -123,6 +123,13 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
             factura_individual_generada: p.factura_individual_generada,
         })));
     }
+
+    // Efecto para abrir automáticamente el modal si califica para cancelación automática
+    useEffect(() => {
+        if (dataDetalleResp?.califica_cancelacion_automatica && !reservaCancelada && !isCancelarReservaModalOpen) {
+            setIsCancelarReservaModalOpen(true);
+        }
+    }, [dataDetalleResp?.califica_cancelacion_automatica, reservaCancelada, isCancelarReservaModalOpen]);
 
     const renderStars = (rating: number) => {
         return (
@@ -856,6 +863,12 @@ return   <>
                                         {dataDetalleResp?.paquete?.nombre}
                                     </p>
                                     <p className="text-sm text-gray-500">Nombre del paquete</p>
+                                    </div>
+                                    <div>
+                                    <p className="font-medium text-gray-900">
+                                        {dataDetalleResp?.paquete_codigo || '-'}
+                                    </p>
+                                    <p className="text-sm text-gray-500">Código del paquete</p>
                                     </div>
                                     <div>
                                     <p className="font-medium text-gray-900">
@@ -1861,6 +1874,7 @@ return   <>
                 onConfirm={handleCancelarReserva}
                 isPending={isPendingCancelarReserva}
                 reservaData={dataDetalleResp}
+                forzarCancelacion={dataDetalleResp?.califica_cancelacion_automatica || false}
             />
         )}
 

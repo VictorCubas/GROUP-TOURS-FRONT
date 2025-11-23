@@ -12,6 +12,7 @@ interface CancelarReservaModalProps {
   onConfirm: (payload: any) => void;
   isPending: boolean;
   reservaData: any;
+  forzarCancelacion?: boolean;
 }
 
 const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
@@ -20,6 +21,7 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
   onConfirm,
   isPending,
   reservaData,
+  forzarCancelacion = false,
 }) => {
   const [formData, setFormData] = useState({
     motivo_cancelacion_id: '',
@@ -54,7 +56,7 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
     }
   }, [isOpen]);
 
-  // Limpiar el formulario cuando se cierra el modal
+  // Limpiar el formulario cuando se cierra el modal o inicializarlo cuando se abre con forzarCancelacion
   useEffect(() => {
     if (!isOpen) {
       // Reset form when modal closes
@@ -66,8 +68,17 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
         referencia: '',
       });
       setErrors({});
+    } else if (isOpen && forzarCancelacion) {
+      // Si es forzarCancelacion, preseleccionar el motivo ID 5
+      setFormData({
+        motivo_cancelacion_id: '5',
+        motivo_observaciones: '',
+        metodo_devolucion: '',
+        observaciones: '',
+        referencia: '',
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, forzarCancelacion]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -117,6 +128,14 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
     <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
       style={{ zIndex: 99999 }}
+      onClick={(e) => {
+        // Prevenir el cierre al hacer clic fuera del modal si está forzando cancelación
+        if (forzarCancelacion) {
+          e.stopPropagation();
+        } else if (e.target === e.currentTarget && !isPending) {
+          onClose();
+        }
+      }}
     >
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 max-h-[95vh] h-[80vh] overflow-y-auto">
         {/* Header */}
@@ -126,13 +145,15 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
               <XCircle className="w-7 h-7 mr-3" />
               CANCELAR RESERVA
             </h2>
-            <button
-              onClick={onClose}
-              disabled={isPending}
-              className="text-white hover:bg-red-700 rounded-full p-1"
-            >
-              <XCircle className="w-6 h-6" />
-            </button>
+            {!forzarCancelacion && (
+              <button
+                onClick={onClose}
+                disabled={isPending}
+                className="text-white hover:bg-red-700 rounded-full p-1"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -260,8 +281,8 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, motivo_cancelacion_id: e.target.value })}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.motivo_cancelacion_id ? 'border-red-500' : 'border-gray-300'
-                }`}
-                disabled={isPending}
+                } ${forzarCancelacion ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                disabled={isPending || forzarCancelacion}
               >
                 <option value="">Seleccione un motivo...</option>
                 {MOTIVOS_CANCELACION.map((motivo) => (
@@ -333,18 +354,20 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
         </div>
 
         <div className="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-between">
-          <Button
-            onClick={onClose}
-            disabled={isPending}
-            variant="outline"
-            className="px-6"
-          >
-            Volver
-          </Button>
+          {!forzarCancelacion && (
+            <Button
+              onClick={onClose}
+              disabled={isPending}
+              variant="outline"
+              className="px-6"
+            >
+              Volver
+            </Button>
+          )}
           <Button
             onClick={handleSubmit}
             disabled={isPending}
-            className="px-6 bg-red-600 hover:bg-red-700 text-white"
+            className={`px-6 bg-red-600 hover:bg-red-700 text-white ${forzarCancelacion ? 'ml-auto' : ''}`}
           >
             {isPending ? (
               <>

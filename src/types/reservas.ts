@@ -288,6 +288,7 @@ export const MOTIVOS_CANCELACION = [
   { id: '2', label: 'Cambio de planes del cliente' },
   { id: '3', label: 'Problemas de salud' },
   { id: '4', label: 'Problemas con documentación' },
+  { id: '5', label: 'Cancelación automática por falta de pago' },
   { id: '6', label: 'Fuerza mayor / Caso fortuito' },
   { id: '7', label: 'Error en la reserva' },
   { id: '8', label: 'Otro motivo' }

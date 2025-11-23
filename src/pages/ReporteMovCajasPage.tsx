@@ -71,6 +71,8 @@ export default function ReporteMovCajasPage() {
     busqueda: ""
   })
 
+  const [busquedaLocal, setBusquedaLocal] = useState("")
+
   const [currentPage, setCurrentPage] = useState(1)
   const [paginacion, setPaginacion] = useState<RespuestaPaginada>({
     next: null,
@@ -79,6 +81,16 @@ export default function ReporteMovCajasPage() {
     totalPages: 1,
     pageSize: 20
   })
+
+  // Debounce para búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFiltros(prev => ({ ...prev, busqueda: busquedaLocal }))
+      setCurrentPage(1)
+    }, 750)
+
+    return () => clearTimeout(timer)
+  }, [busquedaLocal])
 
   // Query para obtener el reporte
   const { data, isFetching, isError, error } = useQuery({
@@ -149,6 +161,7 @@ export default function ReporteMovCajasPage() {
       metodo_pago: "",
       busqueda: ""
     })
+    setBusquedaLocal("")
     setCurrentPage(1)
   }
 
@@ -524,20 +537,17 @@ export default function ReporteMovCajasPage() {
                   </div>
                 </div>
 
-                {/* Búsqueda */}
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Buscar por descripción, referencia o número de movimiento..."
-                      value={filtros.busqueda}
-                      onChange={(e) => {
-                        setFiltros({ ...filtros, busqueda: e.target.value })
-                        setCurrentPage(1)
-                      }}
-                      className="pl-10 border-blue-200"
-                    />
-                  </div>
+               {/* Búsqueda */}
+               <div className="flex items-center gap-4">
+                 <div className="relative flex-1">
+                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                   <Input
+                     placeholder="Buscar por descripción, referencia o número de movimiento..."
+                     value={busquedaLocal}
+                     onChange={(e) => setBusquedaLocal(e.target.value)}
+                     className="pl-10 border-blue-200"
+                   />
+                 </div>
 
                   <Button
                     variant="outline"

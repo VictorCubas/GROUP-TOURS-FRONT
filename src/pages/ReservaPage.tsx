@@ -2883,6 +2883,7 @@ export default function ReservaPage() {
                           <TableHead className="font-semibold text-gray-700">Numéro</TableHead>
                           <TableHead className="font-semibold text-gray-700">Titular</TableHead>
                           <TableHead className="font-semibold text-gray-700">Paquete</TableHead>
+                          <TableHead className="font-semibold text-gray-700">Código Paquete</TableHead>
                           <TableHead className="font-semibold text-gray-700">Pasajeros</TableHead>
                           <TableHead className="font-semibold text-gray-700">Estado</TableHead>
                           <TableHead className="font-semibold text-gray-700">Pago</TableHead>
@@ -2938,6 +2939,12 @@ export default function ReservaPage() {
                                     {data?.paquete?.destino?.ciudad}, {data?.paquete?.destino?.pais}
                                   </div>
                                 </div>
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-gray-900">{data?.paquete_codigo || '-'}</div>
                               </div>
                             </TableCell>
 
