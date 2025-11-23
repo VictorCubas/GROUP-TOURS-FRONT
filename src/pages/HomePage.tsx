@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
-import { Home, TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Home, TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle, Clock, Package, Users, Calendar, Briefcase } from "lucide-react";
 import { 
   fetchResumenGeneral, 
   fetchAlertas, 
@@ -19,9 +19,11 @@ import type {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useSessionStore } from '@/store/sessionStore';
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { hasRole, session } = useSessionStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resumen, setResumen] = useState<ResumenGeneralData | null>(null);
@@ -31,16 +33,25 @@ const HomePage = () => {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [periodo, setPeriodo] = useState<'hoy' | 'semana' | 'mes'>('mes');
 
-  useEffect(() => {
-    loadDashboard();
-    
-    // Auto-refresh cada 5 minutos
-    const interval = setInterval(() => {
-      loadDashboard();
-    }, 5 * 60 * 1000);
+  // 🔥 Verificar si tiene rol Gerencial
+  const esGerencial = hasRole('Gerencial');
 
-    return () => clearInterval(interval);
-  }, [periodo]); // Recargar cuando cambia el período
+  useEffect(() => {
+    // Solo cargar dashboard si es Gerencial
+    if (esGerencial) {
+      loadDashboard();
+      
+      // Auto-refresh cada 5 minutos
+      const interval = setInterval(() => {
+        loadDashboard();
+      }, 5 * 60 * 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      // Si NO es Gerencial, quitar el loading
+      setLoading(false);
+    }
+  }, [periodo, esGerencial]); // Recargar cuando cambia el período
 
   async function loadDashboard() {
     try {
@@ -74,6 +85,12 @@ const HomePage = () => {
     }
   }
 
+  // 🔥 Si NO es Gerencial, mostrar página de bienvenida inmediatamente
+  if (!esGerencial) {
+    return <WelcomePage userName={session?.usuario || 'Usuario'} />;
+  }
+
+  // Para usuarios Gerenciales: Mostrar loading mientras carga
   if (loading && !resumen) {
     return (
       <div className="max-w-7xl mx-auto space-y-8 p-6">
@@ -395,6 +412,151 @@ const HomePage = () => {
 };
 
 export default HomePage;
+
+// ========== PÁGINA DE BIENVENIDA (NO GERENCIAL) ==========
+
+interface WelcomePageProps {
+  userName: string;
+}
+
+function WelcomePage({ userName }: WelcomePageProps) {
+  const navigate = useNavigate();
+
+  const quickActions = [
+    {
+      icon: Calendar,
+      title: "Ver Reservas",
+      description: "Consulta y gestiona las reservas de paquetes",
+      color: "bg-purple-500",
+      hoverColor: "hover:bg-purple-600",
+      path: "/paquetes_viajes/reservas"
+    },
+    {
+      icon: Package,
+      title: "Ver Paquetes",
+      description: "Explora los paquetes turísticos disponibles",
+      color: "bg-blue-500",
+      hoverColor: "hover:bg-blue-600",
+      path: "/paquetes_viajes/paquetes"
+    },
+    {
+      icon: Users,
+      title: "Gestión de Personas",
+      description: "Administra la información de clientes",
+      color: "bg-green-500",
+      hoverColor: "hover:bg-green-600",
+      path: "/seguridad/personas"
+    },
+    {
+      icon: Briefcase,
+      title: "Mi Trabajo",
+      description: "Accede a tus tareas y responsabilidades",
+      color: "bg-orange-500",
+      hoverColor: "hover:bg-orange-600",
+      path: "#"
+    }
+  ];
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-8">
+      {/* Header de Bienvenida */}
+      <div className="text-center pt-8 pb-4">
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-6 shadow-lg">
+          <Home className="h-10 w-10 text-white" />
+        </div>
+        <h1 className="text-4xl font-bold text-gray-900 mb-3">
+          ¡Bienvenido, {userName}!
+        </h1>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          Sistema de Gestión de Paquetes Turísticos
+        </p>
+        <p className="text-lg text-gray-500 mt-2">
+          {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+        </p>
+      </div>
+
+      {/* Card de Información */}
+      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50">
+        <CardContent className="p-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+              Tu espacio de trabajo está listo
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Desde aquí puedes acceder a todas las funcionalidades del sistema según tus permisos. 
+              Utiliza el menú lateral para navegar entre las diferentes secciones.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Accesos Rápidos */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Accesos Rápidos</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {quickActions.map((action, index) => (
+            <Card 
+              key={index}
+              className="border-gray-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+              onClick={() => action.path !== '#' && navigate(action.path)}
+            >
+              <CardContent className="p-6">
+                <div className={`w-12 h-12 ${action.color} ${action.hoverColor} rounded-xl flex items-center justify-center mb-4 transition-colors group-hover:scale-110 transform duration-300`}>
+                  <action.icon className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {action.title}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {action.description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Tips y Ayuda */}
+      <Card className="border-green-200 bg-green-50/50">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Consejos para empezar
+              </h3>
+              <ul className="space-y-2 text-gray-700">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  Utiliza el menú lateral para navegar entre las diferentes secciones
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  Tus permisos determinan a qué módulos puedes acceder
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  Si necesitas ayuda, contacta al administrador del sistema
+                </li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Footer Info */}
+      <div className="text-center py-8 text-gray-500">
+        <p className="text-sm">
+          Group Tours © {new Date().getFullYear()} - Sistema de Gestión Turística
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ========== COMPONENTES AUXILIARES ==========
 

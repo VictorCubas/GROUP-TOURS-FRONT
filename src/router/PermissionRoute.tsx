@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSessionStore } from "@/store/sessionStore";
 
 const PermissionRoute = () => {
-  const { session, loading, siTienePermiso } = useSessionStore();
+  const { session, loading, siTienePermiso, hasRole } = useSessionStore();
   const location = useLocation();
 
   if (loading) {
@@ -54,14 +54,22 @@ const PermissionRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Obtener la última parte de la URL → ej. /seguridad/usuarios → "usuarios"
+  // Página principal siempre es accesible
+  if (location.pathname === "/") {
+    return <Outlet />;
+  }
+
+  // 🔥 CASO ESPECIAL: Reportes solo para rol Gerencial
+  if (location.pathname.startsWith('/reportes')) {
+    if (!hasRole('Gerencial')) {
+      return <Navigate to="/" replace />;
+    }
+    return <Outlet />;
+  }
+
+  // Para el resto de rutas, usar el sistema de permisos normal
   const pathParts = location.pathname.split("/").filter(Boolean);
   const lastSegment = pathParts[pathParts.length - 1]?.toLowerCase();
-
-
-    if (location.pathname === "/") {
-    return <Outlet />;
-    }
 
   // Verificar si el módulo existe y tiene permiso de lectura
   const hasPermission = siTienePermiso(lastSegment, "leer");
