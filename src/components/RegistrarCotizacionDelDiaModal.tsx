@@ -1,18 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type React from "react"
-import { useMutation } from '@tanstack/react-query';
-import { use, useState } from "react"
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { use, useEffect, useState } from "react"
 import { ToastContext } from '@/context/ToastContext';
 import { useSessionStore } from '@/store/sessionStore';
 import { DollarSign, Calendar, TrendingUp, Info, BarChartBig as ChartBar, X, Loader2Icon, CheckCircle2 } from "lucide-react"
 import { registrarCotizaccicon } from "./utils/httpUsuario";
 import { Button } from "./ui/button";
+import { fetchDataMonedaTodos } from "./utils/httpPaquete";
+import type { Moneda } from "@/types/paquetes";
 
 const currentRate = 0;
 
 const RegistrarCotizacionDelDiaModal = () => {
   const {setCotizacionDiariaCargada} = useSessionStore();
   const {handleShowToast} = use(ToastContext);
+  const [moneda, setMoneda] = useState<Moneda | null>(null)
   const [cotizacion, setCotizacion] = useState<string>(
     currentRate > 0 ? currentRate.toLocaleString("es-PY") : ""
   )
@@ -29,6 +32,24 @@ const RegistrarCotizacionDelDiaModal = () => {
   const [observaciones, setObservaciones] = useState<string>("")
   const [error, setError] = useState<string>("")
 
+
+  const {data: dataMonedaList, isFetching: isFetchingMoneda,} = useQuery({
+    queryKey: ['monedas-disponibles',], //data cached
+    queryFn: () => fetchDataMonedaTodos(),
+    staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+  });
+
+  
+  useEffect(() => {
+    if (dataMonedaList) {
+      const moneda = dataMonedaList.find((moneda: Moneda) => moneda.codigo === 'USD');
+      if (moneda) {
+        setMoneda(moneda)
+      }
+    }
+  }, [dataMonedaList])  
+
+
   const handleGuardar = () => {
     const cotizacionLimpia = cotizacion.replace(/\./g, "")
     const cotizacionNumerica = Number.parseFloat(cotizacionLimpia)
@@ -39,7 +60,7 @@ const RegistrarCotizacionDelDiaModal = () => {
     }
 
     const payload = {
-      moneda: 2,
+      moneda: moneda?.id,
       valor_en_guaranies: cotizacionNumerica,
       fecha_vigencia: fecha,
       observaciones: observaciones
