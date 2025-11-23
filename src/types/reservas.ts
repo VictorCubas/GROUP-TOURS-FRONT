@@ -182,6 +182,7 @@ export interface Reserva {
   estado_display: string;
   modalidad_facturacion: "global" | 'individual';
   pasajeros: Pasajero[];
+  paquete_codigo: string;
   activo: boolean;
   condicion_pago: string;
   condicion_pago_display: string;
