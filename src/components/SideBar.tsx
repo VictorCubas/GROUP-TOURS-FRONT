@@ -75,7 +75,7 @@ const sidebarItems = [
     submenu: [
       { label: "Mov Cajas", href: "/reportes/cajas", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
       { label: "Paquetes", href: "/reportes/paquetes", color: "text-orange-400", bgcolor: "bg-orange-400" },
-      { label: "Reservas", href: "/reportes/reservas", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      // { label: "Reservas", href: "/reportes/reservas", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
     ],
   },
   // { icon: FileText, label: "Ventas", href: "#", color: "text-amber-400" },
@@ -103,7 +103,7 @@ interface SiderBarProps{
 
 const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
   const [expandedItems, setExpandedItems] = useState<string[]>([])
-  const {logout, siTienePermiso} = useSessionStore();
+  const {logout, siTienePermiso, hasRole} = useSessionStore();
   const navigate = useNavigate()
 
   const toggleExpanded = (label: string) => {
@@ -175,9 +175,20 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
                         // Extraer el nombre del módulo desde la URL (última parte del path)
                         const moduleName = subItem.href.split('/').pop() || '';
 
+                        // 🔥 Si es un item de Reportes, verificar rol Gerencial
+                        const isReportItem = subItem.href.startsWith('/reportes');
+                        if (isReportItem && !hasRole('Gerencial')) {
+                          return null;
+                        }
+
+                        // 🔥 Si tiene rol Gerencial y es un item de reportes, mostrarlo sin verificar permisos
+                        const shouldShow = isReportItem 
+                          ? hasRole('Gerencial') 
+                          : siTienePermiso(moduleName, 'leer');
+
                         return (
                           <>
-                            {siTienePermiso(moduleName, 'leer') &&
+                            {shouldShow &&
                             <Tooltip key={subItem.label}>
                               <TooltipTrigger asChild>
                                 <span>
