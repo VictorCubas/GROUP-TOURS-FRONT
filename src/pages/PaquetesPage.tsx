@@ -2556,7 +2556,7 @@ const handleSubmitClick = useCallback(async () => {
                                 render={({ field }) => (
                                   <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                     <Select
-                                      disabled={!!dataAEditar}
+                                      // disabled={!!dataAEditar}
                                       value={field.value}
                                       onValueChange={(value) => {
                                         field.onChange(value)
@@ -2625,7 +2625,7 @@ const handleSubmitClick = useCallback(async () => {
                                   <GenericSearchSelect
                                     dataList={dataDestinoList}
                                     value={selectedDestinoID}
-                                    disabled={!!dataAEditar}
+                                    // disabled={!!dataAEditar}
                                     onValueChange={setSelectedDestinoID}
                                     handleDataNoSeleccionada={handleDestinoNoSeleccionada}
                                     placeholder="Selecciona el destino..."
@@ -2720,7 +2720,7 @@ const handleSubmitClick = useCallback(async () => {
                               render={({ field }) => (
                                 <div className="flex items-center gap-3 cursor-pointer m-0">
                                   <Checkbox
-                                    disabled={!!dataAEditar}
+                                    // disabled={!!dataAEditar}
                                     id="personalizado"
                                     checked={field.value}
                                     onCheckedChange={(checked) => {
@@ -2750,7 +2750,7 @@ const handleSubmitClick = useCallback(async () => {
                                 id="cantidad_pasajeros"
                                 autoComplete="cantidad_pasajeros"
                                 placeholder="Ingrese la cantidad de pasajeros"
-                                disabled={!!dataAEditar}
+                                // disabled={!!dataAEditar}
                                 className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 disabled:pointer-events-auto disabled:cursor-not-allowed"
                                 {...register('cantidad_pasajeros', {
                                   required: {
@@ -2799,7 +2799,7 @@ const handleSubmitClick = useCallback(async () => {
                                     <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                       <Select
                                         value={field.value}
-                                        disabled={!!dataAEditar}
+                                        // disabled={!!dataAEditar}
                                         onValueChange={(value) => {
                                           field.onChange(value)
                                           if (value) {
