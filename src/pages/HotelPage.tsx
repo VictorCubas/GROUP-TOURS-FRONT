@@ -343,6 +343,15 @@ export default function HotelPage() {
         queryClient.invalidateQueries({
           queryKey: ['paquetes-resumen'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
+        });
     },
   });
 
@@ -383,6 +392,15 @@ export default function HotelPage() {
         queryClient.invalidateQueries({
           queryKey: ['usuarios-resumen'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
+        });
     },
   });
 
@@ -403,6 +421,15 @@ export default function HotelPage() {
 
         queryClient.invalidateQueries({
           queryKey: ['todos-hoteles'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
         });
     },
   });
@@ -490,15 +517,24 @@ export default function HotelPage() {
 
 
     console.log(rooms)
-    const habitaciones = rooms.map(room => ({
-      numero: room.number,
-      tipo: room.type,
-      capacidad: room.capacity,
-      precio_noche: room.price,
-      moneda: room.currency,
-      activo: true,
-      servicios: []
-    }))
+    const habitaciones = rooms.map(room => {
+      const habitacion: any = {
+        numero: room.number,
+        tipo: room.type,
+        capacidad: room.capacity,
+        precio_noche: room.price,
+        moneda: room.currency,
+        activo: true,
+        servicios: []
+      };
+      
+      // 🔹 Incluir el ID solo si existe y es un número (habitación existente)
+      if (room.id && typeof room.id === 'number') {
+        habitacion.id = room.id;
+      }
+      
+      return habitacion;
+    })
     
     const payload = {...dataForm, 
         // activo: true, 
