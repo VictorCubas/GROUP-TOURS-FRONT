@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { use, useEffect, useState } from 'react';
-import { FileText, Building2, Percent, Eye, Download, Check, Edit, X, Loader2Icon } from 'lucide-react';
+import { FileText, Building2, Percent, Eye, Check, Edit, X, Loader2Icon } from 'lucide-react';
 import { InformacionEmpresaForm } from '@/components/InformacionEmpresaForm';
 import { ImpuestoConfig } from '@/components/ImpuestoConfig';
 import { FacturaPreview } from '@/components/FacturaPreview';
@@ -173,7 +173,7 @@ function FactuacionConfigPage() {
               <p className="text-gray-600">Gestiona todos los campos correspondiente a una factura.</p>
             </div>
             <div className="flex gap-3">
-              {siTienePermiso("facturacion", "exportar") &&
+              {/* {siTienePermiso("facturacion", "exportar") &&
                 <Button
                   type='button'
                   variant="outline"
@@ -182,7 +182,7 @@ function FactuacionConfigPage() {
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
                 </Button>
-              }
+              } */}
 
               {siTienePermiso("facturacion", "modificar") && !siEditando && 
                 <Button 

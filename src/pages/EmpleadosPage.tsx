@@ -15,7 +15,6 @@ import {
   // Users,
   // Package,
   // User,
-  Download,
   // RefreshCw,
   Eye,
   Calendar,
@@ -945,7 +944,7 @@ export default function ModulosPage() {
               <p className="text-gray-600">Gestiona los datos de empleados del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              {siTienePermiso("empleados", "exportar") &&
+              {/* {siTienePermiso("empleados", "exportar") &&
                 <Button
                   variant="outline"
                   className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -953,7 +952,7 @@ export default function ModulosPage() {
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
                 </Button>
-              }
+              } */}
 
               {siTienePermiso("empleados", "exportar") && 
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"

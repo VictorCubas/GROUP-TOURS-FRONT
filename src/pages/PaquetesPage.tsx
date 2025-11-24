@@ -2563,7 +2563,7 @@ const handleSubmitClick = useCallback(async () => {
               <p className="text-gray-600">Gestiona los datos de paquetes del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              {siTienePermiso("paquetes", "exportar") &&
+              {/* {siTienePermiso("paquetes", "exportar") &&
                 <Button
                   variant="outline"
                   className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -2571,7 +2571,7 @@ const handleSubmitClick = useCallback(async () => {
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
                 </Button>
-              }
+              } */}
 
               {siTienePermiso("paquetes", "exportar") && 
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"

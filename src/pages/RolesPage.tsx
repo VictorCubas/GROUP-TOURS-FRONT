@@ -13,7 +13,6 @@ import {
   Check,
   X,
   Users,
-  Download,
   RefreshCw,
   Eye,
   Calendar,
@@ -525,13 +524,13 @@ export default function RolesPage() {
             <p className="text-gray-600">Gestiona los roles del sistema de manera eficiente</p>
           </div>
           <div className="flex gap-3">
-            <Button
+            {/* <Button
               variant="outline"
               className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 bg-transparent"
             >
               <Download className="h-4 w-4 mr-2" />
               Exportar
-            </Button>
+            </Button> */}
             <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
               onClick={() => setActiveTab('form')}>
               <Plus className="h-4 w-4 mr-2" />

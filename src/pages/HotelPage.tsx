@@ -11,7 +11,6 @@ import {
   MoreHorizontal,
   Check,
   X,
-  Download,
   Eye,
   Calendar,
   Loader2Icon,
@@ -970,7 +969,7 @@ export default function HotelPage() {
             <p className="text-gray-600">Gestiona los hoteles del sistema de manera eficiente</p>
           </div>
           <div className="flex gap-3">
-              {siTienePermiso("hoteles", "exportar") && 
+              {/* {siTienePermiso("hoteles", "exportar") && 
                   <Button
                     variant="outline"
                     className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -978,7 +977,7 @@ export default function HotelPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Exportar
                   </Button>
-              }
+              } */}
 
               {siTienePermiso("hoteles", "crear") && (
                 <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"

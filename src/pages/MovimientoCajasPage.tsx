@@ -4,7 +4,6 @@
 import { startTransition, useEffect, useState } from "react"
 import {
   Search,
-  Download,
   Eye,
   Loader2Icon,
   Info,
@@ -389,7 +388,7 @@ export default function MovimientoCajasPage() {
             </div>
             <p className="text-gray-600">Visualiza todos los movimientos registrados en las cajas del sistema.</p>
           </div>
-          <div className="flex gap-3">
+          {/* <div className="flex gap-3">
             {siTienePermiso("movimientos", "exportar") &&
               <Button
                 variant="outline"
@@ -399,7 +398,7 @@ export default function MovimientoCajasPage() {
                 Exportar
               </Button>
             }
-          </div>
+          </div> */}
         </div>
 
         {/* Stats Cards */}

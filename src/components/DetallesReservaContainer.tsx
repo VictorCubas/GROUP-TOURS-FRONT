@@ -1886,6 +1886,8 @@ return   <>
                 reservaData={dataDetalleResp}
                 onDescargarComprobante={handleDescargarPDF}
                 isPendingDescarga={isPendingDescargaComprobante}
+                onGenerarNotaCredito={handleGenerarNotaCreditoGlobal}
+                isPendingGenerarNC={isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial}
             />
         )}
 </>
