@@ -109,3 +109,8 @@ export async function fetchDataPaqueteTodos() {
   const resp = await axiosInstance.get(`/paquete/todos/`);
   return resp?.data
 }
+
+export async function fetchCotizacionVigente() {
+  const resp = await axiosInstance.get(`/moneda/cotizaciones/vigente/?moneda_codigo=USD`);
+  return resp?.data
+}

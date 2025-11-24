@@ -88,7 +88,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Distribuidora, Moneda, Paquete, PriceMode, RespuestaPaginada, SalidaPaquete, TipoPaquete, } from "@/types/paquetes"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos, fetchCotizacionVigente } from "@/components/utils/httpPaquete"
 import {Controller, useForm, useWatch } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
@@ -318,6 +318,12 @@ export default function ModulosPage() {
         queryKey: ['todos-zona-geografica',], //data cached
         queryFn: () => fetchDataZonasGeograficasTodos(),
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
+  const {data: dataCotizacion, isFetching: isFetchingCotizacion} = useQuery({
+        queryKey: ['cotizacion-vigente',], //data cached
+        queryFn: () => fetchCotizacionVigente(),
+        staleTime: 30 * 60 * 1000 //despues de 30min los datos se consideran obsoletos
     });
 
 
@@ -1780,10 +1786,19 @@ const handleSubmitClick = useCallback(async () => {
           console.log(rangoPrecioDesdeHasta); 
           // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
 
+          // 🔹 Obtener la moneda seleccionada para aplicar conversión si es necesario
+          const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+          const esGuaranies = monedaActual?.codigo === 'PYG';
+          const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+          
+          // 🔹 Calcular factor de conversión (1 si es USD, cotización si es PYG)
+          const factorConversion = (esGuaranies && cotizacionVigente) ? Number(cotizacionVigente) : 1;
           
           if(paqueteModalidad === 'flexible'){
-            setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString()); 
-            setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+            const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin * factorConversion);
+            const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax * factorConversion);
+            setValueSalida('precio_desde', precioDesdeConvertido.toString()); 
+            setValueSalida('precio_hasta', precioHastaConvertido.toString());
           }
           else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
             console.log(fixedRoomTypeId);
@@ -1795,7 +1810,9 @@ const handleSubmitClick = useCallback(async () => {
             console.log(habitacionFiltered[0].precio_noche);
             console.log(rangoPrecioDesdeHasta.noches);
             console.log(habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches);
-            setValueSalida('precio_desde', (habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches).toString());
+            const precioBase = habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches;
+            const precioDesdeConvertido = Math.round(precioBase * factorConversion);
+            setValueSalida('precio_desde', precioDesdeConvertido.toString());
             setValueSalida('precio_hasta', '');
           }
         }
@@ -1810,7 +1827,7 @@ const handleSubmitClick = useCallback(async () => {
         setValueSalida('cantidadNoche', calculateNoches(fechaSalida, fechaRegreso).toString());
       }
       // 👇 dependencias simples, sin llamadas complejas
-    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList, fixedRoomTypeId]);
+    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList, fixedRoomTypeId, monedaSeleccionada, dataMonedaList, dataCotizacion, paqueteModalidad, propio]);
 
 
     //FUCNIONES DE HOTELES DE LAS SALIDAS
@@ -3690,8 +3707,34 @@ const handleSubmitClick = useCallback(async () => {
                                                                   </Label>
 
                                                                   {propio ? 
-                                                                    <div className="text-2xl font-bold text-blue-600">
-                                                                      {formatearSeparadorMiles.format(+(precioDesde ?? 0))}
+                                                                    <div className="col-span-3">
+                                                                      <div className="text-2xl font-bold text-blue-600">
+                                                                        {formatearSeparadorMiles.format(+(precioDesde ?? 0))}
+                                                                      </div>
+                                                                      {(() => {
+                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                        const esGuaranies = monedaActual?.codigo === 'PYG';
+                                                                        const esUSD = monedaActual?.codigo === 'USD';
+                                                                        const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+                                                                        
+                                                                        if (esGuaranies && cotizacionVigente && !isFetchingCotizacion) {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Calculado automáticamente según la cotización del día (1 USD = Gs. {Number(cotizacionVigente).toLocaleString('es-PY')})
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        if (esUSD) {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Precio calculado automáticamente en USD
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        return null;
+                                                                      })()}
                                                                     </div> :
 
                                                                     <div className="col-span-3 flex gap-2">
@@ -3718,15 +3761,41 @@ const handleSubmitClick = useCallback(async () => {
                                                                   </Label>
 
                                                                   {propio ? 
-                                                                    <div className="text-2xl font-bold text-blue-600 flex">
-                                                                      {
-                                                                        paqueteModalidad === 'flexible' ? 
-                                                                          formatearSeparadorMiles.format(+(precioHasta ?? 0)) :
-                                                                          <Badge
-                                                                            className="bg-gray-100 text-gray-700 border-gray-200">
-                                                                            No aplica
-                                                                          </Badge>
-                                                                      }
+                                                                    <div className="col-span-3">
+                                                                      <div className="text-2xl font-bold text-blue-600 flex">
+                                                                        {
+                                                                          paqueteModalidad === 'flexible' ? 
+                                                                            formatearSeparadorMiles.format(+(precioHasta ?? 0)) :
+                                                                            <Badge
+                                                                              className="bg-gray-100 text-gray-700 border-gray-200">
+                                                                              No aplica
+                                                                            </Badge>
+                                                                        }
+                                                                      </div>
+                                                                      {(() => {
+                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                        const esGuaranies = monedaActual?.codigo === 'PYG';
+                                                                        const esUSD = monedaActual?.codigo === 'USD';
+                                                                        const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+                                                                        
+                                                                        if (esGuaranies && cotizacionVigente && !isFetchingCotizacion && paqueteModalidad === 'flexible') {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Precio máximo calculado con cotización vigente
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        if (esUSD && paqueteModalidad === 'flexible') {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Precio máximo calculado automáticamente en USD
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        return null;
+                                                                      })()}
                                                                     </div> : 
 
                                                                     <div className="col-span-3 flex gap-2">
