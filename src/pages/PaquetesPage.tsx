@@ -2728,8 +2728,11 @@ const handleSubmitClick = useCallback(async () => {
                                       const isChecked = !!checked;
                                       field.onChange(isChecked);
                                       // Si personalizado es true, establecer modalidad a 'fijo'
+                                      // Si personalizado es false, establecer modalidad a 'flexible'
                                       if (isChecked) {
                                         setPaqueteModalidad('fijo');
+                                      } else {
+                                        setPaqueteModalidad('flexible');
                                       }
                                     }}
                                     className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
@@ -3352,6 +3355,13 @@ const handleSubmitClick = useCallback(async () => {
                                       </p>
                                     </div>
                                   )}
+                                  {!watch('personalizado') && (
+                                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                      <p className="text-sm text-blue-800">
+                                        <strong>Nota:</strong> Para habilitar la modalidad "Paquete cerrado", debes marcar la opción "Personalizado".
+                                      </p>
+                                    </div>
+                                  )}
                                   <div className="grid md:grid-cols-2 gap-4">
                                     <div
                                       onClick={() => {
@@ -3361,7 +3371,7 @@ const handleSubmitClick = useCallback(async () => {
                                         setPaqueteModalidad('flexible')
                                       }}
                                       className={`border-2 rounded-lg p-4 transition-all ${
-                                        watch('personalizado') ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                                        watch('personalizado') || dataAEditar ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
                                       } ${
                                         paqueteModalidad === 'flexible' 
                                           ? 'border-blue-500 bg-blue-50' 
@@ -3379,13 +3389,13 @@ const handleSubmitClick = useCallback(async () => {
 
                                     <div
                                       onClick={() => {
-                                        if(dataAEditar || watch('personalizado'))
+                                        if(dataAEditar || !watch('personalizado'))
                                           return;
                                         
                                         setPaqueteModalidad('fijo')
                                       }}
                                       className={`border-2 rounded-lg p-4 transition-all ${
-                                        watch('personalizado') ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                                        !watch('personalizado') || dataAEditar ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
                                       } ${
                                         paqueteModalidad === 'fijo' 
                                           ? 'border-orange-500 bg-orange-50' 
