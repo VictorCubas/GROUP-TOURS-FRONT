@@ -847,8 +847,9 @@ export default function ModulosPage() {
       console.log(selectedDestino) 
 
       if(selectedDestino.length){  
+        console.log('selectedDestino[0]: ', selectedDestino[0])
         // setValue('nombre', selectedDestino[0].ciudad_nombre);
-        setCiudadDataSelected(selectedDestino[0].ciudad_nombre);
+        setCiudadDataSelected(selectedDestino[0].id); // 🔹 Cambio: Ahora guardamos el ID de la ciudad
         setCiudadDataCompleto(selectedDestino[0]);
 
         //zona_geografica_nombre
