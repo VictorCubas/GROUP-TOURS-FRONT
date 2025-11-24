@@ -74,7 +74,7 @@ export async function fetchDataHoteles(ciudad_id_or_nombre: number | string, pai
   let url = `/hotel/?page=1&page_size=10&activo=true`;
   
   if (esNumero) {
-    url += `&ciudad_id=${ciudad_id_or_nombre}`;
+    url += `&destino_id=${ciudad_id_or_nombre}`;
   } else {
     if (ciudad_id_or_nombre) {
       url += `&ciudad=${ciudad_id_or_nombre}`;
