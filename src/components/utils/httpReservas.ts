@@ -453,6 +453,18 @@ export async function activarDesactivarData({ dataId, activo }: { dataId: number
   await axiosInstance.patch(`/paquete/${dataId}/`, {activo,});    
 }
 
+// Función para desactivar una reserva
+export async function desactivarReserva(reservaId: number | string) {
+  const response = await axiosInstance.post(`/reservas/${reservaId}/desactivar/`, {});
+  return response.data;
+}
+
+// Función para activar una reserva
+export async function activarReserva(reservaId: number | string) {
+  const response = await axiosInstance.post(`/reservas/${reservaId}/activar/`, {});
+  return response.data;
+}
+
 export async function fetchResumen() {
   const resp = await axiosInstance.get(`/reservas/resumen/`);
   return resp?.data
