@@ -313,12 +313,12 @@ const HomePage = () => {
       )}
 
       {totalAlertas === 0 && (
-        <Card className="border-green-200 bg-green-50/30">
+        <Card className="border-amber-300 bg-amber-50/70">
           <CardContent className="p-6">
             <div className="text-center py-8">
-              <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-              <p className="text-xl font-semibold text-gray-700">¡Todo en orden!</p>
-              <p className="text-gray-600 mt-2">No hay alertas pendientes en este momento</p>
+              <CheckCircle className="h-16 w-16 text-amber-600 mx-auto mb-4" />
+              <p className="text-xl font-semibold text-amber-900">¡Todo en orden!</p>
+              <p className="text-amber-800 mt-2">De momento no hay alertas. Todas las operaciones están funcionando correctamente.</p>
             </div>
           </CardContent>
         </Card>
