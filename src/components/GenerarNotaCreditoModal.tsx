@@ -26,8 +26,8 @@ interface GenerarNotaCreditoModalProps {
 
 
 const motivosNC = [
-  { value: 1, label: "Devolución y Ajuste de precios" },
-  { value: 2, label: "Devolución" },
+  { value: 1, label: "Devolución y Ajuste de precios (cancelación)" },
+  { value: 2, label: "Devolución/Cancelación" },
   { value: 3, label: "Descuento" },
   { value: 4, label: "Bonificación" },
   { value: 5, label: "Crédito incobrable" },

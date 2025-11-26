@@ -456,8 +456,8 @@ export default function MovimientoCajasPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="ingreso">Ingresos</SelectItem>
-                    <SelectItem value="egreso">Egresos</SelectItem>
+                    <SelectItem value="ingreso">Débitos</SelectItem>
+                    <SelectItem value="egreso">Créditos</SelectItem>
                   </SelectContent>
                 </Select>
 

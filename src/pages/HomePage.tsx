@@ -191,12 +191,12 @@ const HomePage = () => {
               color="blue"
             />
             <MetricCard 
-              title="Ingresos" 
+              title="Débitos" 
               value={formatMoney(resumen.financiero.ingresos_periodo)} 
               color="green"
             />
             <MetricCard 
-              title="Egresos" 
+              title="Créditos" 
               value={formatMoney(resumen.financiero.egresos_periodo)} 
               color="orange"
             />
