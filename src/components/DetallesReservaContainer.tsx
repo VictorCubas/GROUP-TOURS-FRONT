@@ -8,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import PagoParcialModal from './PagoParcialModal';
 import { use, useState, useEffect } from 'react';
-import { useCancelarReserva, useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarNotaCreditoGlobal, useGenerarNotaCreditoParcial, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
+import { useCancelarReserva, useAsignarPasajero, useAsignarTipoFacturaModalidad, useDescargarComprobante, useDescargarFacturaById, useDescargarFacturaGlobal, useDescargarFacturaIndividual, useDescargarNotaCreditoYaGenerada, useDescargarVoucher, useGenerarFacturaCancelacion, useGenerarNotaCreditoGlobal, useGenerarNotaCreditoParcial, useRegistrarPagoParcial } from './hooks/useDescargarPDF';
 import { ToastContext } from '@/context/ToastContext';
 import { queryClient } from './utils/http';
 import PaymentReceiptModal from './PaymentReceiptModal';
@@ -20,6 +20,7 @@ import AsignarTipoFacturaModal from './AsignarTipoFactura';
 import GenerarNotaCreditoModal from './GenerarNotaCreditoModal';
 import CancelarReservaModal from './CancelarReservaModal';
 import ComprobanteDevolucionModal from './ComprobanteDevolucionModal';
+import ModalExitoCancelacion from './ModalExitoCancelacion';
 import { useSessionStore } from '@/store/sessionStore';
 // import { verificarUsuarioTieneCajaAbierta } from './utils/httpCajas';
 // import type { VerificacionCajaAbierta } from '@/types/cajas';
@@ -52,6 +53,14 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const [isCancelarReservaModalOpen, setIsCancelarReservaModalOpen] = useState(false);
     const [isComprobanteDevolucionModalOpen, setIsComprobanteDevolucionModalOpen] = useState(false);
     const [cancelacionResponse, setCancelacionResponse] = useState<any>(null);
+    
+    // 🆕 Estados para el flujo secuencial de cancelación
+    const [cancelacionPayload, setCancelacionPayload] = useState<any>(null);
+    const [facturaGeneradaCancelacion, setFacturaGeneradaCancelacion] = useState<any>(null);
+    const [notaCreditoGenerada, setNotaCreditoGenerada] = useState<any>(null);
+    const [mostrarGenerarFacturaCancelacion, setMostrarGenerarFacturaCancelacion] = useState(false);
+    const [mostrarGenerarNCCancelacion, setMostrarGenerarNCCancelacion] = useState(false);
+    const [mostrarModalExitoCancelacion, setMostrarModalExitoCancelacion] = useState(false);
     
     const {data: dataDetalleResp, isFetching: isFetchingDetalles,} = useQuery({
         queryKey: ['reserva-detalles', reservaId], //data cached
@@ -89,6 +98,13 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const { mutate: generarYDescargarVoucher, isPending: isPendingDescargaVoucher } = useDescargarVoucher();
 
     const { mutate: fetchCancelarReserva, isPending: isPendingCancelarReserva } = useCancelarReserva();
+    console.log(fetchCancelarReserva);
+
+    // 🆕 Hook para generar factura de cancelación
+    const { mutate: fetchGenerarFacturaCancelacion, isPending: isPendingGenerarFacturaCancelacion } = useGenerarFacturaCancelacion();
+
+    // 🆕 Hook para descargar factura por ID (para facturas de cancelación)
+    const { mutate: fetchDescargarFacturaById, isPending: isPendingDescargarFacturaById } = useDescargarFacturaById();
 
     // Verificar si el usuario tiene permiso para registrar pagos
     // Solo Cajero y Admin pueden registrar pagos
@@ -464,6 +480,20 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         });
     }
 
+    // 🆕 Handler para descargar factura por ID (para facturas de cancelación)
+    function handleDescargarFacturaPorId(facturaId: number) {
+        fetchDescargarFacturaById(facturaId, {
+            onSuccess: () => {
+                console.log('✅ Factura descargada correctamente');
+                handleShowToast('Factura descargada correctamente', 'success');
+            },
+            onError: (error) => {
+                console.error('❌ Error al descargar la factura:', error);
+                handleShowToast('Error al descargar la factura', 'error');
+            },
+        });
+    }
+
     const handleDescargarVoucherPDF = (id: number) => {
         setDescargandoVoucherId(id)
         generarYDescargarVoucher(id, {
@@ -493,27 +523,120 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         });
     }
 
-    const handleCancelarReserva = (payload: any) => {
-        console.log('📦 Payload enviado para cancelar reserva:', JSON.stringify(payload, null, 2));
+    // 🆕 Handler principal de cancelación con flujo secuencial
+    const handleCancelarReserva = (payloadExtendido: any) => {
+        console.log('📦 Payload recibido para cancelación:', JSON.stringify(payloadExtendido, null, 2));
+        
+        // Extraer datos del payload
+        const { tiene_factura, flujo, items_nc, factura_id, monto_total_pagado, ...payloadCancelacion } = payloadExtendido;
+        
+        // Guardar el payload completo para uso posterior
+        setCancelacionPayload(payloadExtendido);
+        
+        // Cerrar modal de cancelación
+        setIsCancelarReservaModalOpen(false);
+        
+        // Decidir siguiente paso según si tiene factura
+        if (tiene_factura) {
+            console.log('✅ Tiene factura existente → Abrir modal de NC directo');
+            // Ya tiene factura → Ir directo a generar NC
+            setMostrarGenerarNCCancelacion(true);
+        } else {
+            console.log('⚠️ NO tiene factura → Abrir modal de generar factura');
+            // No tiene factura → Generar factura primero
+            setMostrarGenerarFacturaCancelacion(true);
+        }
+    };
 
-        fetchCancelarReserva(
-            { reservaId: reservaId, payload },
+    // 🆕 Handler cuando se genera la factura de cancelación
+    const handleFacturaCancelacionGenerada = (payload: ClienteFacturaData) => {
+        console.log('📄 Generando factura de cancelación...', payload);
+        
+        // 🔄 Reutilizar la misma lógica que handleConfirmGenerarFacturaGlobal
+        const payloadBackend: any = {};
+        
+        if (payload.factura_nombre === 'titular') {
+            // Factura al titular
+            if (payload.algunValorHaCambiado) {
+                // Titular con cambio de documento
+                payloadBackend.tercero_tipo_documento = payload.tipo_documento;
+                payloadBackend.tercero_numero_documento = payload.documento_original;
+            }
+            // Si no hay cambios, body vacío = factura al titular por defecto
+        } else {
+            // Factura a tercero
+            payloadBackend.tercero_nombre = payload.nombre;
+            payloadBackend.tercero_tipo_documento = payload.tipo_documento;
+            payloadBackend.tercero_numero_documento = payload.ruc;
+            payloadBackend.tercero_direccion = payload.direccion;
+            payloadBackend.tercero_telefono = payload.telefono;
+            payloadBackend.tercero_email = payload.email;
+        }
+        
+        fetchGenerarFacturaCancelacion(
+            { reservaId: reservaId, payload: payloadBackend },
             {
                 onSuccess: (data) => {
-                    console.log('✅ Reserva cancelada correctamente');
-                    console.log('📄 Respuesta del servidor (nueva estructura):', {
-                        pasajeros_cancelados: data?.pasajeros_cancelados,
-                        cupos_info: data?.cupos_info,
-                        monto_reembolsable: data?.monto_reembolsable,
-                        facturas_afectadas: data?.facturas_afectadas,
-                    });
-                    handleShowToast('Reserva cancelada correctamente', 'success');
+                    console.log('✅ Factura de cancelación generada:', data);
+                    handleShowToast('Factura generada correctamente', 'success');
+                    
+                    // Guardar factura generada
+                    setFacturaGeneradaCancelacion(data);
+                    
+                    // Cerrar modal de factura
+                    setMostrarGenerarFacturaCancelacion(false);
+                    
+                    // Abrir automáticamente modal de NC
+                    setMostrarGenerarNCCancelacion(true);
+                },
+                onError: (error: any) => {
+                    console.error('❌ Error al generar factura:', error);
+                    const errorMessage = error.response?.data?.message
+                        || error.response?.data?.error
+                        || 'Error al generar factura de cancelación';
+                    handleShowToast(errorMessage, 'error');
+                },
+            }
+        );
+    };
 
-                    // Guardar respuesta y abrir modal de comprobante
-                    setCancelacionResponse(data);
-                    setIsCancelarReservaModalOpen(false);
-                    setIsComprobanteDevolucionModalOpen(true);
-
+    // 🆕 Handler cuando se genera la NC (última paso del flujo)
+    const handleNCCancelacionGenerada = (payloadNC: any) => {
+        console.log('📋 Generando NC de cancelación...', payloadNC);
+        
+        // Determinar qué hook usar según el tipo
+        const { tipo_nota_credito, ...payloadLimpio } = payloadNC;
+        const isNCParcial = tipo_nota_credito === 'parcial';
+        const mutationFn = isNCParcial ? fetchGenerarNotaCreditoParcial : fetchGenerarNotaCreditoGlobal;
+        
+        // Determinar factura_id
+        const facturaId = cancelacionPayload?.factura_id || facturaGeneradaCancelacion?.factura?.id;
+        
+        if (!facturaId) {
+            handleShowToast('Error: No se encontró la factura para generar la NC', 'error');
+            return;
+        }
+        
+        mutationFn(
+            { facturaId, payload: payloadLimpio },
+            {
+                onSuccess: (data) => {
+                    console.log('✅ NC de cancelación generada:', data);
+                    console.log('📊 Estructura completa de data:', JSON.stringify(data, null, 2));
+                    console.log('🔍 data.nota_credito:', data?.nota_credito);
+                    console.log('🔍 data directamente:', data);
+                    
+                    handleShowToast('Nota de Crédito generada correctamente', 'success');
+                    
+                    // Guardar NC generada
+                    setNotaCreditoGenerada(data);
+                    
+                    // Cerrar modal de NC
+                    setMostrarGenerarNCCancelacion(false);
+                    
+                    // Abrir modal de éxito
+                    setMostrarModalExitoCancelacion(true);
+                    
                     // Refrescar queries
                     queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
                     queryClient.invalidateQueries({ queryKey: ['reservas'], exact: false });
@@ -523,17 +646,24 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                     queryClient.invalidateQueries({ queryKey: ['salidas-paquete'], exact: false });
                 },
                 onError: (error: any) => {
-                    console.error('❌ Error al cancelar la reserva:', error);
-                    console.error('📋 Detalles del error:', error.response?.data);
-
+                    console.error('❌ Error al generar NC:', error);
                     const errorMessage = error.response?.data?.message
                         || error.response?.data?.error
-                        || 'Error al cancelar la reserva';
-
+                        || 'Error al generar Nota de Crédito';
                     handleShowToast(errorMessage, 'error');
                 },
             }
         );
+    };
+
+    // 🆕 Handler para cerrar modal de éxito y limpiar estados
+    const handleCloseModalExitoCancelacion = () => {
+        setMostrarModalExitoCancelacion(false);
+        setCancelacionPayload(null);
+        setFacturaGeneradaCancelacion(null);
+        setNotaCreditoGenerada(null);
+        // Cerrar el modal principal de detalles si es necesario
+        // onClose();
     };
 
     const handleCloseCancelarReservaModal = () => {
@@ -1888,6 +2018,54 @@ return   <>
                 isPendingDescarga={isPendingDescargaComprobante}
                 onGenerarNotaCredito={handleGenerarNotaCreditoGlobal}
                 isPendingGenerarNC={isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial}
+            />
+        )}
+
+        {/* 🆕 Modal de Generar Factura de Cancelación */}
+        {mostrarGenerarFacturaCancelacion && (
+            <GenerarFacturaModal
+                isOpen={mostrarGenerarFacturaCancelacion}
+                onClose={() => setMostrarGenerarFacturaCancelacion(false)}
+                onConfirm={handleFacturaCancelacionGenerada}
+                isPending={isPendingGenerarFacturaCancelacion}
+                reservaData={dataDetalleResp}
+                tipo="cancelacion"
+                montoCancelacion={cancelacionPayload?.monto_total_pagado}
+            />
+        )}
+
+        {/* 🆕 Modal de Generar NC de Cancelación */}
+        {mostrarGenerarNCCancelacion && (
+            <GenerarNotaCreditoModal
+                isOpen={mostrarGenerarNCCancelacion}
+                onClose={() => setMostrarGenerarNCCancelacion(false)}
+                onConfirm={handleNCCancelacionGenerada}
+                isPending={isPendingGenerarNotaCreditoGlobal || isPendingGenerarNotaCreditoParcial}
+                reservaData={dataDetalleResp}
+                itemsNCPrecalculados={
+                    facturaGeneradaCancelacion?.info_nc?.items_nc || cancelacionPayload?.items_nc || []
+                }
+                modoPrecalculado={true}
+            />
+        )}
+
+        {/* 🆕 Modal de Éxito de Cancelación */}
+        {mostrarModalExitoCancelacion && (
+            <ModalExitoCancelacion
+                isOpen={mostrarModalExitoCancelacion}
+                onClose={handleCloseModalExitoCancelacion}
+                facturaGenerada={facturaGeneradaCancelacion}
+                notaCredito={notaCreditoGenerada?.nota_credito}
+                reservaCodigo={dataDetalleResp?.codigo}
+                montoDevuelto={cancelacionPayload?.monto_nc || facturaGeneradaCancelacion?.info_nc?.monto_a_acreditar || 0}
+                moneda={{
+                    simbolo: dataDetalleResp?.paquete?.moneda?.simbolo || 'Gs.',
+                    codigo: dataDetalleResp?.paquete?.moneda?.codigo || 'PYG'
+                }}
+                onDescargarFactura={handleDescargarFacturaPorId}
+                onDescargarNC={handleDescargarNotaCreditoYaGenerada}
+                isPendingDescargaFactura={isPendingDescargarFacturaById}
+                isPendingDescargaNC={isPendingDescargarNC}
             />
         )}
 </>

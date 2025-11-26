@@ -268,6 +268,13 @@ export async function descargarFacturaGlobalById(id: number | string, params: st
   return response;
 }
 
+// 🆕 Generar factura de cancelación (retorna factura + info_nc sin descargar)
+export async function generarFacturaCancelacion(reservaId: number | string, payload: any = {}) {
+  const url = `/facturacion/generar-factura-cancelacion/${reservaId}/`;
+  const response = await axiosInstance.post(url, payload);
+  return response.data; // { factura: {...}, info_nc: { items_nc: [...] } }
+}
+
 export async function
 generarNotaCreditoGlobal(id: number | string, payload: any) {
   const urlGenerar = `/facturacion/generar-nota-credito-total/${id}`;
@@ -286,7 +293,7 @@ generarNotaCreditoGlobal(id: number | string, payload: any) {
     // 2️⃣ Descargar el PDF correspondiente
     await descargarPdfNotaCredito(notaCreditoId);
 
-    return response;
+    return response.data; // 🔧 Retornar data en lugar de response completo
   } catch (error) {
     console.error('❌ Error al generar o descargar la nota de crédito:', error);
     throw error;
@@ -311,7 +318,7 @@ export async function generarNotaCreditoParcial(id: number | string, payload: an
     // 2️⃣ Descargar el PDF correspondiente
     await descargarPdfNotaCredito(notaCreditoId);
 
-    return response;
+    return response.data; // 🔧 Retornar data en lugar de response completo
   } catch (error) {
     console.error('❌ Error al generar o descargar la nota de crédito parcial:', error);
     throw error;
@@ -525,4 +532,39 @@ export async function cancelarReserva(reservaId: number | string, payload: any) 
     console.error('Error al cancelar la reserva:', error);
     throw error;
   }
+}
+
+// Función para descargar una factura por ID usando el endpoint de facturación
+export async function descargarFacturaById(facturaId: number | string) {
+  const response = await axiosInstance.get(
+    `/facturacion/descargar-pdf/${facturaId}/`,
+    { responseType: 'blob' }
+  );
+
+  // Intentar obtener el nombre del archivo desde el header Content-Disposition
+  const contentDisposition = response.headers['content-disposition'];
+  let fileName = `factura-${facturaId}.pdf`;
+
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) {
+      fileName = decodeURIComponent(match[1]);
+    }
+  }
+
+  // Crear la URL del archivo
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+
+  // Crear enlace temporal para forzar la descarga
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', fileName);
+  document.body.appendChild(link);
+  link.click();
+
+  // Limpieza
+  link.remove();
+  window.URL.revokeObjectURL(url);
+
+  return response;
 }
