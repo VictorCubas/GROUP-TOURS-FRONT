@@ -428,7 +428,7 @@ export default function FacturacionPage() {
               </div>
               <p className="text-gray-600">Listado completo de facturas emitidas del sistema.</p>
             </div>
-            <div className="flex gap-3">
+            {/* <div className="flex gap-3">
               {siTienePermiso("facturacion", "exportar") &&
                   <Button
                     variant="outline"
@@ -438,7 +438,7 @@ export default function FacturacionPage() {
                     Exportar
                   </Button>
               }
-            </div>
+            </div> */}
           </div>
 
           {/* Stats Cards */}

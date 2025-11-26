@@ -191,12 +191,12 @@ const HomePage = () => {
               color="blue"
             />
             <MetricCard 
-              title="Ingresos" 
+              title="Débitos" 
               value={formatMoney(resumen.financiero.ingresos_periodo)} 
               color="green"
             />
             <MetricCard 
-              title="Egresos" 
+              title="Créditos" 
               value={formatMoney(resumen.financiero.egresos_periodo)} 
               color="orange"
             />
@@ -313,12 +313,12 @@ const HomePage = () => {
       )}
 
       {totalAlertas === 0 && (
-        <Card className="border-green-200 bg-green-50/30">
+        <Card className="border-amber-300 bg-amber-50/70">
           <CardContent className="p-6">
             <div className="text-center py-8">
-              <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-              <p className="text-xl font-semibold text-gray-700">¡Todo en orden!</p>
-              <p className="text-gray-600 mt-2">No hay alertas pendientes en este momento</p>
+              <CheckCircle className="h-16 w-16 text-amber-600 mx-auto mb-4" />
+              <p className="text-xl font-semibold text-amber-900">¡Todo en orden!</p>
+              <p className="text-amber-800 mt-2">De momento no hay alertas. Todas las operaciones están funcionando correctamente.</p>
             </div>
           </CardContent>
         </Card>
@@ -592,19 +592,10 @@ interface AlertCardProps {
   navigate: (path: string) => void;
 }
 
-function AlertCard({ alerta, tipo, navigate }: AlertCardProps) {
+function AlertCard({ alerta, tipo }: AlertCardProps) {
   const isCritical = tipo === 'critical';
   const bgColor = isCritical ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200';
   const textColor = isCritical ? 'text-red-900' : 'text-yellow-900';
-  const buttonColor = isCritical 
-    ? 'bg-red-600 hover:bg-red-700 text-white' 
-    : 'bg-yellow-600 hover:bg-yellow-700 text-white';
-
-  const handleAction = () => {
-    if (alerta.accion_url) {
-      navigate(alerta.accion_url);
-    }
-  };
 
   return (
     <div className={`flex items-center justify-between p-4 rounded-lg border ${bgColor}`}>
@@ -615,8 +606,9 @@ function AlertCard({ alerta, tipo, navigate }: AlertCardProps) {
       </div>
       {alerta.accion_url && alerta.accion_texto && (
         <button
-          onClick={handleAction}
-          className={`ml-4 px-4 py-2 rounded text-sm font-medium ${buttonColor} transition-colors`}
+          disabled
+          title="Acción temporalmente deshabilitada desde el dashboard"
+          className="ml-4 px-4 py-2 rounded text-sm font-medium bg-gray-400 text-gray-700 cursor-not-allowed opacity-60"
         >
           {alerta.accion_texto}
         </button>

@@ -81,7 +81,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type ReservaListado, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import {formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular } from "@/components/utils/httpReservas"
+import { fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular, activarReserva, desactivarReserva } from "@/components/utils/httpReservas"
 
 import {Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -712,9 +712,15 @@ export default function ReservaPage() {
   });
 
   const {mutate: mutateDesactivar, isPending: isPendingDesactivar} = useMutation({
-    mutationFn: activarDesactivarData,
+    mutationFn: async ({ dataId, activo }: { dataId: number; activo: boolean }) => {
+      if (activo) {
+        return await activarReserva(dataId);
+      } else {
+        return await desactivarReserva(dataId);
+      }
+    },
     onSuccess: () => {
-        handleShowToast('Se ha desactivado el reserva satisfactoriamente', 'success');
+        handleShowToast(`Se ha ${dataADesactivar?.activo ? 'desactivado' : 'activado'} la reserva satisfactoriamente`, 'success');
         setOnDesactivarData(false);
         setDataADesactivar(undefined);
         //desactivamos todas las queies
@@ -1458,10 +1464,9 @@ export default function ReservaPage() {
                         </div>
                         <h2 className='text-center'>Confirmacion de operación</h2>
                       <p className=' text-gray-600 dark:text-gray-400 mt-2 text-justify'>
-                        ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} al reserva  
+                        ¿Estás seguro de que deseas {dataADesactivar!.activo ? 'desactivar' : 'activar'} la reserva  
                         <b>
-                            {/* {' ' + capitalizePrimeraLetra((dataADesactivar?.nombre) ?? '')} */}
-                            sadasdasd
+                            {' ' + (dataADesactivar?.codigo ?? '')}
                         </b>? 
                       </p>
 
@@ -1494,7 +1499,7 @@ export default function ReservaPage() {
               <p className="text-gray-600">Gestiona los datos de reservas del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              {siTienePermiso("reservas", "exportar") &&
+              {/* {siTienePermiso("reservas", "exportar") &&
                 <Button
                   variant="outline"
                   className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -1502,7 +1507,7 @@ export default function ReservaPage() {
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
                 </Button>
-              }
+              } */}
 
               {siTienePermiso("reservas", "crear") && 
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"

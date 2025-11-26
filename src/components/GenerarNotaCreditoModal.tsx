@@ -22,17 +22,19 @@ interface GenerarNotaCreditoModalProps {
   isPending: boolean;
   reservaData: any; // Datos completos de la reserva desde el backend
   selectedPasajeroId?: number; // ID del pasajero específico para pago individual
+  itemsNCPrecalculados?: any[]; // 🆕 Items pre-calculados del backend
+  modoPrecalculado?: boolean; // 🆕 Si true, usa items pre-calculados y deshabilita edición
 }
 
 
 const motivosNC = [
-  { value: 1, label: "Devolución y Ajuste de precios" },
-  { value: 2, label: "Devolución" },
+  { value: 1, label: "Devolución y Ajuste de precios (cancelación)" },
+  { value: 2, label: "Devolución/Cancelación" },
   { value: 3, label: "Descuento" },
-  { value: 4, label: "Bonificación" },
-  { value: 5, label: "Crédito incobrable" },
-  { value: 6, label: "Recupero de costo" },
-  { value: 7, label: "Recupero de gasto" },
+  // { value: 4, label: "Bonificación" },
+  // { value: 5, label: "Crédito incobrable" },
+  // { value: 6, label: "Recupero de costo" },
+  // { value: 7, label: "Recupero de gasto" },
   { value: 8, label: "Ajuste de precio" },
 ]
 
@@ -42,18 +44,26 @@ export default function GenerarNotaCreditoModal({
   onConfirm,
   isPending,
   reservaData,
-  selectedPasajeroId
+  selectedPasajeroId,
+  itemsNCPrecalculados = [], // 🆕
+  modoPrecalculado = false, // 🆕
 }: GenerarNotaCreditoModalProps) {
 
-  const [tipoNC, setTipoNC] = useState<"total" | "parcial" | "">("")
+  const [tipoNC, setTipoNC] = useState<"total" | "parcial" | "">(modoPrecalculado ? "parcial" : "")
 
   const [motivo, setMotivo] = useState("")
   const [observaciones, setObservaciones] = useState("")
   const [monto, setMonto] = useState("")
 
-  console.log(reservaData)
+  // 🆕 Calcular monto de items pre-calculados
+  const montoPrecalculado = itemsNCPrecalculados?.reduce((sum: number, item: any) => {
+    return sum + (item.precio_unitario * (item.cantidad || 1));
+  }, 0) || 0;
 
+  console.log(reservaData)
   console.log(selectedPasajeroId)
+  console.log('📋 Items NC pre-calculados:', itemsNCPrecalculados)
+  console.log('💰 Monto pre-calculado:', montoPrecalculado)
 
   // Calcular el monto base según si es por pasajero o global
   const montoBase = (() => {
@@ -113,13 +123,15 @@ export default function GenerarNotaCreditoModal({
                     </div>
                   
 
-                  <div className="space-y-4 mt-6">
-                    <Label className="text-lg font-semibold">Tipo de Nota de Crédito</Label>
-                    <RadioGroup
-                      value={tipoNC}
-                      onValueChange={(value: any) => setTipoNC(value)}
-                      className="space-y-4"
-                    >
+                  {/* 🆕 Ocultar selección de tipo si está en modo pre-calculado */}
+                  {!modoPrecalculado && (
+                    <div className="space-y-4 mt-6">
+                      <Label className="text-lg font-semibold">Tipo de Nota de Crédito</Label>
+                      <RadioGroup
+                        value={tipoNC}
+                        onValueChange={(value: any) => setTipoNC(value)}
+                        className="space-y-4"
+                      >
                       
 
                       <div
@@ -180,9 +192,34 @@ export default function GenerarNotaCreditoModal({
                         </Label>
                       </div>
                     </RadioGroup>
-                  </div>
+                    </div>
+                  )}
+
+                  {/* 🆕 Mostrar monto pre-calculado cuando está en modo pre-calculado */}
+                  {modoPrecalculado && (
+                    <div className="mt-6 bg-purple-50 border-2 border-purple-300 rounded-lg p-5">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-purple-900 flex items-center">
+                          <FileText className="w-5 h-5 mr-2" />
+                          Nota de Crédito Parcial (Pre-calculada)
+                        </h4>
+                        <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                          AUTOMÁTICA
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex justify-between items-center">
+                        <span className="text-gray-700">Monto a acreditar:</span>
+                        <span className="text-2xl font-bold text-purple-700">
+                          {formatearSeparadorMiles.format(montoPrecalculado)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-2 italic">
+                        Este monto fue calculado automáticamente por el sistema según los pagos realizados (excluyendo la seña no reembolsable).
+                      </p>
+                    </div>
+                  )}
                 
-                  {tipoNC === "parcial" && (
+                  {(tipoNC === "parcial" && !modoPrecalculado) && (
                     <div className="space-y-2">
                       <Label htmlFor="monto" className="text-base font-semibold">
                         Monto a Acreditar <span className="text-destructive">*</span>
@@ -256,7 +293,14 @@ export default function GenerarNotaCreditoModal({
                           <div className="flex justify-between items-center pt-2 border-t">
                             <span className="text-muted-foreground font-medium">Monto a acreditar:</span>
                             <span className="font-bold text-base text-destructive">
-                              {tipoNC === "total" ? formatearSeparadorMiles.format(montoBase) : monto ? `${formatearSeparadorMiles.format(Number(monto))}` : "$0.00"}
+                              {tipoNC === "total" 
+                                ? formatearSeparadorMiles.format(montoBase) 
+                                : modoPrecalculado 
+                                  ? formatearSeparadorMiles.format(montoPrecalculado)
+                                  : monto 
+                                    ? `${formatearSeparadorMiles.format(Number(monto))}` 
+                                    : "$0.00"
+                              }
                             </span>
                           </div>
                         </>
@@ -279,7 +323,7 @@ export default function GenerarNotaCreditoModal({
               </Button>
               <Button
                 type='button'
-                disabled={isPending || !tipoNC || !motivo || (tipoNC === "parcial" && !monto)}
+                disabled={isPending || !tipoNC || !motivo || (tipoNC === "parcial" && !modoPrecalculado && !monto)}
                 onClick={(e) => {
                   e.stopPropagation();
 
@@ -293,22 +337,25 @@ export default function GenerarNotaCreditoModal({
                     return;
                   }
 
-                  if (tipoNC === "parcial" && !monto) {
-                    handleShowToast('Debes ingresar el monto a acreditar', 'error');
-                    return;
-                  }
+                  // 🆕 Validaciones solo si NO está en modo pre-calculado
+                  if (!modoPrecalculado) {
+                    if (tipoNC === "parcial" && !monto) {
+                      handleShowToast('Debes ingresar el monto a acreditar', 'error');
+                      return;
+                    }
 
-                  if (tipoNC === "parcial" && parseFloat(monto) > montoBase) {
-                    handleShowToast(
-                      `El monto no puede exceder ${formatearSeparadorMiles.format(montoBase)}`,
-                      'error'
-                    );
-                    return;
-                  }
+                    if (tipoNC === "parcial" && parseFloat(monto) > montoBase) {
+                      handleShowToast(
+                        `El monto no puede exceder ${formatearSeparadorMiles.format(montoBase)}`,
+                        'error'
+                      );
+                      return;
+                    }
 
-                  if (tipoNC === "parcial" && parseFloat(monto) <= 0) {
-                    handleShowToast('El monto debe ser mayor a cero', 'error');
-                    return;
+                    if (tipoNC === "parcial" && parseFloat(monto) <= 0) {
+                      handleShowToast('El monto debe ser mayor a cero', 'error');
+                      return;
+                    }
                   }
 
                   const payload: any = {
@@ -317,15 +364,21 @@ export default function GenerarNotaCreditoModal({
                     observaciones: observaciones || '',
                   };
 
-                  // 🆕 Para NC Parcial, construir el array de items según la especificación del backend
+                  // 🆕 Usar items pre-calculados si está en modo pre-calculado
                   if (tipoNC === "parcial") {
-                    payload.items = [
-                      {
-                        descripcion: observaciones || "Nota de crédito parcial",
-                        cantidad: 1,
-                        precio_unitario: parseFloat(monto)
-                      }
-                    ];
+                    if (modoPrecalculado && itemsNCPrecalculados.length > 0) {
+                      // Usar items del backend
+                      payload.items = itemsNCPrecalculados;
+                    } else {
+                      // Construir items manualmente
+                      payload.items = [
+                        {
+                          descripcion: observaciones || "Nota de crédito parcial",
+                          cantidad: 1,
+                          precio_unitario: parseFloat(monto)
+                        }
+                      ];
+                    }
                   }
 
                   console.log('📦 Payload NC generado:', payload);

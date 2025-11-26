@@ -5,7 +5,6 @@
 import { startTransition, use, useEffect, useState } from "react"
 import {
   Search,
-  Plus,
   Edit,
   Trash2,
   MoreHorizontal,
@@ -15,7 +14,6 @@ import {
   // Users,
   // Package,
   // User,
-  Download,
   RefreshCw,
   Eye,
   Calendar,
@@ -506,7 +504,7 @@ export default function ModulosPage() {
               </div>
               <p className="text-gray-600">Gestiona los tipos de documentos del sistema y sus estados.</p>
             </div>
-            <div className="flex gap-3">
+            {/* <div className="flex gap-3">
               <Button
                 variant="outline"
                 className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -519,7 +517,7 @@ export default function ModulosPage() {
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Tipo Documento
               </Button>
-            </div>
+            </div> */}
           </div>
 
           {/* Stats Cards */}

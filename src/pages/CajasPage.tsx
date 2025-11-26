@@ -14,7 +14,6 @@ import {
   // Users,
   // Package,
   // User,
-  Download,
   // RefreshCw,
   Eye,
   Loader2Icon,
@@ -1112,7 +1111,7 @@ export default function CajasPage() {
               <p className="text-gray-600">Gestiona los datos de los cajas del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              {siTienePermiso("cajas", "exportar") && 
+              {/* {siTienePermiso("cajas", "exportar") && 
                   <Button
                     variant="outline"
                     className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -1120,7 +1119,7 @@ export default function CajasPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Exportar
                   </Button>
-              }
+              } */}
 
               {siTienePermiso("cajas", "crear") && (
                 <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"

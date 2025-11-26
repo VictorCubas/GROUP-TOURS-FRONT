@@ -11,7 +11,6 @@ import {
   MoreHorizontal,
   Check,
   X,
-  Download,
   Eye,
   Calendar,
   Loader2Icon,
@@ -790,7 +789,7 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
             <p className="text-gray-600">Gestiona los destinos del sistema de manera eficiente</p>
           </div>
           <div className="flex gap-3">
-              {siTienePermiso("destinos", "exportar") && 
+              {/* {siTienePermiso("destinos", "exportar") && 
                   <Button
                     variant="outline"
                     className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -798,7 +797,7 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
                     <Download className="h-4 w-4 mr-2" />
                     Exportar
                   </Button>
-              }
+              } */}
 
               {siTienePermiso("destinos", "crear") && (
                 <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"

@@ -12,7 +12,7 @@ import {
   // Users,
   // Package,
   // User,
-  Download,
+  // Download,
   // RefreshCw,
   Eye,
   Loader2Icon,
@@ -805,7 +805,7 @@ export default function AperturaCajasPage() {
               <p className="text-gray-600">Gestiona los datos de los aperturas del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              {siTienePermiso("aperturas", "exportar") && 
+              {/* {siTienePermiso("aperturas", "exportar") && 
                   <Button
                     variant="outline"
                     className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -813,7 +813,7 @@ export default function AperturaCajasPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Exportar
                   </Button>
-              }
+              } */}
 
               {siTienePermiso("aperturas", "crear") && (
                 <Button

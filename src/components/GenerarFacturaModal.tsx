@@ -22,6 +22,8 @@ interface GenerarFacturaModalProps {
   isPending: boolean;
   reservaData: any; // Datos completos de la reserva desde el backend
   selectedPasajeroId?: number; // ID del pasajero específico para pago individual
+  tipo?: 'normal' | 'cancelacion'; // 🆕 Tipo de factura
+  montoCancelacion?: number; // 🆕 Monto para factura de cancelación
 }
 
 export default function GenerarFacturaModal({
@@ -31,7 +33,8 @@ export default function GenerarFacturaModal({
   isPending,
   reservaData,
   selectedPasajeroId,
-  
+  tipo = 'normal', // 🆕 Por defecto es factura normal
+  montoCancelacion, // 🆕 Monto para cancelación
 }: GenerarFacturaModalProps) {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null)
   const [activeTab, setActiveTab] = useState("form")
@@ -156,10 +159,14 @@ export default function GenerarFacturaModal({
       // Items (desde reservaData con datos reales)
       items: [{
         code: reservaData.paquete?.codigo || 'PKG-001',
-        description: reservaData.paquete?.nombre || 'Paquete Turístico',
+        description: tipo === 'cancelacion'
+          ? `Regularización - Cancelación de Reserva ${reservaData.codigo || ''}`
+          : (reservaData.paquete?.nombre || 'Paquete Turístico'),
         unitMeasure: 'Unidad',
-        quantity: reservaData.cantidad_pasajeros || 1,
-        unitPrice: reservaData.precio_unitario || 0,
+        quantity: tipo === 'cancelacion' ? 1 : (reservaData.cantidad_pasajeros || 1),
+        unitPrice: tipo === 'cancelacion'
+          ? (montoCancelacion || reservaData.monto_pagado || 0)
+          : (reservaData.precio_unitario || 0),
         discount: 0,
         taxType: configFacturaData.subtipo_impuesto_nombre?.includes('10') ? 'iva10' :
                 configFacturaData.subtipo_impuesto_nombre?.includes('5') ? 'iva5' : 'exenta'
@@ -272,12 +279,18 @@ export default function GenerarFacturaModal({
                       <div className="flex items-center justify-between b pb-4 ">
                         <div>
                             <div className='flex w-full justify-between'>
-                              <h2 className="text-2xl font-bold">Registro de Factura - Paquetes de Viajes</h2>
+                              <h2 className="text-2xl font-bold">
+                                {tipo === 'cancelacion'
+                                  ? 'Factura de Regularización - Cancelación'
+                                  : 'Registro de Factura - Paquetes de Viajes'}
+                              </h2>
                               <FileText className="h-8 w-8 text-blue-600" />
                             </div>
 
                           <p className='pt-3 text-gray-500'>
-                            Registro de facturas para paquetes turísticos
+                            {tipo === 'cancelacion'
+                              ? 'Generación de factura sobre monto pagado para proceder con Nota de Crédito'
+                              : 'Registro de facturas para paquetes turísticos'}
                           </p>
                         </div>
                       </div>

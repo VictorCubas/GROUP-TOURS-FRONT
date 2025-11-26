@@ -340,7 +340,7 @@ export default function ReporteMovCajasPage() {
               </div>
               <h1 className="text-3xl font-semibold text-gray-900">Reporte de Movimientos de Caja</h1>
             </div>
-            <p className="text-gray-600">Visualiza y analiza todos los movimientos (ingresos y egresos) de las cajas.</p>
+            <p className="text-gray-600">Visualiza y analiza todos los movimientos (débitos y créditos) de las cajas.</p>
           </div>
           <div className="flex gap-3">
             {(siTienePermiso("reportes", "exportar") || hasRole('Gerencial')) && (
@@ -398,14 +398,14 @@ export default function ReporteMovCajasPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{data.resumen.total_registros}</div>
                 <p className="text-xs text-muted-foreground">
-                  {data.resumen.ingresos_count} ingresos, {data.resumen.egresos_count} egresos
+                  {data.resumen.ingresos_count} débitos, {data.resumen.egresos_count} créditos
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Ingresos</CardTitle>
+                <CardTitle className="text-sm font-medium">Total Débitos</CardTitle>
                 <TrendingUp className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
@@ -420,7 +420,7 @@ export default function ReporteMovCajasPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Egresos</CardTitle>
+                <CardTitle className="text-sm font-medium">Total Créditos</CardTitle>
                 <TrendingDown className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
@@ -530,8 +530,8 @@ export default function ReporteMovCajasPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="todas">Todos</SelectItem>
-                        <SelectItem value="ingreso">Ingresos</SelectItem>
-                        <SelectItem value="egreso">Egresos</SelectItem>
+                        <SelectItem value="ingreso">Débitos</SelectItem>
+                        <SelectItem value="egreso">Créditos</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

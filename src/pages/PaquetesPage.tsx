@@ -88,7 +88,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Distribuidora, Moneda, Paquete, PriceMode, RespuestaPaginada, SalidaPaquete, TipoPaquete, } from "@/types/paquetes"
 import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
-import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
+import { activarDesactivarData, fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataTiposPaquetesTodos, fetchDataDistribuidoraTodos, fetchDataServiciosTodos, fetchDataMonedaTodos, fetchCotizacionVigente } from "@/components/utils/httpPaquete"
 import {Controller, useForm, useWatch } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
 import { ToastContext } from "@/context/ToastContext"
@@ -182,6 +182,7 @@ export default function ModulosPage() {
 
   const [paqueteModalidad, setPaqueteModalidad] = useState<'flexible' | 'fijo'>('flexible');
   const [fixedRoomTypeId, setFixedRoomTypeId] = useState('');
+  const [preciosCatalogoTrigger, setPreciosCatalogoTrigger] = useState(0); // Para forzar recálculo
   
   // DATOS DEL FORMULARIO 
   const {control,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
@@ -318,6 +319,12 @@ export default function ModulosPage() {
         queryKey: ['todos-zona-geografica',], //data cached
         queryFn: () => fetchDataZonasGeograficasTodos(),
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
+    });
+
+  const {data: dataCotizacion, isFetching: isFetchingCotizacion} = useQuery({
+        queryKey: ['cotizacion-vigente',], //data cached
+        queryFn: () => fetchCotizacionVigente(),
+        staleTime: 30 * 60 * 1000 //despues de 30min los datos se consideran obsoletos
     });
 
 
@@ -584,6 +591,17 @@ export default function ModulosPage() {
         setSalidas([]);
         setSelectedServicios([]);
         setPermissionSearchTerm("");
+        setSelectedHotels(new Set());
+        setModoPrecio({}); // Resetear modo de precio
+
+        // 🔹 Limpiar campos dinámicos de precios_catalogo y cupos
+        const formValues = getValuesSalida();
+        Object.keys(formValues).forEach((key) => {
+          if (key.startsWith('precio_proveedor_') || key.startsWith('precio_habitacion_por_hotel_') || key.startsWith('cupo_habitacion_')) {
+            setValueSalida(key, undefined);
+          }
+        });
+
         reset({
             nombre: '',
             tipo_paquete: '',
@@ -595,6 +613,20 @@ export default function ModulosPage() {
             imagen: '',
             moneda: '',
             zona_geografica: ''
+        });
+
+        resetSalida({
+          precio_desde: '',
+          cantidadNoche: '',
+          precio_hasta: '',
+          precio_hasta_editable: '',
+          precio_desde_editable: '',
+          senia: '',
+          fecha_salida_v2: '',
+          fecha_regreso_v2: '',
+          ganancia: '',
+          comision: '',
+          cupo: '',
         });
 
 
@@ -847,8 +879,9 @@ export default function ModulosPage() {
       console.log(selectedDestino) 
 
       if(selectedDestino.length){  
+        console.log('selectedDestino[0]: ', selectedDestino[0])
         // setValue('nombre', selectedDestino[0].ciudad_nombre);
-        setCiudadDataSelected(selectedDestino[0].ciudad_nombre);
+        setCiudadDataSelected(selectedDestino[0].id); // 🔹 Cambio: Ahora guardamos el ID de la ciudad
         setCiudadDataCompleto(selectedDestino[0]);
 
         //zona_geografica_nombre
@@ -1524,6 +1557,14 @@ useEffect(() => {
       comision: '',
     })
 
+    // 🔹 Limpiar campos dinámicos de precios_catalogo
+    const formValues = getValuesSalida();
+    Object.keys(formValues).forEach((key) => {
+      if (key.startsWith('precio_proveedor_') || key.startsWith('precio_habitacion_por_hotel_') || key.startsWith('cupo_habitacion_')) {
+        setValueSalida(key, undefined);
+      }
+    });
+
     resetSalida({
       precio_desde: '',
       cantidadNoche: '',
@@ -1541,6 +1582,7 @@ useEffect(() => {
     setEditingSalidaId(null);
     setValidando(false);
     setFixedRoomTypeId('')
+    setModoPrecio({}) // Resetear modo de precio
   }
   
 
@@ -1779,10 +1821,19 @@ const handleSubmitClick = useCallback(async () => {
           console.log(rangoPrecioDesdeHasta); 
           // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
 
+          // 🔹 Obtener la moneda seleccionada para aplicar conversión si es necesario
+          const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+          const esGuaranies = monedaActual?.codigo === 'PYG';
+          const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+          
+          // 🔹 Calcular factor de conversión (1 si es USD, cotización si es PYG)
+          const factorConversion = (esGuaranies && cotizacionVigente) ? Number(cotizacionVigente) : 1;
           
           if(paqueteModalidad === 'flexible'){
-            setValueSalida('precio_desde', rangoPrecioDesdeHasta.precioMin.toString()); 
-            setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMax.toString());
+            const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin * factorConversion);
+            const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax * factorConversion);
+            setValueSalida('precio_desde', precioDesdeConvertido.toString()); 
+            setValueSalida('precio_hasta', precioHastaConvertido.toString());
           }
           else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
             console.log(fixedRoomTypeId);
@@ -1794,7 +1845,9 @@ const handleSubmitClick = useCallback(async () => {
             console.log(habitacionFiltered[0].precio_noche);
             console.log(rangoPrecioDesdeHasta.noches);
             console.log(habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches);
-            setValueSalida('precio_desde', (habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches).toString());
+            const precioBase = habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches;
+            const precioDesdeConvertido = Math.round(precioBase * factorConversion);
+            setValueSalida('precio_desde', precioDesdeConvertido.toString());
             setValueSalida('precio_hasta', '');
           }
         }
@@ -1809,7 +1862,63 @@ const handleSubmitClick = useCallback(async () => {
         setValueSalida('cantidadNoche', calculateNoches(fechaSalida, fechaRegreso).toString());
       }
       // 👇 dependencias simples, sin llamadas complejas
-    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList, fixedRoomTypeId]);
+    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList, fixedRoomTypeId, monedaSeleccionada, dataMonedaList, dataCotizacion, paqueteModalidad, propio]);
+
+
+    // 🔹 Auto-calcular precios cuando propio = false (distribuidora)
+    // Los precios ingresados son PRECIOS FINALES TOTALES en la MISMA moneda del paquete
+    // NO se aplica conversión porque ya están en la moneda correcta
+    useEffect(() => {
+      if (propio) return; // Solo para distribuidoras
+
+      // Observar todos los valores del formulario de salida
+      const formValues = getValuesSalida();
+      
+      // Extraer precios del catálogo (precio_proveedor_* y precio_habitacion_por_hotel_*)
+      const preciosCatalogo: number[] = [];
+      
+      Object.entries(formValues).forEach(([key, value]) => {
+        if ((key.startsWith('precio_proveedor_') || key.startsWith('precio_habitacion_por_hotel_')) && value) {
+          const precio = Number(value);
+          if (!isNaN(precio) && precio > 0) {
+            preciosCatalogo.push(precio);
+          }
+        }
+      });
+
+      console.log('🔹 [DISTRIBUIDORA] Precios del catálogo extraídos:', preciosCatalogo);
+
+      if (preciosCatalogo.length === 0) {
+        // Si no hay precios, limpiar los campos
+        setValueSalida('precio_desde_editable', '');
+        setValueSalida('precio_hasta_editable', '');
+        return;
+      }
+
+      // Calcular mínimo y máximo DIRECTAMENTE de los precios finales ingresados
+      // ⚠️ NO SE MULTIPLICA POR NOCHES (ya son precios finales)
+      // ⚠️ NO SE APLICA CONVERSIÓN (ya están en la moneda del paquete)
+      const precioMin = Math.min(...preciosCatalogo);
+      const precioMax = Math.max(...preciosCatalogo);
+
+      console.log('🔹 [DISTRIBUIDORA] Precio mínimo:', precioMin);
+      console.log('🔹 [DISTRIBUIDORA] Precio máximo:', precioMax);
+
+      // Actualizar los campos directamente (sin conversión)
+      setValueSalida('precio_desde_editable', precioMin.toString());
+      
+      if (paqueteModalidad === 'flexible') {
+        setValueSalida('precio_hasta_editable', precioMax.toString());
+      } else {
+        setValueSalida('precio_hasta_editable', '');
+      }
+    }, [
+      propio, 
+      paqueteModalidad, 
+      getValuesSalida, 
+      setValueSalida,
+      preciosCatalogoTrigger, // Se actualiza cuando cambian los precios del catálogo
+    ]);
 
 
     //FUCNIONES DE HOTELES DE LAS SALIDAS
@@ -2454,7 +2563,7 @@ const handleSubmitClick = useCallback(async () => {
               <p className="text-gray-600">Gestiona los datos de paquetes del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              {siTienePermiso("paquetes", "exportar") &&
+              {/* {siTienePermiso("paquetes", "exportar") &&
                 <Button
                   variant="outline"
                   className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -2462,7 +2571,7 @@ const handleSubmitClick = useCallback(async () => {
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
                 </Button>
-              }
+              } */}
 
               {siTienePermiso("paquetes", "exportar") && 
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
@@ -2556,7 +2665,7 @@ const handleSubmitClick = useCallback(async () => {
                                 render={({ field }) => (
                                   <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                     <Select
-                                      disabled={!!dataAEditar}
+                                      // disabled={!!dataAEditar}
                                       value={field.value}
                                       onValueChange={(value) => {
                                         field.onChange(value)
@@ -2625,7 +2734,7 @@ const handleSubmitClick = useCallback(async () => {
                                   <GenericSearchSelect
                                     dataList={dataDestinoList}
                                     value={selectedDestinoID}
-                                    disabled={!!dataAEditar}
+                                    // disabled={!!dataAEditar}
                                     onValueChange={setSelectedDestinoID}
                                     handleDataNoSeleccionada={handleDestinoNoSeleccionada}
                                     placeholder="Selecciona el destino..."
@@ -2720,15 +2829,18 @@ const handleSubmitClick = useCallback(async () => {
                               render={({ field }) => (
                                 <div className="flex items-center gap-3 cursor-pointer m-0">
                                   <Checkbox
-                                    disabled={!!dataAEditar}
+                                    // disabled={!!dataAEditar}
                                     id="personalizado"
                                     checked={field.value}
                                     onCheckedChange={(checked) => {
                                       const isChecked = !!checked;
                                       field.onChange(isChecked);
                                       // Si personalizado es true, establecer modalidad a 'fijo'
+                                      // Si personalizado es false, establecer modalidad a 'flexible'
                                       if (isChecked) {
                                         setPaqueteModalidad('fijo');
+                                      } else {
+                                        setPaqueteModalidad('flexible');
                                       }
                                     }}
                                     className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
@@ -2750,7 +2862,7 @@ const handleSubmitClick = useCallback(async () => {
                                 id="cantidad_pasajeros"
                                 autoComplete="cantidad_pasajeros"
                                 placeholder="Ingrese la cantidad de pasajeros"
-                                disabled={!!dataAEditar}
+                                // disabled={!!dataAEditar}
                                 className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 disabled:pointer-events-auto disabled:cursor-not-allowed"
                                 {...register('cantidad_pasajeros', {
                                   required: {
@@ -2799,7 +2911,7 @@ const handleSubmitClick = useCallback(async () => {
                                     <div className="w-full min-w-0 select-container"> {/* Contenedor para controlar el layout */}
                                       <Select
                                         value={field.value}
-                                        disabled={!!dataAEditar}
+                                        // disabled={!!dataAEditar}
                                         onValueChange={(value) => {
                                           field.onChange(value)
                                           if (value) {
@@ -3351,6 +3463,13 @@ const handleSubmitClick = useCallback(async () => {
                                       </p>
                                     </div>
                                   )}
+                                  {!watch('personalizado') && (
+                                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                      <p className="text-sm text-blue-800">
+                                        <strong>Nota:</strong> Para habilitar la modalidad "Paquete cerrado", debes marcar la opción "Personalizado".
+                                      </p>
+                                    </div>
+                                  )}
                                   <div className="grid md:grid-cols-2 gap-4">
                                     <div
                                       onClick={() => {
@@ -3360,7 +3479,7 @@ const handleSubmitClick = useCallback(async () => {
                                         setPaqueteModalidad('flexible')
                                       }}
                                       className={`border-2 rounded-lg p-4 transition-all ${
-                                        watch('personalizado') ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                                        watch('personalizado') || dataAEditar ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
                                       } ${
                                         paqueteModalidad === 'flexible' 
                                           ? 'border-blue-500 bg-blue-50' 
@@ -3378,13 +3497,13 @@ const handleSubmitClick = useCallback(async () => {
 
                                     <div
                                       onClick={() => {
-                                        if(dataAEditar || watch('personalizado'))
+                                        if(dataAEditar || !watch('personalizado'))
                                           return;
                                         
                                         setPaqueteModalidad('fijo')
                                       }}
                                       className={`border-2 rounded-lg p-4 transition-all ${
-                                        watch('personalizado') ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
+                                        !watch('personalizado') || dataAEditar ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
                                       } ${
                                         paqueteModalidad === 'fijo' 
                                           ? 'border-orange-500 bg-orange-50' 
@@ -3460,6 +3579,34 @@ const handleSubmitClick = useCallback(async () => {
                                                         Complete los datos de la nueva salida para agregarla al al paquete.
                                                       </DialogDescription>
                                                     </DialogHeader>
+
+                                                    {/* 💡 Card Informativo sobre la Moneda del Catálogo */}
+                                                    {!propio && (() => {
+                                                      const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                      if (monedaActual) {
+                                                        return (
+                                                          <Card className="mt-4 border-blue-200 bg-blue-50">
+                                                            <CardContent className="pt-4">
+                                                              <div className="flex items-start gap-3">
+                                                                <div className="flex-shrink-0 mt-0.5">
+                                                                  <Info className="h-5 w-5 text-blue-600" />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                  <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                                                                    💰 Información sobre Precios del Catálogo
+                                                                  </h3>
+                                                                  <p className="text-sm text-blue-800">
+                                                                    Los precios del catálogo de la distribuidora deben ingresarse en <span className="font-bold">{monedaActual.nombre} ({monedaActual.simbolo})</span>, que es la moneda seleccionada para este paquete.
+                                                                  </p>
+                                                                </div>
+                                                              </div>
+                                                            </CardContent>
+                                                          </Card>
+                                                        );
+                                                      }
+                                                      return null;
+                                                    })()}
+
                                                     <div className="grid gap-4 py-4">
                                                         <div className="bg-white rounded-lg shadow-md p-6">
                                                           <h2 className="text-lg font-semibold text-gray-900 mb-4">Información de Salidas</h2>
@@ -3599,10 +3746,18 @@ const handleSubmitClick = useCallback(async () => {
                                                                             : 'border-blue-200 focus:border-blue-500'
                                                                         }`}
                                                                       />
-                                                                      {/* Mensaje de error (si quieres mostrarlo): */}
-                                                                      {/* {error && (
-                                                                        <span className="text-red-400 text-sm mt-1">{error.message}</span>
-                                                                      )} */}
+                                                                      {/* Mensaje informativo sobre la moneda */}
+                                                                      {(() => {
+                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                        if (monedaActual) {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-600 mt-1 font-medium">
+                                                                              Monto en {monedaActual.nombre} ({monedaActual.simbolo})
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        return null;
+                                                                      })()}
                                                                     </div>
                                                                   )}
                                                                 />
@@ -3679,25 +3834,54 @@ const handleSubmitClick = useCallback(async () => {
                                                                   </Label>
 
                                                                   {propio ? 
-                                                                    <div className="text-2xl font-bold text-blue-600">
-                                                                      {formatearSeparadorMiles.format(+(precioDesde ?? 0))}
+                                                                    <div className="col-span-3">
+                                                                      <div className="text-2xl font-bold text-blue-600">
+                                                                        {formatearSeparadorMiles.format(+(precioDesde ?? 0))}
+                                                                      </div>
+                                                                      {(() => {
+                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                        const esGuaranies = monedaActual?.codigo === 'PYG';
+                                                                        const esUSD = monedaActual?.codigo === 'USD';
+                                                                        const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+                                                                        
+                                                                        if (esGuaranies && cotizacionVigente && !isFetchingCotizacion) {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Calculado automáticamente según la cotización del día (1 USD = Gs. {Number(cotizacionVigente).toLocaleString('es-PY')})
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        if (esUSD) {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Precio calculado automáticamente en USD
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        return null;
+                                                                      })()}
                                                                     </div> :
 
-                                                                    <div className="col-span-3 flex gap-2">
-                                                                    <Input
-                                                                      id="precio_desde_editable"
-                                                                      type="text"
-                                                                      {...registerSalida('precio_desde_editable', {
-                                                                          required: true, })
+                                                                    <div className="col-span-3">
+                                                                      <div className="text-2xl font-bold text-blue-600">
+                                                                        {formatearSeparadorMiles.format(+(watchSalida('precio_desde_editable') ?? 0))}
+                                                                      </div>
+                                                                      {(() => {
+                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                        
+                                                                        if (monedaActual) {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Precio mínimo calculado del catálogo en {monedaActual.nombre} ({monedaActual.simbolo})
+                                                                            </p>
+                                                                          );
                                                                         }
-                                                                        placeholder="150"
-                                                                        className={`flex-1 h-auto py-2 ${
-                                                                          errorsSalida?.precio_desde_editable
-                                                                            ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
-                                                                            : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
-                                                                        }`}
-                                                                    />
-                                                                  </div>
+                                                                        
+                                                                        return null;
+                                                                      })()}
+                                                                    </div>
                                                                   }
                                                               </div>
 
@@ -3707,31 +3891,67 @@ const handleSubmitClick = useCallback(async () => {
                                                                   </Label>
 
                                                                   {propio ? 
-                                                                    <div className="text-2xl font-bold text-blue-600 flex">
-                                                                      {
-                                                                        paqueteModalidad === 'flexible' ? 
-                                                                          formatearSeparadorMiles.format(+(precioHasta ?? 0)) :
-                                                                          <Badge
-                                                                            className="bg-gray-100 text-gray-700 border-gray-200">
-                                                                            No aplica
-                                                                          </Badge>
-                                                                      }
+                                                                    <div className="col-span-3">
+                                                                      <div className="text-2xl font-bold text-blue-600 flex">
+                                                                        {
+                                                                          paqueteModalidad === 'flexible' ? 
+                                                                            formatearSeparadorMiles.format(+(precioHasta ?? 0)) :
+                                                                            <Badge
+                                                                              className="bg-gray-100 text-gray-700 border-gray-200">
+                                                                              No aplica
+                                                                            </Badge>
+                                                                        }
+                                                                      </div>
+                                                                      {(() => {
+                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                        const esGuaranies = monedaActual?.codigo === 'PYG';
+                                                                        const esUSD = monedaActual?.codigo === 'USD';
+                                                                        const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+                                                                        
+                                                                        if (esGuaranies && cotizacionVigente && !isFetchingCotizacion && paqueteModalidad === 'flexible') {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Precio máximo calculado con cotización vigente
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        if (esUSD && paqueteModalidad === 'flexible') {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Precio máximo calculado automáticamente en USD
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        return null;
+                                                                      })()}
                                                                     </div> : 
 
-                                                                    <div className="col-span-3 flex gap-2">
-                                                                      <Input
-                                                                        id="precio_hasta_editable"
-                                                                        type="text"
-                                                                        {...registerSalida('precio_hasta_editable', {
-                                                                            required: propio, })
-                                                                          }
-                                                                          placeholder=""
-                                                                          className={`flex-1 h-auto py-2 ${
-                                                                            errorsSalida?.precio_hasta_editable
-                                                                              ? 'border-2 !border-red-400 focus:!border-red-400 focus:ring-0 outline-none !text-lg !leading-tight !font-bold'
-                                                                              : 'border-2 border-blue-200 focus:border-blue-600 !text-lg !leading-tight !font-bold text-blue-600'
-                                                                          }`}
-                                                                      />
+                                                                    <div className="col-span-3">
+                                                                      <div className="text-2xl font-bold text-blue-600 flex">
+                                                                        {
+                                                                          paqueteModalidad === 'flexible' ? 
+                                                                            formatearSeparadorMiles.format(+(watchSalida('precio_hasta_editable') ?? 0)) :
+                                                                            <Badge
+                                                                              className="bg-gray-100 text-gray-700 border-gray-200">
+                                                                              No aplica
+                                                                            </Badge>
+                                                                        }
+                                                                      </div>
+                                                                      {(() => {
+                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                        
+                                                                        if (monedaActual && paqueteModalidad === 'flexible') {
+                                                                          return (
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                              Precio máximo calculado del catálogo en {monedaActual.nombre} ({monedaActual.simbolo})
+                                                                            </p>
+                                                                          );
+                                                                        }
+                                                                        
+                                                                        return null;
+                                                                      })()}
                                                                     </div>
                                                                   }
                                                               </div>
@@ -4010,6 +4230,11 @@ const handleSubmitClick = useCallback(async () => {
                                                                                                           setValueSalida(`precio_proveedor_${habitacion.id}`, val);
                                                                                                         });
                                                                                                       }
+                                                                                                      
+                                                                                                      // Actualizar trigger para recalcular precios
+                                                                                                      if (!propio) {
+                                                                                                        setPreciosCatalogoTrigger(prev => prev + 1);
+                                                                                                      }
                                                                                                     }
                                                                                                   }}
                                                                                                   onBlur={field.onBlur}
@@ -4025,6 +4250,17 @@ const handleSubmitClick = useCallback(async () => {
                                                                                                       : 'border-blue-200 focus:border-blue-500'
                                                                                                   }`}
                                                                                                 />
+                                                                                                {(() => {
+                                                                                                  const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                                                  if (monedaActual) {
+                                                                                                    return (
+                                                                                                      <p className="text-xs text-blue-600 mt-1 font-medium">
+                                                                                                        💰 Ingrese el precio total del paquete en {monedaActual.nombre} ({monedaActual.simbolo})
+                                                                                                      </p>
+                                                                                                    );
+                                                                                                  }
+                                                                                                  return null;
+                                                                                                })()}
                                                                                               </div>
                                                                                             )}
                                                                                           />
@@ -4167,6 +4403,10 @@ const handleSubmitClick = useCallback(async () => {
                                                                                                         onValueChange={(values) => {
                                                                                                           const val = values.floatValue ?? null;
                                                                                                           field.onChange(val && val > 0 ? val : null);
+                                                                                                          // Actualizar trigger para recalcular precios
+                                                                                                          if (!propio) {
+                                                                                                            setPreciosCatalogoTrigger(prev => prev + 1);
+                                                                                                          }
                                                                                                         }}
                                                                                                         onBlur={field.onBlur}
                                                                                                         thousandSeparator="."
@@ -4182,6 +4422,17 @@ const handleSubmitClick = useCallback(async () => {
                                                                                                             : 'border-blue-200 focus:border-blue-500'
                                                                                                         } ${modoPrecio[hotel.id] === 'hotel' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                                                                       />
+                                                                                                      {modoPrecio[hotel.id] !== 'hotel' && (() => {
+                                                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+                                                                                                        if (monedaActual) {
+                                                                                                          return (
+                                                                                                            <p className="text-xs text-blue-600 mt-1 font-medium">
+                                                                                                              💰 Ingrese el precio total del paquete en {monedaActual.nombre} ({monedaActual.simbolo})
+                                                                                                            </p>
+                                                                                                          );
+                                                                                                        }
+                                                                                                        return null;
+                                                                                                      })()}
                                                                                                     </div>
                                                                                                   )}
                                                                                                 />

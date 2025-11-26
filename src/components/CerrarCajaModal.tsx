@@ -313,7 +313,7 @@ const CerrarCajaModal: React.FC<CerrarCajaModalProps> = ({
                   <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="h-5 w-5 text-green-600" />
-                      <p className="text-sm font-medium text-green-900">Ingresos</p>
+                      <p className="text-sm font-medium text-green-900">Débitos</p>
                     </div>
                     <p className="text-lg font-bold text-green-700">
                       Gs {formatearSeparadorMiles.format(Number(resumen?.totales?.total_ingresos || 0))}
@@ -323,7 +323,7 @@ const CerrarCajaModal: React.FC<CerrarCajaModalProps> = ({
                   <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingDown className="h-5 w-5 text-red-600" />
-                      <p className="text-sm font-medium text-red-900">Egresos</p>
+                      <p className="text-sm font-medium text-red-900">Créditos</p>
                     </div>
                     <p className="text-lg font-bold text-red-700">
                       Gs {formatearSeparadorMiles.format(Number(resumen?.totales?.total_egresos || 0))}

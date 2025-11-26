@@ -95,7 +95,7 @@ const AppRouter = () => {
                       </Route>
 
                       <Route path="/facturacion">
-                        <Route path="facturas" element={<FacturacionPage />} />
+                        <Route path="facturacion" element={<FacturacionPage />} />
                         {/* <Route path="modulos" element={<ModuloPage />} />
                         <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
                         <Route path="nacionalidades" element={<NacionalidadesPage />} />

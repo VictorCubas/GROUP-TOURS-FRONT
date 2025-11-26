@@ -14,7 +14,6 @@ import {
   // Users,
   // Package,
   // User,
-  Download,
   // RefreshCw,
   Eye,
   Calendar,
@@ -795,13 +794,13 @@ export default function ModulosPage() {
               <p className="text-gray-600">Gestiona los datos de personas del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              <Button
+              {/* <Button
                 variant="outline"
                 className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar
-              </Button>
+              </Button> */}
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
                 onClick={() => setActiveTab('form')}>
                 <Plus className="h-4 w-4 mr-2" />

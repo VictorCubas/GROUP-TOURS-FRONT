@@ -276,7 +276,7 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
                               ${" "}
                               {formatearSeparadorMiles.format(parseFloat(habitacion.precio_venta_final))}
                             </div>
-                            <p className="text-xs text-muted-foreground">Precio en {habitacion.precio_moneda_alternativa.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(habitacion.precio_moneda_alternativa.precio_venta_final)}</span></p> 
+                            <p className="text-xs text-muted-foreground">Precio en {habitacion?.precio_moneda_alternativa?.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(habitacion.precio_moneda_alternativa.precio_venta_final)}</span></p> 
                             <div className="text-xs text-gray-600 mb-1">Por persona</div>
                           </div>
                         

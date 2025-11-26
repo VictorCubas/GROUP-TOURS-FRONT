@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from '@tanstack/react-query';
-import { asignarPasajero, asignarTipoFacturaModalidad, cancelarReserva, descargarComprobanteById, descargarComprobantePDF, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, descargarNotaCreditoYaGenerada, generarNotaCreditoGlobal, generarNotaCreditoParcial, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
+import { asignarPasajero, asignarTipoFacturaModalidad, cancelarReserva, descargarComprobanteById, descargarComprobantePDF, descargarFacturaById, descargarFacturaGlobalById, descargarFacturaIndividualById, descargaVoucherById, descargarNotaCreditoYaGenerada, generarFacturaCancelacion, generarNotaCreditoGlobal, generarNotaCreditoParcial, pagarSenia, pagoTotal, registrarPago } from '../utils/httpReservas';
 
 export function useDescargarPDF() {
     return useMutation({
@@ -55,6 +55,16 @@ export function useDescargarFacturaIndividual() {
     onError: (error) => {
       console.error('❌ Error al generar o descargar la factura:', error);
       // toast.error('No se pudo generar el comprobante');
+    },
+  });
+}
+
+// 🆕 Hook para generar factura de cancelación (retorna data sin descargar)
+export function useGenerarFacturaCancelacion() {
+  return useMutation({
+    mutationFn: async ({ reservaId, payload }: { reservaId: number | string; payload: any }) => {
+      const data = await generarFacturaCancelacion(reservaId, payload);
+      return data; // { factura: {...}, info_nc: { items_nc: [...] } }
     },
   });
 }
@@ -160,6 +170,21 @@ export function useCancelarReserva() {
     mutationFn: async ({ reservaId, payload }: { reservaId: number | string; payload: any }) => {
       const data = await cancelarReserva(reservaId, payload);
       return data;
+    },
+  });
+}
+
+// Hook para descargar factura por ID (endpoint de facturación)
+export function useDescargarFacturaById() {
+  return useMutation({
+    mutationFn: async (facturaId: number | string) => {
+      await descargarFacturaById(facturaId);
+    },
+    onSuccess: (data) => {
+      console.log('✅ Factura descargada:', data);
+    },
+    onError: (error) => {
+      console.error('❌ Error al descargar la factura:', error);
     },
   });
 }

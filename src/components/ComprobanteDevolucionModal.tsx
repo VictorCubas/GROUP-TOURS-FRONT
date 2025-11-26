@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, Download, FileText, XCircle, Users } from 'lucide-react';
+import { CheckCircle, Download, FileText, XCircle, Users, FileCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { formatearFecha, formatearSeparadorMiles } from '@/helper/formatter';
+import GenerarNotaCreditoModal from './GenerarNotaCreditoModal';
 
 interface ComprobanteDevolucionModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ interface ComprobanteDevolucionModalProps {
   reservaData: any;
   onDescargarComprobante?: (comprobanteId: number) => void;
   isPendingDescarga?: boolean;
+  onGenerarNotaCredito?: (facturaId: number, payload: any) => void;
+  isPendingGenerarNC?: boolean;
 }
 
 const ComprobanteDevolucionModal: React.FC<ComprobanteDevolucionModalProps> = ({
@@ -21,18 +24,24 @@ const ComprobanteDevolucionModal: React.FC<ComprobanteDevolucionModalProps> = ({
   reservaData,
   onDescargarComprobante,
   isPendingDescarga = false,
+  onGenerarNotaCredito,
+  isPendingGenerarNC = false,
 }) => {
+  const [isGenerarNotaCreditoModalOpen, setIsGenerarNotaCreditoModalOpen] = useState(false);
+
   // Log de verificación de datos
   if (isOpen) {
     console.log('📊 ComprobanteDevolucionModal - Datos recibidos:', {
       pasajeros_cancelados: responseData?.pasajeros_cancelados,
       fueron_liberados: responseData?.cupos_info?.fueron_liberados,
       monto_reembolsable: responseData?.monto_reembolsable,
+      factura_para_nota_credito: responseData?.factura_para_nota_credito,
     });
   }
 
   const comprobante = responseData?.comprobante_devolucion;
   const huboDevolucion = comprobante && responseData?.monto_reembolsable > 0;
+  const facturaParaNC = responseData?.factura_para_nota_credito;
 
   // Bloquear scroll del modal padre cuando ComprobanteDevolucionModal está abierto
   useEffect(() => {
@@ -201,6 +210,58 @@ const ComprobanteDevolucionModal: React.FC<ComprobanteDevolucionModalProps> = ({
             </div>
           </div>
 
+          {/* Información de Factura para Nota de Crédito */}
+          {facturaParaNC && (
+            <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-6">
+              <h4 className="font-semibold text-purple-800 mb-3 flex items-center">
+                <FileCheck className="w-5 h-5 mr-2" />
+                FACTURA DISPONIBLE PARA NOTA DE CRÉDITO
+              </h4>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-sm text-gray-600">Número de Factura:</p>
+                  <p className="font-semibold text-gray-900">{facturaParaNC.numero}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Tipo:</p>
+                  <p className="font-semibold text-gray-900 capitalize">{facturaParaNC.tipo}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Monto Total:</p>
+                  <p className="font-semibold text-purple-700 text-lg">
+                    {reservaData?.paquete?.moneda?.simbolo || '$'}
+                    {formatearSeparadorMiles.format(facturaParaNC.total)}
+                  </p>
+                </div>
+                {facturaParaNC.pasajero && (
+                  <div>
+                    <p className="text-sm text-gray-600">Pasajero:</p>
+                    <p className="font-semibold text-gray-900">{facturaParaNC.pasajero}</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-center">
+                <Button
+                  onClick={() => setIsGenerarNotaCreditoModalOpen(true)}
+                  disabled={isPendingGenerarNC}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {isPendingGenerarNC ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <FileCheck className="w-4 h-4 mr-2" />
+                      Generar Nota de Crédito
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Proceso Completo */}
           <div className="bg-green-50 border-l-4 border-green-600 p-4 rounded">
             <h4 className="font-semibold text-green-800 mb-2 flex items-center">
@@ -215,8 +276,12 @@ const ComprobanteDevolucionModal: React.FC<ComprobanteDevolucionModalProps> = ({
                 </>
               ) : (
                 <>
-                  Se procesaron {responseData?.facturas_afectadas} factura(s) y se generaron las 
-                  Notas de Crédito correspondientes.
+                  Se procesaron {responseData?.facturas_afectadas} factura(s).
+                  {facturaParaNC && (
+                    <span className="block mt-2 font-semibold text-purple-700">
+                      ⚠️ Debe generar la Nota de Crédito manualmente usando el botón de arriba.
+                    </span>
+                  )}
                 </>
               )}
             </p>
@@ -299,6 +364,25 @@ const ComprobanteDevolucionModal: React.FC<ComprobanteDevolucionModalProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Modal de Generar Nota de Crédito */}
+      {isGenerarNotaCreditoModalOpen && facturaParaNC && (
+        <GenerarNotaCreditoModal
+          isOpen={isGenerarNotaCreditoModalOpen}
+          onClose={() => setIsGenerarNotaCreditoModalOpen(false)}
+          onConfirm={(payload) => {
+            console.log('📦 Generando NC para factura ID:', facturaParaNC.id);
+            console.log('📦 Payload:', payload);
+            if (onGenerarNotaCredito) {
+              onGenerarNotaCredito(facturaParaNC.id, payload);
+            }
+            setIsGenerarNotaCreditoModalOpen(false);
+          }}
+          isPending={isPendingGenerarNC}
+          reservaData={reservaData}
+          selectedPasajeroId={undefined}
+        />
+      )}
     </div>,
     document.body
   );

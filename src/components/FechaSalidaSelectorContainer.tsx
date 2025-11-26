@@ -229,7 +229,7 @@ export function FechaSalidaSelectorContainer({
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-lg text-blue-600">Desde {departure.moneda.simbolo}{formatearSeparadorMiles.format(departure.precio_venta_total_min)}</p>
-                    <p className="text-xs text-muted-foreground">Precio en {departure.precio_moneda_alternativa.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(departure.precio_moneda_alternativa.precio_venta_min)}</span></p> 
+                    <p className="text-xs text-muted-foreground">Precio en {departure?.precio_moneda_alternativa?.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(departure.precio_moneda_alternativa.precio_venta_min)}</span></p> 
                     <p className="text-xs text-muted-foreground">por persona</p>
                   </div>
                 </div>

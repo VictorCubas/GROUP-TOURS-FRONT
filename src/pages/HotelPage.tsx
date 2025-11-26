@@ -11,7 +11,6 @@ import {
   MoreHorizontal,
   Check,
   X,
-  Download,
   Eye,
   Calendar,
   Loader2Icon,
@@ -343,6 +342,15 @@ export default function HotelPage() {
         queryClient.invalidateQueries({
           queryKey: ['paquetes-resumen'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
+        });
     },
   });
 
@@ -383,6 +391,15 @@ export default function HotelPage() {
         queryClient.invalidateQueries({
           queryKey: ['usuarios-resumen'],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
+        });
     },
   });
 
@@ -403,6 +420,15 @@ export default function HotelPage() {
 
         queryClient.invalidateQueries({
           queryKey: ['todos-hoteles'],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos'],
+          exact: false
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['destinos-disponibles'],
         });
     },
   });
@@ -490,15 +516,24 @@ export default function HotelPage() {
 
 
     console.log(rooms)
-    const habitaciones = rooms.map(room => ({
-      numero: room.number,
-      tipo: room.type,
-      capacidad: room.capacity,
-      precio_noche: room.price,
-      moneda: room.currency,
-      activo: true,
-      servicios: []
-    }))
+    const habitaciones = rooms.map(room => {
+      const habitacion: any = {
+        numero: room.number,
+        tipo: room.type,
+        capacidad: room.capacity,
+        precio_noche: room.price,
+        moneda: room.currency,
+        activo: true,
+        servicios: []
+      };
+      
+      // 🔹 Incluir el ID solo si existe y es un número (habitación existente)
+      if (room.id && typeof room.id === 'number') {
+        habitacion.id = room.id;
+      }
+      
+      return habitacion;
+    })
     
     const payload = {...dataForm, 
         // activo: true, 
@@ -934,7 +969,7 @@ export default function HotelPage() {
             <p className="text-gray-600">Gestiona los hoteles del sistema de manera eficiente</p>
           </div>
           <div className="flex gap-3">
-              {siTienePermiso("hoteles", "exportar") && 
+              {/* {siTienePermiso("hoteles", "exportar") && 
                   <Button
                     variant="outline"
                     className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
@@ -942,7 +977,7 @@ export default function HotelPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Exportar
                   </Button>
-              }
+              } */}
 
               {siTienePermiso("hoteles", "crear") && (
                 <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
