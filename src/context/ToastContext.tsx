@@ -1,24 +1,25 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { registerToastHandler } from "@/helper/toastService";
 import { createContext, useState, type ReactNode } from "react";
 
 interface ShowMessageType{
     message: string,
-    tipo: 'success' | 'error'
+    tipo: 'success' | 'error' | 'warning'
 }
 
 interface ToastContextType{
-    handleShowToast: (message?: string, tipo?: 'success' | 'error') => void;
+    handleShowToast: (message?: string, tipo?: 'success' | 'error' |'warning') => void;
     showMessageToast: ShowMessageType | null
 }
 
 interface ToastConextProviderProps{
-     children: ReactNode;
+    children: ReactNode;
 }
 
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const ToastContext = createContext<ToastContextType>({
-    handleShowToast: (_message?: string, _tipo?: 'success' | 'error') => {},
+    handleShowToast: (_message?: string, _tipo?: 'success' | 'error' | 'warning') => {},
     showMessageToast: null
 });
 
@@ -29,7 +30,7 @@ export const ToastConextProvider = ({children}: ToastConextProviderProps  )=> {
     /**
      * Setea el mensaje y el tipo de toast a mostrarse
      */
-    const handleShowToast = (message?: string, tipo?: 'success' | 'error') => {
+    const handleShowToast = (message?: string, tipo?: 'success' | 'error' | 'warning') => {
         let newMessage: ShowMessageType | null = null;
 
         if(message && tipo)
@@ -47,6 +48,7 @@ export const ToastConextProvider = ({children}: ToastConextProviderProps  )=> {
         showMessageToast
     }
 
+    registerToastHandler(handleShowToast);
     
     return (
         <ToastContext.Provider value={contextValue}>

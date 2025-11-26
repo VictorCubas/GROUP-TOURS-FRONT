@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
-
 import { use, useEffect, useState } from "react"
 import { Eye, EyeOff, Lock, Plane, Loader2, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useNavigate } from "react-router-dom"
 import { useForm } from 'react-hook-form';
-import axios from "axios"
+import axiosInstance from "@/service/axiosInterceptor";
 import { API_BASE_URL } from "@/service/api"
 import { useSessionStore, type SessionDataStore } from "@/store/sessionStore"
 import { ToastContext } from "@/context/ToastContext"
@@ -39,6 +38,18 @@ export default function LoginPage() {
   }, []);
 
 
+  useEffect(() => {
+    // Cuando el login page se monta
+    const html = document.documentElement;
+    html.style.overflowY = "auto";
+
+    // Cuando se desmonta, restauramos el valor anterior (buena práctica)
+    return () => {
+      html.style.overflowY = "";
+    };
+  }, []);
+
+
   const handleLogin = async (dataForm: LoginFormData) => {
     setIsLoading(true);
     setError("");
@@ -48,8 +59,16 @@ export default function LoginPage() {
 
       const session: SessionDataStore = {
         usuario: dataForm.username,
-        token: dataResp.data.access
+        token: dataResp.data.access,
+        debeResetearContrasenia: dataResp.data.debe_cambiar_contrasenia, // mapeo
+        cotizacionDiariaCargada: dataResp.data.cotizacion_diaria_cargada, // mapeo
+        roles: dataResp.data.user.roles,
+        permisos: dataResp.data.user.permisos,
+        esAdmin: dataResp.data.user.es_admin,
+        nombreUsuario: dataResp.data.user.nombre_persona,
+        usuarioId: dataResp.data.user.id,
       }
+
 
       login(session);
       handleShowToast('Bienvenido a GroupTours', "success");
@@ -64,11 +83,12 @@ export default function LoginPage() {
   }
 
   const loginFetch = (credentials: LoginFormData) => {
-    return axios.post(`${API_BASE_URL}/login`, credentials);
+    return axiosInstance.post(`${API_BASE_URL}/login/`, credentials);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4
+    overflow-y-auto">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-20">
         <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">

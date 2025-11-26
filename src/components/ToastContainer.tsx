@@ -7,9 +7,9 @@ const ToastContainer = () => {
 
     useEffect(() => {
         if (showMessageToast) {
-           const { message } = showMessageToast;
+          const { message } = showMessageToast;
 
-           const config: ToastOptions = {
+          const config: ToastOptions = {
                   duration: 4000,
                   position: 'bottom-center',
     
@@ -39,10 +39,17 @@ const ToastContainer = () => {
               toast.success(message, config);
             }
 
-           if(showMessageToast.tipo === 'error'){
+            if(showMessageToast.tipo === 'error'){
               config!.iconTheme!.primary = '#f00';
               config!.style!.border = '1px solid #EF4444';
               config!.style!.backgroundColor = '#FEE2E2';
+              toast.error(message, config);
+            }
+
+            if(showMessageToast.tipo === 'warning'){
+              config!.iconTheme!.primary = '#f00';
+              config!.style!.border = '1px solid #fb923c';
+              config!.style!.backgroundColor = '#FFEDD5';
               toast.error(message, config);
             }
           
@@ -56,6 +63,14 @@ const ToastContainer = () => {
         {<Toaster
             position="bottom-center"
             reverseOrder={false}
+            containerStyle={{
+              zIndex: 999999,
+            }}
+            toastOptions={{
+              style: {
+                zIndex: 999999,
+              },
+            }}
             />}
     </>
   )
