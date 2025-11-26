@@ -6,10 +6,12 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
-  FileText,
   Settings,
   LogOut,
   Plane,
+  ChartColumnBig,
+  Receipt,
+  BarChart2,
 } from "lucide-react";
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
@@ -18,28 +20,79 @@ import { useSessionStore } from '@/store/sessionStore';
 const sidebarItems = [
   { icon: Plane, label: "Paquetes de viajes", href: "#", color: "text-purple-400" ,
     submenu: [
-      { label: "Terrestres", href: "/paquetes/terrestres", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
-      { label: "Aereos", href: "/paquetes/aereos", color: "text-orange-400", bgcolor: "bg-orange-400" },
-      { label: "Pasajeros", href: "/paquetes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
-      // { icon: Users, label: "Pasajeros", href: "#", color: "text-emerald-400" },
+      { label: "Reservas", href: "/paquetes_viajes/reservas", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      { label: "Paquetes", href: "/paquetes_viajes/paquetes", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      // { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      // { label: "Pasajeros", href: "/paquetes_viajes/pasajeros", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      { label: "Destinos", href: "/paquetes_viajes/destinos", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      { label: "Hoteles", href: "/paquetes_viajes/hoteles", color: "text-blue-400", bgcolor: "bg-blue-400" },
     ],
   },
   {
     icon: Shield,
     label: "Seguridad",
     href: "#",
-    color: "text-blue-400",
+    color: "text-emerald-400",
     submenu: [
-      { label: "Usuarios", href: "/usuarios", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
-      { label: "Empleados", href: "/empleados", color: "text-orange-400", bgcolor: "bg-orange-400" },
-      { label: "Personas", href: "/personas", color: "text-pink-400", bgcolor: "bg-pink-400" },
-      { label: "Roles", href: "/roles", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
-      { label: "Permisos", href: "/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
+      { label: "Usuarios", href: "/seguridad/usuarios", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      { label: "Empleados", href: "/seguridad/empleados", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      { label: "Personas", href: "/seguridad/personas", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      { label: "Roles", href: "/seguridad/roles", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      { label: "Permisos", href: "/seguridad/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
     ],
   },
-  { icon: FileText, label: "Facturación", href: "#", color: "text-amber-400" },
-  { icon: Settings, label: "Proveedores", href: "#", color: "text-indigo-400" },
-  { icon: FileText, label: "Documentos", href: "#", color: "text-teal-400" },
+  {
+    icon: BarChart2,
+    label: "Arqueo de cajas",
+    href: "#",
+    color: "text-cyan-400",
+    submenu: [
+      { label: "Gestion Cajas", href: "/arqueo/cajas", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      { label: "Aperturas", href: "/arqueo/aperturas", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      // { label: "Cierres", href: "/arqueo/cierres", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      { label: "Movimientos", href: "/arqueo/movimientos", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      // { label: "Permisos", href: "/arqueo/cajas", color: "text-blue-400", bgcolor: "bg-blue-400" },
+    ],
+  },
+  {
+    icon: Receipt,
+    label: "Facturación",
+    href: "#",
+    color: "text-blue-400",
+    submenu: [
+      { label: "Facturación", href: "/facturacion/facturacion", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      // { label: "Aperturas", href: "/arqueo/aperturas", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      // { label: "Cierres", href: "/arqueo/cierres", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      // { label: "Movimientos", href: "/arqueo/movimientos", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      // { label: "Permisos", href: "/arqueo/cajas", color: "text-blue-400", bgcolor: "bg-blue-400" },
+    ],
+  },
+  {
+    icon: ChartColumnBig,
+    label: "Reportes",
+    href: "#",
+    color: "text-purple-400",
+    submenu: [
+      { label: "Mov Cajas", href: "/reportes/cajas", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      { label: "Paquetes", href: "/reportes/paquetes", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      // { label: "Reservas", href: "/reportes/reservas", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+    ],
+  },
+  // { icon: FileText, label: "Ventas", href: "#", color: "text-amber-400" },
+  // { icon: Settings, label: "Proveedores", href: "#", color: "text-indigo-400" },
+  { icon: Settings, label: "Configuración", href: "#", color: "text-slate-400" ,
+      submenu: [
+      { label: "Facturacion", href: "/configuracion/facturacion", color: "text-emerald-400", bgcolor: "bg-emerald-400" },
+      { label: "Modulos", href: "/configuracion/modulos", color: "text-orange-400", bgcolor: "bg-orange-400" },
+      { label: "Tipo Documentos", href: "/configuracion/tipo_documentos", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      { label: "Nacionalidades", href: "/configuracion/nacionalidades", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      { label: "Tipo Paquetes", href: "/configuracion/tipo_paquetes", color: "text-blue-400", bgcolor: "bg-blue-400" },
+      // { label: "Personas", href: "/personas", color: "text-pink-400", bgcolor: "bg-pink-400" },
+      // { label: "Roles", href: "/seguridad/roles", color: "text-yellow-400", bgcolor: "bg-yellow-400" },
+      // { label: "Permisos", href: "/seguridad/permisos", color: "text-blue-400", bgcolor: "bg-blue-400" },
+    ],
+  },
+  // { icon: FileText, label: "Documentos", href: "#", color: "text-teal-400" },
 ]
 
 interface SiderBarProps{
@@ -50,7 +103,7 @@ interface SiderBarProps{
 
 const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
   const [expandedItems, setExpandedItems] = useState<string[]>([])
-  const {logout} = useSessionStore();
+  const {logout, siTienePermiso, hasRole} = useSessionStore();
   const navigate = useNavigate()
 
   const toggleExpanded = (label: string) => {
@@ -118,22 +171,69 @@ const SideBar: React.FC<SiderBarProps> = ({isCollapsed}) => {
                   </Tooltip>
                   {!isCollapsed && (
                     <CollapsibleContent className="ml-8 mt-2 space-y-1">
-                      {item.submenu.map((subItem) => (
-                        <Tooltip key={subItem.label}>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <NavLink
-                                to={subItem.href}
-                               className={({isActive}) => isActive ? `${cssDefault}  bg-blue-600/20 text-blue-300 border-l-2 border-blue-400`
-                               : `${cssDefault} hover:bg-slate-800` } 
-                              >
-                                <div className={`w-2 h-2 rounded-full ${subItem.bgcolor}`}></div> 
-                                <span className="text-sm">{subItem.label}</span>
-                              </NavLink>
-                            </span>
-                          </TooltipTrigger>
-                        </Tooltip>
-                      ))}
+                      {item.submenu.map((subItem) => {
+                        // Extraer el nombre del módulo desde la URL (última parte del path)
+                        const moduleName = subItem.href.split('/').pop() || '';
+
+                        // 🔥 LÓGICA PARA USUARIOS GERENCIALES
+                        const esGerencial = hasRole('Gerencial');
+                        const isReportItem = subItem.href.startsWith('/reportes');
+
+                        // Si es Gerencial:
+                        if (esGerencial) {
+                          // Solo mostrar items de Reportes
+                          if (!isReportItem) {
+                            return null; // Ocultar items que NO son reportes
+                          }
+                          // Mostrar items de reportes sin verificar permisos
+                          return (
+                            <Tooltip key={subItem.label}>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <NavLink
+                                    to={subItem.href}
+                                    className={({isActive}) => isActive ? `${cssDefault}  bg-blue-600/20 text-blue-300 border-l-2 border-blue-400`
+                                    : `${cssDefault} hover:bg-slate-800` }
+                                  >
+                                    <div className={`w-2 h-2 rounded-full ${subItem.bgcolor}`}></div>
+                                    <span className="text-sm">{subItem.label}</span>
+                                  </NavLink>
+                                </span>
+                              </TooltipTrigger>
+                            </Tooltip>
+                          );
+                        }
+
+                        // Para usuarios NO gerenciales:
+                        // Ocultar items de reportes
+                        if (isReportItem) {
+                          return null;
+                        }
+
+                        // Verificar permisos normalmente
+                        const shouldShow = siTienePermiso(moduleName, 'leer');
+
+                        return (
+                          <>
+                            {shouldShow &&
+                            <Tooltip key={subItem.label}>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <NavLink
+                                    to={subItem.href}
+                                  className={({isActive}) => isActive ? `${cssDefault}  bg-blue-600/20 text-blue-300 border-l-2 border-blue-400`
+                                  : `${cssDefault} hover:bg-slate-800` }
+                                  >
+                                    <div className={`w-2 h-2 rounded-full ${subItem.bgcolor}`}></div>
+                                    <span className="text-sm">{subItem.label}</span>
+                                  </NavLink>
+                                </span>
+                              </TooltipTrigger>
+                            </Tooltip>
+                            }
+                          </>
+                        )
+                      })}
                     </CollapsibleContent>
                   )}
                 </Collapsible>

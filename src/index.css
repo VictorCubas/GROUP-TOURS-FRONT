@@ -203,11 +203,39 @@ body {
 
 }
 
+.modal-detalles {
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  top: 10vh;
+  left: calc(50% - 22.5rem);
+  width: 45rem;
+  max-height: 80vh;
+  border: none;
+  border-radius: 6px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.26);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  row-gap: 1rem;
+  animation: slide-down-fade-in 300ms ease-out forwards;
+}
+
 h2{
   font-size: 1.3rem;
 }
 
 .modal::backdrop {
+  height: 100vh;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.modal-detalles::backdrop {
   height: 100vh;
   width: 100%;
   background: rgba(0, 0, 0, 0.5);
@@ -275,4 +303,92 @@ h2{
 
 .margin-bottom-cero{
   margin-bottom: 0;
+}
+
+div:has(> table) {
+  height: 55vh !important; 
+}
+
+.tabla-comprobante:has(> table) {
+  height: fit-content !important; 
+}
+
+.tabla-facturacion-preview:has(> table) {
+  height: fit-content !important; 
+  min-height: 20vh;
+}
+
+.absolute-center{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* styles.css */
+/* input[aria-hidden="true"] {
+  position: absolute !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+} */
+
+
+/* Mejora el layout de los componentes Select de shadcn/ui */
+/* styles.css */
+input[aria-hidden="true"] {
+  position: absolute !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Mejora el layout de los componentes Select de shadcn/ui */
+[data-radix-select-trigger] {
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+[data-radix-select-content] {
+  width: var(--radix-select-trigger-width) !important;
+  max-height: var(--radix-select-content-available-height) !important;
+}
+
+[data-radix-select-item] {
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+
+.select-container select{
+    position: fixed !important;
+}
+
+.select-trigger{
+  height: 3rem !important;
+}
+
+
+html{
+  overflow: hidden;
+}
+
+
+.moneda{
+  width: 1.3rem;
+  height: 1.2rem;
 }
