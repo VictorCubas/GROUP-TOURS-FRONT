@@ -529,6 +529,12 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         
         // Extraer datos del payload
         const { tiene_factura, flujo, items_nc, factura_id, monto_total_pagado, ...payloadCancelacion } = payloadExtendido;
+
+        console.log(flujo);
+        console.log(items_nc);
+        console.log(factura_id);
+        console.log(monto_total_pagado);
+        console.log(payloadCancelacion);
         
         // Guardar el payload completo para uso posterior
         setCancelacionPayload(payloadExtendido);
