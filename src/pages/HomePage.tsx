@@ -592,19 +592,10 @@ interface AlertCardProps {
   navigate: (path: string) => void;
 }
 
-function AlertCard({ alerta, tipo, navigate }: AlertCardProps) {
+function AlertCard({ alerta, tipo }: AlertCardProps) {
   const isCritical = tipo === 'critical';
   const bgColor = isCritical ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200';
   const textColor = isCritical ? 'text-red-900' : 'text-yellow-900';
-  const buttonColor = isCritical 
-    ? 'bg-red-600 hover:bg-red-700 text-white' 
-    : 'bg-yellow-600 hover:bg-yellow-700 text-white';
-
-  const handleAction = () => {
-    if (alerta.accion_url) {
-      navigate(alerta.accion_url);
-    }
-  };
 
   return (
     <div className={`flex items-center justify-between p-4 rounded-lg border ${bgColor}`}>
@@ -615,8 +606,9 @@ function AlertCard({ alerta, tipo, navigate }: AlertCardProps) {
       </div>
       {alerta.accion_url && alerta.accion_texto && (
         <button
-          onClick={handleAction}
-          className={`ml-4 px-4 py-2 rounded text-sm font-medium ${buttonColor} transition-colors`}
+          disabled
+          title="Acción temporalmente deshabilitada desde el dashboard"
+          className="ml-4 px-4 py-2 rounded text-sm font-medium bg-gray-400 text-gray-700 cursor-not-allowed opacity-60"
         >
           {alerta.accion_texto}
         </button>
