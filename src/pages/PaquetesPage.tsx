@@ -2433,7 +2433,7 @@ const handleSubmitClick = useCallback(async () => {
             <div>
               <p className="text-sm text-slate-500">Precio (conversion)</p>
               <p className="font-semibold text-slate-800">
-                {formatearSeparadorMiles.format(item?.precio_moneda_alternativa?.precio_final ?? 0)}
+                {formatearSeparadorMiles.format(item?.precio_moneda_alternativa?.precio_venta_min ?? 0)}
               </p>
             </div>
           </div>
