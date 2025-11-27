@@ -215,6 +215,25 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         return 'bg-green-600';
     };
 
+    // 🔍 Debug: Verificar el orden de los pasajeros tal como llegan del backend
+    useEffect(() => {
+        if (dataDetalleResp?.pasajeros) {
+            console.log('📋 Orden ORIGINAL desde el backend:');
+            dataDetalleResp.pasajeros.forEach((pasajero: any, index: number) => {
+                console.log(`  ${index}. ID: ${pasajero.id} | Nombre: ${pasajero.persona.nombre} ${pasajero.persona.apellido} | Por asignar: ${pasajero.por_asignar}`);
+            });
+
+            const ordenados = dataDetalleResp.pasajeros.slice().sort((a: any, b: any) => {
+                if (a.por_asignar === b.por_asignar) return a.id - b.id;
+                return a.por_asignar ? 1 : -1;
+            });
+
+            console.log('✅ Orden DESPUÉS de ordenar (reales primero):');
+            ordenados.forEach((pasajero: any, index: number) => {
+                console.log(`  ${index}. ID: ${pasajero.id} | Nombre: ${pasajero.persona.nombre} ${pasajero.persona.apellido} | Por asignar: ${pasajero.por_asignar}`);
+            });
+        }
+    }, [dataDetalleResp?.pasajeros]);
 
     if(isFetchingDetalles){
         return (
@@ -1369,7 +1388,18 @@ return   <>
 
                 {dataDetalleResp?.pasajeros.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {dataDetalleResp?.pasajeros.map((pasajero: any, index: number) => (
+                        {dataDetalleResp?.pasajeros
+                            .slice()
+                            .sort((a: any, b: any) => {
+                                // Pasajeros reales (por_asignar=false) van primero
+                                if (a.por_asignar === b.por_asignar) {
+                                    // Si ambos tienen el mismo estado, mantener orden por ID
+                                    return a.id - b.id;
+                                }
+                                // Los pasajeros asignados (por_asignar=false) van primero
+                                return a.por_asignar ? 1 : -1;
+                            })
+                            .map((pasajero: any, index: number) => (
                         <div key={pasajero.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
                             <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center space-x-3">
