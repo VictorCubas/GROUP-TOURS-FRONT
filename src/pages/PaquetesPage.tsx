@@ -4298,10 +4298,17 @@ const handleSubmitClick = useCallback(async () => {
                                                                                       ${fixedRoomTypeId === habitacion.id ? 'border-green-400 bg-green-100' : 'border-gray-200 hover:border-gray-300'}`}
                                                                                   >
                                                                                     {/* Icono y tipo de habitación */}
-                                                                                    <Label className="text-sm flex items-center gap-2 md:w-1/4">
+                                                                                    <div className="text-sm flex items-center gap-2 md:w-1/4">
                                                                                       {getRoomIcon(habitacion.tipo)}
-                                                                                      {getRoomTypeLabel(habitacion.tipo)}
-                                                                                    </Label>
+                                                                                      <div className="flex flex-col">
+                                                                                        <Label className="font-medium">{getRoomTypeLabel(habitacion.tipo)}</Label>
+                                                                                        {habitacion.capacidad && (
+                                                                                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                                            {habitacion.capacidad} {habitacion.capacidad === 1 ? 'persona' : 'personas'}
+                                                                                          </span>
+                                                                                        )}
+                                                                                      </div>
+                                                                                    </div>
 
                                                                                     {/* Precio y cupo */}
                                                                                     {propio && habitacion?.precio_noche &&
