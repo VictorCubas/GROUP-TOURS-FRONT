@@ -2892,6 +2892,7 @@ export default function ReservaPage() {
                           <TableHead className="font-semibold text-gray-700 min-w-[100px]">Pasajeros</TableHead>
                           <TableHead className="font-semibold text-gray-700 min-w-[120px]">Estado</TableHead>
                           <TableHead className="font-semibold text-gray-700 min-w-[150px]">Pago</TableHead>
+                          <TableHead className="font-semibold text-gray-700 min-w-[120px]">Días p/Salida</TableHead>
                           <TableHead className="font-semibold text-gray-700 min-w-[130px]">Precio Unitario</TableHead>
                           <TableHead className="font-semibold text-gray-700 min-w-[140px]">Modalidad Factura</TableHead>
                           <TableHead className="font-semibold text-gray-700 min-w-[130px]">Condicion Pago</TableHead>
@@ -2979,10 +2980,10 @@ export default function ReservaPage() {
                                   {PAYMENT_STATUS[getPaymentStatus(data)].label}
                                 </span>
                                 <div className="w-full bg-gray-200 rounded-full h-1">
-                                  <div 
+                                  <div
                                     className={`h-1 rounded-full ${
-                                      getPaymentStatus(data) === 'pago_completo' ? 'bg-green-500' : 
-                                      getPaymentStatus(data) === 'pago_parcial' ? 'bg-yellow-500' : 
+                                      getPaymentStatus(data) === 'pago_completo' ? 'bg-green-500' :
+                                      getPaymentStatus(data) === 'pago_parcial' ? 'bg-yellow-500' :
                                       getPaymentStatus(data) === 'sobrepago' ? 'bg-blue-500' : 'bg-red-500'
                                     }`}
                                     style={{ width: `${Math.min(getPaymentPercentage(data), 100)}%` }}
@@ -2990,6 +2991,24 @@ export default function ReservaPage() {
                                 </div>
                                 {/* const paymentStatus = getPaymentStatus(reserva);
                   const paymentPercentage = getPaymentPercentage(reserva); */}
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <div className="flex items-center justify-center">
+                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                                  data?.dias_hasta_salida !== undefined && data?.dias_hasta_salida !== null
+                                    ? data.dias_hasta_salida <= 7
+                                      ? 'bg-red-100 text-red-700 border border-red-300'
+                                      : data.dias_hasta_salida <= 30
+                                      ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                                      : 'bg-green-100 text-green-700 border border-green-300'
+                                    : 'bg-gray-100 text-gray-500'
+                                }`}>
+                                  {data?.dias_hasta_salida !== undefined && data?.dias_hasta_salida !== null
+                                    ? `${data.dias_hasta_salida} días`
+                                    : '-'}
+                                </span>
                               </div>
                             </TableCell>
 

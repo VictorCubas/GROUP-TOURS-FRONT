@@ -77,7 +77,7 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
     >
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 max-h-[95vh] h-[80vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-blue-600 text-white p-6 rounded-t-xl">
+        <div className="bg-red-600 text-white p-6 rounded-t-xl">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold flex items-center">
               <AlertCircle className="w-7 h-7 mr-3" />
@@ -87,7 +87,7 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
               <button
                 onClick={onClose}
                 disabled={isPending}
-                className="text-white hover:bg-blue-700 rounded-full p-1"
+                className="text-white hover:bg-red-700 rounded-full p-1"
               >
                 <AlertCircle className="w-6 h-6" />
               </button>
@@ -106,10 +106,10 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
               {/* Badge del flujo */}
               {infoCancelacion?.flujo && (
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
-                  infoCancelacion.flujo === 'facturar_y_nc' 
-                    ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                  infoCancelacion.flujo === 'facturar_y_nc'
+                    ? 'bg-orange-100 text-orange-800 border border-orange-300'
                     : infoCancelacion.flujo === 'generar_nc'
-                    ? 'bg-purple-100 text-purple-800 border border-purple-300'
+                    ? 'bg-red-100 text-red-800 border border-red-300'
                     : 'bg-gray-100 text-gray-800 border border-gray-300'
                 }`}>
                   {infoCancelacion.flujo === 'facturar_y_nc' && '📄 Facturar + NC'}
@@ -148,7 +148,7 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
                         </span>
                       </div>
                       <div className="flex items-center">
-                        <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                        <CheckCircle className="w-4 h-4 text-orange-600 mr-2" />
                         <span className="text-gray-700">Se generará Nota de Crédito automáticamente</span>
                       </div>
                     </>
@@ -160,7 +160,7 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
                       </div>
                       {infoCancelacion?.monto_nc > 0 && (
                         <div className="flex items-center">
-                          <AlertCircle className="w-4 h-4 text-blue-600 mr-2" />
+                          <AlertCircle className="w-4 h-4 text-orange-600 mr-2" />
                           <span className="text-gray-700">Se requerirá facturar para generar NC</span>
                         </div>
                       )}
@@ -171,28 +171,28 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
 
               {/* Proceso que se ejecutará */}
               {infoCancelacion?.flujo && (
-                <div className="mt-3 pt-3 border-t border-yellow-200 bg-blue-50 rounded p-4">
+                <div className="mt-3 pt-3 border-t border-yellow-200 bg-orange-50 rounded p-4">
                   <div className="flex items-center space-x-2 mb-2">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <span className="font-semibold text-blue-900">Proceso de Cancelación:</span>
+                    <FileText className="w-4 h-4 text-orange-600" />
+                    <span className="font-semibold text-orange-900">Proceso de Cancelación:</span>
                   </div>
                   <div className="ml-6 space-y-2 text-sm text-gray-700">
                     {infoCancelacion.flujo === 'facturar_y_nc' && (
                       <>
                         <div className="flex items-start space-x-2">
-                          <span className="text-blue-600 font-bold">1.</span>
+                          <span className="text-orange-600 font-bold">1.</span>
                           <span>Se cancelará la reserva</span>
                         </div>
                         <div className="flex items-start space-x-2">
-                          <span className="text-blue-600 font-bold">2.</span>
+                          <span className="text-orange-600 font-bold">2.</span>
                           <span>Se generará una factura por los pagos realizados</span>
                         </div>
                         <div className="flex items-start space-x-2">
-                          <span className="text-blue-600 font-bold">3.</span>
+                          <span className="text-orange-600 font-bold">3.</span>
                           <span>Podrá generar una Nota de Crédito por Gs. {formatearSeparadorMiles.format(infoCancelacion.monto_nc)}</span>
                         </div>
                         <div className="flex items-start space-x-2">
-                          <span className="text-blue-600 font-bold">4.</span>
+                          <span className="text-orange-600 font-bold">4.</span>
                           <span>Los cupos serán liberados</span>
                         </div>
                       </>
@@ -200,15 +200,15 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
                     {infoCancelacion.flujo === 'generar_nc' && (
                       <>
                         <div className="flex items-start space-x-2">
-                          <span className="text-purple-600 font-bold">1.</span>
+                          <span className="text-red-600 font-bold">1.</span>
                           <span>Se cancelará la reserva</span>
                         </div>
                         <div className="flex items-start space-x-2">
-                          <span className="text-purple-600 font-bold">2.</span>
+                          <span className="text-red-600 font-bold">2.</span>
                           <span>Podrá generar una Nota de Crédito por Gs. {formatearSeparadorMiles.format(infoCancelacion.monto_nc)}</span>
                         </div>
                         <div className="flex items-start space-x-2">
-                          <span className="text-purple-600 font-bold">3.</span>
+                          <span className="text-red-600 font-bold">3.</span>
                           <span>Los cupos serán liberados</span>
                         </div>
                       </>
@@ -286,9 +286,9 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
 
                   {/* Monto de NC (si aplica) */}
                   {infoCancelacion?.monto_nc > 0 && (
-                    <div className="flex justify-between items-center pt-1 bg-blue-100 -mx-2 px-2 py-2 rounded">
-                      <span className="font-semibold text-blue-900">Monto para Nota de Crédito:</span>
-                      <span className="text-xl font-bold text-blue-700">
+                    <div className="flex justify-between items-center pt-1 bg-orange-100 -mx-2 px-2 py-2 rounded">
+                      <span className="font-semibold text-orange-900">Monto para Nota de Crédito:</span>
+                      <span className="text-xl font-bold text-orange-700">
                         {reservaData?.paquete?.moneda?.simbolo || '$'}
                         {formatearSeparadorMiles.format(infoCancelacion?.monto_nc)}
                       </span>
@@ -349,11 +349,11 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
             </div>
           </div>
 
-          <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-            <p className="text-sm font-medium text-blue-800 flex items-center">
+          <div className="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
+            <p className="text-sm font-medium text-orange-800 flex items-center">
               <AlertCircle className="w-4 h-4 mr-2" />
-              Al continuar, {infoCancelacion?.tiene_factura 
-                ? 'se generará una Nota de Crédito basada en la factura existente' 
+              Al continuar, {infoCancelacion?.tiene_factura
+                ? 'se generará una Nota de Crédito basada en la factura existente'
                 : 'primero se generará una factura de cancelación y luego la Nota de Crédito correspondiente'}
             </p>
           </div>
@@ -373,7 +373,7 @@ const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
           <Button
             onClick={handleContinuar}
             disabled={isPending}
-            className={`px-6 bg-blue-600 hover:bg-blue-700 text-white ${forzarCancelacion ? 'ml-auto' : ''}`}
+            className={`px-6 bg-orange-600 hover:bg-orange-700 text-white ${forzarCancelacion ? 'ml-auto' : ''}`}
           >
             {isPending ? (
               <>
