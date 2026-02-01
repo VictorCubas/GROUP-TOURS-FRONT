@@ -3007,7 +3007,8 @@ export default function ReservaPage() {
                                 }`}>
                                   {data?.dias_hasta_salida !== undefined && data?.dias_hasta_salida !== null
                                     ? `${data.dias_hasta_salida > 1 ? data.dias_hasta_salida + ' días': 
-                                        data.dias_hasta_salida === 0 ? 'Es hoy': 'Finalizada'} `
+                                        data.dias_hasta_salida === 0 ? 'Es hoy': 'Hace ' + data.dias_hasta_salida * -1 + 
+                                        (data.dias_hasta_salida * -1 === 1 ? ' dia' : ' dias')} `
                                     : '-'}
                                 </span>
 
