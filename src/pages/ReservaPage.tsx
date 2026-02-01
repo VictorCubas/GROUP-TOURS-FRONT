@@ -3006,9 +3006,17 @@ export default function ReservaPage() {
                                     : 'bg-gray-100 text-gray-500'
                                 }`}>
                                   {data?.dias_hasta_salida !== undefined && data?.dias_hasta_salida !== null
-                                    ? `${data.dias_hasta_salida} días`
+                                    ? `${data.dias_hasta_salida > 1 ? data.dias_hasta_salida + ' días': 
+                                        data.dias_hasta_salida === 0 ? 'Es hoy': 'Finalizada'} `
                                     : '-'}
                                 </span>
+
+
+                                {/* {data?.dias_hasta_salida !== undefined && data?.dias_hasta_salida !== null
+                                    ? `${data.dias_hasta_salida > 1 ? data.dias_hasta_salida + ' días':
+                                        `${data.dias_hasta_salida === 0 ? 'Es hoy': 'Salida fin'
+                                    } `
+                                    : '-'} */}
                               </div>
                             </TableCell>
 
