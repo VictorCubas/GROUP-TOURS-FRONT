@@ -60,7 +60,6 @@ import type { Moneda } from "@/types/paquetes"
 import type { Servicio } from "@/types/hotel"
 import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
 import { useMonedaInicial } from "@/components/hooks/useMonedaInicial"
 
 
