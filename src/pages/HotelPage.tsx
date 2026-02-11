@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-constant-condition */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
@@ -60,6 +61,7 @@ import type { Servicio } from "@/types/hotel"
 import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { fetchDataMonedaTodos } from "@/components/utils/httpPaquete"
+import { useMonedaInicial } from "@/components/hooks/useMonedaInicial"
 
 
 const roleStatusColors = {
@@ -72,6 +74,7 @@ let dataList: Hotel[] = [];
 export default function HotelPage() {
   const {siTienePermiso } = useSessionStore();
   const [newDataCiudadList, setNewDataCiudadList] = useState<Hotel[]>();
+  // monedaInicial ahora viene del hook useMonedaInicial
   const [paisDataSelected, setPaisDataSelected] = useState<any>();
   const [selectedCiudadID, setSelectedCiudadID] = useState<number | "">("");
   const [selectedCadenaID, setSelectedCadenaID] = useState<number | "">("");
@@ -108,7 +111,7 @@ export default function HotelPage() {
                 descripcion: "",
                 estrellas: 4,
                 estrellas_filtros: 0,
-                moneda: '2'
+                moneda: "", //hay que registrar se setea o no inicialmente el valor
               }
             });
   // DATOS DEL FORMULARIO 
@@ -191,13 +194,9 @@ export default function HotelPage() {
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
-  const {data: dataMonedaList, isFetching: isFetchingMoneda,} = useQuery({
-        queryKey: ['monedas-disponibles',], //data cached
-        queryFn: () => fetchDataMonedaTodos(),
-        staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
-      });
 
-      console.log(isFetchingMoneda)
+  const { dataMonedaList, monedaInicial } = useMonedaInicial(setValue);
+
 
   if(!isFetching && !isError){
     if(data?.results){
@@ -310,6 +309,7 @@ export default function HotelPage() {
         reset({
             nombre: "",
             descripcion: "",
+            moneda: monedaInicial?.id?.toString() ?? "",
           });
 
         setSelectedPermissions([])
@@ -449,6 +449,7 @@ export default function HotelPage() {
             descripcion: "",
             estrellas: 4,
             direccion: "",
+            moneda: monedaInicial?.id?.toString() ?? "",
           });
         setActiveTab('list');
         setRooms([]);
@@ -729,6 +730,7 @@ export default function HotelPage() {
     setIsAddRoomOpen(false);
     setIsEditMode(false);
     setEditingRoomId(null);
+    setValue('moneda', monedaInicial!.id.toString())
   }
 
   const handleEditRoom = (room: any) => {
