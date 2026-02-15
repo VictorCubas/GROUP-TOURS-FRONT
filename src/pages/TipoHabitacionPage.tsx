@@ -38,7 +38,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -105,7 +104,7 @@ export default function TipoHabitacionesPage() {
   const {handleShowToast} = use(ToastContext);
   
   // DATOS DEL FORMULARIO 
-  const {register, control, watch, handleSubmit, formState: {errors, }, reset, clearErrors} = 
+  const {register, control, handleSubmit, formState: {errors, }, reset, clearErrors} = 
             useForm<aEditarDataForm>({
               mode: "onBlur",
               defaultValues: {
