@@ -9,6 +9,17 @@ export interface TipoHabitacion {
   // en_uso: boolean;
 }
 
+export interface TipoHabitacionTodos {
+  id: number;
+  // numero: number;
+  nombre: string;
+  capacidad: number;
+  // fecha_creacion: string;
+  // fecha_modificacion: string;
+  // activo: boolean;
+  // en_uso: boolean;
+}
+
 export interface RespuestaPaginada {
   totalItems: number;
   next: string | null;
