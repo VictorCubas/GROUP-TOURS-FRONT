@@ -157,13 +157,11 @@ export default function HotelPage() {
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
-  const {data: dataHotelesList, isFetching: isFetchingHoteles,} = useQuery({
+  const {data: dataHotelesList,} = useQuery({
       queryKey: ['todos-hoteles',], //data cached
       queryFn: () => fetchDataHoteles(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
-
-  console.log(isFetchingHoteles)
 
   const {data: dataCadenaList, isFetching: isFetchingCadenas,} = useQuery({
       queryKey: ['todos-cadenas',], //data cached
@@ -215,7 +213,6 @@ export default function HotelPage() {
 
         if(selectedPais.length){
           const pais = selectedPais[0];
-          console.log('pais: ', pais);
           // const selectedCiudad = dataNacionalidadList.filter((ciudad: any) => ciudad.id.toString() === selectedNacionalidadID.toString());
           setPaisDataSelected(pais);
           if(!dataAEditar){
@@ -287,7 +284,6 @@ export default function HotelPage() {
 
   useEffect(() => {
       const handler = setTimeout(() => {
-        console.log('cambiando nombre')
         setFiltros(filtroAnterior => ({
           ...filtroAnterior, nombre: busquedaPorFiltro,
         }))
@@ -452,14 +448,7 @@ export default function HotelPage() {
         setRooms([]);
   }
 
-
   const handleGuardarNuevaData = async (dataForm: any) => {
-
-    console.log('dataForm: ', dataForm);
-    console.log('selectedPermissions: ', selectedPermissions)
-    console.log('newRoom: ', newRoom);
-    console.log('rooms: ', rooms);
-    console.log('selectedCiudadID: ', selectedCiudadID);
 
     if (cadenaNoSeleccionada === undefined) {
         setCadenaNoSeleccionada(true);
@@ -491,8 +480,6 @@ export default function HotelPage() {
       
       delete payload.estrellas_filtros;
       delete payload.moneda;
-
-      console.log('payload: ', payload);
     
     if(selectedPermissions.length){
       mutate(payload);
@@ -512,8 +499,6 @@ export default function HotelPage() {
         return;
       }
 
-
-    console.log(rooms)
     const habitaciones = rooms.map(room => {
       const habitacion: any = {
         tipo_habitacion: room.id,
@@ -545,7 +530,6 @@ export default function HotelPage() {
 
   useEffect(() => {
       if (dataAEditar) {
-        console.log('reset data para editar: ', dataAEditar)
         reset({
           ...dataAEditar,
           nombre: dataAEditar.nombre,
@@ -578,8 +562,6 @@ export default function HotelPage() {
 
     setRooms([...habitaciones]);
   }
-
-  console.log(rooms)
 
   const toggleActivar = (modulo: Hotel) => {
     setOnDesactivarData(true);
@@ -629,19 +611,13 @@ export default function HotelPage() {
     setCiudadNoSeleccionada(value);
   }
 
-  console.log(rooms)
-
   // FUNCIONES DE HABITACION
   const handleAddRoom = () => { 
     // setPrecioIsRequired(false);
-    console.log('newRoom: ', newRoom);
     if (!newRoom.price || newRoom.price <= 0) {
       setPrecioIsRequired(true);
       return; // Validación básica
     }
-
-    console.log(isEditMode);
-    console.log(editingRoomId);
 
     const tipoHabitacion = dataTipoHabitacinesList.find((h: TipoHabitacionTodos) => h.id.toString() === newRoom.id.toString())
 
@@ -650,8 +626,6 @@ export default function HotelPage() {
       // console.log(newRoom)
       const roomEdited = {...newRoom};
 
-      console.log(roomEdited);
-      console.log(rooms)
       setRooms((prev) =>
         prev.map((room) =>
           room.id.toString() === editingRoomId.toString()
@@ -664,11 +638,6 @@ export default function HotelPage() {
         )
       );
     } else {
-      // 🔹 Agregando nueva habitación
-      
-      console.log('tipoHabitacion: ', tipoHabitacion);
-      console.log('precio: ', precio);
-        // { id: 30, nombre: 'Suite', capacidad: 2 } 
       
       const room: any = {
         ...newRoom,
@@ -704,12 +673,7 @@ export default function HotelPage() {
   }
 
   const handleEditRoom = (room: any) => {
-    // ciudad_id: selectedCiudadID,
-    //             hoteles_ids: selectedPermissions,
-    //             pais_id: selectedNacionalidadID,
-    //             destino_id: selectedCadenaID,
 
-    console.log(room) 
       setNewRoom({
         id: room.id.toString(),
         price: room.price,
@@ -761,7 +725,6 @@ export default function HotelPage() {
 
   const moneda = watch('moneda');
   const monedaDataSelected = dataMonedaList && dataMonedaList?.find((m: Moneda) => m?.id?.toString() === moneda?.toString());
-  console.log('monedaDataSelected: ', monedaDataSelected)
 
   return (
     <>
@@ -1407,7 +1370,6 @@ export default function HotelPage() {
                                                     clearErrors("moneda")
                                                   }
           
-                                                  console.log('value: ', value);
                                                   // const tipoPaquete = dataTipoPaqueteList.filter((doc: TipoPaquete) => doc.id.toString() === value)
                                                   // console.log('moneda: ', tipoPaquete[0])
                                                   // setMone(tipoPaquete[0]);
@@ -1519,8 +1481,6 @@ export default function HotelPage() {
                               selectedPermissions.includes(p.id),
                             )
 
-                            console.log('allFilteredSelected: ', allFilteredSelected )
-
                             if (allFilteredSelected) {
                               setSelectedPermissions((prev) =>
                                 prev.filter((id) => !filteredPermissions.map((p: any) => p.id).includes(id)),
@@ -1555,11 +1515,9 @@ export default function HotelPage() {
                             disabled={isPendingMutation}
                             type="submit"
                              onClick={() => {
-                              console.log('cadenaNoSeleccionada 1: ', cadenaNoSeleccionada);
                               setOnGuardar(true)
                               
                               if(cadenaNoSeleccionada === undefined){
-                                  console.log('cadenaNoSeleccionada 2: ', cadenaNoSeleccionada);
                                   setCadenaNoSeleccionada(false);
                                 }
                             }}
