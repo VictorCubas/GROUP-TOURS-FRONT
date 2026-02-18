@@ -24,6 +24,7 @@ const PaquetesPage = lazy(() => import('@/pages/PaquetesPage'));
 const ReservaPage = lazy(() => import('@/pages/ReservaPage'));
 const HotelPage = lazy(() => import('@/pages/HotelPage'));
 const TipoDocumentosPage = lazy(() => import('@/pages/TipoDocumentosPage'));
+const TipoHabitacionesPage = lazy(() => import('@/pages/TipoHabitacionPage'));
 const TipoPaquetesPage = lazy(() => import('@/pages/TipoPaquetesPage'));
 const PersonasPage = lazy(() => import('@/pages/PersonasPage'));
 const EmpleadosPage = lazy(() => import('@/pages/EmpleadosPage'));
@@ -82,6 +83,7 @@ const AppRouter = () => {
                         <Route path="facturacion" element={<FacturacionConfig />} />
                         <Route path="modulos" element={<ModuloPage />} />
                         <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
+                        <Route path="tipo_habitaciones" element={<TipoHabitacionesPage />} />
                         <Route path="nacionalidades" element={<NacionalidadesPage />} />
                         <Route path="tipo_paquetes" element={<TipoPaquetesPage />} />
                       </Route>

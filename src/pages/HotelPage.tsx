@@ -61,6 +61,8 @@ import type { Servicio } from "@/types/hotel"
 import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useMonedaInicial } from "@/components/hooks/useMonedaInicial"
+import type { TipoHabitacionTodos } from "@/types/tipoHabitacion"
+import { useTipoHabitacionInicial } from "@/components/hooks/useTipoHabitacionInicial"
 
 
 const roleStatusColors = {
@@ -73,7 +75,6 @@ let dataList: Hotel[] = [];
 export default function HotelPage() {
   const {siTienePermiso } = useSessionStore();
   const [newDataCiudadList, setNewDataCiudadList] = useState<Hotel[]>();
-  // monedaInicial ahora viene del hook useMonedaInicial
   const [paisDataSelected, setPaisDataSelected] = useState<any>();
   const [selectedCiudadID, setSelectedCiudadID] = useState<number | "">("");
   const [selectedCadenaID, setSelectedCadenaID] = useState<number | "">("");
@@ -93,6 +94,7 @@ export default function HotelPage() {
   const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [onGuardar, setOnGuardar] = useState(false);
+  const [monedaIsRequired, setPrecioIsRequired] = useState(false);
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
                   fecha_desde: "",
@@ -120,19 +122,15 @@ export default function HotelPage() {
 
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [newRoom, setNewRoom] = useState({
-    number: "",
-    type: "",
-    capacity: 1,
+    id: 0,
     price: 0,
     currency: "2",
   })
 
+  const [precio, setPrecio] = useState<string>();
+
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
-
-  //DATOS DE HABITACION
-  
-
 
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('list');
@@ -159,13 +157,11 @@ export default function HotelPage() {
     staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
 
-  const {data: dataHotelesList, isFetching: isFetchingHoteles,} = useQuery({
+  const {data: dataHotelesList,} = useQuery({
       queryKey: ['todos-hoteles',], //data cached
       queryFn: () => fetchDataHoteles(),
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
   });
-
-  console.log(isFetchingHoteles)
 
   const {data: dataCadenaList, isFetching: isFetchingCadenas,} = useQuery({
       queryKey: ['todos-cadenas',], //data cached
@@ -193,8 +189,8 @@ export default function HotelPage() {
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
-
   const { dataMonedaList, monedaInicial } = useMonedaInicial(setValue);
+  const { dataTipoHabitacinesList, tipoHabitacinInicial } = useTipoHabitacionInicial(setNewRoom);
 
 
   if(!isFetching && !isError){
@@ -217,7 +213,6 @@ export default function HotelPage() {
 
         if(selectedPais.length){
           const pais = selectedPais[0];
-          console.log('pais: ', pais);
           // const selectedCiudad = dataNacionalidadList.filter((ciudad: any) => ciudad.id.toString() === selectedNacionalidadID.toString());
           setPaisDataSelected(pais);
           if(!dataAEditar){
@@ -289,7 +284,6 @@ export default function HotelPage() {
 
   useEffect(() => {
       const handler = setTimeout(() => {
-        console.log('cambiando nombre')
         setFiltros(filtroAnterior => ({
           ...filtroAnterior, nombre: busquedaPorFiltro,
         }))
@@ -356,7 +350,7 @@ export default function HotelPage() {
   const {mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
     mutationFn: guardarDataEditado,
     onSuccess: () => {
-        handleShowToast('Se ha guardado el modulo satisfactoriamente', 'success');
+        handleShowToast('Se ha guardado el hotel satisfactoriamente', 'success');
         setDataAEditar(undefined);
         setSelectedNacionalidadid("");
         setOnGuardar(false);
@@ -405,7 +399,7 @@ export default function HotelPage() {
   const {mutate: mutateDesactivar, isPending: isPendingDesactivar} = useMutation({
     mutationFn: activarDesactivarData,
     onSuccess: () => {
-        handleShowToast('Se ha desactivado el modulo satisfactoriamente', 'success');
+        handleShowToast('Se ha desactivado el hotel satisfactoriamente', 'success');
         setOnDesactivarData(false);
         setDataADesactivar(undefined);
         //desactivamos todas las queies
@@ -454,33 +448,25 @@ export default function HotelPage() {
         setRooms([]);
   }
 
-
   const handleGuardarNuevaData = async (dataForm: any) => {
-
-    console.log('dataForm: ', dataForm);
-    console.log('selectedPermissions: ', selectedPermissions)
-    console.log('newRoom: ', newRoom);
-    console.log('rooms: ', rooms);
-    console.log('selectedCiudadID: ', selectedCiudadID);
 
     if (cadenaNoSeleccionada === undefined) {
         setCadenaNoSeleccionada(true);
         return;
       }
 
-    
-//       "servicios": [],
-// //       "activo": true
+    if(!selectedCiudadID){
+      handleShowToast('Debes seleccionar la ciudad', 'error');
+      return;
+    }
+
     const habitaciones = rooms.map(room => ({
-      numero: room.number,
-      tipo: room.type,
-      capacidad: room.capacity,
+      tipo_habitacion: room.id,
       precio_noche: room.price,
       moneda: room.currency,
-      activo: true,
       servicios: []
     }))
-    
+
     const payload = {...dataForm, 
         activo: true, 
         en_uso: false, 
@@ -494,7 +480,6 @@ export default function HotelPage() {
       
       delete payload.estrellas_filtros;
       delete payload.moneda;
-      console.log(payload)
     
     if(selectedPermissions.length){
       mutate(payload);
@@ -514,24 +499,14 @@ export default function HotelPage() {
         return;
       }
 
-
-    console.log(rooms)
     const habitaciones = rooms.map(room => {
       const habitacion: any = {
-        numero: room.number,
-        tipo: room.type,
-        capacidad: room.capacity,
+        tipo_habitacion: room.id,
         precio_noche: room.price,
         moneda: room.currency,
-        activo: true,
-        servicios: []
+        servicios: [],
       };
-      
-      // 🔹 Incluir el ID solo si existe y es un número (habitación existente)
-      if (room.id && typeof room.id === 'number') {
-        habitacion.id = room.id;
-      }
-      
+    
       return habitacion;
     })
     
@@ -543,11 +518,8 @@ export default function HotelPage() {
         servicios: selectedPermissions,
         habitaciones: [...habitaciones]
       }
-
-      
       
       delete payload.moneda;
-      console.log(payload)
     
     if(selectedPermissions.length){
       mutateGuardarEditado(payload);
@@ -558,7 +530,6 @@ export default function HotelPage() {
 
   useEffect(() => {
       if (dataAEditar) {
-        console.log('reset data para editar: ', dataAEditar)
         reset({
           ...dataAEditar,
           nombre: dataAEditar.nombre,
@@ -573,58 +544,24 @@ export default function HotelPage() {
   const handleEditar = (data: Hotel) => {
     setActiveTab('form');
     setDataAEditar(data);
-    console.log(data)
 
-    // ciudad_id: selectedCiudadID,
-    //             hoteles_ids: selectedPermissions,
-    //             pais_id: selectedNacionalidadID,
-    //             destino_id: selectedCadenaID,
-    // const hoteles = data.hoteles;
-    // const hotelesIds = hoteles.map(hotel => hotel.id)
-    // console.log(data)
-    // console.log('dataAEditar.persona.id: ', data.ciudad)
-    // setSelectedNacionalidadid(Number(data.ciudad.pais_id));
-    // setSelectedCiudadID(data.ciudad.id); 
     setSelectedCadenaID(data.cadena)
     // setSelectedNacionalidadid(data.cadena);
     setSelectedCiudadID(data.ciudad);
     setSelectedNacionalidadid(data.pais_id)
     setSelectedPermissions(data.servicios);
 
-    // number: "",
-    // type: "",
-    // capacity: 1,
-    // price: 0,
-    // currency: "",
+    
     const habitaciones = data.habitaciones.map(room => ({
-      id: room.id,
-      number: room.numero,
-      type: room.tipo,
+      id: room.tipo_habitacion,
+      type: room.tipo_habitacion_nombre,
       capacity: room.capacidad,
       price: room.precio_noche,
       currency: room.moneda,
     }))
 
-    //  habitaciones: [
-    //   {
-    //     id: 6,
-    //     hotel: 23,
-    //     numero: '100',
-    //     tipo: 'doble',
-    //     capacidad: 2,
-    //     precio_noche: 260000,
-    //     moneda: 1,
-    //     moneda_nombre: 'Guaraní',
-    //     servicios: [],
-    //     activo: true,
-    //     fecha_creacion: '2025-09-19T16:32:29+0000',
-    //     fecha_modificacion: '2025-09-19T16:32:29+0000'
-    //   }
-    // ],
     setRooms([...habitaciones]);
   }
-
-  console.log(rooms)
 
   const toggleActivar = (modulo: Hotel) => {
     setOnDesactivarData(true);
@@ -674,40 +611,43 @@ export default function HotelPage() {
     setCiudadNoSeleccionada(value);
   }
 
-  console.log(rooms)
-
   // FUNCIONES DE HABITACION
   const handleAddRoom = () => { 
-    if (!newRoom.number || !newRoom.type || newRoom.price <= 0) {
+    // setPrecioIsRequired(false);
+    if (!newRoom.price || newRoom.price <= 0) {
+      setPrecioIsRequired(true);
       return; // Validación básica
     }
 
-    console.log(isEditMode);
-    console.log(editingRoomId);
+    const tipoHabitacion = dataTipoHabitacinesList.find((h: TipoHabitacionTodos) => h.id.toString() === newRoom.id.toString())
 
     if (isEditMode && editingRoomId) {
       // 🔹 Editando habitación existente
       // console.log(newRoom)
-      const roomEdited = {...newRoom, currency: watch('moneda')};
-      console.log(roomEdited)
+      const roomEdited = {...newRoom};
+
       setRooms((prev) =>
         prev.map((room) =>
-          room.id === editingRoomId
-            ? { ...room, ...roomEdited } // Reemplazamos los valores con los del formulario
+          room.id.toString() === editingRoomId.toString()
+            ? { ...roomEdited,
+                capacity: tipoHabitacion.capacidad,
+                type: tipoHabitacion.nombre,
+                currency: moneda,
+             } // Reemplazamos los valores con los del formulario
             : room
         )
       );
     } else {
-      // 🔹 Agregando nueva habitación
+      
       const room: any = {
-        id: Date.now().toString(), // ID temporal
         ...newRoom,
-        currency: watch('moneda'), // o newRoom.currency
+        capacity: tipoHabitacion.capacidad,
+        type: tipoHabitacion.nombre,
+        currency: moneda,
+        price: newRoom.price,
       };
-      setRooms((prev) => {
-        console.log(prev)
-        return [...prev, room]
-      });
+      
+      setRooms((prev) => ([...prev, room]));
     }
 
     // Resetear formulario
@@ -719,34 +659,28 @@ export default function HotelPage() {
   }
 
   const resetRoomForm = () => {
-    setNewRoom({
-      number: "",
-      type: "",
-      capacity: 1,
-      price: 0,
-      currency: "2",
-    })
     setIsAddRoomOpen(false);
     setIsEditMode(false);
     setEditingRoomId(null);
+    setNewRoom({
+      id: tipoHabitacinInicial?.id?.toString(),
+      price: 0,
+      currency: monedaInicial?.id?.toString(),
+    })
     setValue('moneda', monedaInicial!.id.toString())
+    setPrecio(undefined);
+    setPrecioIsRequired(false);
   }
 
   const handleEditRoom = (room: any) => {
-    // ciudad_id: selectedCiudadID,
-    //             hoteles_ids: selectedPermissions,
-    //             pais_id: selectedNacionalidadID,
-    //             destino_id: selectedCadenaID,
 
-    console.log(room) 
       setNewRoom({
-        number: room.number,
-        type: room.type,
-        capacity: room.capacity,
+        id: room.id.toString(),
         price: room.price,
         currency: room.currency, // 🔹 esto está bien
       });
 
+      setPrecio(room.price.toLocaleString("es-PY"));
       setEditingRoomId(room.id);
       setIsEditMode(true);
       setIsAddRoomOpen(true);
@@ -771,6 +705,26 @@ export default function HotelPage() {
       </div>
     );
   };
+
+
+  const handlePrecioChange = (valor: string) => {
+    // setNewRoom((prev) => ({ ...prev, price: Number.parseFloat(e.target.value) || 0 }))
+
+    const valorLimpio = valor.replace(/\D/g, "")
+    if (valorLimpio === "") {
+      setNewRoom((prev) => ({ ...prev, price: 0 }))
+      setPrecio(undefined);
+      setPrecioIsRequired(true);
+      return
+    }
+    const valorNumerico = Number.parseInt(valorLimpio)
+    setNewRoom((prev) => ({ ...prev, price: valorNumerico }))
+    setPrecio(valorNumerico.toLocaleString("es-PY"));
+    setPrecioIsRequired(false);
+  }
+
+  const moneda = watch('moneda');
+  const monedaDataSelected = dataMonedaList && dataMonedaList?.find((m: Moneda) => m?.id?.toString() === moneda?.toString());
 
   return (
     <>
@@ -849,11 +803,11 @@ export default function HotelPage() {
                                   Habitaciones ({dataDetalle?.habitaciones.length})
                                 </Label>
                                 <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
-                                  {dataDetalle?.habitaciones.map((habitacion, index) => (
+                                  {dataDetalle?.habitaciones.map((habitacion) => (
                                     <>
-                                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                      <div key={habitacion.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
                                         <BedIcon className="h-4 w-4 text-blue-500" />
-                                        <span className="text-sm">{habitacion.tipo}</span>
+                                        <span className="text-sm">{habitacion?.tipo_habitacion_nombre}</span>
 
                                         <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
                                             {habitacion?.moneda_simbolo}{habitacion?.precio_noche} <span className="text-gray-500 font-normal"> / noche</span>
@@ -1340,7 +1294,8 @@ export default function HotelPage() {
                                     Agregar Habitación
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
+
+                                <DialogContent className="w-fit">
                                   <DialogHeader>
                                     <DialogTitle>Agregar Tipo de Habitación</DialogTitle>
                                     <DialogDescription>
@@ -1348,76 +1303,56 @@ export default function HotelPage() {
                                     </DialogDescription>
                                   </DialogHeader>
                                   <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                      <Label htmlFor="room-number" className="text-right">
-                                        Codigo *
-                                      </Label>
-                                      <Input
-                                        id="room-number"
-                                        value={newRoom.number}
-                                        onChange={(e) => setNewRoom((prev) => ({ ...prev, number: e.target.value }))}
-                                        placeholder="101"
-                                        className="col-span-3"
-                                      />
+                                    <div>
+                                      {JSON.stringify(newRoom)}
                                     </div>
+
                                     <div className="grid grid-cols-4 items-center gap-4">
                                       <Label htmlFor="room-type" className="text-right">
                                         Base *
                                       </Label>
                                       <Select
-                                        value={newRoom.type}
-                                        onValueChange={(value) => setNewRoom((prev) => ({ ...prev, type: value }))}
+                                        value={newRoom?.id?.toString()}
+                                        onValueChange={(value) => setNewRoom((prev) => ({ ...prev, id: Number(value)}))}
                                       >
                                         <SelectTrigger className="col-span-3">
                                           <SelectValue placeholder="Seleccione tipo" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="single">Habitación Simple</SelectItem>
-                                          <SelectItem value="doble">Habitación Doble</SelectItem>
-                                          <SelectItem value="triple">Habitación Triple</SelectItem>
-                                          <SelectItem value="suite">Suite</SelectItem>
-                                          <SelectItem value="premium">Premium</SelectItem>
-                                          {/* <SelectItem value="Penthouse">Penthouse</SelectItem> */}
+                                          {dataTipoHabitacinesList?.map((tipoHabitacion: TipoHabitacionTodos) => 
+                                            <SelectItem key={tipoHabitacion.id} className="w-full "
+                                              value={tipoHabitacion?.id?.toString()}>
+                                                  <div className="flex items-centergap-2 min-w-0">
+                                                    <div className="flex items-center gap-1  w-[5.5rem]">
+                                                      <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
+                                                      <span className="truncate">{tipoHabitacion.nombre}</span>
+                                                    </div>
+                                                    <Badge className="bg-gray-100 text-gray-700 border-gray-200">
+                                                      {`${tipoHabitacion.capacidad} persona${tipoHabitacion.capacidad > 1 ? 's': ''}`}
+                                                    </Badge>
+                                                  </div>
+                                              </SelectItem>
+                                            
+                                          )}
+                                          
                                         </SelectContent>
                                       </Select>
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                      <Label htmlFor="room-capacity" className="text-right">
-                                        Capacidad
+                                      <Label htmlFor="room-price" className="text-left whitespace-nowrap ">
+                                        Precio persona * 
                                       </Label>
-                                      <Select
-                                        value={newRoom.capacity.toString()}
-                                        onValueChange={(value) =>
-                                          setNewRoom((prev) => ({ ...prev, capacity: Number.parseInt(value) }))
-                                        }
-                                      >
-                                        <SelectTrigger className="col-span-3">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="1">1 persona</SelectItem>
-                                          <SelectItem value="2">2 personas</SelectItem>
-                                          <SelectItem value="3">3 personas</SelectItem>
-                                          <SelectItem value="4">4 personas</SelectItem>
-                                          <SelectItem value="5">5 personas</SelectItem>
-                                          <SelectItem value="6">6 personas</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                      <Label htmlFor="room-price" className="text-right">
-                                        Precio * 
-                                      </Label>
-                                      <div className="col-span-3 flex gap-2">
+                                      <div className="col-span-3 flex gap-2 min-w-0">
                                         <Input
                                           id="room-price"
-                                          type="number"
-                                          value={newRoom.price}
-                                          onChange={(e) =>
-                                            setNewRoom((prev) => ({ ...prev, price: Number.parseFloat(e.target.value) || 0 }))
-                                          }
-                                          placeholder="150"
-                                          className="flex-1"
+                                          type="text"
+                                          value={precio ?? ""}
+                                          // onChange={(e) =>
+                                          //   setNewRoom((prev) => ({ ...prev, price: Number.parseFloat(e.target.value) || 0 }))
+                                          // }
+                                          onChange={(e) => handlePrecioChange(e.target.value)}
+                                          placeholder={monedaDataSelected?.codigo === 'USD' ? "150$": '1.900.000Gs'}
+                                          className={`w-32 ${monedaIsRequired ? 'border-2 border-red-400 focus:!border-red-400 focus:ring-0 outline-none': ''}`}
                                         />
                                         
 
@@ -1426,7 +1361,7 @@ export default function HotelPage() {
                                           control={control}
                                           rules={{ required: "Este campo es requerido" }}
                                           render={({ field }) => (
-                                            <div className=" select-container"> {/* Contenedor para controlar el layout */}
+                                            <div className="select-container flex-1 min-w-0"> {/* Contenedor para controlar el layout */}
                                               <Select
                                                 value={field.value}
                                                 onValueChange={(value) => {
@@ -1435,7 +1370,6 @@ export default function HotelPage() {
                                                     clearErrors("moneda")
                                                   }
           
-                                                  console.log('value: ', value);
                                                   // const tipoPaquete = dataTipoPaqueteList.filter((doc: TipoPaquete) => doc.id.toString() === value)
                                                   // console.log('moneda: ', tipoPaquete[0])
                                                   // setMone(tipoPaquete[0]);
@@ -1489,7 +1423,6 @@ export default function HotelPage() {
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Número</TableHead>
                                     <TableHead>Tipo</TableHead>
                                     <TableHead>Capacidad</TableHead>
                                     <TableHead>Precio por Noche</TableHead>
@@ -1499,8 +1432,8 @@ export default function HotelPage() {
                                 <TableBody>
                                   {rooms.map((room: any) => (
                                     <TableRow key={room.id}>
-                                      <TableCell className="font-medium">{room.number}</TableCell>
-                                      <TableCell>{room.type}</TableCell>
+                                      {/* <TableCell className="font-medium">{room.number}</TableCell> */}
+                                      <TableCell className="font-medium">{room.type}</TableCell>
                                       <TableCell>{room.capacity} personas</TableCell>
                                       <TableCell>
                                         {formatearSeparadorMiles.format(room.price)} {dataMonedaList.filter((moneda: Moneda) => moneda.id == room.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == room.currency)[0].codigo })
@@ -1548,8 +1481,6 @@ export default function HotelPage() {
                               selectedPermissions.includes(p.id),
                             )
 
-                            console.log('allFilteredSelected: ', allFilteredSelected )
-
                             if (allFilteredSelected) {
                               setSelectedPermissions((prev) =>
                                 prev.filter((id) => !filteredPermissions.map((p: any) => p.id).includes(id)),
@@ -1584,11 +1515,9 @@ export default function HotelPage() {
                             disabled={isPendingMutation}
                             type="submit"
                              onClick={() => {
-                              console.log('cadenaNoSeleccionada 1: ', cadenaNoSeleccionada);
                               setOnGuardar(true)
                               
                               if(cadenaNoSeleccionada === undefined){
-                                  console.log('cadenaNoSeleccionada 2: ', cadenaNoSeleccionada);
                                   setCadenaNoSeleccionada(false);
                                 }
                             }}
@@ -1932,7 +1861,7 @@ export default function HotelPage() {
                                   <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                     <Search className="h-8 w-8 text-gray-400" />
                                   </div>
-                                  <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron modulos</h3>
+                                  <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron hoteles</h3>
                                   <p className="text-gray-500 mb-4">Intenta ajustar los filtros de búsqueda.</p>
                                   <Button
                                     onClick={handleReset}
