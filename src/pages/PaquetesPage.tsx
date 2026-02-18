@@ -1818,7 +1818,7 @@ const handleSubmitClick = useCallback(async () => {
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
         console.log(propio)
         if(propio){
-          console.log(rangoPrecioDesdeHasta); 
+          console.log('rangoPrecioDesdeHasta: ', rangoPrecioDesdeHasta); 
           // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
 
           // 🔹 Obtener la moneda seleccionada para aplicar conversión si es necesario
@@ -1831,8 +1831,9 @@ const handleSubmitClick = useCallback(async () => {
           
           if(paqueteModalidad === 'flexible'){
             const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin * factorConversion);
+            console.log('precioDesdeConvertido: ', precioDesdeConvertido);
             const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax * factorConversion);
-            setValueSalida('precio_desde', precioDesdeConvertido.toString()); 
+            setValueSalida('precio_desde', precioDesdeConvertido.toString());  
             setValueSalida('precio_hasta', precioHastaConvertido.toString());
           }
           else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
