@@ -3843,6 +3843,11 @@ const handleSubmitClick = useCallback(async () => {
                                                                         const esGuaranies = monedaActual?.codigo === 'PYG';
                                                                         const esUSD = monedaActual?.codigo === 'USD';
                                                                         const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+
+                                                                        console.log('monedaActual: ', monedaActual);
+                                                                        console.log('esGuaranies: ', esGuaranies);
+                                                                        console.log('esUSD: ', esUSD);
+                                                                        console.log('cotizacionVigente: ', cotizacionVigente);
                                                                         
                                                                         if (esGuaranies && cotizacionVigente && !isFetchingCotizacion) {
                                                                           return (
