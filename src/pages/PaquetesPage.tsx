@@ -1818,20 +1818,24 @@ const handleSubmitClick = useCallback(async () => {
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
         console.log(propio)
         if(propio){
-          console.log('rangoPrecioDesdeHasta: ', rangoPrecioDesdeHasta); 
+          console.log('[debug] rangoPrecioDesdeHasta: ', rangoPrecioDesdeHasta); 
           // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
 
           // 🔹 Obtener la moneda seleccionada para aplicar conversión si es necesario
           const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
           const esGuaranies = monedaActual?.codigo === 'PYG';
           const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+          console.log('[debug] monedaActual: ', monedaActual); 
+          console.log('[debug] esGuaranies: ', esGuaranies); 
+          console.log('[debug] cotizacionVigente: ', cotizacionVigente); 
           
           // 🔹 Calcular factor de conversión (1 si es USD, cotización si es PYG)
           const factorConversion = (esGuaranies && cotizacionVigente) ? Number(cotizacionVigente) : 1;
+          console.log('[debug] factorConversion: ', factorConversion);
           
           if(paqueteModalidad === 'flexible'){
             const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin * factorConversion);
-            console.log('precioDesdeConvertido: ', precioDesdeConvertido);
+            console.log('[debug] precioDesdeConvertido: ', precioDesdeConvertido);
             const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax * factorConversion);
             setValueSalida('precio_desde', precioDesdeConvertido.toString());  
             setValueSalida('precio_hasta', precioHastaConvertido.toString());
