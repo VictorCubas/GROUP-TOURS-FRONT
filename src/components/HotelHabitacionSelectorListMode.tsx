@@ -273,7 +273,7 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
                           <div className="text-right">
                             <div className="text-xs text-gray-600 mb-1">Precio total</div>
                             <div className="text-2xl font-bold text-blue-600">
-                              ${" "}
+                              {habitacion?.precio_moneda_alternativa?.moneda === 'USD' ? 'Gs.': 'USD'}{" "}
                               {formatearSeparadorMiles.format(parseFloat(habitacion.precio_venta_final))}
                             </div>
                             <p className="text-xs text-muted-foreground">Precio en {habitacion?.precio_moneda_alternativa?.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(habitacion.precio_moneda_alternativa.precio_venta_final)}</span></p> 
