@@ -1303,9 +1303,6 @@ export default function HotelPage() {
                                     </DialogDescription>
                                   </DialogHeader>
                                   <div className="grid gap-4 py-4">
-                                    <div>
-                                      {JSON.stringify(newRoom)}
-                                    </div>
 
                                     <div className="grid grid-cols-4 items-center gap-4">
                                       <Label htmlFor="room-type" className="text-right">
