@@ -1809,49 +1809,49 @@ const handleSubmitClick = useCallback(async () => {
           selectedHotels.has(hotel.id) // o idsSeleccionados.includes(hotel.id)
         );
 
-        console.log(selectedHotels); 
-        console.log(dataHotelesList)
-        console.log(hotelesFiltrados); 
-        console.log(fechaSalida, fechaRegreso)
+        // console.log(selectedHotels); 
+        // console.log(dataHotelesList)
+        // console.log('[debug] hotelesFiltrados: ', hotelesFiltrados); 
+        // console.log(fechaSalida, fechaRegreso)
           // { min: 1680, max: 1760, dias: 8, noches: 8 }                  
-        console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso))
-        const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
-        console.log(propio)
-        if(propio){
-          console.log('[debug] rangoPrecioDesdeHasta: ', rangoPrecioDesdeHasta); 
-          // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
+        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+        const monedaPaqueteCodigo = monedaActual?.codigo ?? 'USD';
+        const cotizacionVigente = dataCotizacion?.valor_en_guaranies ? Number(dataCotizacion.valor_en_guaranies) : undefined;
 
-          // 🔹 Obtener la moneda seleccionada para aplicar conversión si es necesario
-          const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
-          const esGuaranies = monedaActual?.codigo === 'PYG';
-          const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
-          console.log('[debug] monedaActual: ', monedaActual); 
-          console.log('[debug] esGuaranies: ', esGuaranies); 
-          console.log('[debug] cotizacionVigente: ', cotizacionVigente); 
-          
-          // 🔹 Calcular factor de conversión (1 si es USD, cotización si es PYG)
-          const factorConversion = (esGuaranies && cotizacionVigente) ? Number(cotizacionVigente) : 1;
-          console.log('[debug] factorConversion: ', factorConversion);
-          
+        // console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso, monedaPaqueteCodigo, cotizacionVigente))
+        const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso, monedaPaqueteCodigo, cotizacionVigente);
+        // console.log(propio)
+        if(propio){
+          // console.log('[debug] rangoPrecioDesdeHasta: ', rangoPrecioDesdeHasta);
+
           if(paqueteModalidad === 'flexible'){
-            const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin * factorConversion);
-            console.log('[debug] precioDesdeConvertido: ', precioDesdeConvertido);
-            const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax * factorConversion);
-            setValueSalida('precio_desde', precioDesdeConvertido.toString());  
+            const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin);
+            // console.log('[debug] precioDesdeConvertido: ', precioDesdeConvertido);
+            const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax);
+            setValueSalida('precio_desde', precioDesdeConvertido.toString());
             setValueSalida('precio_hasta', precioHastaConvertido.toString());
           }
           else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
-            console.log(fixedRoomTypeId);
-            console.log(hotelesFiltrados);
-            console.log(hotelesFiltrados[0].habitaciones);
-            // setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMin.toString());
-            const habitacionFiltered =  hotelesFiltrados[0].habitaciones?.filter((habitacion: any) => habitacion.id === fixedRoomTypeId)
+            // console.log(fixedRoomTypeId);
+            // console.log(hotelesFiltrados);
+            // console.log(hotelesFiltrados[0].habitaciones);
+            const habitacionFiltered = hotelesFiltrados[0].habitaciones?.filter((habitacion: any) => habitacion.id === fixedRoomTypeId)
             console.log(habitacionFiltered);
-            console.log(habitacionFiltered[0].precio_noche);
-            console.log(rangoPrecioDesdeHasta.noches);
-            console.log(habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches);
-            const precioBase = habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches;
-            const precioDesdeConvertido = Math.round(precioBase * factorConversion);
+            const hab = habitacionFiltered[0];
+            // console.log(hab.precio_noche);
+            // console.log(rangoPrecioDesdeHasta.noches);
+
+            const monedaHab: string = hab.moneda_codigo ?? 'USD';
+            let precioNoche: number = hab.precio_noche;
+            if (monedaHab !== monedaPaqueteCodigo && cotizacionVigente) {
+              precioNoche = monedaPaqueteCodigo === 'PYG'
+                ? precioNoche * cotizacionVigente
+                : precioNoche / cotizacionVigente;
+            }
+
+            // console.log(precioNoche * rangoPrecioDesdeHasta.noches);
+            const precioBase = precioNoche * rangoPrecioDesdeHasta.noches;
+            const precioDesdeConvertido = Math.round(precioBase);
             setValueSalida('precio_desde', precioDesdeConvertido.toString());
             setValueSalida('precio_hasta', '');
           }
