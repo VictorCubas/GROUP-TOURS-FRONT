@@ -189,6 +189,16 @@ export default function HotelPage() {
         staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
       });
 
+  //se invalida la peticion de servicios-disponibles al hacer unmount del componente
+  useEffect(() => {
+    return () => {
+      queryClient.invalidateQueries({
+                queryKey: ['servicios-disponibles'],
+                exact: false
+              });
+    }
+  }, [])
+
   const { dataMonedaList, monedaInicial } = useMonedaInicial(setValue);
   const { dataTipoHabitacinesList, tipoHabitacinInicial } = useTipoHabitacionInicial(setNewRoom);
 
@@ -205,7 +215,7 @@ export default function HotelPage() {
         setNewDataCiudadList([])
       }
     }, [isFetchingCiudad]);
-    
+
 
   useEffect(() => {
       if(selectedNacionalidadID){

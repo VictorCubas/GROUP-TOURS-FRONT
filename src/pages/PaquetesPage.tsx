@@ -294,6 +294,17 @@ export default function ModulosPage() {
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
+
+  //se invalida la peticion de servicios-disponibles al hacer unmount del componente
+  useEffect(() => {
+    return () => {
+      queryClient.invalidateQueries({
+                queryKey: ['servicios-disponibles'],
+                exact: false
+              });
+    }
+  }, [])
+
   const {data: dataDistribuidoraList, isFetching: isFetchingDistribuidora,} = useQuery({
       queryKey: ['distribuidoras-disponibles',], //data cached
       queryFn: () => fetchDataDistribuidoraTodos(),
@@ -705,7 +716,6 @@ export default function ModulosPage() {
     console.log("FormData listo:", [...formData.entries()]); 
     mutate(formData);  
   };
-
 
 
   const handleGuardarDataEditado = async (dataForm: any) => {
