@@ -288,6 +288,7 @@ export default function SalidasPage() {
   useEffect(() => {
     const handler = setTimeout(() => {
       setFiltros((prev) => ({ ...prev, busqueda: busquedaInput }))
+      setCurrentPage(1)
     }, 750)
     return () => clearTimeout(handler)
   }, [busquedaInput])
