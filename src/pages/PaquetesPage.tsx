@@ -1828,38 +1828,39 @@ const handleSubmitClick = useCallback(async () => {
         const monedaPaqueteCodigo = monedaActual?.codigo ?? 'USD';
         const cotizacionVigente = dataCotizacion?.valor_en_guaranies ? Number(dataCotizacion.valor_en_guaranies) : undefined;
 
-        // console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso, monedaPaqueteCodigo, cotizacionVigente))
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso, monedaPaqueteCodigo, cotizacionVigente);
-        // console.log(propio)
         if(propio){
-          // console.log('[debug] rangoPrecioDesdeHasta: ', rangoPrecioDesdeHasta);
-
           if(paqueteModalidad === 'flexible'){
-            const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin);
-            // console.log('[debug] precioDesdeConvertido: ', precioDesdeConvertido);
-            const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax);
-            setValueSalida('precio_desde', precioDesdeConvertido.toString());
-            setValueSalida('precio_hasta', precioHastaConvertido.toString());
+            if(rangoPrecioDesdeHasta.sinCotizacion){
+              handleShowToast('No hay cotización vigente. No se puede calcular el precio para habitaciones con moneda diferente al paquete.', 'error');
+              setValueSalida('precio_desde', '');
+              setValueSalida('precio_hasta', '');
+            } else {
+              const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin);
+              const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax);
+              setValueSalida('precio_desde', precioDesdeConvertido.toString());
+              setValueSalida('precio_hasta', precioHastaConvertido.toString());
+            }
           }
           else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
-            // console.log(fixedRoomTypeId);
-            // console.log(hotelesFiltrados);
-            // console.log(hotelesFiltrados[0].habitaciones);
-            const habitacionFiltered = hotelesFiltrados[0].habitaciones?.filter((habitacion: any) => habitacion.id === fixedRoomTypeId)
-            console.log(habitacionFiltered);
+            const habitacionFiltered = hotelesFiltrados[0].habitaciones?.filter((habitacion: any) => habitacion.id.toString() === fixedRoomTypeId)
             const hab = habitacionFiltered[0];
-            // console.log(hab.precio_noche);
-            // console.log(rangoPrecioDesdeHasta.noches);
 
             const monedaHab: string = hab.moneda_codigo ?? 'USD';
             let precioNoche: number = hab.precio_noche;
-            if (monedaHab !== monedaPaqueteCodigo && cotizacionVigente) {
+
+            if (monedaHab !== monedaPaqueteCodigo) {
+              if (!cotizacionVigente) {
+                handleShowToast('No hay cotización vigente. No se puede calcular el precio para esta habitación.', 'error');
+                setValueSalida('precio_desde', '');
+                setValueSalida('precio_hasta', '');
+                return;
+              }
               precioNoche = monedaPaqueteCodigo === 'PYG'
                 ? precioNoche * cotizacionVigente
                 : precioNoche / cotizacionVigente;
             }
 
-            // console.log(precioNoche * rangoPrecioDesdeHasta.noches);
             const precioBase = precioNoche * rangoPrecioDesdeHasta.noches;
             const precioDesdeConvertido = Math.round(precioBase);
             setValueSalida('precio_desde', precioDesdeConvertido.toString());
