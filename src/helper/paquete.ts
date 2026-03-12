@@ -189,19 +189,25 @@ export const calcularRangoPrecio = (
   precioMax: number;
   dias: number;
   noches: number;
+  sinCotizacion: boolean;
 } => {
 
   const diffDias = calculateNoches(fechaIngreso, fechaRegreso);
   const diffNoches = diffDias;
+  let sinCotizacion = false;
 
-  const precios: number[] = hoteles.flatMap(hotel =>
+  const preciosNullable: (number | null)[] = hoteles.flatMap(hotel =>
     hotel.habitaciones.map((h: any) => {
       const monedaHab: string = h.moneda_codigo ?? 'USD';
       const precioOriginal: number = h.precio_noche;
 
-      //si PYG entonces retornar el precio original en PYG
-      if (monedaHab === monedaPaquete || !cotizacion) {
+      if (monedaHab === monedaPaquete) {
         return precioOriginal;
+      }
+
+      if (!cotizacion) {
+        sinCotizacion = true;
+        return null; // no se puede convertir sin cotización
       }
 
       if (monedaPaquete === 'PYG') {
@@ -212,14 +218,16 @@ export const calcularRangoPrecio = (
     })
   );
 
+  const precios = preciosNullable.filter((p): p is number => p !== null);
+
   if (precios.length === 0) {
-    return { precioMin: 0, precioMax: 0, dias: diffDias, noches: diffNoches };
+    return { precioMin: 0, precioMax: 0, dias: diffDias, noches: diffNoches, sinCotizacion };
   }
 
   const precioMin = Math.min(...precios) * diffNoches;
   const precioMax = Math.max(...precios) * diffNoches;
 
-  return { precioMin, precioMax, dias: diffDias, noches: diffNoches };
+  return { precioMin, precioMax, dias: diffDias, noches: diffNoches, sinCotizacion };
 };
 
 
