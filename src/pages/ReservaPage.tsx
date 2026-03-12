@@ -324,6 +324,7 @@ export default function ReservaPage() {
 
           // Refrescar la lista de reservas para ver el estado actualizado
           queryClient.invalidateQueries({ queryKey: ['reservas'] });
+          queryClient.invalidateQueries({ queryKey: ['salidas'] });
           // Refrescar el resumen de movimientos de caja
           queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
           queryClient.invalidateQueries({queryKey: ['movimientos'],exact: false});
@@ -361,6 +362,7 @@ export default function ReservaPage() {
 
           // Refrescar la lista de reservas para ver el estado actualizado
           queryClient.invalidateQueries({ queryKey: ['reservas'] });
+          queryClient.invalidateQueries({ queryKey: ['salidas'] });
           // Refrescar el resumen de movimientos de caja
           queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
           queryClient.invalidateQueries({queryKey: ['movimientos'],exact: false});
@@ -658,6 +660,7 @@ export default function ReservaPage() {
           queryKey: ['paquetes-disponibles'],
         });
 
+        queryClient.invalidateQueries({ queryKey: ['salidas'] });
         
         queryClient.invalidateQueries({
           queryKey: ['pasajeros-disponibles'],
@@ -702,6 +705,8 @@ export default function ReservaPage() {
         queryClient.invalidateQueries({
           queryKey: ['personas-disponibles'],
         });
+
+        queryClient.invalidateQueries({ queryKey: ['salidas'] });
         
         queryClient.removeQueries({
           queryKey: ['hotel-por-salida'],
