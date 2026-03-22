@@ -681,7 +681,7 @@ export default function SalidasPage() {
       fecha_regreso: dataForm.fecha_regreso_v2,
       moneda_id: dataForm.moneda,
       senia: dataForm.senia,
-      precio_actual: propio ? dataForm.precio_desde : dataForm.precio_desde_editable,
+      costo_base_desde: propio ? dataForm.precio_desde : dataForm.precio_desde_editable,
       hoteles_ids: hotelesIds,
     }
 
@@ -700,9 +700,9 @@ export default function SalidasPage() {
     }
 
     if (propio && dataForm.precio_hasta) {
-      payload.precio_final = dataForm.precio_hasta
+      payload.costo_base_hasta = dataForm.precio_hasta
     } else if (!propio && dataForm.precio_hasta_editable && paqueteModalidad === "flexible") {
-      payload.precio_final = dataForm.precio_hasta_editable
+      payload.costo_base_hasta = dataForm.precio_hasta_editable
     }
 
     if (paqueteModalidad === "fijo" && fixedRoomTypeIdRef.current) {
@@ -834,7 +834,7 @@ export default function SalidasPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-4xl font-bold text-white">
-                      {dataDetalle.moneda.simbolo} {formatearSeparadorMiles.format(Number(dataDetalle.precio_actual))}
+                      {dataDetalle.moneda.simbolo} {formatearSeparadorMiles.format(Number(dataDetalle.costo_base_desde))}
                     </div>
                     <div className="text-white/80 text-sm mt-1">Precio actual</div>
                   </div>
@@ -942,7 +942,7 @@ export default function SalidasPage() {
                             <div>
                               <p className="text-xs text-gray-500">Precio actual</p>
                               <p className="font-bold text-green-600 text-lg">
-                                {dataDetalle.moneda.simbolo} {formatearSeparadorMiles.format(Number(dataDetalle.precio_actual))}
+                                {dataDetalle.moneda.simbolo} {formatearSeparadorMiles.format(Number(dataDetalle.costo_base_desde))}
                               </p>
                             </div>
                             <div>
@@ -1030,11 +1030,11 @@ export default function SalidasPage() {
                                     <p className="font-semibold text-gray-900">{dataSalidaDetalle.comision} %</p>
                                   </div>
                                 )}
-                                {dataSalidaDetalle.precio_final != null && (
+                                {dataSalidaDetalle.costo_base_hasta != null && (
                                   <div>
                                     <p className="text-xs text-gray-500">Precio final</p>
                                     <p className="font-semibold text-gray-900">
-                                      {dataDetalle.moneda.simbolo} {formatearSeparadorMiles.format(Number(dataSalidaDetalle.precio_final))}
+                                      {dataDetalle.moneda.simbolo} {formatearSeparadorMiles.format(Number(dataSalidaDetalle.costo_base_hasta))}
                                     </p>
                                   </div>
                                 )}
@@ -1453,7 +1453,7 @@ export default function SalidasPage() {
                             <TableCell>
                               <div className="font-medium text-green-600">
                                 {salida.moneda.simbolo}{" "}
-                                {formatearSeparadorMiles.format(Number(salida.precio_actual))}
+                                {formatearSeparadorMiles.format(Number(salida.costo_base_desde))}
                               </div>
                               <div className="text-sm text-gray-500">
                                 Seña: {salida.moneda.simbolo}{" "}

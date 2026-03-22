@@ -58,8 +58,8 @@ export interface SalidaPaquete {
   fecha_regreso: string;      // ISO date en formato 'YYYY-MM-DD'
   moneda: Moneda;            // Objeto con id y nombre
   temporada: string | null;  // Puede ser null
-  precio_actual: number;     // Precio numérico
-  precio_final?: number;     // Precio numérico
+  costo_base_desde: number;  // Costo base mínimo de la salida (habitación más barata × noches)
+  costo_base_hasta?: number; // Costo base máximo de la salida (puede ser null)
   precio_moneda_alternativa?: PrecioAlternativo;     // Precio numérico
   precio_venta_total_min?: number;       
   senia: number;     // Precio numérico

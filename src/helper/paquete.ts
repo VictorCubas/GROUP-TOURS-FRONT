@@ -110,7 +110,7 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
         fecha_salida: salida.fecha_salida_v2,
         fecha_regreso: salida.fecha_regreso_v2,
         senia: salida.senia,
-        precio_actual: salida.precio_actual,
+        costo_base_desde: salida.costo_base_desde,
         hoteles: salida.hoteles_ids,
         cupo: salida?.cupo ? parseInt(salida.cupo, 10) : null, // Entero
         moneda_id: dataForm.moneda,
@@ -130,8 +130,8 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
         sal.comision = salida.comision;
       }
 
-      if(salida.precio_final)
-        sal.precio_final = salida.precio_final;
+      if(salida.costo_base_hasta)
+        sal.costo_base_hasta = salida.costo_base_hasta;
 
       return sal;
     }
@@ -261,7 +261,7 @@ const parseFechaLocal = (fecha: string | Date): Date => {
 
 /**
  * Calcula el costo total del paquete sumando el total de servicios
- * al menor precio_actual y al mayor precio_final del array.
+ * al menor costo_base_desde y al mayor costo_base_hasta del array.
  */
 export function calcularCostoPaquete(
   salidas: SalidaPaquete[],
@@ -278,8 +278,8 @@ export function calcularCostoPaquete(
   console.log(totalPrecioServicios);
 
   // 🔹 Convertir a número y buscar min y max
-  const preciosActual = salidas.map((s: any) => Number(s.precio_actual ? s.precio_actual : s.precio));
-  const preciosFinal = salidas.map((s) => Number(s.precio_final));
+  const preciosActual = salidas.map((s: any) => Number(s.costo_base_desde ? s.costo_base_desde : s.precio));
+  const preciosFinal = salidas.map((s) => Number(s.costo_base_hasta));
 
   const menorPrecioActual = Math.min(...preciosActual);
   const mayorPrecioFinal = Math.max(...preciosFinal);

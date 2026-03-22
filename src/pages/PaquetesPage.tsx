@@ -728,7 +728,7 @@ export default function ModulosPage() {
       const salActualizada: any = {
         fecha_salida: salida.fecha_salida_v2,
         fecha_regreso: salida.fecha_regreso_v2,
-        precio_actual: salida?.precio_actual ?? salida?.precio,
+        costo_base_desde: salida?.costo_base_desde ?? salida?.precio,
         senia: salida.senia,
         cupo: parseInt(salida.cupo, 10), // Entero
         moneda_id: dataForm.moneda,
@@ -737,8 +737,8 @@ export default function ModulosPage() {
         temporada_id: salida?.temporada_id || null, // Opcional
       };
 
-      if(salida?.precio_final)
-        salActualizada.precio_final = salida?.precio_final;
+      if(salida?.costo_base_hasta)
+        salActualizada.costo_base_hasta = salida?.costo_base_hasta;
 
       if(paqueteModalidad === 'fijo')
         salActualizada.habitacion_fija = salida.habitacion_fija;
@@ -1030,8 +1030,8 @@ export default function ModulosPage() {
         fecha_salida_v2: salida.fecha_salida,
         fecha_regreso_v2: salida.fecha_regreso,
         moneda: salida.moneda.id,
-        precio: salida.precio_actual,
-        precio_final: salida.precio_final,
+        precio: salida.costo_base_desde,
+        costo_base_hasta: salida.costo_base_hasta,
         senia: salida.senia,
         cupo: data.propio ? salida.cupo : null,
         cupos_habitaciones: salida.cupos_habitaciones,
@@ -1447,8 +1447,8 @@ useEffect(() => {
 
       // 🔹 Editando habitación existente
       const salidaEdited: any = {...dataForm,
-        precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
-        precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
+        costo_base_desde: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
+        costo_base_hasta: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
         hoteles_ids:hotelesIds,
         cupos_habitaciones: habitacionesCuposList,
         precios_catalogo: precioCatalogoDistribuidora,
@@ -1465,8 +1465,8 @@ useEffect(() => {
       delete salidaEdited.precio_desde;
       delete salidaEdited.precio_hasta;
 
-      if(!propio && !salidaEdited?.precio_final){
-        delete salidaEdited.precio_final;
+      if(!propio && !salidaEdited?.costo_base_hasta){
+        delete salidaEdited.costo_base_hasta;
       }
 
       console.log(salidas)
@@ -1498,9 +1498,9 @@ useEffect(() => {
       const salida: any = {
         id: Date.now().toString(), // ID temporal
         ...dataForm,
-        precio_actual: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
-        precio_final: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
-        // precio_final: dataForm.precio_hasta,
+        costo_base_desde: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
+        costo_base_hasta: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
+        // costo_base_hasta: dataForm.precio_hasta,
         cupos_habitaciones: habitacionesCuposList,
         precios_catalogo: precioCatalogoDistribuidora,
         precios_catalogo_hoteles: preciosCatalogoHoteles,
@@ -1517,8 +1517,8 @@ useEffect(() => {
       delete salida.precio_desde;
       delete salida.precio_hasta_editable;
       delete salida.precio_hasta;
-      if(!propio && !salida?.precio_final || paqueteModalidad === 'fijo'){
-        delete salida.precio_final;
+      if(!propio && !salida?.costo_base_hasta || paqueteModalidad === 'fijo'){
+        delete salida.costo_base_hasta;
       }
 
       if(propio){
@@ -1697,10 +1697,10 @@ const handleSubmitClick = useCallback(async () => {
 
     resetSalida({
       ...salida,
-      precio_desde_editable: salida.precio ?? salida.precio_actual,
-      precio_hasta_editable: salida?.precio_final,
-      precio_hasta: salida?.precio_final ?? '',
-      precio_desde: salida.precio ?? salida.precio_actual
+      precio_desde_editable: salida.precio ?? salida.costo_base_desde,
+      precio_hasta_editable: salida?.costo_base_hasta,
+      precio_hasta: salida?.costo_base_hasta ?? '',
+      precio_desde: salida.precio ?? salida.costo_base_desde
     })
 
     setEditingSalidaId(salida.id);
@@ -4542,9 +4542,9 @@ const handleSubmitClick = useCallback(async () => {
                                                 <TableRow key={salida.id}>
                                                   <TableCell className="font-medium">{formatearFecha(salida.fecha_salida_v2, false)}</TableCell>
                                                   <TableCell>{formatearFecha(salida?.fecha_regreso_v2, false)}</TableCell>
-                                                  <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.precio_actual)}</TableCell>
-                                                  <TableCell>{salida?.precio_final ? 
-                                                          formatearSeparadorMiles.format(salida?.precio_final) : 
+                                                  <TableCell>{formatearSeparadorMiles.format(salida.precio ?? salida.costo_base_desde)}</TableCell>
+                                                  <TableCell>{salida?.costo_base_hasta ?
+                                                          formatearSeparadorMiles.format(salida?.costo_base_hasta) : 
                                                           <Badge
                                                             className="bg-gray-100 text-gray-700 border-gray-200">
                                                             {paqueteModalidad === 'flexible' ? 'Sin tope' : 'No aplica'}

@@ -26,8 +26,8 @@ export interface SalidaListado {
   moneda: SalidaMoneda;
   fecha_salida: string;
   fecha_regreso: string | null;
-  precio_actual: string;
-  precio_final: string;
+  costo_base_desde: string;
+  costo_base_hasta: string;
   precio_venta_sugerido_min: string;
   precio_venta_sugerido_max: string;
   senia: string;
