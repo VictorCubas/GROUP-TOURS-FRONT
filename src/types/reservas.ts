@@ -194,6 +194,7 @@ export interface Reserva {
   porcentaje_pagado: number;
   nota_credito_global_ya_generada?: boolean; // Indica si la factura global tiene NC activa (modalidad global)
   nota_credito_global_id?: number; // ID de la nota de crédito global activa
+  dias_hasta_salida?: number; // Días restantes hasta la fecha de salida del paquete
 }
 
 export interface ReservaListado {

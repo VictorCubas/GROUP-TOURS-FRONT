@@ -61,7 +61,10 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
     const [mostrarGenerarFacturaCancelacion, setMostrarGenerarFacturaCancelacion] = useState(false);
     const [mostrarGenerarNCCancelacion, setMostrarGenerarNCCancelacion] = useState(false);
     const [mostrarModalExitoCancelacion, setMostrarModalExitoCancelacion] = useState(false);
-    
+
+    // 🆕 Estado para controlar que el modal de cancelación automática solo se abra UNA vez
+    const [cancelacionAutomaticaProcesada, setCancelacionAutomaticaProcesada] = useState(false);
+
     const {data: dataDetalleResp, isFetching: isFetchingDetalles,} = useQuery({
         queryKey: ['reserva-detalles', reservaId], //data cached
         queryFn: ({signal}) => fetchReservaDetallesById({signal, id: reservaId}),
@@ -140,12 +143,21 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         })));
     }
 
+    // 🔧 Fix: Resetear la bandera cuando cambia la reserva (importante para múltiples reservas)
+    useEffect(() => {
+        setCancelacionAutomaticaProcesada(false);
+    }, [reservaId]);
+
     // Efecto para abrir automáticamente el modal si califica para cancelación automática
     useEffect(() => {
-        if (dataDetalleResp?.califica_cancelacion_automatica && !reservaCancelada && !isCancelarReservaModalOpen) {
+        if (dataDetalleResp?.califica_cancelacion_automatica &&
+            !reservaCancelada &&
+            !isCancelarReservaModalOpen &&
+            !cancelacionAutomaticaProcesada) { // ✅ Nueva condición para evitar reabrir
             setIsCancelarReservaModalOpen(true);
+            setCancelacionAutomaticaProcesada(true); // ✅ Marcar como procesada
         }
-    }, [dataDetalleResp?.califica_cancelacion_automatica, reservaCancelada, isCancelarReservaModalOpen]);
+    }, [dataDetalleResp?.califica_cancelacion_automatica, reservaCancelada, isCancelarReservaModalOpen, cancelacionAutomaticaProcesada]);
 
     const renderStars = (rating: number) => {
         return (
@@ -203,6 +215,25 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         return 'bg-green-600';
     };
 
+    // 🔍 Debug: Verificar el orden de los pasajeros tal como llegan del backend
+    useEffect(() => {
+        if (dataDetalleResp?.pasajeros) {
+            console.log('📋 Orden ORIGINAL desde el backend:');
+            dataDetalleResp.pasajeros.forEach((pasajero: any, index: number) => {
+                console.log(`  ${index}. ID: ${pasajero.id} | Nombre: ${pasajero.persona.nombre} ${pasajero.persona.apellido} | Por asignar: ${pasajero.por_asignar}`);
+            });
+
+            const ordenados = dataDetalleResp.pasajeros.slice().sort((a: any, b: any) => {
+                if (a.por_asignar === b.por_asignar) return a.id - b.id;
+                return a.por_asignar ? 1 : -1;
+            });
+
+            console.log('✅ Orden DESPUÉS de ordenar (reales primero):');
+            ordenados.forEach((pasajero: any, index: number) => {
+                console.log(`  ${index}. ID: ${pasajero.id} | Nombre: ${pasajero.persona.nombre} ${pasajero.persona.apellido} | Por asignar: ${pasajero.por_asignar}`);
+            });
+        }
+    }, [dataDetalleResp?.pasajeros]);
 
     if(isFetchingDetalles){
         return (
@@ -585,15 +616,57 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
                 onSuccess: (data) => {
                     console.log('✅ Factura de cancelación generada:', data);
                     handleShowToast('Factura generada correctamente', 'success');
-                    
+
                     // Guardar factura generada
                     setFacturaGeneradaCancelacion(data);
-                    
+
                     // Cerrar modal de factura
                     setMostrarGenerarFacturaCancelacion(false);
-                    
-                    // Abrir automáticamente modal de NC
-                    setMostrarGenerarNCCancelacion(true);
+
+                    // 🔧 Decidir siguiente paso según si hay monto para NC
+                    const montoNC = data?.info_nc?.monto_nc || cancelacionPayload?.monto_nc || 0;
+                    const metodo_cancelacion = cancelacionPayload?.metodo_cancelacion;
+
+                    console.log(`🔍 Monto NC: ${montoNC}`);
+                    console.log(`🔍 Método de cancelación: ${metodo_cancelacion}`);
+
+                    if (metodo_cancelacion === 'sin_nc' || montoNC === 0) {
+                        // 🚫 Sin NC: Cancelar reserva directamente
+                        console.log('🚫 No hay monto para NC (monto_nc = 0 o sin_nc) → Cancelar reserva directamente');
+
+                        // Ejecutar cancelación de reserva
+                        fetchCancelarReserva(
+                            { reservaId, payload: {} },
+                            {
+                                onSuccess: (cancelData) => {
+                                    console.log('✅ Reserva cancelada exitosamente (sin NC):', cancelData);
+                                    handleShowToast('Reserva cancelada exitosamente', 'success');
+
+                                    // Ir directo al modal de éxito
+                                    setMostrarModalExitoCancelacion(true);
+
+                                    // Refrescar queries
+                                    queryClient.invalidateQueries({ queryKey: ['reserva-detalles', reservaId] });
+                                    queryClient.invalidateQueries({ queryKey: ['reservas'], exact: false });
+                                    queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
+                                    queryClient.invalidateQueries({ queryKey: ['movimientos'], exact: false });
+                                    queryClient.invalidateQueries({ queryKey: ['paquetes'], exact: false });
+                                    queryClient.invalidateQueries({ queryKey: ['salidas-paquete'], exact: false });
+                                },
+                                onError: (cancelError: any) => {
+                                    console.error('❌ Error al cancelar la reserva:', cancelError);
+                                    const errorMessage = cancelError.response?.data?.message
+                                        || cancelError.response?.data?.error
+                                        || 'Error al cancelar la reserva';
+                                    handleShowToast(errorMessage, 'error');
+                                }
+                            }
+                        );
+                    } else {
+                        // ✅ Con NC: Abrir modal de NC
+                        console.log(`✅ Hay monto para NC (${montoNC}) → Abrir modal de NC`);
+                        setMostrarGenerarNCCancelacion(true);
+                    }
                 },
                 onError: (error: any) => {
                     console.error('❌ Error al generar factura:', error);
@@ -1315,7 +1388,18 @@ return   <>
 
                 {dataDetalleResp?.pasajeros.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {dataDetalleResp?.pasajeros.map((pasajero: any, index: number) => (
+                        {dataDetalleResp?.pasajeros
+                            .slice()
+                            .sort((a: any, b: any) => {
+                                // Pasajeros reales (por_asignar=false) van primero
+                                if (a.por_asignar === b.por_asignar) {
+                                    // Si ambos tienen el mismo estado, mantener orden por ID
+                                    return a.id - b.id;
+                                }
+                                // Los pasajeros asignados (por_asignar=false) van primero
+                                return a.por_asignar ? 1 : -1;
+                            })
+                            .map((pasajero: any, index: number) => (
                         <div key={pasajero.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
                             <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center space-x-3">

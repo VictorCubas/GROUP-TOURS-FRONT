@@ -294,6 +294,17 @@ export default function ModulosPage() {
       staleTime: 5 * 60 * 1000 //despues de 5min los datos se consideran obsoletos
     });
 
+
+  //se invalida la peticion de servicios-disponibles al hacer unmount del componente
+  useEffect(() => {
+    return () => {
+      queryClient.invalidateQueries({
+                queryKey: ['servicios-disponibles'],
+                exact: false
+              });
+    }
+  }, [])
+
   const {data: dataDistribuidoraList, isFetching: isFetchingDistribuidora,} = useQuery({
       queryKey: ['distribuidoras-disponibles',], //data cached
       queryFn: () => fetchDataDistribuidoraTodos(),
@@ -705,7 +716,6 @@ export default function ModulosPage() {
     console.log("FormData listo:", [...formData.entries()]); 
     mutate(formData);  
   };
-
 
 
   const handleGuardarDataEditado = async (dataForm: any) => {
@@ -1809,44 +1819,50 @@ const handleSubmitClick = useCallback(async () => {
           selectedHotels.has(hotel.id) // o idsSeleccionados.includes(hotel.id)
         );
 
-        console.log(selectedHotels); 
-        console.log(dataHotelesList)
-        console.log(hotelesFiltrados); 
-        console.log(fechaSalida, fechaRegreso)
+        // console.log(selectedHotels); 
+        // console.log(dataHotelesList)
+        // console.log('[debug] hotelesFiltrados: ', hotelesFiltrados); 
+        // console.log(fechaSalida, fechaRegreso)
           // { min: 1680, max: 1760, dias: 8, noches: 8 }                  
-        console.log(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso))
-        const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso);
-        console.log(propio)
-        if(propio){
-          console.log(rangoPrecioDesdeHasta); 
-          // setRangoPrecio(calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso));
+        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
+        const monedaPaqueteCodigo = monedaActual?.codigo ?? 'USD';
+        const cotizacionVigente = dataCotizacion?.valor_en_guaranies ? Number(dataCotizacion.valor_en_guaranies) : undefined;
 
-          // 🔹 Obtener la moneda seleccionada para aplicar conversión si es necesario
-          const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
-          const esGuaranies = monedaActual?.codigo === 'PYG';
-          const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
-          
-          // 🔹 Calcular factor de conversión (1 si es USD, cotización si es PYG)
-          const factorConversion = (esGuaranies && cotizacionVigente) ? Number(cotizacionVigente) : 1;
-          
+        const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso, monedaPaqueteCodigo, cotizacionVigente);
+        if(propio){
           if(paqueteModalidad === 'flexible'){
-            const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin * factorConversion);
-            const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax * factorConversion);
-            setValueSalida('precio_desde', precioDesdeConvertido.toString()); 
-            setValueSalida('precio_hasta', precioHastaConvertido.toString());
+            if(rangoPrecioDesdeHasta.sinCotizacion){
+              handleShowToast('No hay cotización vigente. No se puede calcular el precio para habitaciones con moneda diferente al paquete.', 'error');
+              setValueSalida('precio_desde', '');
+              setValueSalida('precio_hasta', '');
+            } else {
+              const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin);
+              const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax);
+              setValueSalida('precio_desde', precioDesdeConvertido.toString());
+              setValueSalida('precio_hasta', precioHastaConvertido.toString());
+            }
           }
           else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
-            console.log(fixedRoomTypeId);
-            console.log(hotelesFiltrados);
-            console.log(hotelesFiltrados[0].habitaciones);
-            // setValueSalida('precio_hasta', rangoPrecioDesdeHasta.precioMin.toString());
-            const habitacionFiltered =  hotelesFiltrados[0].habitaciones?.filter((habitacion: any) => habitacion.id === fixedRoomTypeId)
-            console.log(habitacionFiltered);
-            console.log(habitacionFiltered[0].precio_noche);
-            console.log(rangoPrecioDesdeHasta.noches);
-            console.log(habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches);
-            const precioBase = habitacionFiltered[0].precio_noche * rangoPrecioDesdeHasta.noches;
-            const precioDesdeConvertido = Math.round(precioBase * factorConversion);
+            const habitacionFiltered = hotelesFiltrados[0].habitaciones?.filter((habitacion: any) => habitacion.id.toString() === fixedRoomTypeId)
+            const hab = habitacionFiltered[0];
+
+            const monedaHab: string = hab.moneda_codigo ?? 'USD';
+            let precioNoche: number = hab.precio_noche;
+
+            if (monedaHab !== monedaPaqueteCodigo) {
+              if (!cotizacionVigente) {
+                handleShowToast('No hay cotización vigente. No se puede calcular el precio para esta habitación.', 'error');
+                setValueSalida('precio_desde', '');
+                setValueSalida('precio_hasta', '');
+                return;
+              }
+              precioNoche = monedaPaqueteCodigo === 'PYG'
+                ? precioNoche * cotizacionVigente
+                : precioNoche / cotizacionVigente;
+            }
+
+            const precioBase = precioNoche * rangoPrecioDesdeHasta.noches;
+            const precioDesdeConvertido = Math.round(precioBase);
             setValueSalida('precio_desde', precioDesdeConvertido.toString());
             setValueSalida('precio_hasta', '');
           }
@@ -2433,7 +2449,7 @@ const handleSubmitClick = useCallback(async () => {
             <div>
               <p className="text-sm text-slate-500">Precio (conversion)</p>
               <p className="font-semibold text-slate-800">
-                {formatearSeparadorMiles.format(item?.precio_moneda_alternativa?.precio_final ?? 0)}
+                {formatearSeparadorMiles.format(item?.precio_moneda_alternativa?.precio_venta_min ?? 0)}
               </p>
             </div>
           </div>
@@ -3843,6 +3859,11 @@ const handleSubmitClick = useCallback(async () => {
                                                                         const esGuaranies = monedaActual?.codigo === 'PYG';
                                                                         const esUSD = monedaActual?.codigo === 'USD';
                                                                         const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
+
+                                                                        console.log('monedaActual: ', monedaActual);
+                                                                        console.log('esGuaranies: ', esGuaranies);
+                                                                        console.log('esUSD: ', esUSD);
+                                                                        console.log('cotizacionVigente: ', cotizacionVigente);
                                                                         
                                                                         if (esGuaranies && cotizacionVigente && !isFetchingCotizacion) {
                                                                           return (
@@ -4298,10 +4319,17 @@ const handleSubmitClick = useCallback(async () => {
                                                                                       ${fixedRoomTypeId === habitacion.id ? 'border-green-400 bg-green-100' : 'border-gray-200 hover:border-gray-300'}`}
                                                                                   >
                                                                                     {/* Icono y tipo de habitación */}
-                                                                                    <Label className="text-sm flex items-center gap-2 md:w-1/4">
+                                                                                    <div className="text-sm flex items-center gap-2 md:w-1/4">
                                                                                       {getRoomIcon(habitacion.tipo)}
-                                                                                      {getRoomTypeLabel(habitacion.tipo)}
-                                                                                    </Label>
+                                                                                      <div className="flex flex-col">
+                                                                                        <Label className="font-medium">{getRoomTypeLabel(habitacion.tipo)}</Label>
+                                                                                        {habitacion.capacidad && (
+                                                                                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                                            {habitacion.capacidad} {habitacion.capacidad === 1 ? 'persona' : 'personas'}
+                                                                                          </span>
+                                                                                        )}
+                                                                                      </div>
+                                                                                    </div>
 
                                                                                     {/* Precio y cupo */}
                                                                                     {propio && habitacion?.precio_noche &&
@@ -4846,7 +4874,7 @@ const handleSubmitClick = useCallback(async () => {
 
                             <TableCell className="min-w-[120px]">
                               <div>
-                                <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-mono font-semibold">
+                                <Badge className="bg-gray-100 text-gray-700 border-gray-200 font-mono font-semibold">
                                   {data?.codigo || 'N/A'}
                                 </Badge>
                               </div>

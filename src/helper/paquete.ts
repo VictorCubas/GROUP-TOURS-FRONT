@@ -181,29 +181,53 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
 export const calcularRangoPrecio = (
   hoteles: any[],
   fechaIngreso: string | Date,
-  fechaRegreso: string | Date
-): { 
-  precioMin: number; 
-  precioMax: number; 
-  dias: number; 
-  noches: number } => {
-  
-  const diffDias = calculateNoches(fechaIngreso, fechaRegreso); // Corrección aquí;
-  // Noches = días
-  const diffNoches = diffDias;
+  fechaRegreso: string | Date,
+  monedaPaquete: string = 'USD',
+  cotizacion?: number
+): {
+  precioMin: number;
+  precioMax: number;
+  dias: number;
+  noches: number;
+  sinCotizacion: boolean;
+} => {
 
-  const precios: number[] = hoteles.flatMap(hotel =>
-    hotel.habitaciones.map((h: any) => h.precio_noche)
+  const diffDias = calculateNoches(fechaIngreso, fechaRegreso);
+  const diffNoches = diffDias;
+  let sinCotizacion = false;
+
+  const preciosNullable: (number | null)[] = hoteles.flatMap(hotel =>
+    hotel.habitaciones.map((h: any) => {
+      const monedaHab: string = h.moneda_codigo ?? 'USD';
+      const precioOriginal: number = h.precio_noche;
+
+      if (monedaHab === monedaPaquete) {
+        return precioOriginal;
+      }
+
+      if (!cotizacion) {
+        sinCotizacion = true;
+        return null; // no se puede convertir sin cotización
+      }
+
+      if (monedaPaquete === 'PYG') {
+        return precioOriginal * cotizacion; // USD → PYG
+      }
+
+      return precioOriginal / cotizacion; // PYG → USD
+    })
   );
 
+  const precios = preciosNullable.filter((p): p is number => p !== null);
+
   if (precios.length === 0) {
-    return { precioMin: 0, precioMax: 0, dias: diffDias, noches: diffNoches };
+    return { precioMin: 0, precioMax: 0, dias: diffDias, noches: diffNoches, sinCotizacion };
   }
 
   const precioMin = Math.min(...precios) * diffNoches;
   const precioMax = Math.max(...precios) * diffNoches;
 
-  return { precioMin, precioMax, dias: diffDias, noches: diffNoches };
+  return { precioMin, precioMax, dias: diffDias, noches: diffNoches, sinCotizacion };
 };
 
 
