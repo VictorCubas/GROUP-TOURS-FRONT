@@ -381,6 +381,7 @@ export default function PermisosPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
                 <Modal onClose={handleCloseVerDetalles} claseCss={'modal-detalles'}>
+                  <div className=" bg-white rounded-lg shadow-lg p-6">
                       <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -475,6 +476,7 @@ export default function PermisosPage() {
                         </div>
                         
                       </div>
+                  </div>
                   </Modal>
             </div>
         </div>

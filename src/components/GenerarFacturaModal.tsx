@@ -262,8 +262,8 @@ export default function GenerarFacturaModal({
         className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
         style={{ zIndex: 99999 }}
       >
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 max-h-[95vh] h-[80vh] overflow-y-auto">
-            <div className="absolute top-25 right-40 flex space-x-2">
+          <div className="relative bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 max-h-[95vh] h-[80vh]">
+              <div className="absolute -top-3 -right-3 flex space-x-2">
                   
                   <Button
                     onClick={onClose}
@@ -271,7 +271,7 @@ export default function GenerarFacturaModal({
                   >
                     <X className="w-5 h-5 text-gray-600" />
                   </Button>
-                </div>
+              </div>
               {/* Content */}
               <div className="px-6 py-6 space-y-6">
                 <Card className="p-8 bg-white border-2 border-blue-200">

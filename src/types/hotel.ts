@@ -9,6 +9,8 @@ export interface Habitacion {
   hotel: number;
   numero: string;
   tipo: string;
+  tipo_habitacion?: number,
+  tipo_habitacion_nombre?: string,
   capacidad: number;
   precio_noche: number;           // número con decimales
   moneda: number;

@@ -22,8 +22,10 @@ const NacionalidadesPage = lazy(() => import('@/pages/NacionalidadesPage'));
 const DestinoPage = lazy(() => import('@/pages/DestinoPage'));
 const PaquetesPage = lazy(() => import('@/pages/PaquetesPage'));
 const ReservaPage = lazy(() => import('@/pages/ReservaPage'));
+const SalidasPage = lazy(() => import('@/pages/SalidasPage'));
 const HotelPage = lazy(() => import('@/pages/HotelPage'));
 const TipoDocumentosPage = lazy(() => import('@/pages/TipoDocumentosPage'));
+const TipoHabitacionesPage = lazy(() => import('@/pages/TipoHabitacionPage'));
 const TipoPaquetesPage = lazy(() => import('@/pages/TipoPaquetesPage'));
 const PersonasPage = lazy(() => import('@/pages/PersonasPage'));
 const EmpleadosPage = lazy(() => import('@/pages/EmpleadosPage'));
@@ -59,6 +61,7 @@ const AppRouter = () => {
                         <Route path="destinos" element={<DestinoPage />} />
                         <Route path="reservas" element={<ReservaPage />} />
                         <Route path="paquetes" element={<PaquetesPage />} />
+                        <Route path="salidas" element={<SalidasPage />} />
                         <Route path="hoteles" element={<HotelPage />} />
                       </Route>
 
@@ -82,6 +85,7 @@ const AppRouter = () => {
                         <Route path="facturacion" element={<FacturacionConfig />} />
                         <Route path="modulos" element={<ModuloPage />} />
                         <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
+                        <Route path="tipo_habitaciones" element={<TipoHabitacionesPage />} />
                         <Route path="nacionalidades" element={<NacionalidadesPage />} />
                         <Route path="tipo_paquetes" element={<TipoPaquetesPage />} />
                       </Route>
