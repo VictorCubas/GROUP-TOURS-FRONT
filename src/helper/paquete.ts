@@ -120,7 +120,7 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
       if(paqueteModalidad === 'fijo')
         sal.habitacion_fija = salida.habitacion_fija;
 
-      sal.precios_catalogo = salida.precios_catalogo;
+      sal.precios_catalogo_habitaciones = salida.precios_catalogo_habitaciones ?? [];
       sal.precios_catalogo_hoteles = salida.precios_catalogo_hoteles;
 
       if(propio){
@@ -132,6 +132,9 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
 
       if(salida.costo_base_hasta)
         sal.costo_base_hasta = salida.costo_base_hasta;
+
+      if(salida.items_costo_override_data)
+        sal.items_costo_override_data = salida.items_costo_override_data;
 
       return sal;
     }
@@ -171,6 +174,7 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
     delete payload.distribuidora_id;
   } else {
     delete payload.cantidad_pasajeros;
+    delete payload.servicios_data;
   }
 
 
