@@ -402,7 +402,7 @@ export default function SalidasPage() {
 
     Object.entries(formValues).forEach(([key, value]) => {
       if (
-        (key.startsWith("precio_proveedor_") || key.startsWith("precio_habitacion_por_hotel_")) &&
+        (key.startsWith("precio_paquete_habitacion_") || key.startsWith("precio_habitacion_por_hotel_")) &&
         value
       ) {
         const precio = Number(value)
@@ -471,7 +471,7 @@ export default function SalidasPage() {
     const formValues = getValues()
     Object.keys(formValues).forEach((key) => {
       if (
-        key.startsWith("precio_proveedor_") ||
+        key.startsWith("precio_paquete_habitacion_") ||
         key.startsWith("precio_habitacion_por_hotel_") ||
         key.startsWith("cupo_habitacion_")
       ) {
@@ -528,7 +528,7 @@ export default function SalidasPage() {
         const precioHotel = getValues(`precio_habitacion_por_hotel_${hotelId}`)
         if (precioHotel && precioHotel > 0) {
           hotel?.habitaciones?.forEach((hab: any) =>
-            setValue(`precio_proveedor_${hab.id}`, precioHotel)
+            setValue(`precio_paquete_habitacion_${hab.id}`, precioHotel)
           )
         }
       }
@@ -567,7 +567,7 @@ export default function SalidasPage() {
           const precioHotel = getValues(`precio_habitacion_por_hotel_${hotelId}`)
           if (precioHotel && precioHotel > 0) {
             hotel?.habitaciones?.forEach((hab: any) =>
-              setValue(`precio_proveedor_${hab.id}`, precioHotel)
+              setValue(`precio_paquete_habitacion_${hab.id}`, precioHotel)
             )
           }
         }
@@ -586,7 +586,7 @@ export default function SalidasPage() {
         const precioHotel = getValues(`precio_habitacion_por_hotel_${hotelId}`)
         if (precioHotel && precioHotel > 0) {
           hotel?.habitaciones?.forEach((hab: any) =>
-            setValue(`precio_proveedor_${hab.id}`, precioHotel)
+            setValue(`precio_paquete_habitacion_${hab.id}`, precioHotel)
           )
         }
       }
@@ -655,9 +655,9 @@ export default function SalidasPage() {
 
     // Extract room-level prices (excluding rooms of hotels in mode "hotel")
     let precioCatalogoDistribuidora = Object.entries(dataForm)
-      .filter(([key, value]) => key.startsWith("precio_proveedor_") && value != null)
+      .filter(([key, value]) => key.startsWith("precio_paquete_habitacion_") && value != null)
       .map(([key, value]) => {
-        const habitacion_id = Number(key.replace("precio_proveedor_", ""))
+        const habitacion_id = Number(key.replace("precio_paquete_habitacion_", ""))
         const precio_catalogo = Number(value)
         delete dataForm[key]
         return { habitacion_id, precio_catalogo }
@@ -2264,7 +2264,7 @@ export default function SalidasPage() {
                                                     if (val && val > 0 && modoPrecio[hotel.id] === "hotel") {
                                                       hotel?.habitaciones?.forEach((hab: any) =>
                                                         setValue(
-                                                          `precio_proveedor_${hab.id}`,
+                                                          `precio_paquete_habitacion_${hab.id}`,
                                                           val
                                                         )
                                                       )
@@ -2421,7 +2421,7 @@ export default function SalidasPage() {
                                                       Precio catálogo *
                                                     </Label>
                                                     <Controller
-                                                      name={`precio_proveedor_${habitacion.id}`}
+                                                      name={`precio_paquete_habitacion_${habitacion.id}`}
                                                       control={control}
                                                       rules={{
                                                         required: "Requerido",
