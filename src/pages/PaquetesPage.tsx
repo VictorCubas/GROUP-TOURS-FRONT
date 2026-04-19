@@ -44,7 +44,6 @@ import {
   Building2,
   Table2,
   Grid3X3,
-  DollarSign,
   User,
   UserCheck,
   Users2,
@@ -105,11 +104,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { calcularCostoPaquete, calcularRangoPrecio, calculateNoches, getPayload, normalizarPreciosCatalogo, normalizarPreciosCatalogoHoteles } from "@/helper/paquete";
 import { NumericFormat } from 'react-number-format';
 import { fetchDataZonasGeograficasTodos } from "@/components/utils/httpNacionalidades"
+import { fetchTiposCostoTodos } from "@/components/utils/httpTipoCosto"
 
 
 let dataList: Paquete[] = [];
 let tipoPaqueteFilterList: any[] = [];
 let habitacionesList: any[] = [];
+
 
 
 
@@ -262,6 +263,12 @@ export default function ModulosPage() {
     const [isAddSalidaOpen, setIsAddSalidaOpen] = useState(false);
     // DATOS DE SALIDOS
 
+    // DUMMY — costos por defecto del paquete (reemplazar con estado real al integrar)
+    const [itemsCostoDefecto, setItemsCostoDefecto] = useState<any[]>([]);
+    // DUMMY — costos de la salida (override, reemplazar con estado real al integrar)
+    const [itemsCostoSalida, setItemsCostoSalida] = useState<any[]>([]);
+    // const [precioVentaFinal, setPrecioVentaFinal] = useState<number | null>(null);
+
     console.log(distribuidoraSelected)
 
   const {data: dataDestinoList, isFetching: isFetchingDestino,} = useQuery({
@@ -348,6 +355,12 @@ export default function ModulosPage() {
         enabled: Boolean(ciudadDataSelected),
     });
 
+  const { data: dataTipoCostoList } = useQuery({
+    queryKey: ['tipos-costo-todos'],
+    queryFn: fetchTiposCostoTodos,
+    staleTime: 10 * 60 * 1000,
+  });
+
   // let filteredPermissions: Modulo[] = [];
 
     console.log(dataHotelesList); 
@@ -416,9 +429,9 @@ export default function ModulosPage() {
   const cantidadPasajeros = watch('cantidad_pasajeros');
   const personalizado = watch('personalizado');
   const cantidadNoche = watchSalida('cantidadNoche');
-  const precioDesde = watchSalida('precio_desde');
+  // const precioDesde = watchSalida('precio_desde');
   const monedaSeleccionada = watch('moneda');
-  const precioHasta = watchSalida('precio_hasta');
+  // const precioHasta = watchSalida('precio_hasta');
 
 
   console.log(monedaSeleccionada)
@@ -608,7 +621,7 @@ export default function ModulosPage() {
         // 🔹 Limpiar campos dinámicos de precios_catalogo y cupos
         const formValues = getValuesSalida();
         Object.keys(formValues).forEach((key) => {
-          if (key.startsWith('precio_proveedor_') || key.startsWith('precio_habitacion_por_hotel_') || key.startsWith('cupo_habitacion_')) {
+          if (key.startsWith('precio_paquete_habitacion_') || key.startsWith('precio_habitacion_por_hotel_') || key.startsWith('cupo_habitacion_')) {
             setValueSalida(key, undefined);
           }
         });
@@ -656,7 +669,7 @@ export default function ModulosPage() {
     const serviciosListSelected = selectedServicios.map(s => {
       return {
         servicio_id: s,
-        precio: watch(`precio_personalizado_servicio_${s}`) ?? ''
+        // precio: watch(`precio_personalizado_servicio_${s}`) ?? ''
       }
     })
 
@@ -677,8 +690,18 @@ export default function ModulosPage() {
       handleShowToast('Debes agregar al menos un servicio', 'error');
       return;
     }
+
+    if (propio && itemsCostoDefecto.length < 2) {
+      handleShowToast('Debes agregar al menos 2 ítems de costo al paquete', 'error');
+      return;
+    }
+
+    if (propio && itemsCostoDefecto.some((i: any) => !i.tipo_costo_id || i.monto == null)) {
+      handleShowToast('Todos los ítems de costo deben estar completos', 'error');
+      return;
+    }
  
-    console.log(prePayload); 
+    console.log('prePayload: ', prePayload); 
 
     const formData = new FormData();
 
@@ -697,13 +720,10 @@ export default function ModulosPage() {
     console.log(salidas);
 
     // Agregar el resto de campos
-    Object.keys(prePayload).forEach((key) => { 
+    Object.keys(prePayload).forEach((key) => {
       const value = prePayload[key];
       if (value !== undefined && value !== null) {
         if (key === "salidas" || key === 'servicios_data') {
-          console.log(value)
-          // 👇 Serializamos el array de objetos
-          console.log(JSON.stringify(value))
           formData.append(key, JSON.stringify(value));
         }else if (Array.isArray(value)) {
           value.forEach((v) => formData.append(key, v));
@@ -712,6 +732,14 @@ export default function ModulosPage() {
         }
       }
     });
+
+    if (propio) {
+      const itemsCostoData = itemsCostoDefecto.map((i: any) => ({
+        tipo_costo_id: i.tipo_costo_id,
+        monto: i.monto,
+      }));
+      formData.append('items_costo_data', JSON.stringify(itemsCostoData));
+    }
 
     console.log("FormData listo:", [...formData.entries()]); 
     mutate(formData);  
@@ -726,15 +754,15 @@ export default function ModulosPage() {
 
     const salidasTemp = salidas.map((salida: any) => {
       const salActualizada: any = {
+        id: salida.id,
         fecha_salida: salida.fecha_salida_v2,
         fecha_regreso: salida.fecha_regreso_v2,
         costo_base_desde: salida?.costo_base_desde ?? salida?.precio,
         senia: salida.senia,
-        cupo: parseInt(salida.cupo, 10), // Entero
+        cupo: parseInt(salida.cupo, 10),
         moneda_id: dataForm.moneda,
         hoteles: salida.hoteles_ids,
-        cupos_habitaciones: salida.cupos_habitaciones,
-        temporada_id: salida?.temporada_id || null, // Opcional
+        temporada_id: salida?.temporada_id || null,
       };
 
       if(salida?.costo_base_hasta)
@@ -742,24 +770,25 @@ export default function ModulosPage() {
 
       if(paqueteModalidad === 'fijo')
         salActualizada.habitacion_fija = salida.habitacion_fija;
-      // else if(paqueteModalidad === 'flexible'){
-        
-      // }
 
       if(propio){
-        salActualizada.ganancia = salida.ganancia;
+        // salActualizada.ganancia = salida.ganancia;
         salActualizada.cupos_habitaciones = salida.cupos_habitaciones;
       }
-      else{
-        // Normalizar las estructuras de precios para asegurar formato consistente
-        // y filtrar habitaciones que pertenecen a hoteles en precios_catalogo_hoteles
-        salActualizada.precios_catalogo = normalizarPreciosCatalogo(
-          salida.precios_catalogo,
-          salida.precios_catalogo_hoteles,
-          dataHotelesList || []
-        );
-        salActualizada.comision = salida.comision;
-        salActualizada.precios_catalogo_hoteles = normalizarPreciosCatalogoHoteles(salida.precios_catalogo_hoteles);
+      // else{
+      //   salActualizada.comision = salida.comision;
+      // }
+
+      salActualizada.precios_catalogo_habitaciones = normalizarPreciosCatalogo(
+        salida.precios_catalogo_habitaciones,
+        salida.precios_catalogo_hoteles,
+        dataHotelesList || []
+      );
+      salActualizada.precios_catalogo_hoteles = normalizarPreciosCatalogoHoteles(salida.precios_catalogo_hoteles);
+
+      // Incluir overrides de costos si están definidos en la salida
+      if (salida.items_costo_override_data !== undefined) {
+        salActualizada.items_costo_override_data = salida.items_costo_override_data;
       }
 
       return salActualizada;
@@ -772,24 +801,31 @@ export default function ModulosPage() {
     const serviciosListSelected = selectedServicios.map(s => {
       return {
         servicio_id: s,
-        precio: propio ? (watch(`precio_personalizado_servicio_${s}`) ?? '') : ''
+        // precio: propio ? (watch(`precio_personalizado_servicio_${s}`) ?? '') : ''
       }
     })
 
 
     console.log(serviciosListSelected)
 
-    const payload = {
+    const payload: any = {
       ...dataForm,
       destino_id: selectedDestinoID,
       tipo_paquete_id: tipoPaqueteSelected?.id,
-      servicios_data: serviciosListSelected,
       moneda_id: dataForm.moneda,
       fecha_inicio,
       fecha_fin,
       salidas: salidasTemp,
       modalidad: paqueteModalidad,
     };
+
+    if (propio) {
+      payload.servicios_data = serviciosListSelected;
+      payload.items_costo_data = itemsCostoDefecto.map((i: any) => ({
+        tipo_costo_id: i.tipo_costo_id,
+        monto: i.monto,
+      }));
+    }
 
     // Limpiar campos que no deben enviarse
     delete payload.numero;
@@ -832,10 +868,8 @@ export default function ModulosPage() {
           formData.append(key, value);
         }
       } 
-      else if (key === "salidas" || key === 'servicios_data') {
-        // 👇 Serializamos el array de objetos
-        console.log(JSON.stringify(value))
-        formData.append(key ,JSON.stringify(value));
+      else if (key === "salidas" || key === 'servicios_data' || key === 'items_costo_data') {
+        formData.append(key, JSON.stringify(value));
       }
       else if (Array.isArray(value)) {
         // value.forEach((v) => formData.append(key, v));
@@ -882,7 +916,7 @@ export default function ModulosPage() {
 
   useEffect(() => {
     console.log(selectedDestinoID);
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     
     if(selectedDestinoID){
       const selectedDestino = dataDestinoList.filter((destino: any) => destino.id.toString() === selectedDestinoID.toString());
@@ -1035,9 +1069,10 @@ export default function ModulosPage() {
         senia: salida.senia,
         cupo: data.propio ? salida.cupo : null,
         cupos_habitaciones: salida.cupos_habitaciones,
-        precios_catalogo: salida.precios_catalogo,
+        precios_catalogo_habitaciones: salida.precios_catalogo_habitaciones,
         precios_catalogo_hoteles: salida.precios_catalogo_hoteles,
-        hoteles_ids: salida.hoteles.map((hotel: any) => hotel?.id), 
+        hoteles_ids: salida.hoteles.map((hotel: any) => hotel?.id),
+        items_costo: salida.items_costo ?? [],
       }
 
       console.log(data.modalidad)
@@ -1048,19 +1083,30 @@ export default function ModulosPage() {
         // sal.ganancia = salida.ganancia;
       }
       
-      if(data.propio)
-        sal.ganancia = salida.ganancia;
-      else{
-        sal.comision = salida.comision;
-      }
+      // if(data.propio)
+      //   sal.ganancia = salida.ganancia;
+      // else{
+      //   sal.comision = salida.comision;
+      // }
       
 
       return sal;
     })
 
-    console.log(salidas);
+    console.log('todas salidas: ', salidas);
 
     setSalidas(salidas);
+
+    // Cargar ítems de costo por defecto del paquete
+    if (data.propio && data.items_costo_default?.length) {
+      setItemsCostoDefecto(data.items_costo_default.map((item: any) => ({
+        tipo_costo_id: item.tipo_costo?.id,
+        nombre: item.tipo_costo?.nombre,
+        monto: Number(item.monto),
+        dividir_por_pasajeros: item.tipo_costo?.dividir_por_pasajeros,
+        _id: item.tipo_costo?.id,
+      })));
+    }
   }
 
   console.log(salidas)
@@ -1150,14 +1196,16 @@ export default function ModulosPage() {
 
 
 
-  const handleServicioToggle = (permissionId: number, precio: number) => {
+  const handleServicioToggle = (servicioId: number, precio: number) => {
     console.log(precio); 
-    console.log(permissionId)
+    console.log(servicioId)
+    console.log('selectedServicios: ', selectedServicios)
+
     setSelectedServicios((prev) => {
       const updated =
-        prev.includes(permissionId)
-          ? prev.filter((p) => p !== permissionId) // quitar
-          : [...prev, permissionId];              // agregar
+        prev.includes(servicioId)
+          ? prev.filter((p) => p !== servicioId) // quitar
+          : [...prev, servicioId];              // agregar
 
       return updated;
     });
@@ -1238,10 +1286,7 @@ const totalPrecioServiciosMemo = useMemo(() => {
 
 // 🔹 Calculamos el costo total del paquete
 // Si no es propio, ignora los servicios (solo hoteles)
-const costoTotalPaquete = calcularCostoPaquete(
-  salidas,
-  propio ? totalPrecioServiciosMemo ?? 0 : 0
-);
+const costoTotalPaquete = calcularCostoPaquete(salidas, 0);
 
 console.log("Costo total paquete:", costoTotalPaquete);
 console.log("Total servicios memo:", totalPrecioServiciosMemo);
@@ -1270,6 +1315,21 @@ useEffect(() => {
     setTotalPrecioServiciosEdicion(totalServicios);
   }
 }, [dataAEditar, propio, setValue]);
+
+  useEffect(() => {
+    if (!dataTipoCostoList?.length) return;
+    const codigos = ['BUS', 'COORDINADOR'];
+    const preseleccionados = dataTipoCostoList
+      .filter((t: any) => codigos.includes(t.codigo))
+      .map((t: any) => ({
+        _id: Date.now() + t.id,
+        tipo_costo_id: t.id,
+        nombre: t.nombre,
+        monto: null,
+        dividir_por_pasajeros: t.dividir_por_pasajeros,
+      }));
+    setItemsCostoDefecto(preseleccionados);
+  }, [dataTipoCostoList]);
 
 
   // FUNCIONES DE SALIDAS
@@ -1394,13 +1454,13 @@ useEffect(() => {
       }
     });
 
-    // Recolectar precios por habitación (precio_proveedor_*)
+    // Recolectar precios por habitación (precio_paquete_habitacion_*)
     // SOLO de habitaciones que NO pertenecen a hoteles en modo "hotel"
     let precioCatalogoDistribuidora = Object.entries(dataForm)
-        .filter(([key, value]) => key.startsWith('precio_proveedor_') && value != null)
+        .filter(([key, value]) => key.startsWith('precio_paquete_habitacion_') && value != null)
         .map(([key, value]) => {
           // 🔹 Guardamos el valor
-          const habitacion_id = Number(key.replace('precio_proveedor_', ''));
+          const habitacion_id = Number(key.replace('precio_paquete_habitacion_', ''));
           const precio_catalogo = Number(value);
 
           // 🔹 Eliminamos la propiedad del dataForm
@@ -1415,7 +1475,7 @@ useEffect(() => {
       console.log('Habitaciones excluidas:', Array.from(habitacionesExcluidas));
  
 
-        // precio_proveedor_ precio_habitacion_por_hotel
+        // precio_paquete_habitacion_ precio_habitacion_por_hotel
 
       console.log(precioCatalogoDistribuidora); 
       console.log(dataForm); // 
@@ -1447,11 +1507,11 @@ useEffect(() => {
 
       // 🔹 Editando habitación existente
       const salidaEdited: any = {...dataForm,
-        costo_base_desde: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
-        costo_base_hasta: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
+        costo_base_desde: dataForm.precio_desde_editable,
+        costo_base_hasta: dataForm?.precio_hasta_editable,
         hoteles_ids:hotelesIds,
         cupos_habitaciones: habitacionesCuposList,
-        precios_catalogo: precioCatalogoDistribuidora,
+        precios_catalogo_habitaciones: precioCatalogoDistribuidora,
         precios_catalogo_hoteles: preciosCatalogoHoteles,
         currency: watch('moneda')};
 
@@ -1468,6 +1528,11 @@ useEffect(() => {
       if(!propio && !salidaEdited?.costo_base_hasta){
         delete salidaEdited.costo_base_hasta;
       }
+
+      // Overrides de costos: siempre incluir para que el backend sincronice correctamente
+      salidaEdited.items_costo_override_data = itemsCostoSalida
+        .filter((i: any) => i.origen === 'override')
+        .map((i: any) => ({ tipo_costo_id: i.tipo_costo_id, monto: i.monto }));
 
       console.log(salidas)
       console.log(salidaEdited)
@@ -1498,11 +1563,10 @@ useEffect(() => {
       const salida: any = {
         id: Date.now().toString(), // ID temporal
         ...dataForm,
-        costo_base_desde: propio ? dataForm.precio_desde: dataForm.precio_desde_editable,
-        costo_base_hasta: propio ? dataForm.precio_hasta: dataForm?.precio_hasta_editable,
-        // costo_base_hasta: dataForm.precio_hasta,
+        costo_base_desde: dataForm.precio_desde_editable,
+        costo_base_hasta: dataForm?.precio_hasta_editable,
         cupos_habitaciones: habitacionesCuposList,
-        precios_catalogo: precioCatalogoDistribuidora,
+        precios_catalogo_habitaciones: precioCatalogoDistribuidora,
         precios_catalogo_hoteles: preciosCatalogoHoteles,
         hoteles_ids: hotelesIds,
         currency: watch('moneda'), // o nuevaSalida.currency
@@ -1521,11 +1585,16 @@ useEffect(() => {
         delete salida.costo_base_hasta;
       }
 
-      if(propio){
-        delete salida.comision;
-      }
-      else{
-        delete salida.ganancia;
+      delete salida.ganancia;
+      delete salida.comision;
+
+      // Solo incluir overrides si hay alguno (nueva salida)
+      const overridesNueva = itemsCostoSalida.filter((i: any) => i.origen === 'override');
+      if (overridesNueva.length > 0) {
+        salida.items_costo_override_data = overridesNueva.map((i: any) => ({
+          tipo_costo_id: i.tipo_costo_id,
+          monto: i.monto,
+        }));
       }
 
       console.log(salida);
@@ -1570,7 +1639,7 @@ useEffect(() => {
     // 🔹 Limpiar campos dinámicos de precios_catalogo
     const formValues = getValuesSalida();
     Object.keys(formValues).forEach((key) => {
-      if (key.startsWith('precio_proveedor_') || key.startsWith('precio_habitacion_por_hotel_') || key.startsWith('cupo_habitacion_')) {
+      if (key.startsWith('precio_paquete_habitacion_') || key.startsWith('precio_habitacion_por_hotel_') || key.startsWith('cupo_habitacion_')) {
         setValueSalida(key, undefined);
       }
     });
@@ -1663,49 +1732,227 @@ const handleSubmitClick = useCallback(async () => {
   useEffect(() => {
     if (!editingSalidaId || !isAddSalidaOpen) return;
 
-    const salida = dataAEditar?.salidas?.find(
+    const salida = salidas?.find(
       (s: any) => s.id.toString() === editingSalidaId.toString()
     );
 
     if (!salida) return;
 
+    // Cupos por habitación
     salida.cupos_habitaciones?.forEach((habitacion: any) => {
-      const fieldName = `cupo_habitacion_${habitacion.habitacion.id}`;
-      const value = habitacion.cupo ?? '';
-      setValueSalida(fieldName, value);
+      const habitacionId = habitacion.habitacion?.id ?? habitacion.habitacion_id;
+      if (habitacionId) setValueSalida(`cupo_habitacion_${habitacionId}`, habitacion.cupo ?? '');
     });
 
-    salida.precios_catalogo?.forEach((habitacion: any) => {
-      const fieldName = `precio_proveedor_${habitacion.habitacion.id}`;
-      const value = habitacion.precio_catalogo ?? '';
-      setValueSalida(fieldName, value);
+    // Precios por hotel (precio_habitacion_por_hotel_)
+    salida.precios_catalogo_hoteles?.forEach((ph: any) => {
+      const hotelId = ph.hotel?.id ?? ph.hotel_id;
+      if (hotelId) setValueSalida(`precio_habitacion_por_hotel_${hotelId}`, ph.precio_catalogo ?? '');
     });
 
-    // Setear precios por hotel (precio_habitacion_por_hotel_)
-    salida.precios_catalogo_hoteles?.forEach((hotel: any) => {
-      const fieldName = `precio_habitacion_por_hotel_${hotel.hotel.id}`;
-      const value = hotel.precio_catalogo ?? '';
-      setValueSalida(fieldName, value);
+    // Precios por habitación individual (solo para hoteles en modo habitación)
+    salida.precios_catalogo_habitaciones?.forEach((pc: any) => {
+      const habitacionId = pc.habitacion?.id ?? pc.habitacion_id;
+      if (habitacionId) setValueSalida(`precio_paquete_habitacion_${habitacionId}`, pc.precio_catalogo ?? '');
     });
-  }, [editingSalidaId, selectedHotels, isAddSalidaOpen, dataAEditar?.salidas, setValueSalida, propio]);
+  }, [editingSalidaId, selectedHotels, isAddSalidaOpen, salidas, setValueSalida]);
 
+  useEffect(() => {
+    if (!isAddSalidaOpen || isEditMode) return;
+    setItemsCostoSalida(
+      itemsCostoDefecto.map((item: any) => ({
+        tipo_costo_id: item.tipo_costo_id,
+        nombre: item.nombre,
+        monto: item.monto,
+        dividir_por_pasajeros: item.dividir_por_pasajeros,
+        origen: 'paquete',
+      }))
+    );
+  }, [isAddSalidaOpen]);
 
 
   const handleEditSalida = (salida: any) => {
-    // console.log(salida);
+    console.log('salida a editar: ', salida);
+    console.log('salida a editar: ', salida.precios_catalogo_habitaciones);
     // console.log(propio);
 
-    resetSalida({
+    // Construir el objeto de reset incluyendo precios por habitación y por hotel
+    const resetObj: any = {
       ...salida,
       precio_desde_editable: salida.precio ?? salida.costo_base_desde,
       precio_hasta_editable: salida?.costo_base_hasta,
       precio_hasta: salida?.costo_base_hasta ?? '',
-      precio_desde: salida.precio ?? salida.costo_base_desde
-    })
+      precio_desde: salida.precio ?? salida.costo_base_desde,
+    };
+
+  //   [
+  //   {
+  //     habitacion: {
+  //       id: 103,
+  //       tipo_habitacion: 'Doble',
+  //       capacidad: 2,
+  //       hotel: 'Hotel Prueba Las Vegas'
+  //     },
+  //     precio_catalogo: 2400000
+  //   },
+  //   {
+  //     habitacion: {
+  //       id: 104,
+  //       tipo_habitacion: 'Triple',
+  //       capacidad: 3,
+  //       hotel: 'Hotel Prueba Las Vegas'
+  //     },
+  //     precio_catalogo: 2400000
+  //   }
+  // ]
+
+  console.log('resetObj: ', resetObj)
+
+    // Precios por habitación (de precios_catalogo_habitaciones)
+    salida.precios_catalogo_habitaciones?.forEach((hab: any) => {
+      const habitacionId = hab.habitacion?.id ?? hab.habitacion_id;
+      console.log(habitacionId)
+      if (habitacionId) resetObj[`precio_paquete_habitacion_${habitacionId}`] = hab.precio_catalogo; 
+    });
+
+
+  //     {
+  //   id: 288,
+  //   fecha_salida_v2: '2026-04-19',
+  //   fecha_regreso_v2: '2026-04-26',
+  //   moneda: 1,
+  //   precio: 2200000,
+  //   costo_base_hasta: 2600000,
+  //   senia: 450000,
+  //   cupo: 46,
+  //   cupos_habitaciones: [
+  //     {
+  //       habitacion: {
+  //         id: 104,
+  //         tipo_habitacion: 'Triple',
+  //         capacidad: 3,
+  //         hotel: 'Hotel Prueba Las Vegas'
+  //       },
+  //       cupo: 3
+  //     },
+  //     {
+  //       habitacion: {
+  //         id: 103,
+  //         tipo_habitacion: 'Doble',
+  //         capacidad: 2,
+  //         hotel: 'Hotel Prueba Las Vegas'
+  //       },
+  //       cupo: 10
+  //     },
+  //     {
+  //       habitacion: {
+  //         id: 102,
+  //         tipo_habitacion: 'Doble',
+  //         capacidad: 2,
+  //         hotel: 'Hotel Prueba Reserva 2'
+  //       },
+  //       cupo: 5
+  //     },
+  //     {
+  //       habitacion: {
+  //         id: 101,
+  //         tipo_habitacion: 'Single',
+  //         capacidad: 1,
+  //         hotel: 'Hotel Prueba Reserva 2'
+  //       },
+  //       cupo: 7
+  //     }
+  //   ],
+  //   precios_catalogo_habitaciones: [
+  //     {
+  //       habitacion: {
+  //         id: 103,
+  //         tipo_habitacion: 'Doble',
+  //         capacidad: 2,
+  //         hotel: 'Hotel Prueba Las Vegas'
+  //       },
+  //       precio_catalogo: 2400000
+  //     },
+  //     {
+  //       habitacion: {
+  //         id: 104,
+  //         tipo_habitacion: 'Triple',
+  //         capacidad: 3,
+  //         hotel: 'Hotel Prueba Las Vegas'
+  //       },
+  //       precio_catalogo: 2400000
+  //     }
+  //   ],
+  //   precios_catalogo_hoteles: [
+  //     {
+  //       hotel: { id: 47, nombre: 'Hotel Prueba Las Vegas' },
+  //       precio_catalogo: 2400000
+  //     }
+  //   ],
+  //   hoteles_ids: [ 47, 46 ],
+  //   items_costo: [
+  //     {
+  //       tipo_costo_id: 1,
+  //       nombre: 'Bus',
+  //       dividir_por_pasajeros: true,
+  //       monto: 4200000,
+  //       monto_por_pasajero: 91304.34782608696,
+  //       origen: 'paquete'
+  //     },
+  //     {
+  //       tipo_costo_id: 2,
+  //       nombre: 'Coordinador',
+  //       dividir_por_pasajeros: false,
+  //       monto: 400000,
+  //       monto_por_pasajero: 400000,
+  //       origen: 'paquete'
+  //     }
+  //   ],
+  //   ganancia: null,
+  //   precio_desde_editable: 2200000,
+  //   precio_hasta_editable: 2600000,
+  //   precio_hasta: 2600000,
+  //   precio_desde: 2200000,
+  //   precio_paquete_habitacion_103: 2400000,
+  //   precio_paquete_habitacion_104: 2400000
+  // }
+
+    console.log('resetObj: ', resetObj)
+
+    // Precio por hotel (de precios_catalogo_hoteles)
+    salida.precios_catalogo_hoteles?.forEach((ph: any) => {
+      const hotelId = ph.hotel?.id ?? ph.hotel_id;
+      if (hotelId) resetObj[`precio_habitacion_por_hotel_${hotelId}`] = ph.precio_catalogo;
+    });
+
+    // precio_paquete_habitacion_103: 2400000,
+    // precio_paquete_habitacion_104: 2400000,
+    // precio_habitacion_por_hotel_47: 2400000
+    console.log('resetObj: ', resetObj)
+
+    resetSalida(resetObj);
 
     setEditingSalidaId(salida.id);
     setIsEditMode(true);
     setIsAddSalidaOpen(true);
+
+    if (salida.items_costo && salida.items_costo.length > 0) {
+      setItemsCostoSalida(salida.items_costo.map((item: any) => ({
+        tipo_costo_id: item.tipo_costo_id,
+        nombre: item.nombre,
+        monto: Number(item.monto),
+        dividir_por_pasajeros: item.dividir_por_pasajeros,
+        origen: item.origen,
+      })));
+    } else {
+      setItemsCostoSalida(itemsCostoDefecto.map((item: any) => ({
+        tipo_costo_id: item.tipo_costo_id,
+        nombre: item.nombre,
+        monto: item.monto,
+        dividir_por_pasajeros: item.dividir_por_pasajeros,
+        origen: 'paquete',
+      })));
+    }
 
     console.log(salidas);
     console.log(salida.hoteles_ids)
@@ -1728,40 +1975,16 @@ const handleSubmitClick = useCallback(async () => {
 
     salida.hoteles_ids.forEach((hotelId: number) => {
       // Si el hotel aparece en precios_catalogo_hoteles, está en modo "hotel"
-      const precioHotel = salida.precios_catalogo_hoteles?.find((ph: any) => ph.hotel.id === hotelId);
+      const precioHotel = salida.precios_catalogo_hoteles?.find((ph: any) => (ph.hotel?.id ?? ph.hotel_id) === hotelId);
 
       if (precioHotel) {
         nuevoModoPrecio[hotelId] = 'hotel';
       } else {
-        // Si no está en precios_catalogo_hoteles, está en modo "habitacion"
         nuevoModoPrecio[hotelId] = 'room';
       }
     });
 
     setModoPrecio(nuevoModoPrecio);
-
-    // Si es distribuidor y hay hoteles en modo "hotel", setear automáticamente precio_proveedor_ con el valor de precio_habitacion_por_hotel_
-    if (!propio) {
-      // Esperar a que se actualice el estado antes de setear los precios
-      setTimeout(() => {
-        salida.hoteles_ids.forEach((hotelId: number) => {
-          const precioHotel = salida.precios_catalogo_hoteles?.find((ph: any) => ph.hotel.id === hotelId);
-
-          if (precioHotel) {
-            // Este hotel está en modo "hotel", obtener sus habitaciones
-            const hotel = dataHotelesList?.find((h: any) => h.id === hotelId);
-
-            if (hotel?.habitaciones) {
-              const precioHotelValor = precioHotel.precio_catalogo ?? '';
-
-              hotel.habitaciones.forEach((habitacion: any) => {
-                setValueSalida(`precio_proveedor_${habitacion.id}`, precioHotelValor);
-              });
-            }
-          }
-        });
-      }, 100);
-    }
   };
 
     // FUNCIONES DE SALIDAS
@@ -1881,20 +2104,18 @@ const handleSubmitClick = useCallback(async () => {
     }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList, fixedRoomTypeId, monedaSeleccionada, dataMonedaList, dataCotizacion, paqueteModalidad, propio]);
 
 
-    // 🔹 Auto-calcular precios cuando propio = false (distribuidora)
+    // 🔹 Auto-calcular precio_desde / precio_hasta a partir de los precios ingresados
     // Los precios ingresados son PRECIOS FINALES TOTALES en la MISMA moneda del paquete
-    // NO se aplica conversión porque ya están en la moneda correcta
+    // Aplica tanto para paquetes propios como de distribuidora
     useEffect(() => {
-      if (propio) return; // Solo para distribuidoras
-
       // Observar todos los valores del formulario de salida
       const formValues = getValuesSalida();
       
-      // Extraer precios del catálogo (precio_proveedor_* y precio_habitacion_por_hotel_*)
+      // Extraer precios del catálogo (precio_paquete_habitacion_* y precio_habitacion_por_hotel_*)
       const preciosCatalogo: number[] = [];
       
       Object.entries(formValues).forEach(([key, value]) => {
-        if ((key.startsWith('precio_proveedor_') || key.startsWith('precio_habitacion_por_hotel_')) && value) {
+        if ((key.startsWith('precio_paquete_habitacion_') || key.startsWith('precio_habitacion_por_hotel_')) && value) {
           const precio = Number(value);
           if (!isNaN(precio) && precio > 0) {
             preciosCatalogo.push(precio);
@@ -1982,12 +2203,12 @@ const handleSubmitClick = useCallback(async () => {
         }));
       }
 
-      // Si modoPrecio de este hotel === 'hotel', asignar el valor de precio_habitacion_por_hotel_${hotelId} a los campos precio_proveedor_*
+      // Si modoPrecio de este hotel === 'hotel', asignar el valor de precio_habitacion_por_hotel_${hotelId} a los campos precio_paquete_habitacion_*
       if (modoPrecio[hotelId] === 'hotel') {
         const precioHotel = getValuesSalida(`precio_habitacion_por_hotel_${hotelId}`);
         if (precioHotel && precioHotel > 0) {
           hotel?.habitaciones?.forEach((habitacion: any) => {
-            setValueSalida(`precio_proveedor_${habitacion.id}`, precioHotel);
+            setValueSalida(`precio_paquete_habitacion_${habitacion.id}`, precioHotel);
           });
         }
       }
@@ -2000,28 +2221,6 @@ const handleSubmitClick = useCallback(async () => {
         newSelected.delete(hotelId);
         delete newPrices[hotelId];
       } else {
-        if (propio) {
-          if (hotel.habitaciones.length === 0) {
-            handleShowToast(
-              'Se debe cargar las habitaciones a este hotel para este tipo de paquete',
-              'error'
-            );
-            return;
-          }
-
-          const tienePrecios = hotel.habitaciones.some(
-            (habitacion: any) => !habitacion.precio_noche
-          );
-
-          if (tienePrecios) {
-            handleShowToast(
-              'Se debe cargar los precios a todas habitaciones de este hotel para este tipo de paquete',
-              'error'
-            );
-            return;
-          }
-        }
-
         newSelected.add(hotelId);
         newPrices[hotelId] = { single: 0, doble: 0, triple: 0 };
 
@@ -2033,12 +2232,12 @@ const handleSubmitClick = useCallback(async () => {
           }));
         }
 
-        // Si modoPrecio de este hotel === 'hotel', asignar el valor de precio_habitacion_por_hotel_${hotelId} a los campos precio_proveedor_*
+        // Si modoPrecio de este hotel === 'hotel', asignar el valor de precio_habitacion_por_hotel_${hotelId} a los campos precio_paquete_habitacion_*
         if (modoPrecio[hotelId] === 'hotel') {
           const precioHotel = getValuesSalida(`precio_habitacion_por_hotel_${hotelId}`);
           if (precioHotel && precioHotel > 0) {
             hotel?.habitaciones?.forEach((habitacion: any) => {
-              setValueSalida(`precio_proveedor_${habitacion.id}`, precioHotel);
+              setValueSalida(`precio_paquete_habitacion_${habitacion.id}`, precioHotel);
             });
           }
         }
@@ -2077,14 +2276,14 @@ const handleSubmitClick = useCallback(async () => {
       [hotelId]: newMode
     }))
 
-    // Si se cambia a modo 'hotel', resetear los campos precio_proveedor_* de este hotel con el valor de precio_habitacion_por_hotel
+    // Si se cambia a modo 'hotel', resetear los campos precio_paquete_habitacion_* de este hotel con el valor de precio_habitacion_por_hotel
     if (newMode === 'hotel') {
       const hotel = dataHotelesList?.find((h: any) => h.id === hotelId);
       if (hotel) {
         const precioHotel = getValuesSalida(`precio_habitacion_por_hotel_${hotelId}`);
         if (precioHotel && precioHotel > 0) {
           hotel?.habitaciones?.forEach((habitacion: any) => {
-            setValueSalida(`precio_proveedor_${habitacion.id}`, precioHotel);
+            setValueSalida(`precio_paquete_habitacion_${habitacion.id}`, precioHotel);
           });
         }
       }
@@ -3195,7 +3394,7 @@ const handleSubmitClick = useCallback(async () => {
                               </div>
                           </div>
 
-                            {(totalPrecioServiciosMemo || costoTotalPaquete) && salidas.length > 0 && (
+                            {costoTotalPaquete && salidas.length > 0 && (
                               <Card className="transition-all duration-200 bg-emerald-50 border-emerald-300 space-y-2 md:col-span-2">
                                 <CardContent className="space-y-4 w-full">
                                   <div className="flex items-start justify-between w-full">
@@ -3303,25 +3502,27 @@ const handleSubmitClick = useCallback(async () => {
                                                     ${selectedServicios.includes(servicio.id) 
                                                       ? 'ring-2 ring-blue-200 bg-blue-50/50 border-blue-200' 
                                                       : ''}`}
+                                                  onClick={() => handleServicioToggle(servicio.id, servicio?.precio ?? 0)}
                                         >
-                                          <div className="flex items-center justify-center w-full">
+                                          <div className="flex items-center justify-center w-full"
+                                          >
                                               <div className="flex items-start w-full">
-                                                <div className="flex-shrink-0 mr-3 mt-0.5">
+                                                <div className="flex-shrink-0 mr-3 mt-0.5"
+                                                  onClick={(e) => e.stopPropagation()}>
                                                   <Checkbox
                                                     id={`servicio-${servicio.id}`}
                                                     checked={selectedServicios.includes(servicio.id)}
-                                                    // onCheckedChange={() => handleServicioToggle(servicio.id)}
+                                                    onCheckedChange={() => handleServicioToggle(servicio.id, servicio?.precio ?? 0)}
                                                   />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                   <Label
-                                                    htmlFor={`servicio-${servicio.id}`}
                                                     className="text-sm font-medium text-gray-900 cursor-pointer block"
                                                   >
                                                     {servicio.nombre}
                                                     {selectedServicios.includes(servicio.id) && propio &&
                                                       <div className="col-span-2 flex gap-2 mt-2">  
-                                                        <div>
+                                                        {/* <div>
                                                           <Input
                                                               id="precio_base"
                                                               type="text"
@@ -3336,9 +3537,9 @@ const handleSubmitClick = useCallback(async () => {
                                                             <Label className="block text-xs font-light text-gray-700 mb-1">
                                                               Precio por defecto
                                                             </Label>
-                                                        </div>
+                                                        </div> */}
                                                             
-                                                        <div>
+                                                        {/* <div>
                                                           <Controller
                                                             name={`precio_personalizado_servicio_${servicio.id}`}   // 🔹 campo único por servicio
                                                             control={control}
@@ -3380,7 +3581,7 @@ const handleSubmitClick = useCallback(async () => {
                                                           <Label className="block text-xs font-light text-gray-700 mb-1">
                                                             Precio personalizado
                                                           </Label>
-                                                        </div>
+                                                        </div> */}
                                                       </div>
                                                     }
                                                   </Label>
@@ -3388,7 +3589,7 @@ const handleSubmitClick = useCallback(async () => {
                                                 </div>
 
                                               </div>
-                                              <span onClick={() => handleServicioToggle(servicio.id, servicio?.precio ?? 0)}>
+                                              <span>
                                                 {selectedServicios.includes(servicio.id) ?
                                                   <Trash2 className="text-red-400 w-7 h-7 hover:bg-red-100 rounded-sm p-1" /> :
                                                   <CirclePlus className="text-blue-400 w-7 h-7 hover:bg-blue-100 rounded-sm p-1" />
@@ -3536,6 +3737,152 @@ const handleSubmitClick = useCallback(async () => {
                                     </div>
                                   </div>
                                 </div>
+
+                                {/* SECCIÓN: Costos por Defecto del Paquete */}
+                                {propio && quitarAcentos(tipoPaqueteSelected?.nombre ?? '').toLowerCase() === 'terrestre' && (
+                                  <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+                                    <div className="mb-4">
+                                      <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <Tag className="w-5 h-5 text-emerald-600" />
+                                        Costos por Defecto del Paquete
+                                      </h2>
+                                      <p className="text-sm text-gray-500 mt-1">
+                                        Estos montos se pre-cargarán en cada salida. Podés ajustarlos individualmente por salida si cambian.
+                                      </p>
+                                    </div>
+
+                                    {itemsCostoDefecto.length === 0 ? (
+                                      <div className="border-2 border-dashed border-gray-200 rounded-lg py-8 text-center text-gray-400">
+                                        <Tag className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                                        <p className="text-sm font-medium">Sin costos configurados</p>
+                                        <p className="text-xs mt-0.5">Agregá al menos 2 ítems para poder guardar el paquete</p>
+                                      </div>
+                                    ) : (
+                                      <div className="border rounded-lg overflow-hidden">
+                                        <Table>
+                                          <TableHeader>
+                                            <TableRow className="bg-gray-50">
+                                              <TableHead>Tipo de costo</TableHead>
+                                              <TableHead>Monto por defecto (₲)</TableHead>
+                                              <TableHead className="w-10 text-right pr-3">
+                                                <span className="text-xs text-gray-400 font-normal">Estado</span>
+                                              </TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {itemsCostoDefecto.map((item) => {
+                                              const incompleto = !item.tipo_costo_id || item.monto == null;
+                                              return (
+                                                <TableRow key={item._id} className={incompleto ? 'bg-amber-50/60' : ''}>
+                                                  <TableCell>
+                                                    <div>
+                                                      <Select
+                                                        value={item.tipo_costo_id?.toString() ?? ''}
+                                                        onValueChange={(val) => {
+                                                          const tipo = (dataTipoCostoList ?? []).find((t: any) => t.id === Number(val));
+                                                          setItemsCostoDefecto(prev => prev.map(i =>
+                                                            i._id === item._id
+                                                              ? { ...i, tipo_costo_id: Number(val), nombre: tipo?.nombre ?? '', dividir_por_pasajeros: tipo?.dividir_por_pasajeros ?? false }
+                                                              : i
+                                                          ));
+                                                        }}
+                                                      >
+                                                        <SelectTrigger className={`w-52 ${!item.tipo_costo_id ? 'border-amber-300' : ''}`}>
+                                                          <SelectValue placeholder="Seleccioná un tipo" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                          {(dataTipoCostoList ?? []).filter((t: any) =>
+                                                            t.activo && !itemsCostoDefecto.some(i => i.tipo_costo_id === t.id && i._id !== item._id)
+                                                          ).map((t: any) => (
+                                                            <SelectItem key={t.id} value={t.id.toString()}>{t.nombre}</SelectItem>
+                                                          ))}
+                                                        </SelectContent>
+                                                      </Select>
+                                                      {item.tipo_costo_id && (
+                                                        <p className="text-xs mt-1">
+                                                          {item.dividir_por_pasajeros
+                                                            ? <span className="text-blue-600">✓ Se dividirá por cupo</span>
+                                                            : <span className="text-gray-500">— Costo directo por pasajero</span>
+                                                          }
+                                                        </p>
+                                                      )}
+                                                    </div>
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    <div className="flex items-center gap-1.5">
+                                                      <span className="text-gray-400 text-sm">₲</span>
+                                                      <NumericFormat
+                                                        value={item.monto ?? ''}
+                                                        onValueChange={(values) => {
+                                                          setItemsCostoDefecto(prev => prev.map(i =>
+                                                            i._id === item._id ? { ...i, monto: values.floatValue ?? null } : i
+                                                          ));
+                                                        }}
+                                                        thousandSeparator="."
+                                                        decimalSeparator=","
+                                                        placeholder="0"
+                                                        className={`p-1 pl-2.5 rounded-md border-2 w-44 ${item.monto == null ? 'border-amber-300 bg-amber-50/40' : 'border-blue-200 focus:border-blue-500'}`}
+                                                      />
+                                                    </div>
+                                                  </TableCell>
+                                                  <TableCell className="text-right pr-3">
+                                                    {incompleto ? (
+                                                      <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-medium">
+                                                        <AlertCircle className="w-3.5 h-3.5" />
+                                                        Incompleto
+                                                      </span>
+                                                    ) : (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setItemsCostoDefecto(prev => prev.filter(i => i._id !== item._id))}
+                                                        className="text-red-400 hover:bg-red-50 rounded p-1 cursor-pointer"
+                                                      >
+                                                        <Trash2 className="w-4 h-4" />
+                                                      </button>
+                                                    )}
+                                                  </TableCell>
+                                                </TableRow>
+                                              );
+                                            })}
+                                          </TableBody>
+                                          {itemsCostoDefecto.some(i => i.monto != null) && (
+                                            <tfoot>
+                                              <tr className="bg-gray-50 border-t">
+                                                <td className="px-4 py-2 text-sm font-semibold text-gray-700">Total por defecto</td>
+                                                <td className="px-4 py-2 text-sm font-bold text-gray-900">
+                                                  ₲ {formatearSeparadorMiles.format(itemsCostoDefecto.reduce((acc, i) => acc + (i.monto ?? 0), 0))}
+                                                </td>
+                                                <td />
+                                              </tr>
+                                            </tfoot>
+                                          )}
+                                        </Table>
+                                      </div>
+                                    )}
+
+                                    <div className="flex items-center justify-between mt-3">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 cursor-pointer"
+                                        onClick={() => setItemsCostoDefecto(prev => [
+                                          ...prev,
+                                          { _id: Date.now(), tipo_costo_id: null, nombre: '', monto: null, dividir_por_pasajeros: false }
+                                        ])}
+                                      >
+                                        <CirclePlus className="w-4 h-4 mr-1" />
+                                        Agregar costo por defecto
+                                      </Button>
+                                      {onGuardar && itemsCostoDefecto.length < 2 && (
+                                        <p className="text-sm text-red-500 flex items-center gap-1">
+                                          <AlertCircle className="w-4 h-4" />
+                                          Se requieren al menos 2 ítems de costo para guardar el paquete
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
 
                                 {/* {quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' &&  */}
                                    <Card className="mt-8">
@@ -3849,11 +4196,18 @@ const handleSubmitClick = useCallback(async () => {
                                                                     Precio Desde * 
                                                                   </Label>
 
-                                                                  {propio ? 
+                                                                  {propio ?
                                                                     <div className="col-span-3">
-                                                                      <div className="text-2xl font-bold text-blue-600">
-                                                                        {formatearSeparadorMiles.format(+(precioDesde ?? 0))}
-                                                                      </div>
+                                                                      {!watchSalida('precio_desde_editable') ? (
+                                                                        <p className="text-sm text-amber-600 flex items-center gap-1.5">
+                                                                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                                                          Ingresá los precios de las habitaciones para ver el rango de precio
+                                                                        </p>
+                                                                      ) : (
+                                                                        <div className="text-2xl font-bold text-blue-600">
+                                                                          {formatearSeparadorMiles.format(+(watchSalida('precio_desde_editable') ?? 0))}
+                                                                        </div>
+                                                                      )}
                                                                       {(() => {
                                                                         const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
                                                                         const esGuaranies = monedaActual?.codigo === 'PYG';
@@ -3911,12 +4265,12 @@ const handleSubmitClick = useCallback(async () => {
                                                                     Precio Hasta {propio && <span>*</span>} 
                                                                   </Label>
 
-                                                                  {propio ? 
+                                                                  {propio ?
                                                                     <div className="col-span-3">
                                                                       <div className="text-2xl font-bold text-blue-600 flex">
                                                                         {
-                                                                          paqueteModalidad === 'flexible' ? 
-                                                                            formatearSeparadorMiles.format(+(precioHasta ?? 0)) :
+                                                                          paqueteModalidad === 'flexible' ?
+                                                                            formatearSeparadorMiles.format(+(watchSalida('precio_hasta_editable') ?? 0)) :
                                                                             <Badge
                                                                               className="bg-gray-100 text-gray-700 border-gray-200">
                                                                               No aplica
@@ -3987,118 +4341,8 @@ const handleSubmitClick = useCallback(async () => {
                                                               </div>
 
 
-                                                               {/* PORCENTAJE DE GANANCIA */}
-                                                                {propio &&
-                                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                                      <Label htmlFor="ganancia" className="text-gray-700 font-medium">
-                                                                        Porcentaje de ganancia *
-                                                                      </Label>
-                                                                      <div className="col-span-3 flex gap-2">  
-                                                                        <Controller
-                                                                          name="ganancia"
-                                                                          control={controlSalida} // <-- usa el control correcto de tu form de salidas
-                                                                          rules={{
-                                                                            required: 'Debes completar este campo',
-                                                                            validate: (value) => {
-                                                                              // valor puede ser number | null
-                                                                              if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
-                                                                                return 'Valor inválido';
-                                                                              }
-
-                                                                              if (Number(value) <= 0) {
-                                                                                return 'El valor debe ser mayor que cero';
-                                                                              }
-                                                                              return true;
-                                                                            },
-                                                                          }}
-                                                                            render={({ field, fieldState: { error } }) => (
-                                                                              <div className="flex flex-col">
-                                                                                <NumericFormat
-                                                                                  value={field.value ?? ''}                     // muestra vacío si no hay valor
-                                                                                  onValueChange={(values) => {
-                                                                                    // values.floatValue es number | undefined
-                                                                                    field.onChange(values.floatValue ?? null); // guarda number o null
-                                                                                  }}
-                                                                                  onBlur={field.onBlur}
-                                                                                  thousandSeparator="."
-                                                                                  decimalSeparator=","
-                                                                                  allowNegative={false}          // ❌ no permite números negativos
-                                                                                  decimalScale={0}               // ❌ sin decimales
-                                                                                  allowLeadingZeros={false}  
-                                                                                  // fixedDecimalScale
-                                                                                  suffix=" %"
-                                                                                  placeholder="5%, 10%, 15%, etc."
-                                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
-                                                                                    error
-                                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
-                                                                                      : 'border-blue-200 focus:border-blue-500'
-                                                                                  }`}
-                                                                                />
-                                                                                {/* {error && (
-                                                                                  <span className="text-red-400 text-sm mt-1">
-                                                                                    {error.message}
-                                                                                  </span>
-                                                                                )} */}
-                                                                            </div>
-                                                                          )}
-                                                                        />
-                                                                      </div>
-                                                                  </div>  
-                                                               }
-
-
-                                                               {/* PORCENTAJE DE COMISION */}
-                                                               {!propio &&
-                                                                  <div className="grid grid-cols-4 items-center gap-4">
-                                                                      <Label htmlFor="comision" className="text-gray-700 font-medium">
-                                                                        Porcentaje de comision *
-                                                                      </Label>
-                                                                      <div className="col-span-3 flex gap-2">  
-                                                                        <Controller
-                                                                          name="comision"
-                                                                          control={controlSalida} // <-- usa el control correcto de tu form de salidas
-                                                                          rules={{
-                                                                            required: 'Debes completar este campo',
-                                                                            validate: (value) => {
-                                                                              // valor puede ser number | null
-                                                                              if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
-                                                                                return 'Valor inválido';
-                                                                              }
-                                                                              return true;
-                                                                            },
-                                                                          }}
-                                                                            render={({ field, fieldState: { error } }) => (
-                                                                              <div className="flex flex-col">
-                                                                                <NumericFormat
-                                                                                  value={field.value ?? ''}                     // muestra vacío si no hay valor
-                                                                                  onValueChange={(values) => {
-                                                                                    // values.floatValue es number | undefined
-                                                                                    field.onChange(values.floatValue ?? null); // guarda number o null
-                                                                                  }}
-                                                                                  onBlur={field.onBlur}
-                                                                                  thousandSeparator="."
-                                                                                  decimalSeparator=","
-                                                                                  decimalScale={0}
-                                                                                  fixedDecimalScale
-                                                                                  suffix=" %"
-                                                                                  placeholder="5%, 10%, 15%, etc."
-                                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
-                                                                                    error
-                                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
-                                                                                      : 'border-blue-200 focus:border-blue-500'
-                                                                                  }`}
-                                                                                />
-                                                                                {/* {error && (
-                                                                                  <span className="text-red-400 text-sm mt-1">
-                                                                                    {error.message}
-                                                                                  </span>
-                                                                                )} */}
-                                                                            </div>
-                                                                          )}
-                                                                        />
-                                                                      </div>
-                                                                  </div>  
-                                                              }
+                                                               {/* PORCENTAJE DE GANANCIA — oculto temporalmente */}
+                                                               {/* PORCENTAJE DE COMISION — oculto temporalmente */}
                                                                 
 
                                                             </div>
@@ -4140,351 +4384,296 @@ const handleSubmitClick = useCallback(async () => {
                                                                 </div>
                                                                 }
                                                               </CardHeader>
-                                                              <CardContent className="space-y-4 overflow-y-scroll max-h-[32vh]" >
+                                                              <CardContent className="space-y-4 overflow-y-auto max-h-[60vh]" >
                                                                 {dataHotelesList && dataHotelesList?.map((hotel: any) => (
                                                                   <Card
-                                                                      key={hotel.hotelId}
-                                                                      className={`transition-all duration-200 ${selectedHotels.has(hotel.id) ? "bg-emerald-50 border-emerald-300" : "bg-white"}`}
+                                                                      key={hotel.id}
+                                                                      className={`transition-all duration-200 border-2 ${selectedHotels.has(hotel.id) ? "border-blue-300 bg-blue-50/30" : "border-gray-200 bg-white"}`}
                                                                     >
-                                                                      {/* bg-primary/5 border-primary/30" : "bg-background */}
-                                                                    <CardContent className="">
-                                                                      <div className="space-y-4">
-                                                                        <div className="flex">
-                                                                          <div className="flex items-center space-x-3 ">
-                                                                            <Checkbox
-                                                                              
-                                                                              id={hotel.id}
-                                                                              checked={selectedHotels.has(hotel.id)}
-                                                                              onCheckedChange={() => handleHotelToggle(hotel.id, hotel)}
-                                                                            />
-                                                                            <div className="flex-1">
-                                                                              <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer">
-                                                                                {hotel.nombre}
-                                                                              </Label>
-                                                                              <div className="flex items-center gap-4 mt-1">
-                                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
-                                                                                  {renderStars(hotel.estrellas)}
-                                                                                </Badge>
-                                                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                                  <MapPin className="w-3 h-3" />
-                                                                                  <span>{hotel.direccion}</span>
-                                                                                </div>
+                                                                    <CardContent className="p-4">
+                                                                      {/* Header del hotel */}
+                                                                      <div className="flex items-start justify-between gap-4">
+                                                                        {/* Izquierda: checkbox + info */}
+                                                                        <div className="flex items-start gap-3">
+                                                                          <Checkbox
+                                                                            id={hotel.id}
+                                                                            checked={selectedHotels.has(hotel.id)}
+                                                                            onCheckedChange={() => handleHotelToggle(hotel.id, hotel)}
+                                                                            className="mt-1"
+                                                                          />
+                                                                          <div>
+                                                                            <Label htmlFor={hotel.id} className="text-base font-semibold cursor-pointer leading-tight">
+                                                                              {hotel.nombre}
+                                                                            </Label>
+                                                                            <div className="flex items-center gap-3 mt-1">
+                                                                              {renderStars(hotel.estrellas)}
+                                                                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                                                <MapPin className="w-3 h-3" />
+                                                                                <span>{hotel.direccion}</span>
                                                                               </div>
                                                                             </div>
                                                                           </div>
+                                                                        </div>
 
-                                                                          {!propio &&
-                                                                            <div className="space-y-4 mt-4 px-3  flex items-center gap-4 w-fit">
-                                                                                <div className="">
-                                                                                  <Label className="text-sm font-medium text-gray-700">Modo de precio</Label>
+                                                                        {/* Derecha: toggle modo precio */}
+                                                                        {selectedHotels.has(hotel.id) && (
+                                                                          <div className="flex flex-col items-end gap-1 shrink-0">
+                                                                            <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Modo de Precio</span>
+                                                                            <div className="inline-flex rounded-lg bg-gray-100 p-0.5">
+                                                                              <button
+                                                                                type="button"
+                                                                                onClick={(e) => { e.preventDefault(); handleModeChange(hotel.id, "hotel"); }}
+                                                                                className={cn(
+                                                                                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                                                                                  modoPrecio[hotel.id] === "hotel" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                                                                                )}
+                                                                              >
+                                                                                <Building2 className="h-3.5 w-3.5" />
+                                                                                Por Hotel
+                                                                              </button>
+                                                                              <button
+                                                                                type="button"
+                                                                                onClick={(e) => { e.preventDefault(); handleModeChange(hotel.id, "room"); }}
+                                                                                className={cn(
+                                                                                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                                                                                  modoPrecio[hotel.id] === "room" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                                                                                )}
+                                                                              >
+                                                                                <DoorOpen className="h-3.5 w-3.5" />
+                                                                                Por Habitación
+                                                                              </button>
+                                                                            </div>
+                                                                          </div>
+                                                                        )}
+                                                                      </div>
 
-                                                                                  <div className="inline-flex rounded-xl bg-gray-100 p-1">
-                                                                                    <button
-                                                                                      type="button"
-                                                                                      onClick={(e) => {
-                                                                                        e.preventDefault()
-                                                                                        handleModeChange(hotel.id, "hotel")
-                                                                                      }}
-                                                                                      className={cn(
-                                                                                        "whitespace-nowrap flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-medium transition-all duration-200 cursor-pointer p-2",
-                                                                                        modoPrecio[hotel.id] === "hotel" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900",
-                                                                                      )}
-                                                                                    >
-                                                                                      <Building2 className="h-4 w-4" />
-                                                                                      Por Hotel
-                                                                                    </button>
+                                                                      {/* Sección de configuración (solo cuando hotel seleccionado) */}
+                                                                      {selectedHotels.has(hotel.id) && (
+                                                                        <div className="mt-4">
+                                                                          {/* Campo precio por hotel (modo hotel) */}
+                                                                          {modoPrecio[hotel.id] === 'hotel' && (
+                                                                            <div className="mb-4 flex items-center gap-3">
+                                                                              <Label className="text-sm font-medium text-gray-700 shrink-0">
+                                                                                Precio Final del Hotel *
+                                                                              </Label>
+                                                                              <div className="w-48">
+                                                                                <Controller
+                                                                                  name={`precio_habitacion_por_hotel_${hotel.id}`}
+                                                                                  control={controlSalida}
+                                                                                  rules={{
+                                                                                    required: 'Debes completar este campo',
+                                                                                    validate: (value) => {
+                                                                                      if (value === null || value === undefined || value === '' || isNaN(Number(value))) return 'Valor inválido';
+                                                                                      if (Number(value) <= 0) return 'Debe ser mayor que cero';
+                                                                                      return true;
+                                                                                    },
+                                                                                  }}
+                                                                                  render={({ field, fieldState: { error } }) => (
+                                                                                    <div className="flex flex-col">
+                                                                                      <NumericFormat
+                                                                                        value={field.value ?? ''}
+                                                                                        onValueChange={(values) => {
+                                                                                          const val = values.floatValue ?? null;
+                                                                                          if (val === null || val <= 0) { field.onChange(null); }
+                                                                                          else {
+                                                                                            console.log('field: ', field);
+                                                                                            console.log('modoPrecio: ', modoPrecio)
+                                                                                            field.onChange(val);
+                                                                                            if (modoPrecio[hotel.id] === 'hotel') {
+                                                                                              hotel?.habitaciones?.forEach((habitacion: any) => {
+                                                                                                setValueSalida(`precio_paquete_habitacion_${habitacion.id}`, val);
+                                                                                              });
+                                                                                            }
+                                                                                            setPreciosCatalogoTrigger(prev => prev + 1);
+                                                                                          }
+                                                                                        }}
+                                                                                        onBlur={field.onBlur}
+                                                                                        thousandSeparator="." decimalSeparator="," allowNegative={false} decimalScale={0} allowLeadingZeros={false}
+                                                                                        placeholder="ej: 2.500.000"
+                                                                                        className={`w-full p-1.5 pl-2.5 rounded-md border-2 text-sm ${error ? 'border-red-400' : 'border-blue-200 focus:border-blue-500'}`}
+                                                                                      />
+                                                                                      {error && <p className="text-xs text-red-500 mt-0.5">{error.message}</p>}
+                                                                                    </div>
+                                                                                  )}
+                                                                                />
+                                                                              </div>
+                                                                              <p className="text-xs text-blue-600 font-medium">Precio único para todas las habitaciones</p>
+                                                                            </div>
+                                                                          )}
 
-                                                                                    <button
-                                                                                      onClick={(e) => {
-                                                                                        e.preventDefault();
-                                                                                        handleModeChange(hotel.id, "room");
-                                                                                      }}
-                                                                                      className={cn(
-                                                                                        "whitespace-nowrap flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-all duration-200 cursor-pointer p-2",
-                                                                                        modoPrecio[hotel.id] === "room" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-600 hover:text-gray-900",
-                                                                                      )}
-                                                                                    >
-                                                                                      <DoorOpen className="h-4 w-4" />
-                                                                                      Por Habitación
-                                                                                    </button>
-                                                                                  </div>
+                                                                          {/* Header de habitaciones + stats */}
+                                                                          <div className="mb-3">
+                                                                            <p className="text-sm font-semibold text-gray-800">Configuración por tipo de habitación</p>
+                                                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                                              {modoPrecio[hotel.id] === 'hotel'
+                                                                                ? 'El precio del paquete es igual para todas las habitaciones. Asigná el cupo para cada tipo.'
+                                                                                : 'Ingresá el cupo y el precio del paquete para cada tipo de habitación.'}
+                                                                            </p>
+                                                                            {/* Stats badges */}
+                                                                            {(() => {
+                                                                              const total = hotel?.habitaciones?.length ?? 0;
+                                                                              const cupoTotal = hotel?.habitaciones?.reduce((acc: number, h: any) => {
+                                                                                const v = getValuesSalida(`cupo_habitacion_${h.id}`);
+                                                                                return acc + (Number(v) || 0);
+                                                                              }, 0);
+                                                                              const sinCompletar = hotel?.habitaciones?.filter((h: any) => {
+                                                                                const cupo = getValuesSalida(`cupo_habitacion_${h.id}`);
+                                                                                const precio = getValuesSalida(`precio_paquete_habitacion_${h.id}`);
+                                                                                return !(Number(cupo) > 0 && Number(precio) > 0);
+                                                                              }).length ?? 0;
+                                                                              return (
+                                                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                                                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                                                                                    {total} tipo{total !== 1 ? 's' : ''} habilitado{total !== 1 ? 's' : ''}
+                                                                                  </span>
+                                                                                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                                                                                    {cupoTotal} cupos totales
+                                                                                  </span>
+                                                                                  {sinCompletar > 0 && (
+                                                                                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+                                                                                      {sinCompletar} sin completar
+                                                                                    </span>
+                                                                                  )}
                                                                                 </div>
+                                                                              );
+                                                                            })()}
+                                                                          </div>
 
-                                                                                {modoPrecio[hotel.id] === 'hotel' &&
-                                                                                  <div className="gap-4 pt-0">
-                                                                                      {/* PRECIO HABITACION POR HOTEL */}
-                                                                                      <div className="grid grid-cols-4 items-center gap-4">
-                                                                                        <Label htmlFor={`precio_habitacion_por_hotel_${hotel.id}`} className="text-gray-700 font-medium">
-                                                                                          Precio *
-                                                                                        </Label>
+                                                                          {/* Grid de cards por habitación */}
+                                                                          {hotel?.habitaciones?.length === 0 ? (
+                                                                            <p className="text-sm text-red-400">No tiene habitaciones asignadas</p>
+                                                                          ) : (
+                                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                                              {hotel?.habitaciones?.map((habitacion: any) => {
+                                                                                const cupoVal = Number(getValuesSalida(`cupo_habitacion_${habitacion.id}`)) || 0;
+                                                                                const precioVal = modoPrecio[hotel.id] === 'hotel'
+                                                                                  ? Number(getValuesSalida(`precio_habitacion_por_hotel_${hotel.id}`)) || 0
+                                                                                  : Number(getValuesSalida(`precio_paquete_habitacion_${habitacion.id}`)) || 0;
+                                                                                const isComplete = cupoVal > 0 && precioVal > 0;
+                                                                                const isFixedSelected = paqueteModalidad === 'fijo' && fixedRoomTypeId === habitacion.id.toString();
+                                                                                const showFields = paqueteModalidad === 'flexible' || isFixedSelected;
 
-                                                                                        <div className="col-span-3 flex gap-2">
+                                                                                return (
+                                                                                  <div
+                                                                                    key={habitacion.id}
+                                                                                    onClick={paqueteModalidad === 'fijo' ? () => setFixedRoomTypeId(habitacion.id.toString()) : undefined}
+                                                                                    className={`rounded-xl border-2 p-3 transition-all ${
+                                                                                      isFixedSelected
+                                                                                        ? 'border-green-400 bg-green-50 cursor-pointer'
+                                                                                        : paqueteModalidad === 'fijo'
+                                                                                        ? 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                                                                                        : 'border-gray-200'
+                                                                                    }`}
+                                                                                  >
+                                                                                    {/* Card header: icono + nombre + badge */}
+                                                                                    <div className="flex items-center justify-between mb-3">
+                                                                                      <div className="flex items-center gap-2">
+                                                                                        {getRoomIcon(habitacion.tipo)}
+                                                                                        <div>
+                                                                                          <p className="text-sm font-semibold text-gray-800">{getRoomTypeLabel(habitacion.tipo)}</p>
+                                                                                          {habitacion.capacidad && (
+                                                                                            <p className="text-xs text-gray-400">{habitacion.capacidad} {habitacion.capacidad === 1 ? 'persona' : 'personas'}</p>
+                                                                                          )}
+                                                                                        </div>
+                                                                                      </div>
+                                                                                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
+                                                                                        isComplete
+                                                                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                                                      }`}>
+                                                                                        <span className={`w-1.5 h-1.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                                                                                        {isComplete ? 'Completo' : 'Pendiente'}
+                                                                                      </span>
+                                                                                    </div>
+
+                                                                                    {/* Campos */}
+                                                                                    {showFields ? (
+                                                                                      <div className="grid grid-cols-2 gap-3">
+                                                                                        {/* CUPOS DISPONIBLES (solo propio) */}
+                                                                                        {propio && (
+                                                                                          <div>
+                                                                                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Cupos Disponibles</p>
+                                                                                            <Controller
+                                                                                              name={`cupo_habitacion_${habitacion.id}`}
+                                                                                              control={controlSalida}
+                                                                                              rules={{
+                                                                                                required: 'Requerido',
+                                                                                                validate: (value) => {
+                                                                                                  if (value === null || value === undefined || value === '' || isNaN(Number(value))) return 'Inválido';
+                                                                                                  if (Number(value) <= 0) return 'Debe ser > 0';
+                                                                                                  return true;
+                                                                                                },
+                                                                                              }}
+                                                                                              render={({ field, fieldState: { error } }) => (
+                                                                                                <div>
+                                                                                                  <NumericFormat
+                                                                                                    value={field.value ?? ''}
+                                                                                                    onValueChange={(values) => {
+                                                                                                      const val = values.floatValue ?? null;
+                                                                                                      field.onChange(val && val > 0 ? val : null);
+                                                                                                    }}
+                                                                                                    onBlur={field.onBlur}
+                                                                                                    thousandSeparator="." decimalSeparator="," allowNegative={false} decimalScale={0} allowLeadingZeros={false}
+                                                                                                    placeholder="ej: 20"
+                                                                                                    className={`w-full p-1.5 pl-2 rounded-md border-2 text-sm ${error ? 'border-red-400' : 'border-gray-200 focus:border-blue-400'}`}
+                                                                                                  />
+                                                                                                  <p className="text-[10px] text-gray-400 mt-0.5">Habitaciones disponibles para este tipo</p>
+                                                                                                </div>
+                                                                                              )}
+                                                                                            />
+                                                                                          </div>
+                                                                                        )}
+
+                                                                                        {/* PRECIO DEL PAQUETE */}
+                                                                                        <div className={propio ? '' : 'col-span-2'}>
+                                                                                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Precio del Paquete</p>
                                                                                           <Controller
-                                                                                            name={`precio_habitacion_por_hotel_${hotel.id}`}
+                                                                                            name={`precio_paquete_habitacion_${habitacion.id}`}
                                                                                             control={controlSalida}
                                                                                             rules={{
-                                                                                              required: 'Debes completar este campo',
+                                                                                              required: modoPrecio[hotel.id] === 'hotel' ? false : 'Requerido',
                                                                                               validate: (value) => {
-                                                                                                if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
-                                                                                                  return 'Valor inválido';
-                                                                                                }
-                                                                                                if (Number(value) <= 0) {
-                                                                                                  return 'El valor debe ser mayor que cero';
-                                                                                                }
+                                                                                                if (modoPrecio[hotel.id] === 'hotel') return true;
+                                                                                                if (value === null || value === undefined || value === '' || isNaN(Number(value))) return 'Inválido';
+                                                                                                if (Number(value) <= 0) return 'Debe ser > 0';
                                                                                                 return true;
                                                                                               },
                                                                                             }}
                                                                                             render={({ field, fieldState: { error } }) => (
-                                                                                              <div className="flex flex-col w-full">
+                                                                                              <div>
                                                                                                 <NumericFormat
-                                                                                                  value={field.value ?? ''}
+                                                                                                  value={modoPrecio[hotel.id] === 'hotel' ? (watchSalida(`precio_habitacion_por_hotel_${hotel.id}`) ?? '') : (watchSalida(`precio_paquete_habitacion_${habitacion.id}`) ?? '')}
                                                                                                   onValueChange={(values) => {
                                                                                                     const val = values.floatValue ?? null;
-                                                                                                    if (val === null || val <= 0) {
-                                                                                                      field.onChange(null);
-                                                                                                    } else {
-                                                                                                      field.onChange(val);
-
-                                                                                                      // Actualizar solo los campos precio_proveedor_* de este hotel específico
-                                                                                                      if (modoPrecio[hotel.id] === 'hotel') {
-                                                                                                        hotel?.habitaciones?.forEach((habitacion: any) => {
-                                                                                                          setValueSalida(`precio_proveedor_${habitacion.id}`, val);
-                                                                                                        });
-                                                                                                      }
-                                                                                                      
-                                                                                                      // Actualizar trigger para recalcular precios
-                                                                                                      if (!propio) {
-                                                                                                        setPreciosCatalogoTrigger(prev => prev + 1);
-                                                                                                      }
-                                                                                                    }
+                                                                                                    field.onChange(val && val > 0 ? val : null);
+                                                                                                    setPreciosCatalogoTrigger(prev => prev + 1);
                                                                                                   }}
                                                                                                   onBlur={field.onBlur}
-                                                                                                  thousandSeparator="."
-                                                                                                  decimalSeparator=","
-                                                                                                  allowNegative={false}          // ❌ no permite números negativos
-                                                                                                  decimalScale={0}               // ❌ sin decimales
-                                                                                                  allowLeadingZeros={false}      // evita números tipo 0001
-                                                                                                  placeholder="ej: 250"
-                                                                                                  className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
-                                                                                                    error
-                                                                                                      ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
-                                                                                                      : 'border-blue-200 focus:border-blue-500'
-                                                                                                  }`}
+                                                                                                  thousandSeparator="." decimalSeparator="," allowNegative={false} decimalScale={0} allowLeadingZeros={false}
+                                                                                                  placeholder="₲ 0"
+                                                                                                  disabled={modoPrecio[hotel.id] === 'hotel'}
+                                                                                                  className={`w-full p-1.5 pl-2 rounded-md border-2 text-sm ${error ? 'border-red-400' : 'border-gray-200 focus:border-blue-400'} ${modoPrecio[hotel.id] === 'hotel' ? 'bg-gray-50 cursor-not-allowed text-gray-500' : ''}`}
                                                                                                 />
-                                                                                                {(() => {
-                                                                                                  const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
-                                                                                                  if (monedaActual) {
-                                                                                                    return (
-                                                                                                      <p className="text-xs text-blue-600 mt-1 font-medium">
-                                                                                                        💰 Ingrese el precio total del paquete en {monedaActual.nombre} ({monedaActual.simbolo})
-                                                                                                      </p>
-                                                                                                    );
-                                                                                                  }
-                                                                                                  return null;
-                                                                                                })()}
+                                                                                                <p className="text-[10px] text-gray-400 mt-0.5">
+                                                                                                  {modoPrecio[hotel.id] === 'hotel' ? 'Precio tomado del hotel' : 'Precio total del paquete para esta habitación'}
+                                                                                                </p>
                                                                                               </div>
                                                                                             )}
                                                                                           />
                                                                                         </div>
                                                                                       </div>
-                                                                                  </div>
-                                                                                }
-                                                                            </div>
-                                                                          }
-                                                                        </div>
-
-                                                                        
-
-                                                                        {selectedHotels.has(hotel.id) && (
-                                                                          <div className="pl-6 border-l-2 border-emerald-200">
-                                                                            <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                                                                              Precios por tipo de habitación:
-                                                                            </h4>
-
-                                                                            {/* <div className={`grid grid-cols-2 ${propio ? 'md:grid-cols-2': 'md:grid-cols-3'} gap-4`}> */}
-                                                                            <div className={`grid grid-cols-2 md:grid-cols-2 gap-4`}>
-                                                                              {hotel?.habitaciones?.length === 0 && 
-                                                                                  <p className="text-sm font-medium text-red-400">
-                                                                                    No tiene habitaciones asignadas
-                                                                                  </p>
-                                                                              }
-                                                                              {hotel?.habitaciones?.length > 0 && hotel?.habitaciones.map((habitacion: any) => (
-                                                                                <div key={habitacion.id} className="space-y-2">
-                                                                                  <div 
-                                                                                    onClick={paqueteModalidad === 'fijo' ? 
-                                                                                        () => setFixedRoomTypeId(habitacion.id) 
-                                                                                        : undefined
-                                                                                    }
-                                                                                    className={`flex flex-col md:flex-row gap-2 p-3 rounded-lg border cursor-pointer transition-all
-                                                                                      ${fixedRoomTypeId === habitacion.id ? 'border-green-400 bg-green-100' : 'border-gray-200 hover:border-gray-300'}`}
-                                                                                  >
-                                                                                    {/* Icono y tipo de habitación */}
-                                                                                    <div className="text-sm flex items-center gap-2 md:w-1/4">
-                                                                                      {getRoomIcon(habitacion.tipo)}
-                                                                                      <div className="flex flex-col">
-                                                                                        <Label className="font-medium">{getRoomTypeLabel(habitacion.tipo)}</Label>
-                                                                                        {habitacion.capacidad && (
-                                                                                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                                                            {habitacion.capacidad} {habitacion.capacidad === 1 ? 'persona' : 'personas'}
-                                                                                          </span>
-                                                                                        )}
-                                                                                      </div>
-                                                                                    </div>
-
-                                                                                    {/* Precio y cupo */}
-                                                                                    {propio && habitacion?.precio_noche &&
-                                                                                      <div className="flex flex-col md:flex-row md:items-center md:gap-8 w-full">
-                                                                                        {/* Precio por noche */}
-                                                                                        <div className="relative right-[0.4rem] flex items-center p-1 rounded-md w-full md:w-auto justify-between md:justify-start">
-                                                                                          <DollarSign className="w-4 h-4 text-muted-foreground mr-1" />
-                                                                                          <span className="text-muted-foreground">{habitacion?.precio_noche ?? ''}</span>
-                                                                                        </div>
-
-                                                                                          {(paqueteModalidad === 'flexible' || paqueteModalidad === 'fijo' && fixedRoomTypeId === habitacion.id) && 
-                                                                                            <div className="grid grid-cols-1 sm:grid-cols-5 items-center gap-2 w-full md:w-auto">
-                                                                                              <Label htmlFor="cupo" className="text-righ col-span-1 p-1 rounded-md">
-                                                                                                Cupo:
-                                                                                              </Label>
-                                                                                              <div className="col-span-4 sm:col-span-4">
-                                                                                                <Controller
-                                                                                                  name={`cupo_habitacion_${habitacion.id}`}
-                                                                                                  control={controlSalida}
-                                                                                                  rules={{
-                                                                                                    required: 'Debes completar este campo',
-                                                                                                    validate: (value) => {
-                                                                                                      if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
-                                                                                                        return 'Valor inválido';
-                                                                                                      }
-                                                                                                      if (Number(value) <= 0) {
-                                                                                                        return 'El valor debe ser mayor que cero';
-                                                                                                      }
-                                                                                                      return true;
-                                                                                                    },
-                                                                                                  }}
-                                                                                                  render={({ field, fieldState: { error } }) => (
-                                                                                                    <div className="flex flex-col w-full">
-                                                                                                      <NumericFormat
-                                                                                                        value={field.value ?? ''}
-                                                                                                        onValueChange={(values) => {
-                                                                                                          const val = values.floatValue ?? null;
-                                                                                                          field.onChange(val && val > 0 ? val : null);
-                                                                                                        }}
-                                                                                                        onBlur={field.onBlur}
-                                                                                                        thousandSeparator="."
-                                                                                                        decimalSeparator=","
-                                                                                                        allowNegative={false}
-                                                                                                        decimalScale={0}
-                                                                                                        allowLeadingZeros={false}
-                                                                                                        placeholder="ej: 20"
-                                                                                                        className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
-                                                                                                          error
-                                                                                                            ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
-                                                                                                            : 'border-blue-200 focus:border-blue-500'
-                                                                                                        }`}
-                                                                                                      />
-                                                                                                    </div>
-                                                                                                  )}
-                                                                                                />
-                                                                                              </div>
-                                                                                            </div>
-                                                                                          }
-                                                                                        {/* Cupo */}
-                                                                                      </div> 
-                                                                                    }
-
-                                                                                    {!propio &&
-                                                                                      <div className="flex flex-col md:flex-row md:items-center md:gap-8 w-full">
-                                                                                        {/* Precio por noche */}
-                                                                                        {/* <div className="relative right-[0.4rem] p-1 rounded-md w-full md:w-auto justify-between md:justify-start hidden">
-                                                                                          <DollarSign className="w-4 h-4 text-muted-foreground mr-1" />
-                                                                                          <span className="text-muted-foreground">{habitacion?.precio_noche ?? ''}</span>
-                                                                                        </div> */}
-
-                                                                                          {(paqueteModalidad === 'flexible' || paqueteModalidad === 'fijo' && fixedRoomTypeId === habitacion.id) && 
-                                                                                            <div className="grid grid-cols-1 sm:grid-cols-5 items-center gap-2 w-full md:w-auto">
-                                                                                              <Label htmlFor="cupo" className="text-righ col-span-2 p-1 rounded-md">
-                                                                                                Precio Final:
-                                                                                              </Label>
-                                                                                              <div className="col-span-3 sm:col-span-3">
-                                                                                                <Controller
-                                                                                                  name={`precio_proveedor_${habitacion.id}`}
-                                                                                                  control={controlSalida}
-                                                                                                  rules={{
-                                                                                                    required: modoPrecio[hotel.id] === 'hotel' ? false : 'Debes completar este campo',
-                                                                                                    validate: (value) => {
-                                                                                                      if (modoPrecio[hotel.id] === 'hotel') {
-                                                                                                        return true;
-                                                                                                      }
-                                                                                                      if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
-                                                                                                        return 'Valor inválido';
-                                                                                                      }
-                                                                                                      if (Number(value) <= 0) {
-                                                                                                        return 'El valor debe ser mayor que cero';
-                                                                                                      }
-                                                                                                      return true;
-                                                                                                    },
-                                                                                                  }}
-                                                                                                  render={({ field, fieldState: { error } }) => (
-                                                                                                    <div className="flex flex-col w-full">
-                                                                                                      <NumericFormat
-                                                                                                        value={field.value ?? ''}
-                                                                                                        onValueChange={(values) => {
-                                                                                                          const val = values.floatValue ?? null;
-                                                                                                          field.onChange(val && val > 0 ? val : null);
-                                                                                                          // Actualizar trigger para recalcular precios
-                                                                                                          if (!propio) {
-                                                                                                            setPreciosCatalogoTrigger(prev => prev + 1);
-                                                                                                          }
-                                                                                                        }}
-                                                                                                        onBlur={field.onBlur}
-                                                                                                        thousandSeparator="."
-                                                                                                        decimalSeparator=","
-                                                                                                        allowNegative={false}
-                                                                                                        decimalScale={0}
-                                                                                                        allowLeadingZeros={false}
-                                                                                                        placeholder="ej: 200"
-                                                                                                        disabled={modoPrecio[hotel.id] === 'hotel'}
-                                                                                                        className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
-                                                                                                          error
-                                                                                                            ? 'border-red-400 focus:!border-red-400 focus:ring-0 outline-none'
-                                                                                                            : 'border-blue-200 focus:border-blue-500'
-                                                                                                        } ${modoPrecio[hotel.id] === 'hotel' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                                                                      />
-                                                                                                      {modoPrecio[hotel.id] !== 'hotel' && (() => {
-                                                                                                        const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
-                                                                                                        if (monedaActual) {
-                                                                                                          return (
-                                                                                                            <p className="text-xs text-blue-600 mt-1 font-medium">
-                                                                                                              💰 Ingrese el precio total del paquete en {monedaActual.nombre} ({monedaActual.simbolo})
-                                                                                                            </p>
-                                                                                                          );
-                                                                                                        }
-                                                                                                        return null;
-                                                                                                      })()}
-                                                                                                    </div>
-                                                                                                  )}
-                                                                                                />
-                                                                                              </div>
-                                                                                            </div>
-                                                                                          }
-                                                                                        {/* Cupo */}
-                                                                                      </div> 
-                                                                                    }
-
-                                                                                    {/* Mensaje si no hay precio */}
-                                                                                    {propio && !habitacion?.precio_noche && 
-                                                                                      <p className="text-sm font-medium text-red-400 mt-2 md:mt-0">
-                                                                                        Debes cargar el precio de la habitación
+                                                                                    ) : (
+                                                                                      <p className="text-xs text-gray-400 text-center py-2">
+                                                                                        Seleccioná esta habitación para configurarla
                                                                                       </p>
-                                                                                    }
+                                                                                    )}
                                                                                   </div>
-                                                                                </div>
-
-                                                                              ))}
+                                                                                );
+                                                                              })}
                                                                             </div>
-                                                                          </div>
-                                                                        )}
-                                                                      </div>
+                                                                          )}
+                                                                        </div>
+                                                                      )}
                                                                     </CardContent>
                                                                   </Card>
                                                                 ))}
@@ -4492,7 +4681,349 @@ const handleSubmitClick = useCallback(async () => {
                                                         </Card>
                                                     </div>
 
-                                                    
+                                                    {/* SECCIÓN: Costos de la Salida */}
+                                                    {propio && (
+                                                      <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+                                                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                                          <Tag className="w-5 h-5 text-emerald-600" />
+                                                          Costos de la Salida
+                                                        </h2>
+
+                                                        {(() => {
+                                                          const cupoSalida = Number(watchSalida('cupo')) || 0;
+                                                          const costosPax = itemsCostoSalida.map(item => ({
+                                                            ...item,
+                                                            costo_pax: item.dividir_por_pasajeros && cupoSalida > 0
+                                                              ? (item.monto ?? 0) / cupoSalida
+                                                              : (item.monto ?? 0),
+                                                          }));
+                                                          const totalCostosPax = costosPax.reduce((acc, c) => acc + c.costo_pax, 0);
+                                                          return (
+                                                            <div className="border rounded-lg overflow-hidden">
+                                                              <Table>
+                                                                <TableHeader>
+                                                                  <TableRow className="bg-gray-50">
+                                                                    <TableHead>Tipo</TableHead>
+                                                                    <TableHead>Monto total (₲)</TableHead>
+                                                                    <TableHead className="text-right">Costo/pax (₲)</TableHead>
+                                                                    <TableHead>Estado</TableHead>
+                                                                  </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                  {costosPax.map((item) => {
+                                                                    const esOverride = item.origen === 'override';
+                                                                    return (
+                                                                      <TableRow
+                                                                        key={item.tipo_costo_id}
+                                                                        className={esOverride ? 'bg-blue-50/40 border-l-2 border-l-blue-400' : ''}
+                                                                      >
+                                                                        <TableCell>
+                                                                          <div className="font-medium text-gray-900">{item.nombre}</div>
+                                                                          <div className="text-xs text-gray-500 mt-0.5">
+                                                                            {item.dividir_por_pasajeros
+                                                                              ? <span className="text-blue-600">÷ {cupoSalida || '—'} pasajeros</span>
+                                                                              : <span>Por pasajero</span>
+                                                                            }
+                                                                          </div>
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                          {esOverride ? (
+                                                                            <div className="flex items-center gap-1">
+                                                                              <span className="text-gray-400 text-sm">₲</span>
+                                                                              <NumericFormat
+                                                                                value={item.monto ?? ''}
+                                                                                onValueChange={(values) => {
+                                                                                  setItemsCostoSalida(prev => prev.map(i =>
+                                                                                    i.tipo_costo_id === item.tipo_costo_id
+                                                                                      ? { ...i, monto: values.floatValue ?? null }
+                                                                                      : i
+                                                                                  ));
+                                                                                }}
+                                                                                thousandSeparator="."
+                                                                                decimalSeparator=","
+                                                                                className="p-1 pl-2 rounded-md border-2 border-blue-200 focus:border-blue-500 w-36"
+                                                                              />
+                                                                            </div>
+                                                                          ) : (
+                                                                            <span className="text-gray-700 font-medium">
+                                                                              ₲ {formatearSeparadorMiles.format(item.monto ?? 0)}
+                                                                            </span>
+                                                                          )}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right">
+                                                                          <span className={`font-semibold text-sm ${esOverride ? 'text-blue-700' : 'text-gray-700'}`}>
+                                                                            ₲ {formatearSeparadorMiles.format(Math.round(item.costo_pax))}
+                                                                          </span>
+                                                                          {item.dividir_por_pasajeros && item.monto && cupoSalida > 0 && (
+                                                                            <div className="text-xs text-gray-400 mt-0.5">
+                                                                              {formatearSeparadorMiles.format(item.monto ?? 0)} ÷ {cupoSalida}
+                                                                            </div>
+                                                                          )}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                          {esOverride ? (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                              <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-xs whitespace-nowrap">
+                                                                                ✏️ Personalizado
+                                                                              </Badge>
+                                                                              <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                className="text-gray-400 hover:text-gray-700 text-xs cursor-pointer h-6 px-1.5"
+                                                                                onClick={() => setItemsCostoSalida(prev => prev.map(i =>
+                                                                                  i.tipo_costo_id === item.tipo_costo_id
+                                                                                    ? { ...i, monto: itemsCostoDefecto.find(d => d.tipo_costo_id === item.tipo_costo_id)?.monto ?? i.monto, origen: 'paquete' }
+                                                                                    : i
+                                                                                ))}
+                                                                                title="Volver al monto del paquete"
+                                                                              >
+                                                                                ↩ Reset
+                                                                              </Button>
+                                                                              <button
+                                                                                type="button"
+                                                                                className="text-red-300 hover:text-red-500 hover:bg-red-50 rounded p-0.5 cursor-pointer"
+                                                                                onClick={() => setItemsCostoSalida(prev => prev.filter(i => i.tipo_costo_id !== item.tipo_costo_id))}
+                                                                              >
+                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                              </button>
+                                                                            </div>
+                                                                          ) : (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                              <Badge variant="outline" className="text-gray-400 border-gray-200 bg-gray-50 text-xs whitespace-nowrap">
+                                                                                📦 Paquete
+                                                                              </Badge>
+                                                                              <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 text-xs cursor-pointer h-6 px-1.5"
+                                                                                onClick={() => setItemsCostoSalida(prev => prev.map(i =>
+                                                                                  i.tipo_costo_id === item.tipo_costo_id ? { ...i, origen: 'override' } : i
+                                                                                ))}
+                                                                              >
+                                                                                ✏️ Editar
+                                                                              </Button>
+                                                                            </div>
+                                                                          )}
+                                                                        </TableCell>
+                                                                      </TableRow>
+                                                                    );
+                                                                  })}
+                                                                </TableBody>
+                                                                {itemsCostoSalida.length > 0 && (
+                                                                  <tfoot>
+                                                                    <tr className="bg-gray-50 border-t-2 border-gray-200">
+                                                                      <td className="px-4 py-2 text-sm font-semibold text-gray-700" colSpan={2}>
+                                                                        Subtotal costos operativos
+                                                                      </td>
+                                                                      <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
+                                                                        ₲ {formatearSeparadorMiles.format(Math.round(totalCostosPax))}
+                                                                      </td>
+                                                                      <td />
+                                                                    </tr>
+                                                                  </tfoot>
+                                                                )}
+                                                              </Table>
+                                                            </div>
+                                                          );
+                                                        })()}
+
+                                                        <Button
+                                                          type="button"
+                                                          variant="outline"
+                                                          size="sm"
+                                                          className="mt-3 text-emerald-600 border-emerald-200 hover:bg-emerald-50 cursor-pointer"
+                                                          onClick={() => {
+                                                            const tiposUsados = itemsCostoSalida.map(i => i.tipo_costo_id);
+                                                            const tiposDisponibles = (dataTipoCostoList ?? []).filter((t: any) => t.activo && !tiposUsados.includes(t.id));
+                                                            if (tiposDisponibles.length === 0) return;
+                                                            const tipo = tiposDisponibles[0];
+                                                            setItemsCostoSalida(prev => [
+                                                              ...prev,
+                                                              { tipo_costo_id: tipo.id, nombre: tipo.nombre, monto: null, dividir_por_pasajeros: tipo.dividir_por_pasajeros, origen: 'override' }
+                                                            ]);
+                                                          }}
+                                                        >
+                                                          <CirclePlus className="w-4 h-4 mr-1" />
+                                                          Agregar costo extra solo para esta salida
+                                                        </Button>
+                                                      </div>
+                                                    )}
+
+                                                    {/* SECCIÓN: Resumen de Precios */}
+                                                    {propio && (() => {
+                                                      const cupo = Number(watchSalida('cupo')) || 0;
+                                                      const precioVenta = Number(watchSalida('precio_desde_editable')) || 0;
+                                                      const precioHasta = Number(watchSalida('precio_hasta_editable')) || 0;
+                                                      const costoServicios = 0;
+
+                                                      const costosCostos = itemsCostoSalida.map(item => ({
+                                                        ...item,
+                                                        monto_por_pasajero: item.dividir_por_pasajeros && cupo > 0
+                                                          ? (item.monto ?? 0) / cupo
+                                                          : (item.monto ?? 0),
+                                                      }));
+                                                      const totalCostos = costosCostos.reduce((acc, c) => acc + c.monto_por_pasajero, 0);
+                                                      const costoTotal = costoServicios + totalCostos;
+                                                      const margen = costoTotal > 0 && precioVenta > 0 ? ((precioVenta / costoTotal) - 1) * 100 : 0;
+                                                      const esVentaPerdida = precioVenta > 0 && costoTotal > 0 && precioVenta < costoTotal;
+                                                      const sinPrecio = precioVenta === 0;
+
+                                                      return (
+                                                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-4">
+                                                          <h2 className="text-base font-semibold text-gray-800 mb-4">Resumen de Precios</h2>
+
+                                                          {/* Costos operativos — siempre visibles si hay ítems */}
+                                                          {costoTotal > 0 && (
+                                                            <>
+                                                              {/* Barra de proporción visual */}
+                                                              <div className="mb-4">
+                                                                <div className="flex h-3 rounded-full overflow-hidden gap-px mb-1.5">
+                                                                  {costoServicios > 0 && (
+                                                                    <div
+                                                                      className="bg-blue-400 transition-all"
+                                                                      style={{ width: `${(costoServicios / costoTotal) * 100}%` }}
+                                                                      title={`Servicios: ${((costoServicios / costoTotal) * 100).toFixed(1)}%`}
+                                                                    />
+                                                                  )}
+                                                                  {costosCostos.map(item => item.monto_por_pasajero > 0 && (
+                                                                    <div
+                                                                      key={item.tipo_costo_id}
+                                                                      className={`transition-all ${item.origen === 'override' ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                                                                      style={{ width: `${(item.monto_por_pasajero / costoTotal) * 100}%` }}
+                                                                      title={`${item.nombre}: ${((item.monto_por_pasajero / costoTotal) * 100).toFixed(1)}%`}
+                                                                    />
+                                                                  ))}
+                                                                </div>
+                                                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                                                                  {costoServicios > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Servicios</span>}
+                                                                  {costosCostos.filter(c => c.monto_por_pasajero > 0).map(item => (
+                                                                    <span key={item.tipo_costo_id} className="flex items-center gap-1">
+                                                                      <span className={`w-2 h-2 rounded-full inline-block ${item.origen === 'override' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                                                                      {item.nombre}
+                                                                    </span>
+                                                                  ))}
+                                                                </div>
+                                                              </div>
+
+                                                              <Separator className="mb-3" />
+
+                                                              {/* Desglose línea a línea */}
+                                                              <div className="space-y-1.5 text-sm mb-4">
+                                                                {costoServicios > 0 && (
+                                                                  <div className="flex justify-between text-gray-600">
+                                                                    <span className="flex items-center gap-1.5">
+                                                                      <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                                                                      Servicios:
+                                                                    </span>
+                                                                    <span>₲ {formatearSeparadorMiles.format(costoServicios)}</span>
+                                                                  </div>
+                                                                )}
+                                                                {costosCostos.map(item => (
+                                                                  <div key={item.tipo_costo_id} className="flex justify-between text-gray-600">
+                                                                    <span className="flex items-center gap-1.5">
+                                                                      <span className={`w-2 h-2 rounded-full inline-block ${item.origen === 'override' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                                                                      {item.nombre}{item.dividir_por_pasajeros && cupo > 0 ? ` (÷ ${cupo} pax)` : ''}:
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1 tabular-nums">
+                                                                      ₲ {formatearSeparadorMiles.format(Math.round(item.monto_por_pasajero))}
+                                                                      <span className="text-xs opacity-60">{item.origen === 'override' ? '✏️' : '📦'}</span>
+                                                                    </span>
+                                                                  </div>
+                                                                ))}
+                                                                <Separator />
+                                                                <div className="flex justify-between font-semibold text-gray-800 pt-0.5">
+                                                                  <span>Costo operativo total/pax:</span>
+                                                                  <span className="tabular-nums">₲ {formatearSeparadorMiles.format(Math.round(costoTotal))}</span>
+                                                                </div>
+                                                              </div>
+                                                            </>
+                                                          )}
+
+                                                          {/* Precio de venta — solo si está ingresado */}
+                                                          {sinPrecio ? (
+                                                            <p className="text-sm text-amber-600 flex items-center gap-1.5">
+                                                              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                                              Ingresá los precios de las habitaciones para ver el precio de venta
+                                                            </p>
+                                                          ) : (
+                                                            <div className={`rounded-xl border-2 p-4 ${
+                                                              esVentaPerdida
+                                                                ? 'border-red-300 bg-red-50'
+                                                                : costoTotal > 0 && margen < 10
+                                                                ? 'border-amber-300 bg-amber-50'
+                                                                : 'border-emerald-300 bg-emerald-50'
+                                                            }`}>
+                                                              <div className="flex items-start justify-between flex-wrap gap-4">
+                                                                <div className="flex items-end gap-3">
+                                                                  <div>
+                                                                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-0.5">
+                                                                      Precio desde
+                                                                    </p>
+                                                                    <p className={`text-3xl font-bold tabular-nums ${
+                                                                      esVentaPerdida ? 'text-red-600' : costoTotal > 0 && margen < 10 ? 'text-amber-700' : 'text-emerald-700'
+                                                                    }`}>
+                                                                      ₲ {formatearSeparadorMiles.format(Math.round(precioVenta))}
+                                                                    </p>
+                                                                  </div>
+                                                                  {paqueteModalidad === 'flexible' && precioHasta > 0 && (
+                                                                    <>
+                                                                      <span className="text-gray-400 text-xl mb-1">—</span>
+                                                                      <div>
+                                                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-0.5">
+                                                                          Hasta
+                                                                        </p>
+                                                                        <p className={`text-3xl font-bold tabular-nums ${
+                                                                          esVentaPerdida ? 'text-red-600' : costoTotal > 0 && margen < 10 ? 'text-amber-700' : 'text-emerald-700'
+                                                                        }`}>
+                                                                          ₲ {formatearSeparadorMiles.format(Math.round(precioHasta))}
+                                                                        </p>
+                                                                      </div>
+                                                                    </>
+                                                                  )}
+                                                                </div>
+                                                                {/* {costoTotal > 0 && (
+                                                                  <div className="text-center">
+                                                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">
+                                                                      Margen
+                                                                      <span className="ml-1 text-gray-400 normal-case font-normal" title="(Precio de venta / Costo operativo - 1) × 100">ⓘ</span>
+                                                                    </p>
+                                                                    <p className={`text-2xl font-bold ${
+                                                                      esVentaPerdida ? 'text-red-600' : margen < 10 ? 'text-amber-700' : 'text-emerald-700'
+                                                                    }`}>
+                                                                      {margen.toFixed(1)}%
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-500 tabular-nums">
+                                                                      ₲ {formatearSeparadorMiles.format(Math.round(precioVenta - costoTotal))}
+                                                                    </p>
+                                                                  </div>
+                                                                )} */}
+                                                              </div>
+                                                              <div className={`mt-3 pt-3 border-t flex items-center gap-1.5 text-xs font-medium ${
+                                                                esVentaPerdida
+                                                                  ? 'border-red-200 text-red-600'
+                                                                  : costoTotal > 0 && margen < 10
+                                                                  ? 'border-amber-200 text-amber-700'
+                                                                  : 'border-emerald-200 text-emerald-700'
+                                                              }`}>
+                                                                {/* {esVentaPerdida ? (
+                                                                  <><AlertCircle className="w-3.5 h-3.5 flex-shrink-0" /> Precio por debajo del costo operativo — revisá los costos</>
+                                                                ) : costoTotal === 0 ? (
+                                                                  <><CheckIcon className="w-3.5 h-3.5 flex-shrink-0" /> Precio ingresado — cargá los costos para ver el margen</>
+                                                                ) : margen < 10 ? (
+                                                                  <><AlertCircle className="w-3.5 h-3.5 flex-shrink-0" /> Margen bajo — revisá si el precio es suficiente</>
+                                                                ) : (
+                                                                  <><CheckIcon className="w-3.5 h-3.5 flex-shrink-0" /> Precio saludable</>
+                                                                )} */}
+                                                              </div>
+                                                            </div>
+                                                          )}
+                                                        </div>
+                                                      );
+                                                    })()}
+
+
                                                     <DialogFooter>
                                                       <Button type="button" variant="outline" className="cursor-pointer" 
                                                           onClick={resetSalidaForm}
