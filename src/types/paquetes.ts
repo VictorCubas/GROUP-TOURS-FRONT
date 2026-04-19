@@ -71,7 +71,9 @@ export interface SalidaPaquete {
   comision?: any;
   cupos_habitaciones?: any[];
   precios_catalogo?: any[];
+  precios_catalogo_habitaciones?: any[];
   precios_catalogo_hoteles?: any[];
+  items_costo?: any[];
 }
 
 
@@ -104,7 +106,8 @@ export interface Paquete {
   fecha_fin: string | null; // formato YYYY-MM-DD
   personalizado: boolean;
   cantidad_pasajeros: number | null;
-  servicios: Servicio[] ;
+  servicios: Servicio[];
+  items_costo_default?: any[];
   propio: boolean;
   salidas: SalidaPaquete[]
   activo: boolean;
