@@ -26,6 +26,8 @@ import {
   Users,
   TrendingUp,
   Download,
+  Tag,
+  CirclePlus,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -59,6 +61,7 @@ import {
   exportarPasajerosExcel,
 } from "@/components/utils/httpSalidas"
 import { fetchDataMonedaTodos, fetchCotizacionVigente } from "@/components/utils/httpPaquete"
+import { fetchTiposCostoTodos } from "@/components/utils/httpTipoCosto"
 import { fetchDataPaquetes } from "@/components/utils/httpReservas"
 import { fetchDataHoteles } from "@/components/utils/httpDestino"
 import { Controller, useForm } from "react-hook-form"
@@ -76,6 +79,7 @@ import {
 } from "@/helper/paquete"
 import { NumericFormat } from "react-number-format"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 
 let dataList: SalidaListado[] = []
@@ -131,6 +135,9 @@ export default function SalidasPage() {
   const selectedHotelsRef = useRef(selectedHotels)
   const [preciosCatalogoTrigger, setPreciosCatalogoTrigger] = useState(0)
 
+  // --- Items de costo ---
+  const [itemsCostoSalida, setItemsCostoSalida] = useState<any[]>([])
+
   // --- UI state ---
   const [validando, setValidando] = useState(false)
   const [activeTab, setActiveTab] = useState("list")
@@ -141,7 +148,12 @@ export default function SalidasPage() {
     busqueda: "",
     fecha_desde: "",
     fecha_hasta: "",
+    paquete_id: "",
   })
+
+  // --- Filtro paquete (lista) ---
+  const [paqueteFiltroID, setPaqueteFiltroID] = useState<number | "">("")
+  const [paqueteFiltrosBusqueda, setPaqueteFiltrosBusqueda] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [paginacion, setPaginacion] = useState<RespuestaPaginadaSalida>({
     next: null,
@@ -184,8 +196,6 @@ export default function SalidasPage() {
       fecha_salida_v2: "",
       fecha_regreso_v2: "",
       cupo: "",
-      ganancia: "",
-      comision: "",
       moneda: "",
     },
   })
@@ -203,8 +213,6 @@ export default function SalidasPage() {
   const fechaSalida = watch("fecha_salida_v2")
   const fechaRegreso = watch("fecha_regreso_v2")
   const monedaSeleccionada = watch("moneda")
-  const precioDesde = watch("precio_desde")
-  const precioHasta = watch("precio_hasta")
   const cantidadNoche = watch("cantidadNoche")
 
   // --- Queries ---
@@ -224,6 +232,19 @@ export default function SalidasPage() {
     queryKey: ["paquetes-disponibles-salidas", paqueteBusqueda],
     queryFn: () => fetchDataPaquetes(1, 20, { busqueda: paqueteBusqueda, activo: true }),
     staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: dataPaquetesFiltroList, isFetching: isFetchingFiltrosPaquetes } = useQuery({
+    queryKey: ["paquetes-filtro-salidas", paqueteFiltrosBusqueda],
+    queryFn: () => fetchDataPaquetes(1, 20, { busqueda: paqueteFiltrosBusqueda, activo: true }),
+    staleTime: 5 * 60 * 1000,
+    enabled: Boolean(paqueteFiltrosBusqueda),
+  })
+
+  const { data: dataTipoCostoList } = useQuery({
+    queryKey: ["tipos-costo-todos"],
+    queryFn: fetchTiposCostoTodos,
+    staleTime: 10 * 60 * 1000,
   })
 
   const { data: dataHotelesList, isFetching: isFetchingHoteles } = useQuery({
@@ -302,6 +323,27 @@ export default function SalidasPage() {
       setValue("cupo", cantidadPasajeros)
     }
   }, [selectedPaqueteData, setValue, esTerrestre, cantidadPasajeros])
+
+  // Initialize items de costo from paquete's defaults
+  useEffect(() => {
+    if (!selectedPaqueteData) {
+      setItemsCostoSalida([])
+      return
+    }
+    if (propio && selectedPaqueteData.items_costo_default?.length) {
+      setItemsCostoSalida(
+        selectedPaqueteData.items_costo_default.map((item: any) => ({
+          tipo_costo_id: item.tipo_costo?.id ?? item.tipo_costo_id,
+          nombre: item.tipo_costo?.nombre ?? item.nombre,
+          monto: Number(item.monto),
+          dividir_por_pasajeros: item.tipo_costo?.dividir_por_pasajeros ?? item.dividir_por_pasajeros ?? false,
+          origen: 'paquete' as const,
+        }))
+      )
+    } else {
+      setItemsCostoSalida([])
+    }
+  }, [selectedPaqueteData, propio])
 
   // --- Price auto-calculation (propio) ---
   useEffect(() => {
@@ -393,10 +435,8 @@ export default function SalidasPage() {
     }
   }, [selectedHotels, fechaSalida, fechaRegreso, setValue, dataHotelesList, fixedRoomTypeId, monedaSeleccionada, dataMonedaList, dataCotizacion, paqueteModalidad, propio, handleShowToast])
 
-  // --- Price auto-calculation (distribuidora) ---
+  // --- Price auto-calculation (propio y distribuidora) ---
   useEffect(() => {
-    if (propio) return
-
     const formValues = getValues()
     const preciosCatalogo: number[] = []
 
@@ -429,10 +469,8 @@ export default function SalidasPage() {
   useEffect(() => {
     if (!propio) {
       setValue("cupo", "", { shouldValidate: false })
-      setValue("ganancia", "", { shouldValidate: false })
     } else {
       setValue("precio_desde_editable", "", { shouldValidate: false })
-      setValue("comision", "", { shouldValidate: false })
     }
   }, [propio, setValue])
 
@@ -467,7 +505,7 @@ export default function SalidasPage() {
     setHotelPrices({})
     setModoPrecio({})
     setFixedRoomTypeId("")
-
+    setItemsCostoSalida([])
     const formValues = getValues()
     Object.keys(formValues).forEach((key) => {
       if (
@@ -489,8 +527,6 @@ export default function SalidasPage() {
       fecha_salida_v2: "",
       fecha_regreso_v2: "",
       cupo: "",
-      ganancia: "",
-      comision: "",
       moneda: "",
     })
     setValidando(false)
@@ -540,23 +576,6 @@ export default function SalidasPage() {
         newSelected.delete(hotelId)
         delete newPrices[hotelId]
       } else {
-        if (propio) {
-          if (hotel.habitaciones.length === 0) {
-            handleShowToast(
-              "Se debe cargar las habitaciones a este hotel para este tipo de paquete",
-              "error"
-            )
-            return
-          }
-          if (hotel.habitaciones.some((h: any) => !h.precio_noche)) {
-            handleShowToast(
-              "Se debe cargar los precios a todas habitaciones de este hotel para este tipo de paquete",
-              "error"
-            )
-            return
-          }
-        }
-
         newSelected.add(hotelId)
         newPrices[hotelId] = { single: 0, doble: 0, triple: 0 }
 
@@ -681,28 +700,29 @@ export default function SalidasPage() {
       fecha_regreso: dataForm.fecha_regreso_v2,
       moneda_id: dataForm.moneda,
       senia: dataForm.senia,
-      costo_base_desde: propio ? dataForm.precio_desde : dataForm.precio_desde_editable,
       hoteles_ids: hotelesIds,
     }
 
+    // Precios de catálogo — aplica a propios y distribuidoras
+    payload.precios_catalogo_hoteles = normalizarPreciosCatalogoHoteles(preciosCatalogoHoteles)
+    payload.precios_catalogo_habitaciones = normalizarPreciosCatalogo(
+      precioCatalogoDistribuidora,
+      preciosCatalogoHoteles,
+      dataHotelesList || []
+    )
+
     if (propio) {
       payload.cupo = parseInt(dataForm.cupo, 10)
-      payload.ganancia = dataForm.ganancia
       payload.cupos_habitaciones = habitacionesCuposList
-    } else {
-      payload.comision = dataForm.comision
-      payload.precios_catalogo = normalizarPreciosCatalogo(
-        precioCatalogoDistribuidora,
-        preciosCatalogoHoteles,
-        dataHotelesList || []
-      )
-      payload.precios_catalogo_hoteles = normalizarPreciosCatalogoHoteles(preciosCatalogoHoteles)
-    }
 
-    if (propio && dataForm.precio_hasta) {
-      payload.costo_base_hasta = dataForm.precio_hasta
-    } else if (!propio && dataForm.precio_hasta_editable && paqueteModalidad === "flexible") {
-      payload.costo_base_hasta = dataForm.precio_hasta_editable
+      // Items de costo: solo enviar overrides
+      const overrides = itemsCostoSalida.filter((i: any) => i.origen === 'override')
+      if (overrides.length > 0) {
+        payload.items_costo_override_data = overrides.map((i: any) => ({
+          tipo_costo_id: i.tipo_costo_id,
+          monto: i.monto,
+        }))
+      }
     }
 
     if (paqueteModalidad === "fijo" && fixedRoomTypeIdRef.current) {
@@ -1018,18 +1038,7 @@ export default function SalidasPage() {
                                     </div>
                                   </div>
                                 )}
-                                {dataSalidaDetalle.ganancia != null && (
-                                  <div>
-                                    <p className="text-xs text-gray-500">Ganancia</p>
-                                    <p className="font-semibold text-gray-900">{dataSalidaDetalle.ganancia} %</p>
-                                  </div>
-                                )}
-                                {dataSalidaDetalle.comision != null && (
-                                  <div>
-                                    <p className="text-xs text-gray-500">Comisión</p>
-                                    <p className="font-semibold text-gray-900">{dataSalidaDetalle.comision} %</p>
-                                  </div>
-                                )}
+                                {/* Ganancia / Comision — oculto post-refactor */}
                                 {dataSalidaDetalle.costo_base_hasta != null && (
                                   <div>
                                     <p className="text-xs text-gray-500">Precio final</p>
@@ -1321,7 +1330,7 @@ export default function SalidasPage() {
 
                     <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-blue-200 w-full flex-wrap">
                       <div className="flex items-center gap-2">
-                        <Label className="text-sm text-gray-600 font-medium">Fecha salida desde:</Label>
+                        <Label className="text-sm text-gray-600 font-medium whitespace-nowrap">Fecha salida desde:</Label>
                         <Input
                           type="date"
                           value={filtros.fecha_desde}
@@ -1331,7 +1340,7 @@ export default function SalidasPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Label className="text-sm text-gray-600 font-medium">Fecha salida hasta:</Label>
+                        <Label className="text-sm text-gray-600 font-medium whitespace-nowrap">Fecha salida hasta:</Label>
                         <Input
                           type="date"
                           value={filtros.fecha_hasta}
@@ -1340,12 +1349,35 @@ export default function SalidasPage() {
                         />
                       </div>
 
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm text-gray-600 font-medium whitespace-nowrap">Paquete:</Label>
+                        <div className="min-w-[400px]">
+                          <DinamicSearchSelect
+                            value={paqueteFiltroID}
+                            onValueChange={(val) => {
+                              setPaqueteFiltroID(val as number | "")
+                              setFiltros((prev) => ({ ...prev, paquete_id: val ? String(val) : "" }))
+                              setCurrentPage(1)
+                            }}
+                            onSearchChange={setPaqueteFiltrosBusqueda}
+                            isFetchingPersonas={isFetchingFiltrosPaquetes}
+                            dataList={dataPaquetesFiltroList ?? []}
+                            labelKey="nombre"
+                            valueKey="id"
+                            placeholder="Filtrar por paquete..."
+                            mostrarPreview={false}
+                          />
+                        </div>
+                      </div>
+
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
                           setBusquedaInput("")
-                          setFiltros({ activo: true, busqueda: "", fecha_desde: "", fecha_hasta: "" })
+                          setPaqueteFiltroID("")
+                          setPaqueteFiltrosBusqueda("")
+                          setFiltros({ activo: true, busqueda: "", fecha_desde: "", fecha_hasta: "", paquete_id: "" })
                           setShowActiveOnly(true)
                         }}
                         className="cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-50"
@@ -1414,7 +1446,9 @@ export default function SalidasPage() {
                               <Button
                                 onClick={() => {
                                   setBusquedaInput("")
-                                  setFiltros({ activo: true, busqueda: "", fecha_desde: "", fecha_hasta: "" })
+                                  setPaqueteFiltroID("")
+                                  setPaqueteFiltrosBusqueda("")
+                                  setFiltros({ activo: true, busqueda: "", fecha_desde: "", fecha_hasta: "", paquete_id: "" })
                                   setShowActiveOnly(true)
                                 }}
                                 className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
@@ -1842,15 +1876,16 @@ export default function SalidasPage() {
                         <div className="space-y-1">
                           <Label className="text-gray-600 text-sm">Precio Desde</Label>
                           <div className="text-2xl font-bold text-blue-600">
-                            {propio
-                              ? formatearSeparadorMiles.format(+(precioDesde ?? 0))
-                              : formatearSeparadorMiles.format(
-                                  +(watch("precio_desde_editable") ?? 0)
-                                )}
+                            {!watch("precio_desde_editable") ? (
+                              <span className="text-sm text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                Ingresá los precios de las habitaciones
+                              </span>
+                            ) : (
+                              formatearSeparadorMiles.format(+(watch("precio_desde_editable") ?? 0))
+                            )}
                           </div>
-                          <p className="text-xs text-gray-500">
-                            {propio ? "Calculado automáticamente" : "Mín. del catálogo"}
-                          </p>
+                          <p className="text-xs text-gray-500">Mín. del catálogo</p>
                         </div>
                         <div className="space-y-1">
                           <Label className="text-gray-600 text-sm">Precio Hasta</Label>
@@ -1859,18 +1894,12 @@ export default function SalidasPage() {
                               <Badge className="bg-gray-100 text-gray-700 border-gray-200">
                                 No aplica
                               </Badge>
-                            ) : propio ? (
-                              formatearSeparadorMiles.format(+(precioHasta ?? 0))
                             ) : (
-                              formatearSeparadorMiles.format(
-                                +(watch("precio_hasta_editable") ?? 0)
-                              )
+                              formatearSeparadorMiles.format(+(watch("precio_hasta_editable") ?? 0))
                             )}
                           </div>
                           {paqueteModalidad === "flexible" && (
-                            <p className="text-xs text-gray-500">
-                              {propio ? "Calculado automáticamente" : "Máx. del catálogo"}
-                            </p>
+                            <p className="text-xs text-gray-500">Máx. del catálogo</p>
                           )}
                         </div>
                       </div>
@@ -1983,115 +2012,7 @@ export default function SalidasPage() {
                         )}
                       </div>
 
-                      {/* Ganancia / Comision */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {propio && (
-                          <div className="space-y-2">
-                            <Label className="text-gray-700 font-medium">
-                              Porcentaje de ganancia *
-                            </Label>
-                            <Controller
-                              name="ganancia"
-                              control={control}
-                              rules={{
-                                required: "Debes completar este campo",
-                                validate: (v) => {
-                                  if (
-                                    v === null ||
-                                    v === undefined ||
-                                    v === "" ||
-                                    isNaN(Number(v))
-                                  )
-                                    return "Valor inválido"
-                                  if (Number(v) <= 0) return "El valor debe ser mayor que cero"
-                                  return true
-                                },
-                              }}
-                              render={({ field, fieldState: { error } }) => (
-                                <div className="flex flex-col">
-                                  <NumericFormat
-                                    value={field.value ?? ""}
-                                    onValueChange={(vals) =>
-                                      field.onChange(vals.floatValue ?? null)
-                                    }
-                                    onBlur={field.onBlur}
-                                    thousandSeparator="."
-                                    decimalSeparator=","
-                                    allowNegative={false}
-                                    decimalScale={0}
-                                    allowLeadingZeros={false}
-                                    suffix=" %"
-                                    placeholder="5%, 10%, 15%..."
-                                    className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
-                                      error
-                                        ? "border-red-400 focus:!border-red-400 focus:ring-0 outline-none"
-                                        : "border-blue-200 focus:border-blue-500"
-                                    }`}
-                                  />
-                                  {error && (
-                                    <span className="text-red-400 text-sm mt-1">
-                                      {error.message}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            />
-                          </div>
-                        )}
-
-                        {!propio && (
-                          <div className="space-y-2">
-                            <Label className="text-gray-700 font-medium">
-                              Porcentaje de comisión *
-                            </Label>
-                            <Controller
-                              name="comision"
-                              control={control}
-                              rules={{
-                                required: "Debes completar este campo",
-                                validate: (v) => {
-                                  if (
-                                    v === null ||
-                                    v === undefined ||
-                                    v === "" ||
-                                    isNaN(Number(v))
-                                  )
-                                    return "Valor inválido"
-                                  return true
-                                },
-                              }}
-                              render={({ field, fieldState: { error } }) => (
-                                <div className="flex flex-col">
-                                  <NumericFormat
-                                    value={field.value ?? ""}
-                                    onValueChange={(vals) =>
-                                      field.onChange(vals.floatValue ?? null)
-                                    }
-                                    onBlur={field.onBlur}
-                                    thousandSeparator="."
-                                    decimalSeparator=","
-                                    decimalScale={0}
-                                    fixedDecimalScale
-                                    allowNegative={false}
-                                    suffix=" %"
-                                    placeholder="5%, 10%, 15%..."
-                                    className={`flex-1 p-1 pl-2.5 rounded-md border-2 ${
-                                      error
-                                        ? "border-red-400 focus:!border-red-400 focus:ring-0 outline-none"
-                                        : "border-blue-200 focus:border-blue-500"
-                                    }`}
-                                  />
-                                  {error && (
-                                    <span className="text-red-400 text-sm mt-1">
-                                      {error.message}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            />
-                          </div>
-                        )}
-                      </div>
+                      {/* Ganancia / Comision — oculto temporalmente */}
 
                       {/* Hotels section */}
                       <Card className="bg-gray-50">
@@ -2195,55 +2116,52 @@ export default function SalidasPage() {
                                       </div>
                                     </div>
 
-                                    {/* Price mode toggle (distribuidora only) */}
-                                    {!propio && selectedHotels.has(hotel.id) && (
-                                      <div className="flex items-center gap-4">
-                                        <div>
-                                          <Label className="text-sm font-medium text-gray-700">
-                                            Modo de precio
-                                          </Label>
-                                          <div className="inline-flex rounded-xl bg-gray-100 p-1 mt-1">
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.preventDefault()
-                                                handleModeChange(hotel.id, "hotel")
-                                              }}
-                                              className={cn(
-                                                "whitespace-nowrap flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-medium transition-all duration-200 cursor-pointer p-2",
-                                                modoPrecio[hotel.id] === "hotel"
-                                                  ? "bg-white text-blue-600 shadow-sm"
-                                                  : "text-gray-600 hover:text-gray-900"
-                                              )}
-                                            >
-                                              <Building2 className="h-4 w-4" />
-                                              Por Hotel
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.preventDefault()
-                                                handleModeChange(hotel.id, "room")
-                                              }}
-                                              className={cn(
-                                                "whitespace-nowrap flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium transition-all duration-200 cursor-pointer p-2",
-                                                modoPrecio[hotel.id] === "room"
-                                                  ? "bg-white text-emerald-600 shadow-sm"
-                                                  : "text-gray-600 hover:text-gray-900"
-                                              )}
-                                            >
-                                              <DoorOpen className="h-4 w-4" />
-                                              Por Habitación
-                                            </button>
-                                          </div>
+                                    {/* Mode toggle — visible para todos (propio y distribuidora) */}
+                                    {selectedHotels.has(hotel.id) && (
+                                      <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Modo de Precio</span>
+                                        <div className="inline-flex rounded-lg bg-gray-100 p-0.5">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.preventDefault(); handleModeChange(hotel.id, "hotel") }}
+                                            className={cn(
+                                              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                                              modoPrecio[hotel.id] === "hotel"
+                                                ? "bg-white text-blue-600 shadow-sm"
+                                                : "text-gray-500 hover:text-gray-800"
+                                            )}
+                                          >
+                                            <Building2 className="h-3.5 w-3.5" />
+                                            Por Hotel
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.preventDefault(); handleModeChange(hotel.id, "room") }}
+                                            className={cn(
+                                              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                                              modoPrecio[hotel.id] === "room"
+                                                ? "bg-white text-emerald-600 shadow-sm"
+                                                : "text-gray-500 hover:text-gray-800"
+                                            )}
+                                          >
+                                            <DoorOpen className="h-3.5 w-3.5" />
+                                            Por Habitación
+                                          </button>
                                         </div>
+                                      </div>
+                                    )}
+                                  </div>
 
-                                        {/* Hotel-level price input */}
-                                        {modoPrecio[hotel.id] === "hotel" && (
-                                          <div className="space-y-1">
-                                            <Label className="text-gray-700 font-medium text-sm">
-                                              Precio *
-                                            </Label>
+                                  {/* Configuración de habitaciones (solo cuando hotel seleccionado) */}
+                                  {selectedHotels.has(hotel.id) && (
+                                    <div className="mt-4">
+                                      {/* Campo precio por hotel (modo hotel) */}
+                                      {modoPrecio[hotel.id] === "hotel" && (
+                                        <div className="mb-4 flex items-center gap-3">
+                                          <Label className="text-sm font-medium text-gray-700 shrink-0">
+                                            Precio Final del Hotel *
+                                          </Label>
+                                          <div className="w-48">
                                             <Controller
                                               name={`precio_habitacion_por_hotel_${hotel.id}`}
                                               control={control}
@@ -2251,226 +2169,545 @@ export default function SalidasPage() {
                                                 required: "Debes completar este campo",
                                                 validate: (v) => {
                                                   if (!v || isNaN(Number(v)) || Number(v) <= 0)
-                                                    return "Valor inválido"
+                                                    return "Debe ser mayor que cero"
                                                   return true
                                                 },
                                               }}
                                               render={({ field, fieldState: { error } }) => (
-                                                <NumericFormat
-                                                  value={field.value ?? ""}
-                                                  onValueChange={(vals) => {
-                                                    const val = vals.floatValue ?? null
-                                                    field.onChange(val)
-                                                    if (val && val > 0 && modoPrecio[hotel.id] === "hotel") {
-                                                      hotel?.habitaciones?.forEach((hab: any) =>
-                                                        setValue(
-                                                          `precio_paquete_habitacion_${hab.id}`,
-                                                          val
+                                                <div className="flex flex-col">
+                                                  <NumericFormat
+                                                    value={field.value ?? ""}
+                                                    onValueChange={(vals) => {
+                                                      const val = vals.floatValue ?? null
+                                                      field.onChange(val)
+                                                      if (val && val > 0 && modoPrecio[hotel.id] === "hotel") {
+                                                        hotel?.habitaciones?.forEach((hab: any) =>
+                                                          setValue(`precio_paquete_habitacion_${hab.id}`, val)
                                                         )
-                                                      )
-                                                    }
-                                                    setPreciosCatalogoTrigger((t) => t + 1)
-                                                  }}
-                                                  onBlur={field.onBlur}
-                                                  thousandSeparator="."
-                                                  decimalSeparator=","
-                                                  allowNegative={false}
-                                                  decimalScale={0}
-                                                  allowLeadingZeros={false}
-                                                  placeholder="Precio total"
-                                                  className={`p-1 pl-2.5 rounded-md border-2 w-36 ${
-                                                    error
-                                                      ? "border-red-400"
-                                                      : "border-blue-200 focus:border-blue-500"
-                                                  }`}
-                                                />
+                                                      }
+                                                      setPreciosCatalogoTrigger((t) => t + 1)
+                                                    }}
+                                                    onBlur={field.onBlur}
+                                                    thousandSeparator="."
+                                                    decimalSeparator=","
+                                                    allowNegative={false}
+                                                    decimalScale={0}
+                                                    allowLeadingZeros={false}
+                                                    placeholder="ej: 2.500.000"
+                                                    className={`w-full p-1.5 pl-2.5 rounded-md border-2 text-sm ${
+                                                      error ? "border-red-400" : "border-blue-200 focus:border-blue-500"
+                                                    }`}
+                                                  />
+                                                  {error && <p className="text-xs text-red-500 mt-0.5">{error.message}</p>}
+                                                </div>
                                               )}
                                             />
                                           </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
+                                          <p className="text-xs text-blue-600 font-medium">Precio único para todas las habitaciones</p>
+                                        </div>
+                                      )}
 
-                                  {/* Room list */}
-                                  {selectedHotels.has(hotel.id) &&
-                                    hotel.habitaciones?.length > 0 && (
-                                      <div
-                                        className={`grid gap-3 pl-8 ${
-                                          paqueteModalidad === "fijo"
-                                            ? "grid-cols-1"
-                                            : "grid-cols-1 md:grid-cols-2"
-                                        }`}
-                                      >
-                                        {hotel.habitaciones.map((habitacion: any) => {
-                                          const isFixedSelected =
-                                            paqueteModalidad === "fijo" &&
-                                            fixedRoomTypeId === habitacion.id.toString()
-
+                                      {/* Header de habitaciones + stats */}
+                                      <div className="mb-3">
+                                        <p className="text-sm font-semibold text-gray-800">Configuración por tipo de habitación</p>
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                          {modoPrecio[hotel.id] === "hotel"
+                                            ? "El precio del paquete es igual para todas las habitaciones. Asigná el cupo para cada tipo."
+                                            : "Ingresá el cupo y el precio del paquete para cada tipo de habitación."}
+                                        </p>
+                                        {(() => {
+                                          const total = hotel?.habitaciones?.length ?? 0
+                                          const cupoTotal = hotel?.habitaciones?.reduce((acc: number, h: any) =>
+                                            acc + (Number(getValues(`cupo_habitacion_${h.id}`)) || 0), 0)
+                                          const sinCompletar = hotel?.habitaciones?.filter((h: any) => {
+                                            const cupoV = getValues(`cupo_habitacion_${h.id}`)
+                                            const precioV = getValues(`precio_paquete_habitacion_${h.id}`)
+                                            return !(Number(cupoV) > 0 && Number(precioV) > 0)
+                                          }).length ?? 0
                                           return (
-                                            <div
-                                              key={habitacion.id}
-                                              className={`border rounded-lg p-3 ${
-                                                paqueteModalidad === "fijo"
-                                                  ? isFixedSelected
-                                                    ? "border-blue-400 bg-blue-50"
-                                                    : "border-gray-200 cursor-pointer hover:border-blue-300"
-                                                  : "border-gray-200"
-                                              }`}
-                                              onClick={
-                                                paqueteModalidad === "fijo"
-                                                  ? () =>
-                                                      setFixedRoomTypeId(
-                                                        isFixedSelected
-                                                          ? ""
-                                                          : habitacion.id.toString()
-                                                      )
-                                                  : undefined
-                                              }
-                                            >
-                                              <div className="flex items-center gap-2">
-                                                {paqueteModalidad === "fijo" && (
-                                                  <div
-                                                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                                                      isFixedSelected
-                                                        ? "border-blue-500 bg-blue-500"
-                                                        : "border-gray-300"
-                                                    }`}
-                                                  >
-                                                    {isFixedSelected && (
-                                                      <div className="w-2 h-2 rounded-full bg-white" />
-                                                    )}
-                                                  </div>
-                                                )}
-                                                {getRoomIcon(habitacion.tipo)}
-                                                <div className="flex flex-col">
-                                                  <span className="font-medium text-sm">
-                                                    {getRoomTypeLabel(habitacion.tipo)}
-                                                  </span>
-                                                  {habitacion.capacidad && (
-                                                    <span className="text-xs text-gray-500 whitespace-nowrap">
-                                                      {habitacion.capacidad} {habitacion.capacidad === 1 ? "persona" : "personas"}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                                {propio && (
-                                                  <span className="text-sm text-gray-500">
-                                                    {formatearSeparadorMiles.format(
-                                                      habitacion.precio_noche
-                                                    )}
-                                                    /noche
-                                                  </span>
-                                                )}
-                                              </div>
-
-                                              {/* Cupo por habitación (propio) */}
-                                              {propio &&
-                                                (paqueteModalidad === "flexible" ||
-                                                  isFixedSelected) && (
-                                                  <div className="mt-2">
-                                                    <Label className="text-xs text-gray-600">
-                                                      Cupo *
-                                                    </Label>
-                                                    <Controller
-                                                      name={`cupo_habitacion_${habitacion.id}`}
-                                                      control={control}
-                                                      rules={{
-                                                        required: "Requerido",
-                                                        validate: (v) => {
-                                                          if (
-                                                            !v ||
-                                                            isNaN(Number(v)) ||
-                                                            Number(v) <= 0
-                                                          )
-                                                            return "Valor inválido"
-                                                          return true
-                                                        },
-                                                      }}
-                                                      render={({ field, fieldState: { error } }) => (
-                                                        <NumericFormat
-                                                          value={field.value ?? ""}
-                                                          onValueChange={(vals) =>
-                                                            field.onChange(vals.floatValue ?? null)
-                                                          }
-                                                          onBlur={field.onBlur}
-                                                          thousandSeparator="."
-                                                          decimalSeparator=","
-                                                          allowNegative={false}
-                                                          decimalScale={0}
-                                                          allowLeadingZeros={false}
-                                                          placeholder="Cupo"
-                                                          className={`p-1 pl-2.5 rounded-md border-2 w-full mt-1 ${
-                                                            error
-                                                              ? "border-red-400"
-                                                              : "border-blue-200 focus:border-blue-500"
-                                                          }`}
-                                                          onClick={(e: any) => e.stopPropagation()}
-                                                        />
-                                                      )}
-                                                    />
-                                                  </div>
-                                                )}
-
-                                              {/* Precio proveedor (distribuidora, modo room) */}
-                                              {!propio &&
-                                                modoPrecio[hotel.id] === "room" &&
-                                                (paqueteModalidad === "flexible" ||
-                                                  isFixedSelected) && (
-                                                  <div className="mt-2">
-                                                    <Label className="text-xs text-gray-600">
-                                                      Precio catálogo *
-                                                    </Label>
-                                                    <Controller
-                                                      name={`precio_paquete_habitacion_${habitacion.id}`}
-                                                      control={control}
-                                                      rules={{
-                                                        required: "Requerido",
-                                                        validate: (v) => {
-                                                          if (
-                                                            !v ||
-                                                            isNaN(Number(v)) ||
-                                                            Number(v) <= 0
-                                                          )
-                                                            return "Valor inválido"
-                                                          return true
-                                                        },
-                                                      }}
-                                                      render={({ field, fieldState: { error } }) => (
-                                                        <NumericFormat
-                                                          value={field.value ?? ""}
-                                                          onValueChange={(vals) => {
-                                                            field.onChange(vals.floatValue ?? null)
-                                                            setPreciosCatalogoTrigger((t) => t + 1)
-                                                          }}
-                                                          onBlur={field.onBlur}
-                                                          thousandSeparator="."
-                                                          decimalSeparator=","
-                                                          allowNegative={false}
-                                                          decimalScale={0}
-                                                          allowLeadingZeros={false}
-                                                          placeholder="Precio"
-                                                          className={`p-1 pl-2.5 rounded-md border-2 w-full mt-1 ${
-                                                            error
-                                                              ? "border-red-400"
-                                                              : "border-blue-200 focus:border-blue-500"
-                                                          }`}
-                                                          onClick={(e: any) => e.stopPropagation()}
-                                                        />
-                                                      )}
-                                                    />
-                                                  </div>
-                                                )}
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                                                {total} tipo{total !== 1 ? "s" : ""} habilitado{total !== 1 ? "s" : ""}
+                                              </span>
+                                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                                                {cupoTotal} cupos totales
+                                              </span>
+                                              {sinCompletar > 0 && (
+                                                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+                                                  {sinCompletar} sin completar
+                                                </span>
+                                              )}
                                             </div>
                                           )
-                                        })}
+                                        })()}
                                       </div>
-                                    )}
+
+                                      {/* Grid de cards por habitación */}
+                                      {hotel.habitaciones?.length === 0 ? (
+                                        <p className="text-sm text-red-400">No tiene habitaciones asignadas</p>
+                                      ) : (
+                                        <div className={`grid gap-3 ${paqueteModalidad === "fijo" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+                                          {hotel.habitaciones?.map((habitacion: any) => {
+                                            const cupoVal = Number(getValues(`cupo_habitacion_${habitacion.id}`)) || 0
+                                            const precioVal = modoPrecio[hotel.id] === "hotel"
+                                              ? Number(getValues(`precio_habitacion_por_hotel_${hotel.id}`)) || 0
+                                              : Number(getValues(`precio_paquete_habitacion_${habitacion.id}`)) || 0
+                                            const isComplete = (propio ? cupoVal > 0 : true) && precioVal > 0
+                                            const isFixedSelected = paqueteModalidad === "fijo" && fixedRoomTypeId === habitacion.id.toString()
+                                            const showFields = paqueteModalidad === "flexible" || isFixedSelected
+
+                                            return (
+                                              <div
+                                                key={habitacion.id}
+                                                onClick={paqueteModalidad === "fijo" ? () => setFixedRoomTypeId(isFixedSelected ? "" : habitacion.id.toString()) : undefined}
+                                                className={`rounded-xl border-2 p-3 transition-all ${
+                                                  isFixedSelected
+                                                    ? "border-green-400 bg-green-50 cursor-pointer"
+                                                    : paqueteModalidad === "fijo"
+                                                    ? "border-gray-200 hover:border-gray-300 cursor-pointer"
+                                                    : "border-gray-200"
+                                                }`}
+                                              >
+                                                {/* Card header: icono + nombre + badge */}
+                                                <div className="flex items-center justify-between mb-3">
+                                                  <div className="flex items-center gap-2">
+                                                    {paqueteModalidad === "fijo" && (
+                                                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isFixedSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"}`}>
+                                                        {isFixedSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                      </div>
+                                                    )}
+                                                    {getRoomIcon(habitacion.tipo)}
+                                                    <div>
+                                                      <p className="text-sm font-semibold text-gray-800">{getRoomTypeLabel(habitacion.tipo)}</p>
+                                                      {habitacion.capacidad && (
+                                                        <p className="text-xs text-gray-400">{habitacion.capacidad} {habitacion.capacidad === 1 ? "persona" : "personas"}</p>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                  <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
+                                                    isComplete
+                                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                                  }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${isComplete ? "bg-emerald-500" : "bg-amber-400"}`} />
+                                                    {isComplete ? "Completo" : "Pendiente"}
+                                                  </span>
+                                                </div>
+
+                                                {/* Campos */}
+                                                {showFields ? (
+                                                  <div className="grid grid-cols-2 gap-3">
+                                                    {/* Cupos (solo propio) */}
+                                                    {propio && (
+                                                      <div>
+                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Cupos Disponibles</p>
+                                                        <Controller
+                                                          name={`cupo_habitacion_${habitacion.id}`}
+                                                          control={control}
+                                                          rules={{
+                                                            required: "Requerido",
+                                                            validate: (v) => (!v || isNaN(Number(v)) || Number(v) <= 0) ? "Inválido" : true,
+                                                          }}
+                                                          render={({ field, fieldState: { error } }) => (
+                                                            <div>
+                                                              <NumericFormat
+                                                                value={field.value ?? ""}
+                                                                onValueChange={(vals) => field.onChange(vals.floatValue ?? null)}
+                                                                onBlur={field.onBlur}
+                                                                thousandSeparator="."
+                                                                decimalSeparator=","
+                                                                allowNegative={false}
+                                                                decimalScale={0}
+                                                                allowLeadingZeros={false}
+                                                                placeholder="ej: 20"
+                                                                className={`w-full p-1.5 pl-2 rounded-md border-2 text-sm ${error ? "border-red-400" : "border-gray-200 focus:border-blue-400"}`}
+                                                                onClick={(e: any) => e.stopPropagation()}
+                                                              />
+                                                              <p className="text-[10px] text-gray-400 mt-0.5">Habitaciones disponibles</p>
+                                                            </div>
+                                                          )}
+                                                        />
+                                                      </div>
+                                                    )}
+
+                                                    {/* Precio catálogo (propio y distribuidora) */}
+                                                    <div className={propio ? "" : "col-span-2"}>
+                                                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Precio del Paquete</p>
+                                                      <Controller
+                                                        name={`precio_paquete_habitacion_${habitacion.id}`}
+                                                        control={control}
+                                                        rules={{
+                                                          required: modoPrecio[hotel.id] === "hotel" ? false : "Requerido",
+                                                          validate: (v) => {
+                                                            if (modoPrecio[hotel.id] === "hotel") return true
+                                                            if (!v || isNaN(Number(v)) || Number(v) <= 0) return "Inválido"
+                                                            return true
+                                                          },
+                                                        }}
+                                                        render={({ field, fieldState: { error } }) => (
+                                                          <div>
+                                                            <NumericFormat
+                                                              value={modoPrecio[hotel.id] === "hotel"
+                                                                ? (watch(`precio_habitacion_por_hotel_${hotel.id}`) ?? "")
+                                                                : (watch(`precio_paquete_habitacion_${habitacion.id}`) ?? "")}
+                                                              onValueChange={(vals) => {
+                                                                const val = vals.floatValue ?? null
+                                                                field.onChange(val && val > 0 ? val : null)
+                                                                setPreciosCatalogoTrigger((t) => t + 1)
+                                                              }}
+                                                              onBlur={field.onBlur}
+                                                              thousandSeparator="."
+                                                              decimalSeparator=","
+                                                              allowNegative={false}
+                                                              decimalScale={0}
+                                                              allowLeadingZeros={false}
+                                                              placeholder="₲ 0"
+                                                              disabled={modoPrecio[hotel.id] === "hotel"}
+                                                              className={`w-full p-1.5 pl-2 rounded-md border-2 text-sm ${error ? "border-red-400" : "border-gray-200 focus:border-blue-400"} ${modoPrecio[hotel.id] === "hotel" ? "bg-gray-50 cursor-not-allowed text-gray-500" : ""}`}
+                                                              onClick={(e: any) => e.stopPropagation()}
+                                                            />
+                                                            <p className="text-[10px] text-gray-400 mt-0.5">
+                                                              {modoPrecio[hotel.id] === "hotel" ? "Precio tomado del hotel" : "Precio total del paquete para esta habitación"}
+                                                            </p>
+                                                          </div>
+                                                        )}
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                ) : (
+                                                  <p className="text-xs text-gray-400 text-center py-2">Seleccioná esta habitación para configurarla</p>
+                                                )}
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </CardContent>
                             </Card>
                           ))}
                         </CardContent>
                       </Card>
+
+                      {/* SECCIÓN: Costos de la Salida */}
+                      {propio && (
+                        <div className="bg-white rounded-lg shadow-md p-6 mt-2">
+                          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <Tag className="w-5 h-5 text-emerald-600" />
+                            Costos de la Salida
+                          </h2>
+
+                          {(() => {
+                            const cupoSalida = Number(watch('cupo')) || 0;
+                            const costosPax = itemsCostoSalida.map(item => ({
+                              ...item,
+                              costo_pax: item.dividir_por_pasajeros && cupoSalida > 0
+                                ? (item.monto ?? 0) / cupoSalida
+                                : (item.monto ?? 0),
+                            }));
+                            const totalCostosPax = costosPax.reduce((acc, c) => acc + c.costo_pax, 0);
+                            return (
+                              <div className="border rounded-lg overflow-hidden">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="bg-gray-50">
+                                      <TableHead>Tipo</TableHead>
+                                      <TableHead>Monto total (₲)</TableHead>
+                                      <TableHead className="text-right">Costo/pax (₲)</TableHead>
+                                      <TableHead>Estado</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {costosPax.map((item) => {
+                                      const esOverride = item.origen === 'override';
+                                      return (
+                                        <TableRow
+                                          key={item.tipo_costo_id}
+                                          className={esOverride ? 'bg-blue-50/40 border-l-2 border-l-blue-400' : ''}
+                                        >
+                                          <TableCell>
+                                            <div className="font-medium text-gray-900">{item.nombre}</div>
+                                            <div className="text-xs text-gray-500 mt-0.5">
+                                              {item.dividir_por_pasajeros
+                                                ? <span className="text-blue-600">÷ {cupoSalida || '—'} pasajeros</span>
+                                                : <span>Por pasajero</span>
+                                              }
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            {esOverride ? (
+                                              <div className="flex items-center gap-1">
+                                                <span className="text-gray-400 text-sm">₲</span>
+                                                <NumericFormat
+                                                  value={item.monto ?? ''}
+                                                  onValueChange={(values) => {
+                                                    setItemsCostoSalida(prev => prev.map(i =>
+                                                      i.tipo_costo_id === item.tipo_costo_id
+                                                        ? { ...i, monto: values.floatValue ?? null }
+                                                        : i
+                                                    ));
+                                                  }}
+                                                  thousandSeparator="."
+                                                  decimalSeparator=","
+                                                  className="p-1 pl-2 rounded-md border-2 border-blue-200 focus:border-blue-500 w-36"
+                                                />
+                                              </div>
+                                            ) : (
+                                              <span className="text-gray-700 font-medium">
+                                                ₲ {formatearSeparadorMiles.format(item.monto ?? 0)}
+                                              </span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                            <span className={`font-semibold text-sm ${esOverride ? 'text-blue-700' : 'text-gray-700'}`}>
+                                              ₲ {formatearSeparadorMiles.format(Math.round(item.costo_pax))}
+                                            </span>
+                                            {item.dividir_por_pasajeros && item.monto && cupoSalida > 0 && (
+                                              <div className="text-xs text-gray-400 mt-0.5">
+                                                {formatearSeparadorMiles.format(item.monto ?? 0)} ÷ {cupoSalida}
+                                              </div>
+                                            )}
+                                          </TableCell>
+                                          <TableCell>
+                                            {esOverride ? (
+                                              <div className="flex items-center gap-1.5">
+                                                <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-xs whitespace-nowrap">
+                                                  ✏️ Personalizado
+                                                </Badge>
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="text-gray-400 hover:text-gray-700 text-xs cursor-pointer h-6 px-1.5"
+                                                  onClick={() => setItemsCostoSalida(prev => prev.map(i =>
+                                                    i.tipo_costo_id === item.tipo_costo_id
+                                                      ? { ...i, monto: selectedPaqueteData?.items_costo_default?.find((d: any) => (d.tipo_costo?.id ?? d.tipo_costo_id) === item.tipo_costo_id)?.monto ?? i.monto, origen: 'paquete' }
+                                                      : i
+                                                  ))}
+                                                  title="Volver al monto del paquete"
+                                                >
+                                                  ↩ Reset
+                                                </Button>
+                                                <button
+                                                  type="button"
+                                                  className="text-red-300 hover:text-red-500 hover:bg-red-50 rounded p-0.5 cursor-pointer"
+                                                  onClick={() => setItemsCostoSalida(prev => prev.filter(i => i.tipo_costo_id !== item.tipo_costo_id))}
+                                                >
+                                                  <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <div className="flex items-center gap-1.5">
+                                                <Badge variant="outline" className="text-gray-400 border-gray-200 bg-gray-50 text-xs whitespace-nowrap">
+                                                  📦 Paquete
+                                                </Badge>
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 text-xs cursor-pointer h-6 px-1.5"
+                                                  onClick={() => setItemsCostoSalida(prev => prev.map(i =>
+                                                    i.tipo_costo_id === item.tipo_costo_id ? { ...i, origen: 'override' } : i
+                                                  ))}
+                                                >
+                                                  ✏️ Editar
+                                                </Button>
+                                              </div>
+                                            )}
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                  {itemsCostoSalida.length > 0 && (
+                                    <tfoot>
+                                      <tr className="bg-gray-50 border-t-2 border-gray-200">
+                                        <td className="px-4 py-2 text-sm font-semibold text-gray-700" colSpan={2}>
+                                          Subtotal costos operativos
+                                        </td>
+                                        <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
+                                          ₲ {formatearSeparadorMiles.format(Math.round(totalCostosPax))}
+                                        </td>
+                                        <td />
+                                      </tr>
+                                    </tfoot>
+                                  )}
+                                </Table>
+                              </div>
+                            );
+                          })()}
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 text-emerald-600 border-emerald-200 hover:bg-emerald-50 cursor-pointer"
+                            onClick={() => {
+                              const tiposUsados = itemsCostoSalida.map(i => i.tipo_costo_id);
+                              const tiposDisponibles = (dataTipoCostoList ?? []).filter((t: any) => t.activo && !tiposUsados.includes(t.id));
+                              if (tiposDisponibles.length === 0) return;
+                              const tipo = tiposDisponibles[0];
+                              setItemsCostoSalida(prev => [
+                                ...prev,
+                                { tipo_costo_id: tipo.id, nombre: tipo.nombre, monto: null, dividir_por_pasajeros: tipo.dividir_por_pasajeros, origen: 'override' }
+                              ]);
+                            }}
+                          >
+                            <CirclePlus className="w-4 h-4 mr-1" />
+                            Agregar costo extra solo para esta salida
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* SECCIÓN: Resumen de Precios */}
+                      {propio && (() => {
+                        const cupo = Number(watch('cupo')) || 0;
+                        const precioVenta = Number(watch('precio_desde_editable')) || 0;
+                        const precioHasta = Number(watch('precio_hasta_editable')) || 0;
+                        const costoServicios = 0;
+
+                        const costosCostos = itemsCostoSalida.map(item => ({
+                          ...item,
+                          monto_por_pasajero: item.dividir_por_pasajeros && cupo > 0
+                            ? (item.monto ?? 0) / cupo
+                            : (item.monto ?? 0),
+                        }));
+                        const totalCostos = costosCostos.reduce((acc, c) => acc + c.monto_por_pasajero, 0);
+                        const costoTotal = costoServicios + totalCostos;
+                        const margen = costoTotal > 0 && precioVenta > 0 ? ((precioVenta / costoTotal) - 1) * 100 : 0;
+                        const esVentaPerdida = precioVenta > 0 && costoTotal > 0 && precioVenta < costoTotal;
+                        const sinPrecio = precioVenta === 0;
+
+                        return (
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-4">
+                            <h2 className="text-base font-semibold text-gray-800 mb-4">Resumen de Precios</h2>
+
+                            {/* Costos operativos — siempre visibles si hay ítems */}
+                            {costoTotal > 0 && (
+                              <>
+                                {/* Barra de proporción visual */}
+                                <div className="mb-4">
+                                  <div className="flex h-3 rounded-full overflow-hidden gap-px mb-1.5">
+                                    {costoServicios > 0 && (
+                                      <div
+                                        className="bg-blue-400 transition-all"
+                                        style={{ width: `${(costoServicios / costoTotal) * 100}%` }}
+                                        title={`Servicios: ${((costoServicios / costoTotal) * 100).toFixed(1)}%`}
+                                      />
+                                    )}
+                                    {costosCostos.map(item => item.monto_por_pasajero > 0 && (
+                                      <div
+                                        key={item.tipo_costo_id}
+                                        className={`transition-all ${item.origen === 'override' ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                                        style={{ width: `${(item.monto_por_pasajero / costoTotal) * 100}%` }}
+                                        title={`${item.nombre}: ${((item.monto_por_pasajero / costoTotal) * 100).toFixed(1)}%`}
+                                      />
+                                    ))}
+                                  </div>
+                                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                                    {costoServicios > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Servicios</span>}
+                                    {costosCostos.filter(c => c.monto_por_pasajero > 0).map(item => (
+                                      <span key={item.tipo_costo_id} className="flex items-center gap-1">
+                                        <span className={`w-2 h-2 rounded-full inline-block ${item.origen === 'override' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                                        {item.nombre}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <Separator className="mb-3" />
+
+                                {/* Desglose línea a línea */}
+                                <div className="space-y-1.5 text-sm mb-4">
+                                  {costoServicios > 0 && (
+                                    <div className="flex justify-between text-gray-600">
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                                        Servicios:
+                                      </span>
+                                      <span>₲ {formatearSeparadorMiles.format(costoServicios)}</span>
+                                    </div>
+                                  )}
+                                  {costosCostos.map(item => (
+                                    <div key={item.tipo_costo_id} className="flex justify-between text-gray-600">
+                                      <span className="flex items-center gap-1.5">
+                                        <span className={`w-2 h-2 rounded-full inline-block ${item.origen === 'override' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                                        {item.nombre}{item.dividir_por_pasajeros && cupo > 0 ? ` (÷ ${cupo} pax)` : ''}:
+                                      </span>
+                                      <span className="flex items-center gap-1 tabular-nums">
+                                        ₲ {formatearSeparadorMiles.format(Math.round(item.monto_por_pasajero))}
+                                        <span className="text-xs opacity-60">{item.origen === 'override' ? '✏️' : '📦'}</span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                  <Separator />
+                                  <div className="flex justify-between font-semibold text-gray-800 pt-0.5">
+                                    <span>Costo operativo total/pax:</span>
+                                    <span className="tabular-nums">₲ {formatearSeparadorMiles.format(Math.round(costoTotal))}</span>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+
+                            {/* Precio de venta — solo si está ingresado */}
+                            {sinPrecio ? (
+                              <p className="text-sm text-amber-600 flex items-center gap-1.5">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                Ingresá los precios de las habitaciones para ver el precio de venta
+                              </p>
+                            ) : (
+                              <div className={`rounded-xl border-2 p-4 ${
+                                esVentaPerdida
+                                  ? 'border-red-300 bg-red-50'
+                                  : costoTotal > 0 && margen < 10
+                                  ? 'border-amber-300 bg-amber-50'
+                                  : 'border-emerald-300 bg-emerald-50'
+                              }`}>
+                                <div className="flex items-start justify-between flex-wrap gap-4">
+                                  <div className="flex items-end gap-3">
+                                    <div>
+                                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-0.5">
+                                        Precio desde
+                                      </p>
+                                      <p className={`text-3xl font-bold tabular-nums ${
+                                        esVentaPerdida ? 'text-red-600' : costoTotal > 0 && margen < 10 ? 'text-amber-700' : 'text-emerald-700'
+                                      }`}>
+                                        ₲ {formatearSeparadorMiles.format(Math.round(precioVenta))}
+                                      </p>
+                                    </div>
+                                    {paqueteModalidad === 'flexible' && precioHasta > 0 && (
+                                      <>
+                                        <span className="text-gray-400 text-xl mb-1">—</span>
+                                        <div>
+                                          <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-0.5">
+                                            Hasta
+                                          </p>
+                                          <p className={`text-3xl font-bold tabular-nums ${
+                                            esVentaPerdida ? 'text-red-600' : costoTotal > 0 && margen < 10 ? 'text-amber-700' : 'text-emerald-700'
+                                          }`}>
+                                            ₲ {formatearSeparadorMiles.format(Math.round(precioHasta))}
+                                          </p>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className={`mt-3 pt-3 border-t flex items-center gap-1.5 text-xs font-medium ${
+                                  esVentaPerdida
+                                    ? 'border-red-200 text-red-600'
+                                    : costoTotal > 0 && margen < 10
+                                    ? 'border-amber-200 text-amber-700'
+                                    : 'border-emerald-200 text-emerald-700'
+                                }`}>
+                                  {/* Margen y mensajes — comentado temporalmente */}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Action buttons */}
                       <div className="flex justify-end gap-3">
