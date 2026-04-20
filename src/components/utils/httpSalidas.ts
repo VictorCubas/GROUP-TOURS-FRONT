@@ -16,6 +16,10 @@ export const fetchData = async (page: number, page_size: number = 10, filtros: a
     url += `&fecha_salida_hasta=${filtros.fecha_hasta}`;
   }
 
+  if (filtros.paquete_id) {
+    url += `&paquete_id=${filtros.paquete_id}`;
+  }
+
   url += `&activo=${filtros.activo}`;
 
   try {
