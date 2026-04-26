@@ -2167,26 +2167,12 @@ const handleSubmitClick = useCallback(async () => {
       setFixedRoomTypeId('');
 
       // Solo un hotel permitido
-      if (propio) {
-        if (hotel.habitaciones.length === 0) {
-          handleShowToast(
-            'Se debe cargar las habitaciones a este hotel para este tipo de paquete',
-            'error'
-          );
-          return;
-        }
-
-        const tienePrecios = hotel.habitaciones.some(
-          (habitacion: any) => !habitacion.precio_noche
+      if (propio && hotel.habitaciones.length === 0) {
+        handleShowToast(
+          'Se debe cargar las habitaciones a este hotel para este tipo de paquete',
+          'error'
         );
-
-        if (tienePrecios) {
-          handleShowToast(
-            'Se debe cargar los precios a todas habitaciones de este hotel para este tipo de paquete',
-            'error'
-          );
-          return;
-        }
+        return;
       }
 
       // Selección única
