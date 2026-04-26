@@ -16,8 +16,8 @@ interface Habitacion {
   id: string;
   tipo: string;
   capacidad: number;
-  precio_noche: number;
-  moneda_simbolo: string;
+  precio_noche: number | null;
+  moneda_simbolo: string | null;
   cupo: number;
 }
 
@@ -38,11 +38,9 @@ interface HabitacionListItem {
   habitacion_numero: string;
   habitacion_tipo: string;
   capacidad: number;
-  precio_noche: string;
   precio_venta_final: string;
   cupo: number;
-  precio_moneda_alternativa: MonedaAlternativaCotizada;
-  
+  precio_moneda_alternativa: MonedaAlternativaCotizada | null;
 }
 
 export interface MonedaAlternativaCotizada {
@@ -276,7 +274,9 @@ const HotelHabitacionSelectorListModeComponent: FC<HotelHabitacionSelectorListMo
                               {habitacion?.precio_moneda_alternativa?.moneda === 'USD' ? 'Gs.': 'USD'}{" "}
                               {formatearSeparadorMiles.format(parseFloat(habitacion.precio_venta_final))}
                             </div>
-                            <p className="text-xs text-muted-foreground">Precio en {habitacion?.precio_moneda_alternativa?.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(habitacion.precio_moneda_alternativa.precio_venta_final)}</span></p> 
+                            {habitacion?.precio_moneda_alternativa && (
+                              <p className="text-xs text-muted-foreground">Precio en {habitacion.precio_moneda_alternativa.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(habitacion.precio_moneda_alternativa.precio_venta_final)}</span></p>
+                            )}
                             <div className="text-xs text-gray-600 mb-1">Por persona</div>
                           </div>
                         
