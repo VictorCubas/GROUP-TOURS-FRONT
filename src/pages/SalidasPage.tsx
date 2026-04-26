@@ -60,9 +60,8 @@ import {
   fetchPasajerosSalida,
   exportarPasajerosExcel,
 } from "@/components/utils/httpSalidas"
-import { fetchDataMonedaTodos, fetchCotizacionVigente } from "@/components/utils/httpPaquete"
-import { fetchTiposCostoTodos } from "@/components/utils/httpTipoCosto"
 import { fetchDataPaquetes } from "@/components/utils/httpReservas"
+import { fetchTiposCostoTodos } from "@/components/utils/httpTipoCosto"
 import { fetchDataHoteles } from "@/components/utils/httpDestino"
 import { Controller, useForm } from "react-hook-form"
 import { queryClient } from "@/components/utils/http"
@@ -72,7 +71,6 @@ import { IoWarningOutline } from "react-icons/io5"
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico"
 import { useSessionStore } from "@/store/sessionStore"
 import {
-  calcularRangoPrecio,
   calculateNoches,
   normalizarPreciosCatalogo,
   normalizarPreciosCatalogoHoteles,
@@ -187,8 +185,6 @@ export default function SalidasPage() {
     mode: "onBlur",
     reValidateMode: "onChange",
     defaultValues: {
-      precio_desde: "",
-      precio_hasta: "",
       precio_desde_editable: "",
       precio_hasta_editable: "",
       cantidadNoche: "",
@@ -212,22 +208,9 @@ export default function SalidasPage() {
   // Watch values
   const fechaSalida = watch("fecha_salida_v2")
   const fechaRegreso = watch("fecha_regreso_v2")
-  const monedaSeleccionada = watch("moneda")
   const cantidadNoche = watch("cantidadNoche")
 
   // --- Queries ---
-  const { data: dataMonedaList } = useQuery({
-    queryKey: ["monedas-disponibles"],
-    queryFn: fetchDataMonedaTodos,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const { data: dataCotizacion } = useQuery({
-    queryKey: ["cotizacion-vigente"],
-    queryFn: fetchCotizacionVigente,
-    staleTime: 30 * 60 * 1000,
-  })
-
   const { data: dataPaquetesList, isFetching: isFetchingPaquetes } = useQuery({
     queryKey: ["paquetes-disponibles-salidas", paqueteBusqueda],
     queryFn: () => fetchDataPaquetes(1, 20, { busqueda: paqueteBusqueda, activo: true }),
@@ -345,7 +328,7 @@ export default function SalidasPage() {
     }
   }, [selectedPaqueteData, propio])
 
-  // --- Price auto-calculation (propio) ---
+  // --- Validación de fechas y cálculo de noches ---
   useEffect(() => {
     if (fechaSalida) {
       const selectedDate = new Date(fechaSalida)
@@ -365,67 +348,6 @@ export default function SalidasPage() {
       }
     }
 
-    if (selectedHotels && [...selectedHotels].length && fechaSalida && fechaRegreso && dataHotelesList) {
-      if (fechaRegreso < fechaSalida) {
-        handleShowToast("La fecha de regreso debe ser mayor a la fecha de salida", "error")
-        return
-      }
-
-      const hotelesFiltrados = dataHotelesList?.filter((hotel: any) => selectedHotels.has(hotel.id))
-      const monedaActual = dataMonedaList?.find(
-        (m: any) => m.id.toString() === monedaSeleccionada?.toString()
-      )
-      const monedaPaqueteCodigo = monedaActual?.codigo ?? "USD"
-      const cotizacionVigente = dataCotizacion?.valor_en_guaranies
-        ? Number(dataCotizacion.valor_en_guaranies)
-        : undefined
-
-      const rangoPrecioDesdeHasta = calcularRangoPrecio(
-        hotelesFiltrados,
-        fechaSalida,
-        fechaRegreso,
-        monedaPaqueteCodigo,
-        cotizacionVigente
-      )
-
-      if (rangoPrecioDesdeHasta.sinCotizacion) {
-        handleShowToast("Las habitaciones tienen moneda distinta al paquete y no hay cotización vigente", "error")
-        setValue("precio_desde", "")
-        setValue("precio_hasta", "")
-        return
-      }
-
-      if (propio) {
-        if (paqueteModalidad === "flexible") {
-          setValue("precio_desde", Math.round(rangoPrecioDesdeHasta.precioMin).toString())
-          setValue("precio_hasta", Math.round(rangoPrecioDesdeHasta.precioMax).toString())
-        } else if (paqueteModalidad === "fijo" && fixedRoomTypeId) {
-          const habitacionFiltered = hotelesFiltrados[0]?.habitaciones?.filter(
-            (h: any) => h.id === fixedRoomTypeId
-          )
-          if (habitacionFiltered?.length) {
-            const hab = habitacionFiltered[0]
-            const monedaHab: string = hab.moneda_codigo ?? "USD"
-            let precioNoche: number = hab.precio_noche
-            if (monedaHab !== monedaPaqueteCodigo) {
-              if (!cotizacionVigente) {
-                handleShowToast("Las habitaciones tienen moneda distinta al paquete y no hay cotización vigente", "error")
-                setValue("precio_desde", "")
-                setValue("precio_hasta", "")
-                return
-              }
-              precioNoche =
-                monedaPaqueteCodigo === "PYG"
-                  ? precioNoche * cotizacionVigente
-                  : precioNoche / cotizacionVigente
-            }
-            setValue("precio_desde", Math.round(precioNoche * rangoPrecioDesdeHasta.noches).toString())
-            setValue("precio_hasta", "")
-          }
-        }
-      }
-    }
-
     if (fechaSalida && fechaRegreso) {
       if (fechaRegreso < fechaSalida) {
         handleShowToast("La fecha de regreso debe ser mayor a la fecha de salida", "error")
@@ -433,7 +355,7 @@ export default function SalidasPage() {
       }
       setValue("cantidadNoche", calculateNoches(fechaSalida, fechaRegreso).toString())
     }
-  }, [selectedHotels, fechaSalida, fechaRegreso, setValue, dataHotelesList, fixedRoomTypeId, monedaSeleccionada, dataMonedaList, dataCotizacion, paqueteModalidad, propio, handleShowToast])
+  }, [fechaSalida, fechaRegreso, setValue, handleShowToast])
 
   // --- Price auto-calculation (propio y distribuidora) ---
   useEffect(() => {
@@ -469,8 +391,6 @@ export default function SalidasPage() {
   useEffect(() => {
     if (!propio) {
       setValue("cupo", "", { shouldValidate: false })
-    } else {
-      setValue("precio_desde_editable", "", { shouldValidate: false })
     }
   }, [propio, setValue])
 
@@ -518,8 +438,6 @@ export default function SalidasPage() {
     })
 
     reset({
-      precio_desde: "",
-      precio_hasta: "",
       precio_desde_editable: "",
       precio_hasta_editable: "",
       cantidadNoche: "",
@@ -537,21 +455,12 @@ export default function SalidasPage() {
     if (paqueteModalidad === "fijo") {
       setFixedRoomTypeId("")
 
-      if (propio) {
-        if (hotel.habitaciones.length === 0) {
-          handleShowToast(
-            "Se debe cargar las habitaciones a este hotel para este tipo de paquete",
-            "error"
-          )
-          return
-        }
-        if (hotel.habitaciones.some((h: any) => !h.precio_noche)) {
-          handleShowToast(
-            "Se debe cargar los precios a todas habitaciones de este hotel para este tipo de paquete",
-            "error"
-          )
-          return
-        }
+      if (propio && hotel.habitaciones.length === 0) {
+        handleShowToast(
+          "Se debe cargar las habitaciones a este hotel para este tipo de paquete",
+          "error"
+        )
+        return
       }
 
       setSelectedHotels(new Set([hotelId]))
@@ -710,6 +619,11 @@ export default function SalidasPage() {
       preciosCatalogoHoteles,
       dataHotelesList || []
     )
+
+    payload.costo_base_desde = dataForm.precio_desde_editable
+    if (paqueteModalidad === "flexible" && dataForm.precio_hasta_editable) {
+      payload.costo_base_hasta = dataForm.precio_hasta_editable
+    }
 
     if (propio) {
       payload.cupo = parseInt(dataForm.cupo, 10)
@@ -2078,13 +1992,13 @@ export default function SalidasPage() {
                           {dataHotelesList?.map((hotel: any) => (
                             <Card
                               key={hotel.id}
-                              className={`transition-all duration-200 ${
+                              className={`transition-all duration-200 border-2 ${
                                 selectedHotels.has(hotel.id)
-                                  ? "bg-emerald-50 border-emerald-300"
-                                  : "bg-white"
+                                  ? "border-blue-300 bg-blue-50/30"
+                                  : "border-gray-200 bg-white"
                               }`}
                             >
-                              <CardContent>
+                              <CardContent className="p-4">
                                 <div className="space-y-4">
                                   {/* Hotel header */}
                                   <div className="flex items-start justify-between">
