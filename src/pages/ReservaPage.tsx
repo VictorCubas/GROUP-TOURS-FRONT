@@ -2945,7 +2945,7 @@ export default function ReservaPage() {
                                   className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                                 />
                                 <div className="min-w-0 flex-1">
-                                  <div className="font-medium text-gray-900 truncate max-w-[200px]">{data?.paquete?.nombre}</div>
+                                  <div className="font-medium text-gray-900 truncate max-w-[320px]">{data?.paquete?.nombre}</div>
                                   <div className="text-sm text-gray-500 truncate max-w-[200px]">
                                     {data?.paquete?.destino?.ciudad}, {data?.paquete?.destino?.pais}
                                   </div>
