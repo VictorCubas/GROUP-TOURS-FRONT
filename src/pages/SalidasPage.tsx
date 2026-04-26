@@ -1388,7 +1388,7 @@ export default function SalidasPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium text-gray-900 truncate max-w-[250px]">
+                              <div className="font-medium text-gray-900 truncate max-w-[350px]">
                                 {salida.paquete_nombre}
                               </div>
                             </TableCell>
@@ -2136,7 +2136,7 @@ export default function SalidasPage() {
                                           const sinCompletar = hotel?.habitaciones?.filter((h: any) => {
                                             const cupoV = getValues(`cupo_habitacion_${h.id}`)
                                             const precioV = getValues(`precio_paquete_habitacion_${h.id}`)
-                                            return !(Number(cupoV) > 0 && Number(precioV) > 0)
+                                            return !(propio && Number(cupoV) > 0 && Number(precioV) > 0 || !propio && Number(precioV) > 0);
                                           }).length ?? 0
                                           return (
                                             <div className="flex flex-wrap gap-2 mt-2">
@@ -2144,7 +2144,7 @@ export default function SalidasPage() {
                                                 {total} tipo{total !== 1 ? "s" : ""} habilitado{total !== 1 ? "s" : ""}
                                               </span>
                                               <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-                                                {cupoTotal} cupos totales
+                                                {propio ? `${cupoTotal} cupos totales` : 'Sujeto a disponibilidad'} 
                                               </span>
                                               {sinCompletar > 0 && (
                                                 <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">

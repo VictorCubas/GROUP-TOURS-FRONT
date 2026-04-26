@@ -4505,7 +4505,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                               const sinCompletar = hotel?.habitaciones?.filter((h: any) => {
                                                                                 const cupo = getValuesSalida(`cupo_habitacion_${h.id}`);
                                                                                 const precio = getValuesSalida(`precio_paquete_habitacion_${h.id}`);
-                                                                                return !(Number(cupo) > 0 && Number(precio) > 0);
+                                                                                return !(propio && Number(cupo) > 0 && Number(precio) > 0 || !propio && Number(precio) > 0);
                                                                               }).length ?? 0;
                                                                               return (
                                                                                 <div className="flex flex-wrap gap-2 mt-2">
@@ -4513,7 +4513,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                                     {total} tipo{total !== 1 ? 's' : ''} habilitado{total !== 1 ? 's' : ''}
                                                                                   </span>
                                                                                   <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-                                                                                    {cupoTotal} cupos totales
+                                                                                    {propio ? `${cupoTotal} cupos totales` : 'Sujeto a disponibilidad'} 
                                                                                   </span>
                                                                                   {sinCompletar > 0 && (
                                                                                     <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
@@ -4535,7 +4535,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                                 const precioVal = modoPrecio[hotel.id] === 'hotel'
                                                                                   ? Number(getValuesSalida(`precio_habitacion_por_hotel_${hotel.id}`)) || 0
                                                                                   : Number(getValuesSalida(`precio_paquete_habitacion_${habitacion.id}`)) || 0;
-                                                                                const isComplete = cupoVal > 0 && precioVal > 0;
+                                                                                const isComplete = propio && cupoVal > 0 && precioVal > 0 || !propio && precioVal > 0;
                                                                                 const isFixedSelected = paqueteModalidad === 'fijo' && fixedRoomTypeId === habitacion.id.toString();
                                                                                 const showFields = paqueteModalidad === 'flexible' || isFixedSelected;
 
@@ -5406,7 +5406,7 @@ const handleSubmitClick = useCallback(async () => {
                                     className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                                 />
                                 <div className="min-w-0 flex-1">
-                                  <div className="font-medium text-gray-900 font-sans truncate max-w-[200px]">{data.nombre}</div>
+                                  <div className="font-medium text-gray-900 font-sans truncate max-w-[300px]">{data.nombre}</div>
                                   <div className="text-sm text-gray-500 font-sans">
                                     {data.personalizado ? "Personalizado" : "Fechas fijas"}
                                   </div>
