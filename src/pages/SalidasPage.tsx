@@ -911,13 +911,23 @@ export default function SalidasPage() {
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-3">
-                            <div>
-                              <p className="text-xs text-gray-500">Cupo disponible</p>
-                              <p className="font-bold text-gray-900 text-lg">
-                                {dataSalidaDetalle?.cupo_disponible ?? dataDetalle.cupo_disponible}
-                                <span className="text-gray-400 font-normal text-sm"> / {dataSalidaDetalle?.cupo_total ?? dataDetalle.cupo_total}</span>
-                              </p>
-                            </div>
+                              <div>
+                                <p className="text-xs text-gray-500">Cupo disponible</p>
+                                {dataSalidaDetalle.paquete_propio ?
+                                  <p className="font-bold text-gray-900 text-lg">
+                                    {dataSalidaDetalle?.cupo_disponible ?? dataDetalle.cupo_disponible}
+                                    <span className="text-gray-400 font-normal text-sm"> / {dataSalidaDetalle?.cupo_total ?? dataDetalle.cupo_total}</span>
+                                  </p>
+                                  :
+                                  <div className="flex items-center mt-1 gap-1 text-sm text-muted-foreground">
+                                      <Badge className="bg-gray-100 text-gray-700 border-gray-300">
+                                        Sujeto a disponibilidad
+                                      </Badge>
+                                  </div> 
+                                }
+                              </div>
+                            
+                            
                             <div>
                               <p className="text-xs text-gray-500">Total reservas</p>
                               <p className="font-semibold text-gray-900">{dataSalidaDetalle?.total_reservas ?? dataDetalle.total_reservas}</p>
