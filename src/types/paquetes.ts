@@ -66,7 +66,7 @@ export interface SalidaPaquete {
   cupo: number;              // Cupo numérico
   activo: boolean;           // Estado booleano
   hoteles: number[];
-  habitacion_fija?: any;
+
   ganancia?: any;
   comision?: any;
   cupos_habitaciones?: any[];
@@ -101,7 +101,7 @@ export interface Paquete {
   precio_venta_desde: number;
   senia: number;
   moneda: Moneda;
-  modalidad: 'flexible' | 'fijo';
+
   fecha_inicio: string | null; // formato YYYY-MM-DD
   fecha_fin: string | null; // formato YYYY-MM-DD
   personalizado: boolean;
