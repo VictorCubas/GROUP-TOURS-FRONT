@@ -2,7 +2,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { startTransition, use, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { startTransition, use, useEffect, useMemo, useRef, useState } from "react"
 import {
   Search,
   Plus,
@@ -181,8 +181,6 @@ export default function ModulosPage() {
                   tipo_propiedad: "all",  
                 });
 
-  const [paqueteModalidad, setPaqueteModalidad] = useState<'flexible' | 'fijo'>('flexible');
-  const [fixedRoomTypeId, setFixedRoomTypeId] = useState('');
   const [preciosCatalogoTrigger, setPreciosCatalogoTrigger] = useState(0); // Para forzar recálculo
   
   // DATOS DEL FORMULARIO 
@@ -222,9 +220,8 @@ export default function ModulosPage() {
     handleSubmit: handleSubmitSalida,
     watch: watchSalida,
     setValue: setValueSalida,
-    formState: { 
-      errors: errorsSalida, 
-      isValid: isValidSalida, 
+    formState: {
+      errors: errorsSalida,
     },
     reset: resetSalida,
     getValues: getValuesSalida,
@@ -258,6 +255,7 @@ export default function ModulosPage() {
     })
 
     const [salidas, setSalidas] = useState<any[]>([])
+    const originalSalidasRef = useRef<any[]>([])
     const [isEditMode, setIsEditMode] = useState(false)
     const [editingSalidaId, setEditingSalidaId] = useState<string | null>(null);
     const [isAddSalidaOpen, setIsAddSalidaOpen] = useState(false);
@@ -519,6 +517,11 @@ export default function ModulosPage() {
           queryKey: ['paquetes-disponibles'],
         });
 
+        queryClient.invalidateQueries({ queryKey: ['salidas'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['salidas-resumen'] });
+        queryClient.invalidateQueries({ queryKey: ['salida-detalle'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['paquetes-disponibles-salidas'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['paquetes-filtro-salidas'], exact: false });
 
         queryClient.invalidateQueries({
           queryKey: ['usuarios'],
@@ -577,6 +580,11 @@ export default function ModulosPage() {
         queryClient.invalidateQueries({ queryKey: ['paquetes'], exact: false });
         queryClient.invalidateQueries({ queryKey: ['paquetes-resumen'] });
         queryClient.invalidateQueries({ queryKey: ['paquetes-disponibles'] });
+        queryClient.invalidateQueries({ queryKey: ['salidas'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['salidas-resumen'] });
+        queryClient.invalidateQueries({ queryKey: ['salida-detalle'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['paquetes-disponibles-salidas'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['paquetes-filtro-salidas'], exact: false });
         queryClient.invalidateQueries({ queryKey: ['usuarios'], exact: false });
         queryClient.invalidateQueries({ queryKey: ['usuarios-resumen'] });
     },
@@ -608,8 +616,6 @@ export default function ModulosPage() {
         setDistribuidoraSelected(undefined);
         handleDestinoNoSeleccionada(undefined)
         setCiudadDataSelected(undefined);
-        setFixedRoomTypeId('');
-        setPaqueteModalidad('flexible')
         // setNewDataPersonaList([...dataPersonaList])
         setImagePreview(placeholderViaje);
         setSalidas([]);
@@ -677,7 +683,7 @@ export default function ModulosPage() {
     console.log(serviciosListSelected);  
     console.log(salidas);
     console.log(dataServiciosList);
-    const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, serviciosListSelected, paqueteModalidad);
+    const prePayload = getPayload(salidas, dataForm, watch("propio"), selectedDestinoID, serviciosListSelected);
 
     if (destinoNoSeleccionada === undefined || !prePayload.destino_id) {
       console.log('destino no seleccionado...')
@@ -747,37 +753,32 @@ export default function ModulosPage() {
 
 
   const handleGuardarDataEditado = async (dataForm: any) => {
-    const fecha_inicio = dataForm.fecha_salida ? formatearFechaDDMMYY(dataForm.fecha_salida) : null;
-    const fecha_fin = dataForm.fecha_regreso ? formatearFechaDDMMYY(dataForm.fecha_regreso) : null;
-
-    console.log(salidas)
+    if(salidas.length === 0){
+      handleShowToast('Debes agregar al menos una salida', 'error');
+      return;
+    }
 
     const salidasTemp = salidas.map((salida: any) => {
       const salActualizada: any = {
         id: salida.id,
         fecha_salida: salida.fecha_salida_v2,
         fecha_regreso: salida.fecha_regreso_v2,
-        costo_base_desde: salida?.costo_base_desde ?? salida?.precio,
         senia: salida.senia,
-        cupo: parseInt(salida.cupo, 10),
         moneda_id: dataForm.moneda,
         hoteles: salida.hoteles_ids,
         temporada_id: salida?.temporada_id || null,
       };
 
-      if(salida?.costo_base_hasta)
-        salActualizada.costo_base_hasta = salida?.costo_base_hasta;
-
-      if(paqueteModalidad === 'fijo')
-        salActualizada.habitacion_fija = salida.habitacion_fija;
-
-      if(propio){
-        // salActualizada.ganancia = salida.ganancia;
+      if(propio) {
+        if(salida.cupo) salActualizada.cupo = parseInt(salida.cupo, 10);
         salActualizada.cupos_habitaciones = salida.cupos_habitaciones;
+        if(salida.ganancia !== undefined && salida.ganancia !== '')
+          salActualizada.ganancia = salida.ganancia;
+        if (salida.items_costo_override_data !== undefined)
+          salActualizada.items_costo_override_data = salida.items_costo_override_data;
+      } else {
+        salActualizada.comision = salida.comision;
       }
-      // else{
-      //   salActualizada.comision = salida.comision;
-      // }
 
       salActualizada.precios_catalogo_habitaciones = normalizarPreciosCatalogo(
         salida.precios_catalogo_habitaciones,
@@ -786,132 +787,84 @@ export default function ModulosPage() {
       );
       salActualizada.precios_catalogo_hoteles = normalizarPreciosCatalogoHoteles(salida.precios_catalogo_hoteles);
 
-      // Incluir overrides de costos si están definidos en la salida
-      if (salida.items_costo_override_data !== undefined) {
-        salActualizada.items_costo_override_data = salida.items_costo_override_data;
-      }
-
       return salActualizada;
     });
 
-    
+    // Helper para comparar valores ignorando diferencias de tipo string/number/null
+    const str = (v: any) => (v === null || v === undefined || v === '') ? '' : String(v);
 
-    console.log(salidasTemp)
+    const diff: Record<string, any> = {};
 
-    const serviciosListSelected = selectedServicios.map(s => {
-      return {
-        servicio_id: s,
-        // precio: propio ? (watch(`precio_personalizado_servicio_${s}`) ?? '') : ''
-      }
-    })
-
-
-    console.log(serviciosListSelected)
-
-    const payload: any = {
-      ...dataForm,
-      destino_id: selectedDestinoID,
-      tipo_paquete_id: tipoPaqueteSelected?.id,
-      moneda_id: dataForm.moneda,
-      fecha_inicio,
-      fecha_fin,
-      salidas: salidasTemp,
-      modalidad: paqueteModalidad,
+    // Campos escalares — solo incluir si cambiaron
+    const camposEscalares: Record<string, { actual: any; original: any }> = {
+      nombre:         { actual: dataForm.nombre,          original: dataAEditar!.nombre },
+      propio:         { actual: dataForm.propio,           original: dataAEditar!.propio },
+      personalizado:  { actual: dataForm.personalizado,    original: dataAEditar!.personalizado },
+      destino_id:     { actual: selectedDestinoID,         original: dataAEditar!.destino.id },
+      tipo_paquete_id:{ actual: tipoPaqueteSelected?.id,   original: dataAEditar!.tipo_paquete.id },
+      moneda_id:      { actual: dataForm.moneda,           original: dataAEditar!.moneda.id },
     };
 
     if (propio) {
-      payload.servicios_data = serviciosListSelected;
-      payload.items_costo_data = itemsCostoDefecto.map((i: any) => ({
-        tipo_costo_id: i.tipo_costo_id,
-        monto: i.monto,
-      }));
-    }
-
-    // Limpiar campos que no deben enviarse
-    delete payload.numero;
-    delete payload.tipo_paquete;
-    delete payload.destino;
-    delete payload.moneda;
-    delete payload.servicios;
-    delete payload.fecha_regreso;
-    delete payload.fecha_salida;
-    delete payload.distribuidora;
-
-    if (propio) {
-      delete payload.distribuidora_id;
+      camposEscalares.cantidad_pasajeros = { actual: dataForm.cantidad_pasajeros, original: dataAEditar!.cantidad_pasajeros };
     } else {
-      delete payload.cantidad_pasajeros;
+      camposEscalares.distribuidora_id = { actual: dataForm.distribuidora_id, original: dataAEditar!.distribuidora?.id };
     }
 
+    for (const [key, { actual, original }] of Object.entries(camposEscalares)) {
+      if (str(actual) !== str(original)) {
+        diff[key] = actual;
+      }
+    }
 
-    if(salidas.length === 0){
-      handleShowToast('Debes agregar al menos una salida', 'error');
+    // Salidas — comparar contra snapshot al abrir el formulario de edición
+    if (JSON.stringify(salidas) !== JSON.stringify(originalSalidasRef.current)) {
+      diff.salidas = salidasTemp;
+    }
+
+    // Servicios: aplica a todos los tipos
+    const currentServiciosIds = [...selectedServicios].sort((a, b) => a - b);
+    const originalServiciosIds = [...dataAEditar!.servicios.map((s: any) => s.servicio_id ?? s.id)].sort((a, b) => a - b);
+    if (JSON.stringify(currentServiciosIds) !== JSON.stringify(originalServiciosIds)) {
+      diff.servicios_data = selectedServicios.map(s => ({ servicio_id: s }));
+    }
+
+    // Items de costo: solo para propios
+    if (propio) {
+      const currentItemsCosto = itemsCostoDefecto.map((i: any) => ({ tipo_costo_id: i.tipo_costo_id, monto: Number(i.monto) }));
+      const originalItemsCosto = (dataAEditar!.items_costo_default ?? []).map((i: any) => ({ tipo_costo_id: i.tipo_costo?.id, monto: Number(i.monto) }));
+      if (JSON.stringify(currentItemsCosto) !== JSON.stringify(originalItemsCosto)) {
+        diff.items_costo_data = currentItemsCosto;
+      }
+    }
+
+    const tieneImagenNueva = dataForm.imagen?.[0] instanceof File;
+
+    if (Object.keys(diff).length === 0 && !tieneImagenNueva) {
+      handleShowToast('No hay cambios para guardar', 'warning');
       return;
     }
 
-    console.log(payload); 
     const formData = new FormData();
 
-    // ✅ Agregar imagen solo si es nueva (File)
-    if (
-      dataForm.imagen &&
-      dataForm.imagen.length > 0 &&
-      dataForm.imagen[0] instanceof File
-    ) {
+    if (tieneImagenNueva) {
       formData.append("imagen", dataForm.imagen[0]);
     }
 
-    // Agregar el resto de campos
-    Object.entries(payload).forEach(([key, value]) => {
-      if (key === 'imagen' || key === 'imagen_url') {
-        if (value instanceof File) {
-          formData.append(key, value);
-        }
-      } 
-      else if (key === "salidas" || key === 'servicios_data' || key === 'items_costo_data') {
+    Object.entries(diff).forEach(([key, value]) => {
+      if (key === 'salidas' || key === 'servicios_data' || key === 'items_costo_data') {
         formData.append(key, JSON.stringify(value));
-      }
-      else if (Array.isArray(value)) {
-        // value.forEach((v) => formData.append(key, v));
-        if (value.length === 0) {
-          
-          formData.append(key, JSON.stringify([])); // 👉 se envía como "[]"
-        } else {
-          value.forEach((v) => formData.append(key, v));
-        }
       } else if (value !== undefined && value !== null) {
         formData.append(key, value as any);
       }
     });
 
-    console.log("FormData listo:", [...formData.entries()]);
-    // Debug para ver lo que se envía
-    for (const pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
-    }
+    console.log("PATCH diff:", [...formData.entries()]);
 
-    mutateGuardarEditado({
-        data: formData,
-        paqueteId: payload.id
-      });
+    mutateGuardarEditado({ data: formData, paqueteId: dataAEditar!.id });
   };
 
 
-
-
-  function formatearFechaDDMMYY(fecha: string): string {
-    // Verifica si la fecha contiene "/" y coincide con el patrón DD/MM/YYYY
-    const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-
-    if (regex.test(fecha)) {
-      const [dia, mes, anio] = fecha.split("/");
-      // Retorna en formato YYYY-MM-D (quitando ceros a la izquierda del día)
-      return `${anio}-${mes}-${parseInt(dia, 10)}`;
-    }
-
-    // Si no cumple el formato esperado, devuelve la misma fecha
-    return fecha;
-  }
 
 
   useEffect(() => {
@@ -1028,7 +981,6 @@ export default function ModulosPage() {
       setDistribuidoraSelected(data!.distribuidora);
       console.log(servicios_ids)
       setSelectedServicios(servicios_ids);
-      setPaqueteModalidad(data.modalidad)
 
     const salidas = data.salidas.map((salida: SalidaPaquete) => {
       // let precios_catalogo_hoteles: any[] = [];
@@ -1075,14 +1027,6 @@ export default function ModulosPage() {
         items_costo: salida.items_costo ?? [],
       }
 
-      console.log(data.modalidad)
-      if(data.modalidad === 'fijo'){
-        sal.habitacion_fija = salida.habitacion_fija.id;
-      }
-      else if(data.modalidad === 'flexible'){
-        // sal.ganancia = salida.ganancia;
-      }
-      
       // if(data.propio)
       //   sal.ganancia = salida.ganancia;
       // else{
@@ -1096,6 +1040,7 @@ export default function ModulosPage() {
     console.log('todas salidas: ', salidas);
 
     setSalidas(salidas);
+    originalSalidasRef.current = JSON.parse(JSON.stringify(salidas));
 
     // Cargar ítems de costo por defecto del paquete
     if (data.propio && data.items_costo_default?.length) {
@@ -1336,8 +1281,7 @@ useEffect(() => {
 
   const handleOpenModal = () => {
     const monedaValue = watch('moneda');
-    const esPersonalizado = watch('personalizado');
-    
+
     if (!selectedDestinoID) {
       handleShowToast('Debes seleccionar primero el destino', 'error');
       return;
@@ -1347,13 +1291,6 @@ useEffect(() => {
       handleShowToast('Debes seleccionar primero la moneda', 'error');
       return;
     }
-
-    // Validación para paquetes personalizados: solo una salida
-    if (esPersonalizado && salidas.length >= 1) {
-      handleShowToast('Los paquetes personalizados solo pueden tener una salida', 'error');
-      return;
-    }
-
 
     if(quitarAcentos(tipoPaqueteSelected?.nombre ?? '')?.toLowerCase() === 'terrestre' && !watch('cantidad_pasajeros')
       && watch('propio')){
@@ -1377,15 +1314,9 @@ useEffect(() => {
 
 
   console.log(salidas)
-  console.log(fixedRoomTypeId)
     console.log([...selectedHotels])
 
-  const fixedRoomTypeIdRef = useRef(fixedRoomTypeId);
   const selectedHotelsRef = useRef(selectedHotels);
-
-  useEffect(() => {
-    fixedRoomTypeIdRef.current = fixedRoomTypeId;
-  }, [fixedRoomTypeId]);
 
   useEffect(() => {
     selectedHotelsRef.current = selectedHotels;
@@ -1393,28 +1324,17 @@ useEffect(() => {
 
   const handleAddSalida = async (dataForm: any) => {
     setValidando(true);
-    const hotelesIds = Array.from(selectedHotelsRef.current); 
-    console.log(fixedRoomTypeIdRef.current);
+    const hotelesIds = Array.from(selectedHotelsRef.current);
     console.log(selectedHotelsRef);
-
 
     console.log(salidas)
     console.log(hotelesIds)
-
-    if(paqueteModalidad === 'fijo'){
-      if(!fixedRoomTypeIdRef.current || !hotelesIds.length){ 
-        handleShowToast('Debes seleccionar un hotel y una habitación', 'error');
-        setValidando(false);
-        return;
-      }
-    }
-
-    console.log(selectedHotels)  
+    console.log(selectedHotels)
 
     console.log(dataForm);
     console.log(nuevaSalida);
 
-    let habitacionesCuposList = Object.entries(dataForm)
+    const habitacionesCuposList = Object.entries(dataForm)
         .filter(([key, value]) => key.startsWith('cupo_habitacion_') && value != null)
         .map(([key, value]) => {
           // 🔹 Guardamos el valor
@@ -1456,7 +1376,7 @@ useEffect(() => {
 
     // Recolectar precios por habitación (precio_paquete_habitacion_*)
     // SOLO de habitaciones que NO pertenecen a hoteles en modo "hotel"
-    let precioCatalogoDistribuidora = Object.entries(dataForm)
+    const precioCatalogoDistribuidora = Object.entries(dataForm)
         .filter(([key, value]) => key.startsWith('precio_paquete_habitacion_') && value != null)
         .map(([key, value]) => {
           // 🔹 Guardamos el valor
@@ -1490,20 +1410,8 @@ useEffect(() => {
     console.log(editingSalidaId);
 
     if (isEditMode && editingSalidaId) {
-        if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current){
-          const rooms = habitacionesCuposList.filter((hab: any) => hab.habitacion_id.toString() === fixedRoomTypeIdRef.current.toString())
-          habitacionesCuposList = [...rooms];
-        }
-
-        if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current){
-          const rooms = precioCatalogoDistribuidora.filter((hab: any) => hab.habitacion_id.toString() === fixedRoomTypeIdRef.current.toString())
-          precioCatalogoDistribuidora = [...rooms];
-        }
-
-
         console.log(precioCatalogoDistribuidora)
         console.log(preciosCatalogoHoteles)
- 
 
       // 🔹 Editando habitación existente
       const salidaEdited: any = {...dataForm,
@@ -1514,9 +1422,6 @@ useEffect(() => {
         precios_catalogo_habitaciones: precioCatalogoDistribuidora,
         precios_catalogo_hoteles: preciosCatalogoHoteles,
         currency: watch('moneda')};
-
-      if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current)
-        salidaEdited.habitacion_fija = fixedRoomTypeIdRef.current;
 
       delete salidaEdited.precio;
       
@@ -1529,10 +1434,11 @@ useEffect(() => {
         delete salidaEdited.costo_base_hasta;
       }
 
-      // Overrides de costos: siempre incluir para que el backend sincronice correctamente
-      salidaEdited.items_costo_override_data = itemsCostoSalida
-        .filter((i: any) => i.origen === 'override')
-        .map((i: any) => ({ tipo_costo_id: i.tipo_costo_id, monto: i.monto }));
+      if (propio) {
+        salidaEdited.items_costo_override_data = itemsCostoSalida
+          .filter((i: any) => i.origen === 'override')
+          .map((i: any) => ({ tipo_costo_id: i.tipo_costo_id, monto: i.monto }));
+      }
 
       console.log(salidas)
       console.log(salidaEdited)
@@ -1573,28 +1479,25 @@ useEffect(() => {
       };
 
 
-      console.log(fixedRoomTypeIdRef.current)
-      if(paqueteModalidad === 'fijo' && fixedRoomTypeIdRef.current)
-        salida.habitacion_fija = fixedRoomTypeIdRef.current;
-
       delete salida.precio_desde_editable;
       delete salida.precio_desde;
       delete salida.precio_hasta_editable;
       delete salida.precio_hasta;
-      if(!propio && !salida?.costo_base_hasta || paqueteModalidad === 'fijo'){
+      if(!propio && !salida?.costo_base_hasta){
         delete salida.costo_base_hasta;
       }
 
-      delete salida.ganancia;
-      delete salida.comision;
+      if (!propio) delete salida.ganancia;
+      if (propio) delete salida.comision;
 
-      // Solo incluir overrides si hay alguno (nueva salida)
-      const overridesNueva = itemsCostoSalida.filter((i: any) => i.origen === 'override');
-      if (overridesNueva.length > 0) {
-        salida.items_costo_override_data = overridesNueva.map((i: any) => ({
-          tipo_costo_id: i.tipo_costo_id,
-          monto: i.monto,
-        }));
+      if (propio) {
+        const overridesNueva = itemsCostoSalida.filter((i: any) => i.origen === 'override');
+        if (overridesNueva.length > 0) {
+          salida.items_costo_override_data = overridesNueva.map((i: any) => ({
+            tipo_costo_id: i.tipo_costo_id,
+            monto: i.monto,
+          }));
+        }
       }
 
       console.log(salida);
@@ -1660,35 +1563,20 @@ useEffect(() => {
     setIsEditMode(false);
     setEditingSalidaId(null);
     setValidando(false);
-    setFixedRoomTypeId('')
     setModoPrecio({}) // Resetear modo de precio
   }
   
 
-const handleSubmitClick = useCallback(async () => {
+const handleSubmitClick = async () => {
     if (validando) return;
 
-    setValidando(true); // 🔹 Deshabilitar botón inmediatamente
+    setValidando(true);
     const isValid = await trigger();
-    console.log('🛑 Submit triggered'); 
-    console.log('propio:', propio);
-    console.log('Valores actuales:', getValuesSalida());
-    console.log('Errores:', errorsSalida);
-    console.log('Es válido?', isValidSalida);
-    console.log('isButtonDisabled:', validando);
-    console.log('Validación forzada:', isValid);
     if (isValid) {
-      // Ejecutar submit en un setTimeout para no bloquear la UI
-
-      const hotelesIds = Array.from(selectedHotels);
-        console.log(fixedRoomTypeId)
-        console.log(hotelesIds)
-
       setTimeout(() => {
         handleSubmitSalida(handleAddSalida)();
       }, 0);
     } else {
-      // Verificar si el error es de fecha específicamente
       if (errorsSalida?.fecha_salida_v2) {
         const errorMessage = typeof errorsSalida.fecha_salida_v2.message === 'string'
           ? errorsSalida.fecha_salida_v2.message
@@ -1702,9 +1590,9 @@ const handleSubmitClick = useCallback(async () => {
       } else {
         handleShowToast('Debes completar los campos requeridos', 'error');
       }
-      setValidando(false); // 🔹 Rehabilitar si falla
+      setValidando(false);
     }
-  }, [trigger, propio, getValuesSalida, errorsSalida, isValidSalida, validando, handleSubmitSalida, handleShowToast]);
+  };
 
 
   /**
@@ -1967,9 +1855,6 @@ const handleSubmitClick = useCallback(async () => {
     // Si usas react-hook-form u otro Controller, setea también el value del select/Controller
     setValue('moneda', salida?.moneda?.toString() ?? salida?.currency?.toString());
 
-    if(paqueteModalidad === 'fijo')
-      setFixedRoomTypeId(salida?.habitacion_fija ?? '');
-
     // Determinar el modo de precio para cada hotel basado en los datos guardados
     const nuevoModoPrecio: Record<string, PriceMode> = {};
 
@@ -2002,7 +1887,6 @@ const handleSubmitClick = useCallback(async () => {
       console.log(fechaSalida);
       console.log(fechaRegreso);
       console.log(dataHotelesList);
-      console.log(fixedRoomTypeId);
       console.log([...selectedHotels].length);  
 
 
@@ -2053,41 +1937,15 @@ const handleSubmitClick = useCallback(async () => {
 
         const rangoPrecioDesdeHasta = calcularRangoPrecio(hotelesFiltrados, fechaSalida, fechaRegreso, monedaPaqueteCodigo, cotizacionVigente);
         if(propio){
-          if(paqueteModalidad === 'flexible'){
-            if(rangoPrecioDesdeHasta.sinCotizacion){
-              handleShowToast('No hay cotización vigente. No se puede calcular el precio para habitaciones con moneda diferente al paquete.', 'error');
-              setValueSalida('precio_desde', '');
-              setValueSalida('precio_hasta', '');
-            } else {
-              const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin);
-              const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax);
-              setValueSalida('precio_desde', precioDesdeConvertido.toString());
-              setValueSalida('precio_hasta', precioHastaConvertido.toString());
-            }
-          }
-          else if(paqueteModalidad === 'fijo' && fixedRoomTypeId){
-            const habitacionFiltered = hotelesFiltrados[0].habitaciones?.filter((habitacion: any) => habitacion.id.toString() === fixedRoomTypeId)
-            const hab = habitacionFiltered[0];
-
-            const monedaHab: string = hab.moneda_codigo ?? 'USD';
-            let precioNoche: number = hab.precio_noche;
-
-            if (monedaHab !== monedaPaqueteCodigo) {
-              if (!cotizacionVigente) {
-                handleShowToast('No hay cotización vigente. No se puede calcular el precio para esta habitación.', 'error');
-                setValueSalida('precio_desde', '');
-                setValueSalida('precio_hasta', '');
-                return;
-              }
-              precioNoche = monedaPaqueteCodigo === 'PYG'
-                ? precioNoche * cotizacionVigente
-                : precioNoche / cotizacionVigente;
-            }
-
-            const precioBase = precioNoche * rangoPrecioDesdeHasta.noches;
-            const precioDesdeConvertido = Math.round(precioBase);
-            setValueSalida('precio_desde', precioDesdeConvertido.toString());
+          if(rangoPrecioDesdeHasta.sinCotizacion){
+            handleShowToast('No hay cotización vigente. No se puede calcular el precio para habitaciones con moneda diferente al paquete.', 'error');
+            setValueSalida('precio_desde', '');
             setValueSalida('precio_hasta', '');
+          } else {
+            const precioDesdeConvertido = Math.round(rangoPrecioDesdeHasta.precioMin);
+            const precioHastaConvertido = Math.round(rangoPrecioDesdeHasta.precioMax);
+            setValueSalida('precio_desde', precioDesdeConvertido.toString());
+            setValueSalida('precio_hasta', precioHastaConvertido.toString());
           }
         }
 
@@ -2101,7 +1959,7 @@ const handleSubmitClick = useCallback(async () => {
         setValueSalida('cantidadNoche', calculateNoches(fechaSalida, fechaRegreso).toString());
       }
       // 👇 dependencias simples, sin llamadas complejas
-    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList, fixedRoomTypeId, monedaSeleccionada, dataMonedaList, dataCotizacion, paqueteModalidad, propio]);
+    }, [selectedHotels, fechaSalida, fechaRegreso, setValueSalida, dataHotelesList, monedaSeleccionada, dataMonedaList, dataCotizacion, propio]);
 
 
     // 🔹 Auto-calcular precio_desde / precio_hasta a partir de los precios ingresados
@@ -2144,15 +2002,10 @@ const handleSubmitClick = useCallback(async () => {
       // Actualizar los campos directamente (sin conversión)
       setValueSalida('precio_desde_editable', precioMin.toString());
       
-      if (paqueteModalidad === 'flexible') {
-        setValueSalida('precio_hasta_editable', precioMax.toString());
-      } else {
-        setValueSalida('precio_hasta_editable', '');
-      }
+      setValueSalida('precio_hasta_editable', precioMax.toString());
     }, [
-      propio, 
-      paqueteModalidad, 
-      getValuesSalida, 
+      propio,
+      getValuesSalida,
       setValueSalida,
       preciosCatalogoTrigger, // Se actualiza cuando cambian los precios del catálogo
     ]);
@@ -2163,43 +2016,8 @@ const handleSubmitClick = useCallback(async () => {
   const handleHotelToggle = (hotelId: string, hotel: any) => {
     console.log(hotel);
 
-    if (paqueteModalidad === 'fijo') {
-      setFixedRoomTypeId('');
-
-      // Solo un hotel permitido
-      if (propio && hotel.habitaciones.length === 0) {
-        handleShowToast(
-          'Se debe cargar las habitaciones a este hotel para este tipo de paquete',
-          'error'
-        );
-        return;
-      }
-
-      // Selección única
-      setSelectedHotels(new Set([hotelId]));
-      setHotelPrices({
-        [hotelId]: { single: 0, doble: 0, triple: 0 },
-      });
-
-      // Inicializar modo de precio si no existe
-      if (!modoPrecio[hotelId]) {
-        setModoPrecio(prev => ({
-          ...prev,
-          [hotelId]: 'hotel'
-        }));
-      }
-
-      // Si modoPrecio de este hotel === 'hotel', asignar el valor de precio_habitacion_por_hotel_${hotelId} a los campos precio_paquete_habitacion_*
-      if (modoPrecio[hotelId] === 'hotel') {
-        const precioHotel = getValuesSalida(`precio_habitacion_por_hotel_${hotelId}`);
-        if (precioHotel && precioHotel > 0) {
-          hotel?.habitaciones?.forEach((habitacion: any) => {
-            setValueSalida(`precio_paquete_habitacion_${habitacion.id}`, precioHotel);
-          });
-        }
-      }
-    } else {
-      // Modo flexible: selección múltiple
+    {
+      // Selección múltiple
       const newSelected = new Set(selectedHotels);
       const newPrices = { ...hotelPrices };
 
@@ -3037,13 +2855,6 @@ const handleSubmitClick = useCallback(async () => {
                                     onCheckedChange={(checked) => {
                                       const isChecked = !!checked;
                                       field.onChange(isChecked);
-                                      // Si personalizado es true, establecer modalidad a 'fijo'
-                                      // Si personalizado es false, establecer modalidad a 'flexible'
-                                      if (isChecked) {
-                                        setPaqueteModalidad('fijo');
-                                      } else {
-                                        setPaqueteModalidad('flexible');
-                                      }
                                     }}
                                     className="cursor-pointer border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white"
                                   />
@@ -3403,7 +3214,7 @@ const handleSubmitClick = useCallback(async () => {
                                               ))}
                                           </span>
                                           {/* <span>{}</span> */}
-                                          {!!costoTotalPaquete?.precio_final_total && paqueteModalidad === 'flexible' && 
+                                          {!!costoTotalPaquete?.precio_final_total &&
                                             <>
                                               <span className="text-md text-muted-foreground">Hasta</span>
                                               <span className="text-3xl font-bold text-emerald-600">
@@ -3475,11 +3286,18 @@ const handleSubmitClick = useCallback(async () => {
                                   </div>}
 
                                   {!isFetchingServicios && dataServiciosList && dataServiciosList
-                                      .filter((servicio: any) => 
-                                        
+                                      .filter((servicio: any) =>
+
                                         servicio.nombre.toLowerCase().includes(permissionSearchTerm.toLowerCase())
-                                      
+
                                       )
+                                      .sort((a: any, b: any) => {
+                                        const aSelected = selectedServicios.includes(a.id);
+                                        const bSelected = selectedServicios.includes(b.id);
+                                        if (aSelected && !bSelected) return -1;
+                                        if (!aSelected && bSelected) return 1;
+                                        return 0;
+                                      })
                                       .map((servicio: any) => (
                                         <div
                                           key={servicio.id}
@@ -3658,72 +3476,6 @@ const handleSubmitClick = useCallback(async () => {
                                   {propio && onGuardar && selectedServicios.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
                                 </div>
 
-                                <div className="bg-white rounded-lg shadow-md p-6">
-                                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Modalidad de Paquete</h2>
-                                  {watch('personalizado') && (
-                                    <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                                      <p className="text-sm text-orange-800">
-                                        <strong>Nota:</strong> Los paquetes personalizados siempre usan modalidad "Paquete cerrado" con precio fijo.
-                                      </p>
-                                    </div>
-                                  )}
-                                  {!watch('personalizado') && (
-                                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                      <p className="text-sm text-blue-800">
-                                        <strong>Nota:</strong> Para habilitar la modalidad "Paquete cerrado", debes marcar la opción "Personalizado".
-                                      </p>
-                                    </div>
-                                  )}
-                                  <div className="grid md:grid-cols-2 gap-4">
-                                    <div
-                                      onClick={() => {
-                                        if(dataAEditar || watch('personalizado'))
-                                          return;
-
-                                        setPaqueteModalidad('flexible')
-                                      }}
-                                      className={`border-2 rounded-lg p-4 transition-all ${
-                                        watch('personalizado') || dataAEditar ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
-                                      } ${
-                                        paqueteModalidad === 'flexible' 
-                                          ? 'border-blue-500 bg-blue-50' 
-                                          : 'border-gray-200 hover:border-gray-300'
-                                      }  ${(dataAEditar && paqueteModalidad === 'flexible') ? 'opacity-45' : 'opacity-80'} `}
-                                    >
-                                      <div className="flex items-center mb-2">
-                                        <Star className="w-5 h-5 text-blue-600 mr-2" />
-                                        <span className="font-medium text-gray-900">Paquete Flexible</span>
-                                      </div>
-                                      <p className="text-sm text-gray-600">
-                                        Múltiples opciones de hotel y habitación. El cliente elige al reservar.
-                                      </p>
-                                    </div>
-
-                                    <div
-                                      onClick={() => {
-                                        if(dataAEditar || !watch('personalizado'))
-                                          return;
-                                        
-                                        setPaqueteModalidad('fijo')
-                                      }}
-                                      className={`border-2 rounded-lg p-4 transition-all ${
-                                        !watch('personalizado') || dataAEditar ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
-                                      } ${
-                                        paqueteModalidad === 'fijo' 
-                                          ? 'border-orange-500 bg-orange-50' 
-                                          : 'border-gray-200 hover:border-gray-300'
-                                      }  ${(dataAEditar && paqueteModalidad === 'fijo') ? 'opacity-45' : 'opacity-80'} `}
-                                    >
-                                      <div className="flex items-center mb-2">
-                                        <Tag className="w-5 h-5 text-orange-600 mr-2" />
-                                        <span className="font-medium text-gray-900">Paquete cerrado</span>
-                                      </div>
-                                      <p className="text-sm text-gray-600">
-                                        Hotel y habitación predefinidos con precio fijo.
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
 
                                 {/* SECCIÓN: Costos por Defecto del Paquete */}
                                 {propio && quitarAcentos(tipoPaqueteSelected?.nombre ?? '').toLowerCase() === 'terrestre' && (
@@ -3896,22 +3648,12 @@ const handleSubmitClick = useCallback(async () => {
                                             >
                                               <Button
                                                 type="button"
-                                                className={`cursor-pointer ${
-                                                  personalizado && salidas.length >= 1
-                                                    ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed opacity-60'
-                                                    : 'bg-emerald-500 hover:bg-emerald-600'
-                                                }`}
-                                                disabled={personalizado && salidas.length >= 1}
-                                                onClick={handleOpenModal} // 👈 validación antes de abrir
+                                                className="cursor-pointer bg-emerald-500 hover:bg-emerald-600"
+                                                onClick={handleOpenModal}
                                               >
                                                 <Plus className="h-4 w-4 mr-2" />
                                                 Agregar Salidas
                                               </Button>
-                                              {personalizado && salidas.length >= 1 && (
-                                                <p className="text-xs text-orange-600 font-medium">
-                                                  Los paquetes personalizados solo pueden tener una salida
-                                                </p>
-                                              )}
                                               <DialogContent className="sm:max-w-[1100px] max-h-[90vh] overflow-hidden p-0">
                                                 <div className="max-h-[90vh] overflow-y-auto p-6">
                                                     <form 
@@ -4255,63 +3997,49 @@ const handleSubmitClick = useCallback(async () => {
                                                                   {propio ?
                                                                     <div className="col-span-3">
                                                                       <div className="text-2xl font-bold text-blue-600 flex">
-                                                                        {
-                                                                          paqueteModalidad === 'flexible' ?
-                                                                            formatearSeparadorMiles.format(+(watchSalida('precio_hasta_editable') ?? 0)) :
-                                                                            <Badge
-                                                                              className="bg-gray-100 text-gray-700 border-gray-200">
-                                                                              No aplica
-                                                                            </Badge>
-                                                                        }
+                                                                        {formatearSeparadorMiles.format(+(watchSalida('precio_hasta_editable') ?? 0))}
                                                                       </div>
                                                                       {(() => {
                                                                         const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
                                                                         const esGuaranies = monedaActual?.codigo === 'PYG';
                                                                         const esUSD = monedaActual?.codigo === 'USD';
                                                                         const cotizacionVigente = dataCotizacion?.valor_en_guaranies;
-                                                                        
-                                                                        if (esGuaranies && cotizacionVigente && !isFetchingCotizacion && paqueteModalidad === 'flexible') {
+
+                                                                        if (esGuaranies && cotizacionVigente && !isFetchingCotizacion) {
                                                                           return (
                                                                             <p className="text-xs text-gray-500 mt-1">
                                                                               Precio máximo calculado con cotización vigente
                                                                             </p>
                                                                           );
                                                                         }
-                                                                        
-                                                                        if (esUSD && paqueteModalidad === 'flexible') {
+
+                                                                        if (esUSD) {
                                                                           return (
                                                                             <p className="text-xs text-gray-500 mt-1">
                                                                               Precio máximo calculado automáticamente en USD
                                                                             </p>
                                                                           );
                                                                         }
-                                                                        
+
                                                                         return null;
                                                                       })()}
-                                                                    </div> : 
+                                                                    </div> :
 
                                                                     <div className="col-span-3">
                                                                       <div className="text-2xl font-bold text-blue-600 flex">
-                                                                        {
-                                                                          paqueteModalidad === 'flexible' ? 
-                                                                            formatearSeparadorMiles.format(+(watchSalida('precio_hasta_editable') ?? 0)) :
-                                                                            <Badge
-                                                                              className="bg-gray-100 text-gray-700 border-gray-200">
-                                                                              No aplica
-                                                                            </Badge>
-                                                                        }
+                                                                        {formatearSeparadorMiles.format(+(watchSalida('precio_hasta_editable') ?? 0))}
                                                                       </div>
                                                                       {(() => {
                                                                         const monedaActual = dataMonedaList?.find((m: Moneda) => m.id.toString() === monedaSeleccionada?.toString());
-                                                                        
-                                                                        if (monedaActual && paqueteModalidad === 'flexible') {
+
+                                                                        if (monedaActual) {
                                                                           return (
                                                                             <p className="text-xs text-gray-500 mt-1">
                                                                               Precio máximo calculado del catálogo en {monedaActual.nombre} ({monedaActual.simbolo})
                                                                             </p>
                                                                           );
                                                                         }
-                                                                        
+
                                                                         return null;
                                                                       })()}
                                                                     </div>
@@ -4360,16 +4088,6 @@ const handleSubmitClick = useCallback(async () => {
                                                                   </div>
                                                                 </div>}
 
-                                                                {paqueteModalidad === 'fijo' && 
-                                                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                                                                  <div className="flex items-center text-orange-800">
-                                                                    <AlertCircle className="w-5 h-5 mr-2" />
-                                                                    <span className="font-medium text-sm">
-                                                                      Selecciona un hotel y tipo de habitación específicos para esta paquete
-                                                                    </span>
-                                                                  </div>
-                                                                </div>
-                                                                }
                                                               </CardHeader>
                                                               <CardContent className="space-y-4 overflow-y-auto max-h-[60vh]" >
                                                                 {dataHotelesList && dataHotelesList?.map((hotel: any) => (
@@ -4537,20 +4255,11 @@ const handleSubmitClick = useCallback(async () => {
                                                                                   ? Number(getValuesSalida(`precio_habitacion_por_hotel_${hotel.id}`)) || 0
                                                                                   : Number(getValuesSalida(`precio_paquete_habitacion_${habitacion.id}`)) || 0;
                                                                                 const isComplete = propio && cupoVal > 0 && precioVal > 0 || !propio && precioVal > 0;
-                                                                                const isFixedSelected = paqueteModalidad === 'fijo' && fixedRoomTypeId === habitacion.id.toString();
-                                                                                const showFields = paqueteModalidad === 'flexible' || isFixedSelected;
 
                                                                                 return (
                                                                                   <div
                                                                                     key={habitacion.id}
-                                                                                    onClick={paqueteModalidad === 'fijo' ? () => setFixedRoomTypeId(habitacion.id.toString()) : undefined}
-                                                                                    className={`rounded-xl border-2 p-3 transition-all ${
-                                                                                      isFixedSelected
-                                                                                        ? 'border-green-400 bg-green-50 cursor-pointer'
-                                                                                        : paqueteModalidad === 'fijo'
-                                                                                        ? 'border-gray-200 hover:border-gray-300 cursor-pointer'
-                                                                                        : 'border-gray-200'
-                                                                                    }`}
+                                                                                    className="rounded-xl border-2 p-3 transition-all border-gray-200"
                                                                                   >
                                                                                     {/* Card header: icono + nombre + badge */}
                                                                                     <div className="flex items-center justify-between mb-3">
@@ -4574,8 +4283,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                                     </div>
 
                                                                                     {/* Campos */}
-                                                                                    {showFields ? (
-                                                                                      <div className="grid grid-cols-2 gap-3">
+                                                                                    <div className="grid grid-cols-2 gap-3">
                                                                                         {/* CUPOS DISPONIBLES (solo propio) */}
                                                                                         {propio && (
                                                                                           <div>
@@ -4649,11 +4357,6 @@ const handleSubmitClick = useCallback(async () => {
                                                                                           />
                                                                                         </div>
                                                                                       </div>
-                                                                                    ) : (
-                                                                                      <p className="text-xs text-gray-400 text-center py-2">
-                                                                                        Seleccioná esta habitación para configurarla
-                                                                                      </p>
-                                                                                    )}
                                                                                   </div>
                                                                                 );
                                                                               })}
@@ -4954,7 +4657,7 @@ const handleSubmitClick = useCallback(async () => {
                                                                       ₲ {formatearSeparadorMiles.format(Math.round(precioVenta))}
                                                                     </p>
                                                                   </div>
-                                                                  {paqueteModalidad === 'flexible' && precioHasta > 0 && (
+                                                                  {precioHasta > 0 && (
                                                                     <>
                                                                       <span className="text-gray-400 text-xl mb-1">—</span>
                                                                       <div>
@@ -5048,7 +4751,7 @@ const handleSubmitClick = useCallback(async () => {
                                               <TableRow>
                                                 <TableHead>Fecha Salida</TableHead>
                                                 <TableHead>Fecha Regreso</TableHead>
-                                                <TableHead>{paqueteModalidad === 'flexible' ? 'Precio Desde' : 'Precio fijo'}</TableHead>
+                                                <TableHead>Precio Desde</TableHead>
                                                 <TableHead>Precio Hasta</TableHead>
                                                 <TableHead>Seña</TableHead>
                                                 <TableHead>Cupo</TableHead>
@@ -5065,7 +4768,7 @@ const handleSubmitClick = useCallback(async () => {
                                                           formatearSeparadorMiles.format(salida?.costo_base_hasta) : 
                                                           <Badge
                                                             className="bg-gray-100 text-gray-700 border-gray-200">
-                                                            {paqueteModalidad === 'flexible' ? 'Sin tope' : 'No aplica'}
+                                                            Sin tope
                                                           </Badge>
                                                       }
                                                   </TableCell>
@@ -5362,7 +5065,6 @@ const handleSubmitClick = useCallback(async () => {
                           <TableHead className="font-semibold text-gray-700 min-w-[140px]">Fechas</TableHead>
                           <TableHead className="font-semibold text-gray-700 min-w-[140px]">Propiedad</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Genero</TableHead> */}
-                          <TableHead className="font-semibold text-gray-700 min-w-[110px]">Modalidad</TableHead>
                           <TableHead className="font-semibold text-gray-700 min-w-[100px]">Estado</TableHead>
                           {/* <TableHead className="font-semibold text-gray-700">Uso</TableHead> */}
                           {/* <TableHead className="font-semibold text-gray-700">Prioridad</TableHead> */}
@@ -5513,18 +5215,6 @@ const handleSubmitClick = useCallback(async () => {
                               </div>: '-'}
                               
                             </TableCell> */}
-
-                            <TableCell className="min-w-[110px]">
-                              <Badge
-                                className={
-                                  data.modalidad === 'flexible'
-                                    ? "bg-blue-100 text-blue-700 border-blue-200"
-                                    : "bg-orange-100 text-orange-700 border-orange-200"
-                                }
-                              >
-                                {capitalizePrimeraLetra(data?.modalidad)}
-                              </Badge>
-                            </TableCell>
 
                             <TableCell className="min-w-[100px]">
                               <Badge
