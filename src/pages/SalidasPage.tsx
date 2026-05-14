@@ -119,7 +119,6 @@ export default function SalidasPage() {
 
   // Derived from selected paquete
   const propio: boolean = selectedPaqueteData?.propio ?? true
-  const paqueteModalidad: "flexible" | "fijo" = selectedPaqueteData?.modalidad ?? "flexible"
   const ciudadDataSelected = selectedPaqueteData?.destino?.id
   const cantidadPasajeros: number | null = selectedPaqueteData?.cantidad_pasajeros ?? null
   const esTerrestre = quitarAcentos(selectedPaqueteData?.tipo_paquete?.nombre ?? "").toLowerCase() === "terrestre"
@@ -128,8 +127,6 @@ export default function SalidasPage() {
   const [selectedHotels, setSelectedHotels] = useState<Set<any>>(new Set())
   const [hotelPrices, setHotelPrices] = useState<Record<string, any>>({})
   const [modoPrecio, setModoPrecio] = useState<Record<string, PriceMode>>({})
-  const [fixedRoomTypeId, setFixedRoomTypeId] = useState("")
-  const fixedRoomTypeIdRef = useRef(fixedRoomTypeId)
   const selectedHotelsRef = useRef(selectedHotels)
   const [preciosCatalogoTrigger, setPreciosCatalogoTrigger] = useState(0)
 
@@ -197,10 +194,6 @@ export default function SalidasPage() {
   })
 
   // Keep refs in sync
-  useEffect(() => {
-    fixedRoomTypeIdRef.current = fixedRoomTypeId
-  }, [fixedRoomTypeId])
-
   useEffect(() => {
     selectedHotelsRef.current = selectedHotels
   }, [selectedHotels])
@@ -381,11 +374,8 @@ export default function SalidasPage() {
     const precioMin = Math.min(...preciosCatalogo)
     const precioMax = Math.max(...preciosCatalogo)
     setValue("precio_desde_editable", precioMin.toString())
-    setValue(
-      "precio_hasta_editable",
-      paqueteModalidad === "flexible" ? precioMax.toString() : ""
-    )
-  }, [propio, paqueteModalidad, getValues, setValue, preciosCatalogoTrigger])
+    setValue("precio_hasta_editable", precioMax.toString())
+  }, [propio, getValues, setValue, preciosCatalogoTrigger])
 
   // Clear fields when propio changes
   useEffect(() => {
@@ -403,6 +393,11 @@ export default function SalidasPage() {
       setActiveTab("list")
       queryClient.invalidateQueries({ queryKey: ["salidas"], exact: false })
       queryClient.invalidateQueries({ queryKey: ["salidas-resumen"] })
+      queryClient.invalidateQueries({ queryKey: ["paquetes"], exact: false })
+      queryClient.invalidateQueries({ queryKey: ["paquetes-resumen"] })
+      queryClient.invalidateQueries({ queryKey: ["paquetes-disponibles"], exact: false })
+      queryClient.invalidateQueries({ queryKey: ["paquetes-disponibles-salidas"], exact: false })
+      queryClient.invalidateQueries({ queryKey: ["paquetes-filtro-salidas"], exact: false })
     },
   })
 
@@ -414,6 +409,11 @@ export default function SalidasPage() {
       setDataADesactivar(undefined)
       queryClient.invalidateQueries({ queryKey: ["salidas"], exact: false })
       queryClient.invalidateQueries({ queryKey: ["salidas-resumen"] })
+      queryClient.invalidateQueries({ queryKey: ["paquetes"], exact: false })
+      queryClient.invalidateQueries({ queryKey: ["paquetes-resumen"] })
+      queryClient.invalidateQueries({ queryKey: ["paquetes-disponibles"], exact: false })
+      queryClient.invalidateQueries({ queryKey: ["paquetes-disponibles-salidas"], exact: false })
+      queryClient.invalidateQueries({ queryKey: ["paquetes-filtro-salidas"], exact: false })
     },
   })
 
@@ -424,7 +424,6 @@ export default function SalidasPage() {
     setSelectedHotels(new Set())
     setHotelPrices({})
     setModoPrecio({})
-    setFixedRoomTypeId("")
     setItemsCostoSalida([])
     const formValues = getValues()
     Object.keys(formValues).forEach((key) => {
@@ -452,19 +451,15 @@ export default function SalidasPage() {
 
   // --- Hotel handlers ---
   const handleHotelToggle = (hotelId: string, hotel: any) => {
-    if (paqueteModalidad === "fijo") {
-      setFixedRoomTypeId("")
+    const newSelected = new Set(selectedHotels)
+    const newPrices = { ...hotelPrices }
 
-      if (propio && hotel.habitaciones.length === 0) {
-        handleShowToast(
-          "Se debe cargar las habitaciones a este hotel para este tipo de paquete",
-          "error"
-        )
-        return
-      }
-
-      setSelectedHotels(new Set([hotelId]))
-      setHotelPrices({ [hotelId]: { single: 0, doble: 0, triple: 0 } })
+    if (newSelected.has(hotelId)) {
+      newSelected.delete(hotelId)
+      delete newPrices[hotelId]
+    } else {
+      newSelected.add(hotelId)
+      newPrices[hotelId] = { single: 0, doble: 0, triple: 0 }
 
       if (!modoPrecio[hotelId]) {
         setModoPrecio((prev) => ({ ...prev, [hotelId]: "hotel" }))
@@ -477,33 +472,10 @@ export default function SalidasPage() {
           )
         }
       }
-    } else {
-      const newSelected = new Set(selectedHotels)
-      const newPrices = { ...hotelPrices }
-
-      if (newSelected.has(hotelId)) {
-        newSelected.delete(hotelId)
-        delete newPrices[hotelId]
-      } else {
-        newSelected.add(hotelId)
-        newPrices[hotelId] = { single: 0, doble: 0, triple: 0 }
-
-        if (!modoPrecio[hotelId]) {
-          setModoPrecio((prev) => ({ ...prev, [hotelId]: "hotel" }))
-        }
-        if (modoPrecio[hotelId] === "hotel") {
-          const precioHotel = getValues(`precio_habitacion_por_hotel_${hotelId}`)
-          if (precioHotel && precioHotel > 0) {
-            hotel?.habitaciones?.forEach((hab: any) =>
-              setValue(`precio_paquete_habitacion_${hab.id}`, precioHotel)
-            )
-          }
-        }
-      }
-
-      setSelectedHotels(newSelected)
-      setHotelPrices(newPrices)
     }
+
+    setSelectedHotels(newSelected)
+    setHotelPrices(newPrices)
   }
 
   const handleModeChange = (hotelId: string, newMode: PriceMode) => {
@@ -538,14 +510,6 @@ export default function SalidasPage() {
     setValidando(true)
     const hotelesIds = Array.from(selectedHotelsRef.current)
 
-    if (paqueteModalidad === "fijo") {
-      if (!fixedRoomTypeIdRef.current || !hotelesIds.length) {
-        handleShowToast("Debes seleccionar un hotel y una habitación", "error")
-        setValidando(false)
-        return
-      }
-    }
-
     if (!hotelesIds.length) {
       handleShowToast("Debes seleccionar al menos un hotel", "error")
       setValidando(false)
@@ -553,7 +517,7 @@ export default function SalidasPage() {
     }
 
     // Extract dynamic cupo fields
-    let habitacionesCuposList = Object.entries(dataForm)
+    const habitacionesCuposList = Object.entries(dataForm)
       .filter(([key, value]) => key.startsWith("cupo_habitacion_") && value != null)
       .map(([key, value]) => {
         const habitacion_id = Number(key.replace("cupo_habitacion_", ""))
@@ -582,7 +546,7 @@ export default function SalidasPage() {
     })
 
     // Extract room-level prices (excluding rooms of hotels in mode "hotel")
-    let precioCatalogoDistribuidora = Object.entries(dataForm)
+    const precioCatalogoDistribuidora = Object.entries(dataForm)
       .filter(([key, value]) => key.startsWith("precio_paquete_habitacion_") && value != null)
       .map(([key, value]) => {
         const habitacion_id = Number(key.replace("precio_paquete_habitacion_", ""))
@@ -592,24 +556,14 @@ export default function SalidasPage() {
       })
       .filter((item) => !habitacionesExcluidas.has(item.habitacion_id))
 
-    // Filter by fixed room type if fijo
-    if (paqueteModalidad === "fijo" && fixedRoomTypeIdRef.current) {
-      habitacionesCuposList = habitacionesCuposList.filter(
-        (h) => h.habitacion_id.toString() === fixedRoomTypeIdRef.current.toString()
-      )
-      precioCatalogoDistribuidora = precioCatalogoDistribuidora.filter(
-        (h) => h.habitacion_id.toString() === fixedRoomTypeIdRef.current.toString()
-      )
-    }
-
     // Build payload
     const payload: any = {
       paquete_id: selectedPaqueteID,
       fecha_salida: dataForm.fecha_salida_v2,
       fecha_regreso: dataForm.fecha_regreso_v2,
-      moneda_id: dataForm.moneda,
       senia: dataForm.senia,
       hoteles_ids: hotelesIds,
+      temporada_id: null,
     }
 
     // Precios de catálogo — aplica a propios y distribuidoras
@@ -619,11 +573,6 @@ export default function SalidasPage() {
       preciosCatalogoHoteles,
       dataHotelesList || []
     )
-
-    payload.costo_base_desde = dataForm.precio_desde_editable
-    if (paqueteModalidad === "flexible" && dataForm.precio_hasta_editable) {
-      payload.costo_base_hasta = dataForm.precio_hasta_editable
-    }
 
     if (propio) {
       payload.cupo = parseInt(dataForm.cupo, 10)
@@ -637,10 +586,6 @@ export default function SalidasPage() {
           monto: i.monto,
         }))
       }
-    }
-
-    if (paqueteModalidad === "fijo" && fixedRoomTypeIdRef.current) {
-      payload.habitacion_fija_id = fixedRoomTypeIdRef.current
     }
 
     mutate(payload)
@@ -1673,15 +1618,6 @@ export default function SalidasPage() {
                           >
                             {selectedPaqueteData.propio ? "Propio" : "Distribuidor"}
                           </Badge>
-                          <Badge
-                            className={
-                              selectedPaqueteData.modalidad === "flexible"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-orange-100 text-orange-700"
-                            }
-                          >
-                            {selectedPaqueteData.modalidad}
-                          </Badge>
                           {selectedPaqueteData.destino && (
                             <Badge className="bg-gray-100 text-gray-700">
                               <MapPin className="w-3 h-3 mr-1" />
@@ -1814,17 +1750,9 @@ export default function SalidasPage() {
                         <div className="space-y-1">
                           <Label className="text-gray-600 text-sm">Precio Hasta</Label>
                           <div className="text-2xl font-bold text-blue-600">
-                            {paqueteModalidad === "fijo" ? (
-                              <Badge className="bg-gray-100 text-gray-700 border-gray-200">
-                                No aplica
-                              </Badge>
-                            ) : (
-                              formatearSeparadorMiles.format(+(watch("precio_hasta_editable") ?? 0))
-                            )}
+                            {formatearSeparadorMiles.format(+(watch("precio_hasta_editable") ?? 0))}
                           </div>
-                          {paqueteModalidad === "flexible" && (
-                            <p className="text-xs text-gray-500">Máx. del catálogo</p>
-                          )}
+                          <p className="text-xs text-gray-500">Máx. del catálogo</p>
                         </div>
                       </div>
 
@@ -1969,17 +1897,6 @@ export default function SalidasPage() {
                             </div>
                           )}
 
-                          {paqueteModalidad === "fijo" && (
-                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                              <div className="flex items-center text-orange-800">
-                                <AlertCircle className="w-5 h-5 mr-2" />
-                                <span className="font-medium text-sm">
-                                  Selecciona un hotel y tipo de habitación específicos para esta
-                                  salida
-                                </span>
-                              </div>
-                            </div>
-                          )}
                         </CardHeader>
 
                         <CardContent className="space-y-4 overflow-y-auto max-h-[40vh]">
@@ -2170,36 +2087,22 @@ export default function SalidasPage() {
                                       {hotel.habitaciones?.length === 0 ? (
                                         <p className="text-sm text-red-400">No tiene habitaciones asignadas</p>
                                       ) : (
-                                        <div className={`grid gap-3 ${paqueteModalidad === "fijo" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+                                        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
                                           {hotel.habitaciones?.map((habitacion: any) => {
                                             const cupoVal = Number(getValues(`cupo_habitacion_${habitacion.id}`)) || 0
                                             const precioVal = modoPrecio[hotel.id] === "hotel"
                                               ? Number(getValues(`precio_habitacion_por_hotel_${hotel.id}`)) || 0
                                               : Number(getValues(`precio_paquete_habitacion_${habitacion.id}`)) || 0
                                             const isComplete = (propio ? cupoVal > 0 : true) && precioVal > 0
-                                            const isFixedSelected = paqueteModalidad === "fijo" && fixedRoomTypeId === habitacion.id.toString()
-                                            const showFields = paqueteModalidad === "flexible" || isFixedSelected
 
                                             return (
                                               <div
                                                 key={habitacion.id}
-                                                onClick={paqueteModalidad === "fijo" ? () => setFixedRoomTypeId(isFixedSelected ? "" : habitacion.id.toString()) : undefined}
-                                                className={`rounded-xl border-2 p-3 transition-all ${
-                                                  isFixedSelected
-                                                    ? "border-green-400 bg-green-50 cursor-pointer"
-                                                    : paqueteModalidad === "fijo"
-                                                    ? "border-gray-200 hover:border-gray-300 cursor-pointer"
-                                                    : "border-gray-200"
-                                                }`}
+                                                className="rounded-xl border-2 p-3 transition-all border-gray-200"
                                               >
                                                 {/* Card header: icono + nombre + badge */}
                                                 <div className="flex items-center justify-between mb-3">
                                                   <div className="flex items-center gap-2">
-                                                    {paqueteModalidad === "fijo" && (
-                                                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isFixedSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"}`}>
-                                                        {isFixedSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                                                      </div>
-                                                    )}
                                                     {getRoomIcon(habitacion.tipo)}
                                                     <div>
                                                       <p className="text-sm font-semibold text-gray-800">{getRoomTypeLabel(habitacion.tipo)}</p>
@@ -2219,8 +2122,7 @@ export default function SalidasPage() {
                                                 </div>
 
                                                 {/* Campos */}
-                                                {showFields ? (
-                                                  <div className="grid grid-cols-2 gap-3">
+                                                <div className="grid grid-cols-2 gap-3">
                                                     {/* Cupos (solo propio) */}
                                                     {propio && (
                                                       <div>
@@ -2297,10 +2199,7 @@ export default function SalidasPage() {
                                                         )}
                                                       />
                                                     </div>
-                                                  </div>
-                                                ) : (
-                                                  <p className="text-xs text-gray-400 text-center py-2">Seleccioná esta habitación para configurarla</p>
-                                                )}
+                                                </div>
                                               </div>
                                             )
                                           })}
@@ -2601,7 +2500,7 @@ export default function SalidasPage() {
                                         ₲ {formatearSeparadorMiles.format(Math.round(precioVenta))}
                                       </p>
                                     </div>
-                                    {paqueteModalidad === 'flexible' && precioHasta > 0 && (
+                                    {precioHasta > 0 && (
                                       <>
                                         <span className="text-gray-400 text-xl mb-1">—</span>
                                         <div>
