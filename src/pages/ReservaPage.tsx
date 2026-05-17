@@ -328,6 +328,7 @@ export default function ReservaPage() {
           // Refrescar el resumen de movimientos de caja
           queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
           queryClient.invalidateQueries({queryKey: ['movimientos'],exact: false});
+          queryClient.invalidateQueries({queryKey: ['salida-pasajeros'],exact: false});
         },
         onError: (error: any) => {
           console.error('❌ Error al realizar la seña:', error);
@@ -366,6 +367,7 @@ export default function ReservaPage() {
           // Refrescar el resumen de movimientos de caja
           queryClient.invalidateQueries({ queryKey: ['movimientos-resumen'] });
           queryClient.invalidateQueries({queryKey: ['movimientos'],exact: false});
+          queryClient.invalidateQueries({queryKey: ['salida-pasajeros'],exact: false});
         },
         onError: (error: any) => {
           console.error('❌ Error al realizar la seña:', error);
@@ -661,11 +663,13 @@ export default function ReservaPage() {
         });
 
         queryClient.invalidateQueries({ queryKey: ['salidas'] });
-        
+
+        queryClient.invalidateQueries({ queryKey: ['salida-pasajeros'], exact: false });
+
         queryClient.invalidateQueries({
           queryKey: ['pasajeros-disponibles'],
         });
-        
+
         queryClient.invalidateQueries({
           queryKey: ['personas-disponibles'],
         });
@@ -829,6 +833,11 @@ export default function ReservaPage() {
       }
 
       
+      if (selectedPaqueteData && !selectedPaqueteData.salidas?.length) {
+        handleShowToast('El paquete seleccionado no tiene fechas de salida disponibles', 'error');
+        return;
+      }
+
       if(!selectedPaqueteData || !selectedSalidaID || !selectedTipoHabitacionID || !selectedPersonaID || !selectedTitularData){
         handleShowToast('Debes completar todos los pasos para registrar la reserva', 'error');
         return;
@@ -1491,7 +1500,8 @@ export default function ReservaPage() {
         </div> 
         }
 
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-[95vw] mx-auto space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -1630,13 +1640,20 @@ export default function ReservaPage() {
                               </div>
                             </CardHeader>
                             <CardContent>
-                              {/* SELECTOR DE FECHAS DE SALIDAS */}
-                              <FechaSalidaSelectorContainer
-                                esDistribuidor={!selectedPaqueteData.propio}
-                                fechaSalidasList={selectedPaqueteData?.salidas}
-                                fechaSeleccionada={selectedSalidaID}
-                                onFechaSeleccionada={setSelectedSalidaID}
-                              />
+                              {selectedPaqueteData?.salidas?.length ? (
+                                <FechaSalidaSelectorContainer
+                                  esDistribuidor={!selectedPaqueteData.propio}
+                                  fechaSalidasList={selectedPaqueteData.salidas}
+                                  fechaSeleccionada={selectedSalidaID}
+                                  onFechaSeleccionada={setSelectedSalidaID}
+                                />
+                              ) : (
+                                <div className="flex flex-col items-center justify-center py-10 text-center gap-3 text-gray-500">
+                                  <CalendarDays className="h-10 w-10 text-gray-300" />
+                                  <p className="text-sm font-medium">Este paquete no tiene fechas de salida disponibles</p>
+                                  <p className="text-xs text-gray-400">Contactá al administrador para agregar salidas al paquete.</p>
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         }
@@ -1904,9 +1921,7 @@ export default function ReservaPage() {
                                       </p>)
                                     }
                                     <p className="text-xs text-blue-700 mt-0">
-                                      {selectedPaqueteData.modalidad === "flexible" && selectedTipoHabitacionID
-                                        ? "Establecido automáticamente según la habitación seleccionada"
-                                        : "Cantidad de pasajeros para esta reserva"}
+                                      Cantidad de pasajeros para esta reserva
                                     </p>
                                 </div>
 
@@ -2945,7 +2960,7 @@ export default function ReservaPage() {
                                   className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                                 />
                                 <div className="min-w-0 flex-1">
-                                  <div className="font-medium text-gray-900 truncate max-w-[200px]">{data?.paquete?.nombre}</div>
+                                  <div className="font-medium text-gray-900 truncate max-w-[320px]">{data?.paquete?.nombre}</div>
                                   <div className="text-sm text-gray-500 truncate max-w-[200px]">
                                     {data?.paquete?.destino?.ciudad}, {data?.paquete?.destino?.pais}
                                   </div>
@@ -3379,6 +3394,9 @@ export default function ReservaPage() {
             </TabsContent>
           </Tabs>
       </div>
+        
+      </div>
+     
 
       {/* Modal de Confirmación de Reserva */}
       {payloadReservationData?.modalData && (

@@ -157,10 +157,10 @@ function FactuacionConfigPage() {
    }, [configFacturaData])
 
   return (
-    <div className="min-h-scree">
+    <div className="min-h-screen bg-gray-50 p-6">
 
       <form onSubmit={handleSubmit(handleGuardarNuevaData)}>
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-[95vw] mx-auto space-y-6">
       {/* <div className="max-w-7xl mx-auto space-y-8"> */}
           <div className="flex items-center justify-between">
             <div>
@@ -234,7 +234,7 @@ function FactuacionConfigPage() {
       {/* <div className="max-w-6xl mx-auto px-4 py-6"> */}
       
 
-        <div className="max-w-7xl mx-auto space-y-8 px-4 py-6">
+        <div className="max-w-[95vw] mx-auto space-y-6">
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="border-b border-gray-200">

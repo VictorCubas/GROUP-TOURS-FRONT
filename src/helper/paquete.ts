@@ -103,35 +103,32 @@ export const normalizarPreciosCatalogoHoteles = (precios: any[]): any[] => {
   });
 };
 export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selectedDestinoID: any,
-    serviciosListSelected: any [], paqueteModalidad: 'flexible' | 'fijo'): any => {
+    serviciosListSelected: any []): any => {
 
     const salidasTemp = salidas.map((salida: any) => {
         const sal: any = {
         fecha_salida: salida.fecha_salida_v2,
         fecha_regreso: salida.fecha_regreso_v2,
         senia: salida.senia,
-        precio_actual: salida.precio_actual,
         hoteles: salida.hoteles_ids,
-        cupo: salida?.cupo ? parseInt(salida.cupo, 10) : null, // Entero
         moneda_id: dataForm.moneda,
-        temporada_id: salida?.temporada_id || null, // Opcional
+        temporada_id: salida?.temporada_id || null,
       }
 
-      if(paqueteModalidad === 'fijo')
-        sal.habitacion_fija = salida.habitacion_fija;
+      sal.precios_catalogo_habitaciones = salida.precios_catalogo_habitaciones ?? [];
+      sal.precios_catalogo_hoteles = salida.precios_catalogo_hoteles;
 
       if(propio){
-        sal.ganancia = salida.ganancia;
+        if(salida?.cupo) sal.cupo = parseInt(salida.cupo, 10);
         sal.cupos_habitaciones = salida.cupos_habitaciones;
+        if(salida.ganancia !== undefined && salida.ganancia !== '')
+          sal.ganancia = salida.ganancia;
+        if(salida.items_costo_override_data)
+          sal.items_costo_override_data = salida.items_costo_override_data;
       }
       else{
-        sal.precios_catalogo = salida.precios_catalogo;
-        sal.precios_catalogo_hoteles = salida.precios_catalogo_hoteles;
         sal.comision = salida.comision;
       }
-
-      if(salida.precio_final)
-        sal.precio_final = salida.precio_final;
 
       return sal;
     }
@@ -142,19 +139,16 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
     ...dataForm,
     destino_id: selectedDestinoID,
     tipo_paquete_id: dataForm.tipo_paquete,
-    servicios_data: serviciosListSelected, 
+    servicios_data: serviciosListSelected,
     moneda_id: dataForm.moneda,
-    fecha_inicio: dataForm.fecha_salida,
-    fecha_fin: dataForm.fecha_regreso,
     salidas: salidasTemp,
-    modalidad: paqueteModalidad,
     activo: true,
   };
 
 
   console.log(payload)
 
-  
+
 
   // Eliminar campos que no se envían
   delete payload.numero;
@@ -164,7 +158,10 @@ export const getPayload = (salidas: any[], dataForm: any, propio: boolean, selec
   delete payload.moneda;
   delete payload.fecha_salida;
   delete payload.fecha_regreso;
-  delete payload.imagen; // 🔹 MUY IMPORTANTE
+  delete payload.imagen;
+  delete payload.senia;
+  delete payload.zona_geografica;
+  delete payload.precio;
 
   if (propio) {
     delete payload.distribuidora;
@@ -261,7 +258,7 @@ const parseFechaLocal = (fecha: string | Date): Date => {
 
 /**
  * Calcula el costo total del paquete sumando el total de servicios
- * al menor precio_actual y al mayor precio_final del array.
+ * al menor costo_base_desde y al mayor costo_base_hasta del array.
  */
 export function calcularCostoPaquete(
   salidas: SalidaPaquete[],
@@ -278,8 +275,8 @@ export function calcularCostoPaquete(
   console.log(totalPrecioServicios);
 
   // 🔹 Convertir a número y buscar min y max
-  const preciosActual = salidas.map((s: any) => Number(s.precio_actual ? s.precio_actual : s.precio));
-  const preciosFinal = salidas.map((s) => Number(s.precio_final));
+  const preciosActual = salidas.map((s: any) => Number(s.costo_base_desde ? s.costo_base_desde : s.precio));
+  const preciosFinal = salidas.map((s) => Number(s.costo_base_hasta));
 
   const menorPrecioActual = Math.min(...preciosActual);
   const mayorPrecioFinal = Math.max(...preciosFinal);

@@ -62,7 +62,7 @@ export async function nuevoDataFetch(data: any) {
 }
 
 export async function guardarDataEditado({ data, paqueteId }: { data: any; paqueteId: number | string }) {
-  await axiosInstance.put(`/paquete/${paqueteId}/`, data);    
+  await axiosInstance.patch(`/paquete/${paqueteId}/`, data);
 }
 
 export async function activarDesactivarData({ dataId, activo }: { dataId: number; activo: boolean }) {

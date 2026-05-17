@@ -58,20 +58,22 @@ export interface SalidaPaquete {
   fecha_regreso: string;      // ISO date en formato 'YYYY-MM-DD'
   moneda: Moneda;            // Objeto con id y nombre
   temporada: string | null;  // Puede ser null
-  precio_actual: number;     // Precio numérico
-  precio_final?: number;     // Precio numérico
+  costo_base_desde: number;  // Costo base mínimo de la salida (habitación más barata × noches)
+  costo_base_hasta?: number; // Costo base máximo de la salida (puede ser null)
   precio_moneda_alternativa?: PrecioAlternativo;     // Precio numérico
   precio_venta_total_min?: number;       
   senia: number;     // Precio numérico
   cupo: number;              // Cupo numérico
   activo: boolean;           // Estado booleano
   hoteles: number[];
-  habitacion_fija?: any;
+
   ganancia?: any;
   comision?: any;
   cupos_habitaciones?: any[];
   precios_catalogo?: any[];
+  precios_catalogo_habitaciones?: any[];
   precios_catalogo_hoteles?: any[];
+  items_costo?: any[];
 }
 
 
@@ -99,12 +101,13 @@ export interface Paquete {
   precio_venta_desde: number;
   senia: number;
   moneda: Moneda;
-  modalidad: 'flexible' | 'fijo';
+
   fecha_inicio: string | null; // formato YYYY-MM-DD
   fecha_fin: string | null; // formato YYYY-MM-DD
   personalizado: boolean;
   cantidad_pasajeros: number | null;
-  servicios: Servicio[] ;
+  servicios: Servicio[];
+  items_costo_default?: any[];
   propio: boolean;
   salidas: SalidaPaquete[]
   activo: boolean;

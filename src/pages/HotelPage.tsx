@@ -46,8 +46,8 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { activarDesactivarData, fetchData, fetchDataCadenas, fetchDataHoteles, fetchDataServiciosTodos, fetchResumen, guardarDataEditado, nuevoDataFetch } from "@/components/utils/httpHotel"
 import type { Hotel, HotelPaginatedResponse } from "@/types/hotel"
 import { ToastContext } from "@/context/ToastContext"
-import { Controller, useForm } from "react-hook-form"
-import { capitalizePrimeraLetra, formatearFecha, formatearSeparadorMiles } from "@/helper/formatter"
+import { useForm } from "react-hook-form"
+import { capitalizePrimeraLetra, formatearFecha } from "@/helper/formatter"
 import { queryClient } from "@/components/utils/http"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
@@ -56,7 +56,6 @@ import { fetchDataCiudadesTodos, fetchDataNacionalidadTodos } from "@/components
 import { CountrySearchSelect } from "@/components/CountrySearchSelect"
 import { useSessionStore } from "@/store/sessionStore"
 import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
-import type { Moneda } from "@/types/paquetes"
 import type { Servicio } from "@/types/hotel"
 import { GenericSearchSelect } from "@/components/GenericSearchSelect"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -94,7 +93,6 @@ export default function HotelPage() {
   const [permissionSearchTerm, setPermissionSearchTerm] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [onGuardar, setOnGuardar] = useState(false);
-  const [monedaIsRequired, setPrecioIsRequired] = useState(false);
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
                   fecha_desde: "",
@@ -104,7 +102,7 @@ export default function HotelPage() {
                 });
   
   // DATOS DEL FORMULARIO 
-  const {register, control, watch, handleSubmit, formState: {errors, }, setValue, reset, clearErrors} = 
+  const {register, watch, handleSubmit, formState: {errors, }, setValue, reset} =
             useForm<any>({
               mode: "onBlur",
               defaultValues: {
@@ -123,11 +121,7 @@ export default function HotelPage() {
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [newRoom, setNewRoom] = useState({
     id: 0,
-    price: 0,
-    currency: "2",
   })
-
-  const [precio, setPrecio] = useState<string>();
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
@@ -199,7 +193,7 @@ export default function HotelPage() {
     }
   }, [])
 
-  const { dataMonedaList, monedaInicial } = useMonedaInicial(setValue);
+  const { monedaInicial } = useMonedaInicial(setValue);
   const { dataTipoHabitacinesList, tipoHabitacinInicial } = useTipoHabitacionInicial(setNewRoom);
 
 
@@ -472,8 +466,6 @@ export default function HotelPage() {
 
     const habitaciones = rooms.map(room => ({
       tipo_habitacion: room.id,
-      precio_noche: room.price,
-      moneda: room.currency,
       servicios: []
     }))
 
@@ -512,11 +504,9 @@ export default function HotelPage() {
     const habitaciones = rooms.map(room => {
       const habitacion: any = {
         tipo_habitacion: room.id,
-        precio_noche: room.price,
-        moneda: room.currency,
         servicios: [],
       };
-    
+
       return habitacion;
     })
     
@@ -566,8 +556,6 @@ export default function HotelPage() {
       id: room.tipo_habitacion,
       type: room.tipo_habitacion_nombre,
       capacity: room.capacidad,
-      price: room.precio_noche,
-      currency: room.moneda,
     }))
 
     setRooms([...habitaciones]);
@@ -622,18 +610,11 @@ export default function HotelPage() {
   }
 
   // FUNCIONES DE HABITACION
-  const handleAddRoom = () => { 
-    // setPrecioIsRequired(false);
-    if (!newRoom.price || newRoom.price <= 0) {
-      setPrecioIsRequired(true);
-      return; // Validación básica
-    }
-
+  const handleAddRoom = () => {
     const tipoHabitacion = dataTipoHabitacinesList.find((h: TipoHabitacionTodos) => h.id.toString() === newRoom.id.toString())
 
     if (isEditMode && editingRoomId) {
       // 🔹 Editando habitación existente
-      // console.log(newRoom)
       const roomEdited = {...newRoom};
 
       setRooms((prev) =>
@@ -642,21 +623,17 @@ export default function HotelPage() {
             ? { ...roomEdited,
                 capacity: tipoHabitacion.capacidad,
                 type: tipoHabitacion.nombre,
-                currency: moneda,
-             } // Reemplazamos los valores con los del formulario
+             }
             : room
         )
       );
     } else {
-      
       const room: any = {
         ...newRoom,
         capacity: tipoHabitacion.capacidad,
         type: tipoHabitacion.nombre,
-        currency: moneda,
-        price: newRoom.price,
       };
-      
+
       setRooms((prev) => ([...prev, room]));
     }
 
@@ -674,29 +651,17 @@ export default function HotelPage() {
     setEditingRoomId(null);
     setNewRoom({
       id: tipoHabitacinInicial?.id?.toString(),
-      price: 0,
-      currency: monedaInicial?.id?.toString(),
     })
-    setValue('moneda', monedaInicial!.id.toString())
-    setPrecio(undefined);
-    setPrecioIsRequired(false);
   }
 
   const handleEditRoom = (room: any) => {
-
       setNewRoom({
         id: room.id.toString(),
-        price: room.price,
-        currency: room.currency, // 🔹 esto está bien
       });
 
-      setPrecio(room.price.toLocaleString("es-PY"));
       setEditingRoomId(room.id);
       setIsEditMode(true);
       setIsAddRoomOpen(true);
-
-      // 🔹 Seteamos el value del Controller también
-      setValue('moneda', room.currency.toString()); 
     };
       // FUNCIONES DE HABITACION
 
@@ -717,24 +682,6 @@ export default function HotelPage() {
   };
 
 
-  const handlePrecioChange = (valor: string) => {
-    // setNewRoom((prev) => ({ ...prev, price: Number.parseFloat(e.target.value) || 0 }))
-
-    const valorLimpio = valor.replace(/\D/g, "")
-    if (valorLimpio === "") {
-      setNewRoom((prev) => ({ ...prev, price: 0 }))
-      setPrecio(undefined);
-      setPrecioIsRequired(true);
-      return
-    }
-    const valorNumerico = Number.parseInt(valorLimpio)
-    setNewRoom((prev) => ({ ...prev, price: valorNumerico }))
-    setPrecio(valorNumerico.toLocaleString("es-PY"));
-    setPrecioIsRequired(false);
-  }
-
-  const moneda = watch('moneda');
-  const monedaDataSelected = dataMonedaList && dataMonedaList?.find((m: Moneda) => m?.id?.toString() === moneda?.toString());
 
   return (
     <>
@@ -921,7 +868,8 @@ export default function HotelPage() {
               </div>
         </div>
         }
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-[95vw] mx-auto space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -948,7 +896,7 @@ export default function HotelPage() {
                 <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
                   onClick={() => setActiveTab('form')}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nuevo Usuario
+                  Nuevo Hotel
                 </Button>
               )}
             </div>
@@ -1345,75 +1293,6 @@ export default function HotelPage() {
                                         </SelectContent>
                                       </Select>
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                      <Label htmlFor="room-price" className="text-left whitespace-nowrap ">
-                                        Precio persona * 
-                                      </Label>
-                                      <div className="col-span-3 flex gap-2 min-w-0">
-                                        <Input
-                                          id="room-price"
-                                          type="text"
-                                          value={precio ?? ""}
-                                          // onChange={(e) =>
-                                          //   setNewRoom((prev) => ({ ...prev, price: Number.parseFloat(e.target.value) || 0 }))
-                                          // }
-                                          onChange={(e) => handlePrecioChange(e.target.value)}
-                                          placeholder={monedaDataSelected?.codigo === 'USD' ? "150$": '1.900.000Gs'}
-                                          className={`w-32 ${monedaIsRequired ? 'border-2 border-red-400 focus:!border-red-400 focus:ring-0 outline-none': ''}`}
-                                        />
-                                        
-
-                                         <Controller
-                                          name="moneda"
-                                          control={control}
-                                          rules={{ required: "Este campo es requerido" }}
-                                          render={({ field }) => (
-                                            <div className="select-container flex-1 min-w-0"> {/* Contenedor para controlar el layout */}
-                                              <Select
-                                                value={field.value}
-                                                onValueChange={(value) => {
-                                                  field.onChange(value)
-                                                  if (value) {
-                                                    clearErrors("moneda")
-                                                  }
-          
-                                                  // const tipoPaquete = dataTipoPaqueteList.filter((doc: TipoPaquete) => doc.id.toString() === value)
-                                                  // console.log('moneda: ', tipoPaquete[0])
-                                                  // setMone(tipoPaquete[0]);
-                                                }}
-                                                onOpenChange={(open) => {
-                                                  if (!open && !field.value) {
-                                                    field.onBlur(); 
-                                                  }
-                                                }}
-                                              >
-                                                <SelectTrigger className="w-full cursor-pointer border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-left">
-                                                  <SelectValue placeholder="Moneda" />
-                                                </SelectTrigger>
-                                                <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-h-60">
-                                                  {dataMonedaList.map((data: Moneda) => 
-                                                    <SelectItem 
-                                                      key={data.id} 
-                                                      value={data.id.toString()}
-                                                      className="pl-2 pr-4"
-                                                    >
-                                                      <div className="flex items-center gap-2 min-w-0">
-                                                        <div className="flex-shrink-0 w-3 h-3 bg-blue-400 rounded-full"></div>
-                                                        <span className="truncate">{data.nombre}</span>
-                                                        <Badge className="bg-gray-100 text-gray-700 border-gray-200">
-                                                          {data.codigo}
-                                                        </Badge>
-                                                      </div>
-                                                    </SelectItem>
-                                                  )}
-                                                </SelectContent>
-                                              </Select>
-                                            </div>
-                                          )}
-                                        />
-                                      </div>
-                                    </div>
-                                  
                                   </div>
                                   <DialogFooter>
                                     <Button type="button" variant="outline" className="cursor-pointer" onClick={resetRoomForm}>
@@ -1432,7 +1311,6 @@ export default function HotelPage() {
                                   <TableRow>
                                     <TableHead>Tipo</TableHead>
                                     <TableHead>Capacidad</TableHead>
-                                    <TableHead>Precio por Noche</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
                                   </TableRow>
                                 </TableHeader>
@@ -1442,9 +1320,6 @@ export default function HotelPage() {
                                       {/* <TableCell className="font-medium">{room.number}</TableCell> */}
                                       <TableCell className="font-medium">{room.type}</TableCell>
                                       <TableCell>{room.capacity} personas</TableCell>
-                                      <TableCell>
-                                        {formatearSeparadorMiles.format(room.price)} {dataMonedaList.filter((moneda: Moneda) => moneda.id == room.currency)[0].simbolo } ({dataMonedaList.filter((moneda: Moneda) => moneda.id == room.currency)[0].codigo })
-                                      </TableCell>
                                       <TableCell>
                                         {/* {getStatusBadge(room.status)} */}
                                         </TableCell>
@@ -1986,6 +1861,7 @@ export default function HotelPage() {
             </Card>
           </TabsContent>
         </Tabs>
+      </div>
       </div>
     </>
   );
