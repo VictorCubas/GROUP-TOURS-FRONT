@@ -5269,7 +5269,7 @@ const handleSubmitClick = async () => {
                                   </DropdownMenuItem>
                                   }
 
-                                  {siTienePermiso("paquetes", "modificar") && 
+                                  {siTienePermiso("paquetes", "eliminar") && 
                                     <>
                                         <DropdownMenuSeparator />
                                       <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
