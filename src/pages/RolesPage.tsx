@@ -52,6 +52,7 @@ import { capitalizePrimeraLetra, formatearFecha } from "@/helper/formatter"
 import { queryClient } from "@/components/utils/http"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5"
+import { useSessionStore } from "@/store/sessionStore"
 
 type TipoPermiso = 'C' | 'R' | 'U' | 'D' | 'E'; 
 
@@ -76,6 +77,7 @@ const tiposPermisosList: Record<TipoPermiso, string> = {
 };
 
 export default function RolesPage() {
+  const {siTienePermiso} = useSessionStore();
   const [searchTerm, setSearchTerm] = useState("")
   const [esAdmin, setEsAdmin] = useState(false)
   const [nombreABuscar, setNombreABuscar] = useState("")
@@ -532,11 +534,13 @@ export default function RolesPage() {
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button> */}
-            <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
-              onClick={() => setActiveTab('form')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Rol
-            </Button>
+            {siTienePermiso("roles", "crear") && 
+              <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                onClick={() => setActiveTab('form')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Rol
+              </Button>
+            }
           </div>
         </div>
 
@@ -549,9 +553,11 @@ export default function RolesPage() {
             <TabsTrigger value="list" className="cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white">
               Lista de Roles
             </TabsTrigger>
-            <TabsTrigger value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-              Crear Rol
-            </TabsTrigger>
+            {siTienePermiso("roles", "crear") && 
+              <TabsTrigger value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+                Crear Rol
+              </TabsTrigger>
+            }
           </TabsList>
 
 
@@ -924,7 +930,7 @@ export default function RolesPage() {
                                       </TableCell>
                                     </TableRow>}
                     
-                      {!isFetching && dataList.length > 0 && dataList.map((data: Rol) => (
+                      {!isFetching && dataList.length > 0 && siTienePermiso("roles", "leer") && dataList.map((data: Rol) => (
                           <TableRow
                               key={data.id}
                               className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -998,22 +1004,29 @@ export default function RolesPage() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="border-gray-200">
-                                    <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
-                                      onClick={() => handleVerDetalles(data)}>
-                                      <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                                      Ver detalles
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
-                                      <Edit className="h-4 w-4 mr-2 text-emerald-500" />
-                                      Editar
-                                    </DropdownMenuItem>
+                                    {siTienePermiso("roles", "leer") && 
+                                      <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
+                                        onClick={() => handleVerDetalles(data)}>
+                                        <Eye className="h-4 w-4 mr-2 text-blue-500" />
+                                        Ver detalles
+                                      </DropdownMenuItem>
+                                    }
+                                    {siTienePermiso("roles", "modificar") && 
+                                      <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
+                                        <Edit className="h-4 w-4 mr-2 text-emerald-500" />
+                                        Editar
+                                      </DropdownMenuItem>
+                                    }
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
-                                      onClick={() => toggleActivar(data)}>
-                                      
-                                      {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
-                                      {data.activo ? 'Desactivar' : 'Activar'}
-                                  </DropdownMenuItem>
+
+                                    {siTienePermiso("roles", "modificar") && 
+                                      <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
+                                        onClick={() => toggleActivar(data)}>
+                                        
+                                        {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
+                                        {data.activo ? 'Desactivar' : 'Activar'}
+                                    </DropdownMenuItem>
+                                    }
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>

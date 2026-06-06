@@ -2593,7 +2593,7 @@ const handleSubmitClick = async () => {
                 </Button>
               } */}
 
-              {siTienePermiso("paquetes", "exportar") && 
+              {siTienePermiso("paquetes", "crear") && 
               <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
                 onClick={() => setActiveTab('form')}>
                 <Plus className="h-4 w-4 mr-2" />
