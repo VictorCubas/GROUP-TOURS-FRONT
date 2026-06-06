@@ -554,7 +554,7 @@ export default function RolesPage() {
               Lista de Roles
             </TabsTrigger>
             <TabsTrigger 
-              disabled={siTienePermiso("roles", "crear")}
+              disabled={!siTienePermiso("roles", "crear")}
               value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
               Crear Rol
             </TabsTrigger>
@@ -1019,7 +1019,7 @@ export default function RolesPage() {
                                     }
                                     <DropdownMenuSeparator />
 
-                                    {siTienePermiso("roles", "modificar") && 
+                                    {siTienePermiso("roles", "eliminar") && 
                                       <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
                                         onClick={() => toggleActivar(data)}>
                                         

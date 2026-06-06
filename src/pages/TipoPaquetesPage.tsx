@@ -23,6 +23,7 @@ import {
   // Tag,
   Boxes,
   Package,
+  Plus,
 } from "lucide-react"
 
 // import {
@@ -66,6 +67,7 @@ import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCards from "@/components/ResumenCards"
 import type { aEditarDataForm, RespuestaPaginada, TipoDocumento } from "@/types/tipoPaquetes"
+import { useSessionStore } from "@/store/sessionStore"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
@@ -80,6 +82,7 @@ import type { aEditarDataForm, RespuestaPaginada, TipoDocumento } from "@/types/
 // }
 
 export default function TipoPaquetePage() {
+  const {siTienePermiso} = useSessionStore();
   const [searchTerm, setSearchTerm] = useState("")
   const [nombreABuscar, setNombreABuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
@@ -523,12 +526,16 @@ export default function TipoPaquetePage() {
                 <Download className="h-4 w-4 mr-2" />
                 Exportar
               </Button>
-              <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
-                onClick={() => setActiveTab('form')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Tipo Paquete
-              </Button>
-            </div> */}
+              */}
+
+              {siTienePermiso('tipo_documentos', 'crear') &&
+                <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                  onClick={() => setActiveTab('form')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Tipo Paquete
+                </Button>
+              }
+            </div> 
           </div>
 
           {/* Stats Cards */}
@@ -540,7 +547,9 @@ export default function TipoPaquetePage() {
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
                 Lista de Tipo Paquete
               </TabsTrigger>
-              <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
+              <TabsTrigger 
+                disabled={!siTienePermiso('tipo_documentos', 'crear')}
+                value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
                 Crear Tipo Paquete
               </TabsTrigger>
             </TabsList>
@@ -728,7 +737,7 @@ export default function TipoPaquetePage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && dataList.map((data: TipoDocumento) => (
+                      {!isFetching && dataList.length > 0 && siTienePermiso('tipo_documentos', 'leer') && dataList.map((data: TipoDocumento) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -802,22 +811,31 @@ export default function TipoPaquetePage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="border-gray-200">
-                                <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
-                                  onClick={() => handleVerDetalles(data)}>
-                                  <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                                  Ver detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
-                                  <Edit className="h-4 w-4 mr-2 text-emerald-500" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
-                                  onClick={() => toggleActivar(data)}>
-                                  
-                                  {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
-                                  {data.activo ? 'Desactivar' : 'Activar'}
-                                </DropdownMenuItem>
+                                {siTienePermiso('tipo_documentos', 'leer') &&
+                                  <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
+                                    onClick={() => handleVerDetalles(data)}>
+                                    <Eye className="h-4 w-4 mr-2 text-blue-500" />
+                                    Ver detalles
+                                  </DropdownMenuItem>
+                                }
+                                {siTienePermiso('tipo_documentos', 'modificar') && 
+                                  <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
+                                    <Edit className="h-4 w-4 mr-2 text-emerald-500" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                }
+
+                                {siTienePermiso('tipo_documentos', 'eliminar') &&
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
+                                      onClick={() => toggleActivar(data)}>
+                                      
+                                      {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
+                                      {data.activo ? 'Desactivar' : 'Activar'}
+                                    </DropdownMenuItem>
+                                  </>
+                                }
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -953,7 +971,6 @@ export default function TipoPaquetePage() {
               </Card>
             </TabsContent>
           </Tabs>
-      </div>
       </div>
     </>
 

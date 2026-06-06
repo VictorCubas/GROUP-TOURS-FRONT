@@ -10,12 +10,7 @@ import {
   Trash2,
   MoreHorizontal,
   Check,
-  // X,
   Shield,
-  // Users,
-  // Package,
-  // User,
-  Download,
   RefreshCw,
   Eye,
   Calendar,
@@ -69,6 +64,7 @@ import { ToastContext } from "@/context/ToastContext"
 import Modal from "@/components/Modal"
 import { IoCheckmarkCircleOutline, IoWarningOutline } from "react-icons/io5";
 import ResumenCards from "@/components/ResumenCards"
+import { useSessionStore } from "@/store/sessionStore"
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
 
@@ -83,6 +79,7 @@ import ResumenCards from "@/components/ResumenCards"
 // }
 
 export default function ModulosPage() {
+  const { siTienePermiso } = useSessionStore()
   const [searchTerm, setSearchTerm] = useState("")
   const [nombreABuscar, setNombreABuscar] = useState("")
   const [showActiveOnly, setShowActiveOnly] = useState(true)
@@ -497,18 +494,20 @@ export default function ModulosPage() {
               <p className="text-gray-600">Gestiona los módulos del sistema y su estado.</p>
             </div>
             <div className="flex gap-3">
-              <Button
+              {/* <Button
                 variant="outline"
                 className="border-emerald-200 text-emerald-700 cursor-pointer hover:bg-emerald-50 bg-transparent"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar
-              </Button>
-              <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
-                onClick={() => setActiveTab('form')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Modulo
-              </Button>
+              </Button> */}
+              {siTienePermiso("modulos", "crear") &&
+                <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                  onClick={() => setActiveTab('form')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Modulo
+                </Button>
+              }
             </div>
           </div>
 
@@ -521,7 +520,9 @@ export default function ModulosPage() {
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
                 Lista de Módulos
               </TabsTrigger>
-              <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
+              <TabsTrigger 
+                disabled={!siTienePermiso("modulos", "crear")}
+                value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
                 Crear Modulo
               </TabsTrigger>
             </TabsList>
@@ -709,7 +710,7 @@ export default function ModulosPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && dataList.map((data: Modulo) => (
+                      {!isFetching && dataList.length > 0 && siTienePermiso("modulos", "leer")  && dataList.map((data: Modulo) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -783,22 +784,32 @@ export default function ModulosPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="border-gray-200">
-                                <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
-                                  onClick={() => handleVerDetalles(data)}>
-                                  <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                                  Ver detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
-                                  <Edit className="h-4 w-4 mr-2 text-emerald-500" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
-                                  onClick={() => toggleActivar(data)}>
-                                  
-                                  {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
-                                  {data.activo ? 'Desactivar' : 'Activar'}
-                                </DropdownMenuItem>
+                                {siTienePermiso("modulos", "leer") &&
+                                  <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
+                                    onClick={() => handleVerDetalles(data)}>
+                                    <Eye className="h-4 w-4 mr-2 text-blue-500" />
+                                    Ver detalles
+                                  </DropdownMenuItem>
+                                }
+                                {siTienePermiso("modulos", "modificar") &&
+                                  <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
+                                    <Edit className="h-4 w-4 mr-2 text-emerald-500" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                }
+
+                                {siTienePermiso("modulos", "eliminar") &&
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
+                                      onClick={() => toggleActivar(data)}>
+                                      
+                                      {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
+                                      {data.activo ? 'Desactivar' : 'Activar'}
+                                    </DropdownMenuItem>
+                                  </>
+                                }
+
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

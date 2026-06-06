@@ -24,6 +24,7 @@ import {
   // Activity,
   // Tag,
   Boxes,
+  Plus,
 } from "lucide-react"
 
 // import {
@@ -67,6 +68,7 @@ import { IoCheckmarkCircleOutline, IoDocumentSharp, IoWarningOutline } from "rea
 import type { aEditarDataForm, RespuestaPaginada, TipoHabitacion } from "@/types/tipoHabitacion";
 import ResumenCardsDinamico from "@/components/ResumenCardsDinamico";
 import { MdMeetingRoom } from "react-icons/md";
+import { useSessionStore } from "@/store/sessionStore"
 
 
 // type ModuleKey = keyof typeof moduleColors; // "Usuarios" | "Paquetes" | "Empleados" | "Roles" | "Reservas" | "Reportes"
@@ -92,9 +94,10 @@ const CAPACIDAD_PERSONAS_LIST = [
 
 
 export default function TipoHabitacionesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [nombreABuscar, setNombreABuscar] = useState("")
-  const [showActiveOnly, setShowActiveOnly] = useState(true)
+  const {siTienePermiso} = useSessionStore();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [nombreABuscar, setNombreABuscar] = useState("");
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [dataAEditar, setDataAEditar] = useState<TipoHabitacion>();
   const [dataADesactivar, setDataADesactivar] = useState<TipoHabitacion>();
   const [onDesactivarData, setOnDesactivarData] = useState(false);
@@ -495,12 +498,16 @@ export default function TipoHabitacionesPage() {
                 <Download className="h-4 w-4 mr-2" />
                 Exportar
               </Button>
-              <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
-                onClick={() => setActiveTab('form')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Tipo Habitacion
-              </Button>
-            </div> */}
+              */}
+
+              {siTienePermiso("tipo_habitaciones", "crear") && 
+                <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                  onClick={() => setActiveTab('form')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Tipo Habitacion
+                </Button>
+              }
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -516,7 +523,9 @@ export default function TipoHabitacionesPage() {
               <TabsTrigger value="list" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white cursor-pointer">
                 Lista de Tipo Habitaciones
               </TabsTrigger>
-              <TabsTrigger value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
+              <TabsTrigger 
+                disabled={!siTienePermiso("tipo_habitaciones", "leer")}
+                value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
                 Crear Tipo Habitaciones
               </TabsTrigger>
             </TabsList>
@@ -753,7 +762,7 @@ export default function TipoHabitacionesPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && dataList.map((data: TipoHabitacion) => (
+                      {!isFetching && dataList.length > 0 && siTienePermiso("tipo_habitaciones", "leer") && dataList.map((data: TipoHabitacion) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -822,22 +831,31 @@ export default function TipoHabitacionesPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="border-gray-200">
-                                <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
-                                  onClick={() => handleVerDetalles(data)}>
-                                  <Eye className="h-4 w-4 mr-2 text-blue-500" />
-                                  Ver detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
-                                  <Edit className="h-4 w-4 mr-2 text-emerald-500" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
-                                  onClick={() => toggleActivar(data)}>
-                                  
-                                  {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
-                                  {data.activo ? 'Desactivar' : 'Activar'}
-                                </DropdownMenuItem>
+                                {siTienePermiso("tipo_habitaciones", "leer") &&
+                                  <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
+                                    onClick={() => handleVerDetalles(data)}>
+                                    <Eye className="h-4 w-4 mr-2 text-blue-500" />
+                                    Ver detalles
+                                  </DropdownMenuItem>
+                                }
+
+                                {siTienePermiso("tipo_habitaciones", "modificar") && 
+                                  <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
+                                    <Edit className="h-4 w-4 mr-2 text-emerald-500" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                }
+                                {siTienePermiso("tipo_habitaciones", "eliminar") && 
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
+                                      onClick={() => toggleActivar(data)}>
+                                      
+                                      {data.activo ? <Trash2 className="h-4 w-4 mr-2" /> : <CheckIcon className="h-4 w-4 mr-2" />}
+                                      {data.activo ? 'Desactivar' : 'Activar'}
+                                    </DropdownMenuItem>
+                                  </>
+                                }
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -970,7 +988,6 @@ export default function TipoHabitacionesPage() {
               </Card>
             </TabsContent>
           </Tabs>
-      </div>
       </div>
     </>
 
