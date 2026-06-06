@@ -553,11 +553,11 @@ export default function RolesPage() {
             <TabsTrigger value="list" className="cursor-pointer data-[state=active]:bg-blue-500 data-[state=active]:text-white">
               Lista de Roles
             </TabsTrigger>
-            {siTienePermiso("roles", "crear") && 
-              <TabsTrigger value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-                Crear Rol
-              </TabsTrigger>
-            }
+            <TabsTrigger 
+              disabled={siTienePermiso("roles", "crear")}
+              value="form" className="cursor-pointer data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+              Crear Rol
+            </TabsTrigger>
           </TabsList>
 
 
