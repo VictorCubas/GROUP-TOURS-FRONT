@@ -3190,7 +3190,7 @@ const handleSubmitClick = async () => {
                                     </label>
                                   </div>
                               </div>
-                          </div>
+                            </div>
 
                             {costoTotalPaquete && salidas.length > 0 && (
                               <Card className="transition-all duration-200 bg-emerald-50 border-emerald-300 space-y-2 md:col-span-2">
