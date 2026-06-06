@@ -1607,8 +1607,7 @@ export default function ReservaPage() {
                                         labelKey="nombre"
                                         //
                                         secondaryLabelKey="destino_nombre"
-                                        thirdLabelKey="modalidad"
-                                        fourthLabelKey="tipo_paquete_nombre"
+                                        thirdLabelKey="tipo_paquete_nombre"
                                         valueKey="id"
                                       />
                                   </div>
@@ -2490,7 +2489,7 @@ export default function ReservaPage() {
 
                       {/* PASO 7 RESUMEN DE LOS PRECIOS */}
                       {/* {cantidadActualPasajeros && cantidadActualPasajeros === selectedTipoHabitacionData?.capacidad && ( */}
-                      {selectedPaqueteID && selectedTipoHabitacionID && selectedPersonaID && (
+                      {selectedPaqueteID && selectedSalidaID && selectedTipoHabitacionID && selectedPersonaID && selectedSalidaData && (
                         <div className="space-y-2 md:col-span-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border-2 border-blue-300">
                           <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-gray-900">Resumen de Reserva</h2>
