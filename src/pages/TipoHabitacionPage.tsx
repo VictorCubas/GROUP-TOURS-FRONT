@@ -524,7 +524,7 @@ export default function TipoHabitacionesPage() {
                 Lista de Tipo Habitaciones
               </TabsTrigger>
               <TabsTrigger 
-                disabled={!siTienePermisso("Tipo Habitaciones", "leer")}
+                disabled={!siTienePermiso("Tipos Habitaciones", "leer")}
                 value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
                 Crear Tipo Habitaciones
               </TabsTrigger>
@@ -762,7 +762,7 @@ export default function TipoHabitacionesPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && siTienePermiso("Tipo Habitaciones", "leer") && dataList.masp((data: TipoHabitacion) => (
+                      {!isFetching && dataList.length > 0 && siTienePermiso("Tipos Habitaciones", "leer") && dataList.map((data: TipoHabitacion) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
