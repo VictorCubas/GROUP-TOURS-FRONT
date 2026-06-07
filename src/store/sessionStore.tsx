@@ -139,7 +139,18 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     // ]
     if (!currentSession?.permisos) return false
 
-    const moduloPerm = currentSession.permisos.find(p => p.modulo.toLowerCase() === modulo.toLowerCase())
+
+    const permisosMapped = currentSession?.permisos.map((per: PermisosModulo) => {
+      const mod = per.modulo.toLowerCase();
+      const modulo = mod.replace(' ', '_');
+
+      return {...per, modulo}
+      
+    })
+
+    console.log('permisosMapped: ', permisosMapped)
+
+    const moduloPerm = permisosMapped.find(p => p.modulo.toLowerCase() === modulo.toLowerCase())
 
     console.log('moduloPerm: ', moduloPerm)
 
