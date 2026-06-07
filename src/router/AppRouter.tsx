@@ -84,10 +84,10 @@ const AppRouter = () => {
                       <Route path="/configuracion">
                         <Route path="facturacion" element={<FacturacionConfig />} />
                         <Route path="modulos" element={<ModuloPage />} />
-                        <Route path="tipo_documentos" element={<TipoDocumentosPage />} />
-                        <Route path="tipo_habitaciones" element={<TipoHabitacionesPage />} />
+                        <Route path="tipos_documentos" element={<TipoDocumentosPage />} />
+                        <Route path="tipos_habitaciones" element={<TipoHabitacionesPage />} />
                         <Route path="nacionalidades" element={<NacionalidadesPage />} />
-                        <Route path="tipo_paquetes" element={<TipoPaquetesPage />} />
+                        <Route path="tipos_paquetes" element={<TipoPaquetesPage />} />
                       </Route>
 
                       <Route path="/reportes">
