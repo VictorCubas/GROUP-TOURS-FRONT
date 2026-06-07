@@ -139,7 +139,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     // ]
     if (!currentSession?.permisos) return false
 
-    const moduloPerm = currentSession.permisos.find(p => p.modulo.toLowerCase() === modulo)
+    const moduloPerm = currentSession.permisos.find(p => p.modulo.toLowerCase() === modulo.toLowerCase())
+
+    console.log('moduloPerm: ', moduloPerm)
 
     console.log(moduloPerm)
     console.log(moduloPerm?.permisos[tipo])
