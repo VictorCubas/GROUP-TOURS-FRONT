@@ -518,7 +518,7 @@ export default function ModulosPage() {
               </Button>
               */}
               
-              {siTienePermiso("Tipos Documentos", "crear") && 
+              {siTienePermiso("tipos_documentos", "crear") && 
                 <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
                   onClick={() => setActiveTab('form')}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -538,7 +538,7 @@ export default function ModulosPage() {
                 Lista de Tipo Documentos
               </TabsTrigger>
               <TabsTrigger
-                disabled={!siTienePermiso("Tipos Documentos", "crear")}
+                disabled={!siTienePermiso("tipos_documentos", "crear")}
                  value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
                 Crear Tipo Documentos
               </TabsTrigger>
@@ -727,7 +727,7 @@ export default function ModulosPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && siTienePermiso("Tipos Documentos", "leer") && dataList.map((data: TipoDocumento) => (
+                      {!isFetching && dataList.length > 0 && siTienePermiso("tipos_documentos", "leer") && dataList.map((data: TipoDocumento) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -801,7 +801,7 @@ export default function ModulosPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="border-gray-200">
-                                {siTienePermiso("Tipos Documentos", "leer") && 
+                                {siTienePermiso("tipos_documentos", "leer") && 
                                   <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
                                     onClick={() => handleVerDetalles(data)}>
                                     <Eye className="h-4 w-4 mr-2 text-blue-500" />
@@ -809,14 +809,14 @@ export default function ModulosPage() {
                                   </DropdownMenuItem>
                                 }
 
-                                {siTienePermiso("Tipos Documentos", "modificar") && 
+                                {siTienePermiso("tipos_documentos", "modificar") && 
                                   <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
                                     <Edit className="h-4 w-4 mr-2 text-emerald-500" />
                                     Editar
                                   </DropdownMenuItem>
                                 }
                                 
-                                {siTienePermiso("Tipos Documentos", "eliminar") && 
+                                {siTienePermiso("tipos_documentos", "eliminar") && 
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}

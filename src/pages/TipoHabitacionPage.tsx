@@ -500,7 +500,7 @@ export default function TipoHabitacionesPage() {
               </Button>
               */}
 
-              {siTienePermiso("Tipos Habitaciones", "crear") && 
+              {siTienePermiso("tipos_habitaciones", "crear") && 
                 <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer"
                   onClick={() => setActiveTab('form')}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -524,7 +524,7 @@ export default function TipoHabitacionesPage() {
                 Lista de Tipo Habitaciones
               </TabsTrigger>
               <TabsTrigger 
-                disabled={!siTienePermiso("Tipos Habitaciones", "leer")}
+                disabled={!siTienePermiso("tipos_habitaciones", "leer")}
                 value="form" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white cursor-pointer">
                 Crear Tipo Habitaciones
               </TabsTrigger>
@@ -762,7 +762,7 @@ export default function TipoHabitacionesPage() {
                                       </div>
                                     </TableCell>
                                   </TableRow>}
-                      {!isFetching && dataList.length > 0 && siTienePermiso("Tipos Habitaciones", "leer") && dataList.map((data: TipoHabitacion) => (
+                      {!isFetching && dataList.length > 0 && siTienePermiso("tipos_habitaciones", "leer") && dataList.map((data: TipoHabitacion) => (
                         <TableRow
                           key={data.id}
                           className={`hover:bg-blue-50 transition-colors cursor-pointer`}
@@ -831,7 +831,7 @@ export default function TipoHabitacionesPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="border-gray-200">
-                                {siTienePermiso("Tipos Habitaciones", "leer") &&
+                                {siTienePermiso("tipos_habitaciones", "leer") &&
                                   <DropdownMenuItem className="hover:bg-blue-50 cursor-pointer"
                                     onClick={() => handleVerDetalles(data)}>
                                     <Eye className="h-4 w-4 mr-2 text-blue-500" />
@@ -839,13 +839,13 @@ export default function TipoHabitacionesPage() {
                                   </DropdownMenuItem>
                                 }
 
-                                {siTienePermiso("Tipos Habitaciones", "modificar") && 
+                                {siTienePermiso("tipos_habitaciones", "modificar") && 
                                   <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
                                     <Edit className="h-4 w-4 mr-2 text-emerald-500" />
                                     Editar
                                   </DropdownMenuItem>
                                 }
-                                {siTienePermiso("Tipos Habitaciones", "eliminar") && 
+                                {siTienePermiso("tipos_habitaciones", "eliminar") && 
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem className={`${data.activo ? 'text-red-600 hover:bg-red-50': 'text-green-600 hover:bg-green-50'} cursor-pointer`}
