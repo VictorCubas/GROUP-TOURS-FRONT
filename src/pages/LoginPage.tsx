@@ -223,10 +223,10 @@ export default function LoginPage() {
               <h4 className="text-sm font-medium text-blue-900 mb-2">Credenciales de Demo:</h4>
               <div className="text-sm text-blue-700 space-y-1">
                 <p>
-                  <strong>Usuario:</strong> grouptours
+                  <strong>Usuario:</strong> visitantevisitante
                 </p>
                 <p>
-                  <strong>Contraseña:</strong> admin123
+                  <strong>Contraseña:</strong> Admin123*
                 </p>
               </div>
             </div>
