@@ -29,7 +29,7 @@ export default function LoginPage() {
   const [anioActual, setAnioActual] = useState<number>();
   const {handleShowToast} = use(ToastContext);
 
-  const {register, handleSubmit, formState: {errors, }} = useForm<LoginFormData>({mode: "onBlur"});
+  const {register, handleSubmit, formState: {errors, }} = useForm<LoginFormData>({ mode: "onBlur", reValidateMode: 'onChange' });
 
   useEffect(() => {
     const fechaActual = new Date();

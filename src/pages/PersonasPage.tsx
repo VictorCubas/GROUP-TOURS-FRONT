@@ -131,6 +131,7 @@ export default function ModulosPage() {
   const {control, register, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 nombre: '',
                 apellido: '',

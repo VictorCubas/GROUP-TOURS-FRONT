@@ -98,6 +98,7 @@ export default function TipoPaquetePage() {
   const {register, handleSubmit, formState: {errors, }, reset} = 
             useForm<aEditarDataForm>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 nombre: "",
                 descripcion: "",

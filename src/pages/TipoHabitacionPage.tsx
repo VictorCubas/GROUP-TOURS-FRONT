@@ -110,6 +110,7 @@ export default function TipoHabitacionesPage() {
   const {register, control, handleSubmit, formState: {errors, }, reset, clearErrors} = 
             useForm<aEditarDataForm>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 nombre: "",
                 capacidad: 2,

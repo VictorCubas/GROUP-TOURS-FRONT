@@ -109,6 +109,7 @@ export default function DestinoPage() {
   const {register, handleSubmit, formState: {errors, }, setValue, reset} = 
             useForm<any>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 nombre: "",
                 descripcion: "",

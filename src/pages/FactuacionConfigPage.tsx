@@ -57,7 +57,8 @@ function FactuacionConfigPage() {
       clearErrors, reset, } = 
               useForm<any>({
                 mode: "onBlur",
-       
+                reValidateMode: 'onChange',
+
                 // }
               });
 

@@ -97,6 +97,7 @@ export default function PermisosPage() {
   const {control, register, handleSubmit, formState: {errors, }, clearErrors, reset} = 
             useForm<NuevoPermisoFormData>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 nombre: "",
                 descripcion: "",

@@ -84,6 +84,7 @@ export function FormularioFacturaTitular({
 
   const {control,  register, handleSubmit, watch, setValue, formState: {errors, }, clearErrors, reset, trigger } = useForm<ClienteFacturaData>({
     mode: "onBlur",
+    reValidateMode: 'onChange',
     defaultValues: {
       nombre: '',
       ruc: '',

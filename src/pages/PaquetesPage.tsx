@@ -187,6 +187,7 @@ export default function ModulosPage() {
   const {control,  register, watch, handleSubmit, setValue, formState: {errors, },clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 distribuidora_id: '',
                 propio: true,

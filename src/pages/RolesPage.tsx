@@ -96,6 +96,7 @@ export default function RolesPage() {
   const {register, handleSubmit, formState: {errors, }, reset} = 
             useForm<any>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 nombre: "",
                 descripcion: "",

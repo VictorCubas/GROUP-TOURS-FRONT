@@ -301,6 +301,7 @@ export default function ReportePaquetePage() {
     const {control, register, handleSubmit, watch, formState: {errors, }, clearErrors, reset, setValue} =
               useForm<any>({
                 mode: "onBlur",
+                reValidateMode: 'onChange',
                 defaultValues: {
                   nombre: "",
                   ubicacion: "",

@@ -105,6 +105,7 @@ export default function HotelPage() {
   const {register, watch, handleSubmit, formState: {errors, }, setValue, reset} =
             useForm<any>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 nombre: "",
                 descripcion: "",

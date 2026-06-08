@@ -115,7 +115,8 @@ export default function ModulosPage() {
   const {handleSubmit, } = 
             useForm<any>({
               mode: "onBlur",
-              
+              reValidateMode: 'onChange',
+
             });
   // DATOS DEL FORMULARIO 
 

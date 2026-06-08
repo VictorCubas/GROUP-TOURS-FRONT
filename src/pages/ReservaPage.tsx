@@ -192,6 +192,7 @@ export default function ReservaPage() {
   const {control, watch, handleSubmit, setValue, clearErrors, reset} = 
             useForm<any>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
               }
         });

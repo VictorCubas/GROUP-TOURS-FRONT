@@ -351,6 +351,7 @@ export default function CajasPage() {
     const {control, register, handleSubmit, watch, formState: {errors, }, clearErrors, reset, setValue} =
               useForm<any>({
                 mode: "onBlur",
+                reValidateMode: 'onChange',
                 defaultValues: {
                   nombre: "",
                   descripcion: "",
@@ -370,6 +371,7 @@ export default function CajasPage() {
       setValue: setValueApertura
     } = useForm<any>({
       mode: "onBlur",
+      reValidateMode: 'onChange',
       defaultValues: {
         monto_inicial: null,
         responsable: null,

@@ -99,6 +99,7 @@ export default function ModulosPage() {
   const {register, handleSubmit, formState: {errors, }, reset} = 
             useForm<aEditarDataForm>({
               mode: "onBlur",
+              reValidateMode: 'onChange',
               defaultValues: {
                 nombre: "",
                 descripcion: "",
