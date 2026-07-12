@@ -15,7 +15,6 @@ import {
   Bed,
   AlertCircle,
   DoorOpen,
-  Star,
   MapPin,
   Eye,
   Trash2,
@@ -29,6 +28,7 @@ import {
   Tag,
   CirclePlus,
 } from "lucide-react"
+import { HotelEstrellas } from "@/components/HotelEstrellas"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -493,17 +493,6 @@ export default function SalidasPage() {
     }
   }
 
-  const renderStars = (rating: number) => (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          className={`h-3 w-3 ${i < rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-        />
-      ))}
-      <span className="ml-1 text-sm text-gray-600">({rating})</span>
-    </div>
-  )
 
   // --- Crear salida ---
   const handleCrearSalida = async (dataForm: any) => {
@@ -1947,7 +1936,7 @@ export default function SalidasPage() {
                                             variant="outline"
                                             className="bg-blue-50 text-blue-700 border-blue-300 font-medium"
                                           >
-                                            {renderStars(hotel.estrellas)}
+                                            <HotelEstrellas rating={hotel.estrellas} />
                                           </Badge>
                                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                             <MapPin className="w-3 h-3" />

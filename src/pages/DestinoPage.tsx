@@ -19,9 +19,9 @@ import {
   Shield,
   MapPin,
   HotelIcon,
-  Star,
   Info,
 } from "lucide-react"
+import { HotelEstrellas } from "@/components/HotelEstrellas"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -595,21 +595,6 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
     setCiudadNoSeleccionada(value);
   }
 
-  const renderStars = (rating: number) => {
-      return (
-        <div className="flex items-center gap-1">
-          {Array.from({ length: 5 }, (_, index) => (
-            <Star
-              key={index}
-              className={`h-3 w-3 ${
-                index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-              }`}
-            />
-          ))}
-          <span className="ml-1 text-sm text-gray-600">({rating})</span>
-        </div>
-      );
-    };
 
   return (
     <>
@@ -684,7 +669,7 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
                                       <span className="text-sm">{hotel.nombre}</span>
 
                                       <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
-                                        <span className="text-gray-500 font-normal">{renderStars(hotel.estrellas)}</span>
+                                        <span className="text-gray-500 font-normal"><HotelEstrellas rating={hotel.estrellas} /></span>
                                       </Badge>
                                     </div>
                                   </>
@@ -1139,7 +1124,7 @@ const { mutate: mutateGuardarEditado, isPending: isPendingEdit} = useMutation({
                                       {hotel.moneda_codigo}
                                       {hotel.precio_habitacion}
                                       <span className="text-gray-500 font-normal">
-                                        {renderStars(hotel.estrellas)}
+                                        <HotelEstrellas rating={hotel.estrellas} />
                                       </span>
                                     </Badge>
                                   </div>
