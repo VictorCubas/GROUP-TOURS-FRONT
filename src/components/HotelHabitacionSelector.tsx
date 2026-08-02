@@ -8,8 +8,8 @@ import {
   Users,
   AlertCircle,
   Loader2,
-  Star,
 } from "lucide-react";
+import { HotelEstrellas } from "@/components/HotelEstrellas";
 import { capitalizePrimeraLetra, formatearSeparadorMiles } from "@/helper/formatter";
 import { Badge } from "./ui/badge";
 
@@ -76,21 +76,6 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
   }
 
 
-  const renderStars = (rating: number) => {
-        return (
-          <div className="flex items-center gap-1">
-            {Array.from({ length: 5 }, (_, index) => (
-              <Star
-                key={index}
-                className={`h-3 w-3 ${
-                  index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                }`}
-              />
-            ))}
-            <span className="ml-1 text-sm text-gray-600">({rating})</span>
-          </div>
-        );
-      };
 
 
   const getStyleCuposDisponiblePorHabitacion = (cupos: number) => {
@@ -148,7 +133,7 @@ const HotelHabitacionSelectorComponent: FC<HotelHabitacionSelectorProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center">{renderStars(hotel.estrellas)}</div>
+                    <div className="flex items-center"><HotelEstrellas rating={hotel.estrellas} /></div>
                     <span className="text-xs text-gray-500">
                       {hotel?.habitaciones?.length || 0} tipos de habitación
                     </span>
