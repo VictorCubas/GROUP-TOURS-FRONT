@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { startTransition, use, useCallback, useEffect, useState } from "react"
+import { startTransition, use, useCallback, useEffect, useMemo, useState } from "react"
 import {
   Search,
   Plus,
@@ -11,43 +11,27 @@ import {
   Trash2,
   MoreHorizontal,
   Check,
-  // X,
   Shield,
-  // Users,
-  // Package,
-  // User,
   Download,
-  // RefreshCw,
   Eye,
   Calendar,
-  // AlertCircle,
   Loader2Icon,
   CheckIcon,
-  // FileText,
-  // Activity,
-  // Tag,
-  // Boxes,
-  // User,
-  // Building,
   X,
   Bus,
   Users,
   Table2,
   Grid3X3,
-  Crown,
   User,
   CalendarDays,
   Package,
   CheckCircle,
-  CheckCircle2,
-  Circle,
-  LayoutGrid,
-  List,
   Building2,
   Heart,
   Share2,
   MapPin,
   BoxIcon,
+  CalendarCheck,
 } from "lucide-react"
 
 import { MdOutlinePending } from "react-icons/md";
@@ -79,7 +63,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type Reserva, type ReservaListado, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
+import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, RESERVATION_STATES, type BloqueoData, type HabitacionHotel, type HotelReserva, type Reserva, type ReservaListado, type RespuestaPaginada, type TipoPaquete, } from "@/types/reservas"
 import {formatearFecha, formatearSeparadorMiles, getDaysBetweenDates, quitarAcentos } from "@/helper/formatter"
 import { fetchData, fetchResumen, guardarDataEditado, nuevoDataFetch, fetchDataDistribuidoraTodos, fetchDataPasajeros, fetchDataPaquetes, fetchDataHotelesPorSalida, fetchDataPersonaTitular, activarReserva, desactivarReserva } from "@/components/utils/httpReservas"
 
@@ -98,14 +82,15 @@ import { DinamicSearchSelect } from "@/components/DinamicSearchSelect"
 import type { Persona } from "@/types/empleados"
 import { FechaSalidaSelectorContainer } from "@/components/FechaSalidaSelectorContainer"
 // import { NumericFormat } from "react-number-format"
-import { HotelHabitacionSelector } from "@/components/HotelHabitacionSelector";
-import { HotelHabitacionSelectorListMode, type MonedaAlternativaCotizada } from "@/components/HotelHabitacionSelectorListMode";
 import ReservationConfirmModal from "@/components/ReservationConfirmModal"
 import PaymentReceiptModal from "@/components/PaymentReceiptModal"
 import { useDescargarComprobante, usePagarSenia, usePagoTotal } from "@/components/hooks/useDescargarPDF"
 import PagoSeniaModal from "@/components/PagoSeniaModal"
 import DetallesReservaContainer from "@/components/DetallesReservaContainer";
 import { TbInvoice } from "react-icons/tb"
+import BloqueoHabitacionesContainer, { type MonedaAlternativaCotizada } from "@/components/BloqueoHabitacionesContainer";
+import { BloqueoHabitacionesSeleccionadosCard } from "@/components/BloqueoHabitacionesSeleccionadosCard";
+import { BloqueoHabitacionContext } from "@/context/BloqueoHabitacionContext";
 
 
 // let dataList: Reserva[] = [];
@@ -143,7 +128,6 @@ export default function ReservaPage() {
   const [selectedPasajerosData, setSelectedPasajerosData] = useState<any[]>([])
   const [dataDetalle, setDataDetalle] = useState<Reserva>();
   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
-  const [viewModeHabitacionList, setViewModeHabitacionList] = useState<"grouped" | "detailed">('detailed');
   const {handleShowToast} = use(ToastContext);
   const [onGuardar, setOnGuardar] = useState(false);
   const [newDataPersonaList, setNewDataPersonaList] = useState<Persona[]>();
@@ -156,11 +140,9 @@ export default function ReservaPage() {
   const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
   const [selectedHotelId, setSelectedHotelId] = useState('');
   const [selectedHotelData, setSelectedHotelData] = useState<any>();
-  const [selectedTipoHabitacionID, setSelectedTipoHabitacionID] = useState('');
-  const [selectedTipoHabitacionData, setSelectedTipoHabitacionData] = useState<any>();
+
   const [habitacionesPorSalida, setHabitacionesPorSalida] = useState<any[]>([]);
-  const [habitacionesResumenPrecios, setHabitacionesResumenPrecios] = useState<any[]>([]);
-  const [precioFinalPorPersona, setPrecioFinalPorPersona] = useState<number>(0);
+  // const [precioFinalPorPersona, setPrecioFinalPorPersona] = useState<number>(0);
   const [isEditingSena, setIsEditingSena] = useState(false)
   const [montoInicialAAbonar, setMontoInicialAAbonar] = useState<number>(0)
   const [seniaPorPersona, setSeniaPorPersona] = useState<number>(0)
@@ -168,6 +150,9 @@ export default function ReservaPage() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isSenialModalOpen, setIsSenialModalOpen] = useState(false);
   const [payloadReservationData, setPayloadReservationData] = useState<any>(null);
+  
+  //DATA BLOQUEO
+  const [bloqueoData, setBloqueoData] = useState<BloqueoData[]>([]);
   console.log(seniaPorPersona)
 
   // const [serviciosAdicionalesSearchTerm, setServiciosAdicionalesSearchTerm] = useState("");
@@ -389,7 +374,7 @@ export default function ReservaPage() {
     if(dataHotelesPorSalidaList){
       hotelesPorSalida = dataHotelesPorSalidaList.hoteles;
 
-      console.log(hotelesPorSalida);
+      console.log(hotelesPorSalida); 
     }
 
 
@@ -453,7 +438,7 @@ export default function ReservaPage() {
     if(!dataHotelesPorSalidaList)
       return;
     
-    setHabitacionesResumenPrecios(dataHotelesPorSalidaList?.resumen_precios?.habitaciones_ordenadas ?? [])
+    setCotizacionMonedaAlternativa(dataHotelesPorSalidaList?.resumen_precios?.habitacion_mas_barata?.precio_moneda_alternativa)
 
 
   }, [dataHotelesPorSalidaList]);
@@ -495,7 +480,6 @@ export default function ReservaPage() {
 
 
   useEffect(() => {
-    // setSelectedTipoHabitacionID('')
 
     if (selectedHotelId) {
       const hotel = hotelesPorSalida.find(
@@ -613,10 +597,17 @@ export default function ReservaPage() {
     mutationFn: nuevoDataFetch,
     onSuccess: (data) => {
         handleShowToast('Se ha creado una nueva reserva satisfactoriamente', 'success');
+        const siTitularComoPasajero = titularComoPasajero;
+        console.log('siTitularComoPasajero (antes): ', siTitularComoPasajero)
+        
+        setValue("titularComoPasajero", false);
         reset({
           nombre: '',
           paquete: '',
         });
+        
+        //reseteamos para reutilizar el el modal de PagoSeniaModal
+        setValue("titularComoPasajero", siTitularComoPasajero);
 
         console.log(data)
         // setTipoDePersonaCreacion(undefined);
@@ -791,7 +782,6 @@ export default function ReservaPage() {
         setSelectedSalidaID("");
         setSelectedHotelId('');
         setSelectedHotelData(undefined);
-        setSelectedTipoHabitacionID('');
         setIsEditingSena(false);
         setMontoInicialAAbonar(0);
         setSeniaPorPersona(0);
@@ -811,15 +801,15 @@ export default function ReservaPage() {
         // setSelectedServiciosAdicionales([]);
         // setServiciosAdicionalesSearchTerm("");
         reset({
-            nombre: '',
-            senia: '',
+          nombre: '',
+          senia: '',
         });
-
 
         // setTipoDePersonaCreacion(undefined);
         // setTipoPaqueteSelected(undefined);
         // setDistribuidoraSelected(undefined);
         
+        setBloqueoData([]);
         setActiveTabCatalogo('list');
   }
 
@@ -839,31 +829,28 @@ export default function ReservaPage() {
         return;
       }
 
-      if(!selectedPaqueteData || !selectedSalidaID || !selectedTipoHabitacionID || !selectedPersonaID || !selectedTitularData){
+      if(!selectedPaqueteData || !selectedSalidaID || bloqueoData.length < 1 || !selectedTitularData){
         handleShowToast('Debes completar todos los pasos para registrar la reserva', 'error');
         return;
       }
       
-      if(selectedPaqueteData.propio && selectedSalidaData.cupo < selectedTipoHabitacionData.capacidad){
-        handleShowToast('No hay suficientes lugares disponibles para esta habitacion', 'error');
-        return;
-      }
       
-      const pasajeros_data = selectedPasajerosData.map(p => ({persona_id: p.id}))
-      console.log(pasajeros_data)
+      // const pasajeros_data = selectedPasajerosData.map(p => ({persona_id: p.id}))
+      // console.log(pasajeros_data)
       console.log(selectedTitularData);
       console.log(selectedPasajerosData);
       console.log(selectedPaqueteID);
-      console.log(dataForm)
+      console.log('dataForm: ', dataForm)
 
       console.log(tipoPaqueteSelected)
 
       const payload = {
         ...dataForm,
         paquete_id: selectedPaqueteID,
-        pasajeros_data: pasajeros_data, // Array de IDs
+        // pasajeros_data: pasajeros_data, // Array de IDs //legacy
         salida_id: selectedSalidaID,
-        habitacion_id: selectedTipoHabitacionID,
+        // habitacion_id: selectedTipoHabitacionID, //legacy
+        bloqueos_data: bloqueoData,
         persona: selectedPersonaID,
         titular_como_pasajero: dataForm.titularComoPasajero,
         activo: true,
@@ -888,7 +875,7 @@ export default function ReservaPage() {
       //                                       Number(selectedTipoHabitacionData?.capacidad ?? 0)
       // }
 
-      payload.monto_pagado = 0;
+      // payload.monto_pagado = 0;
 
       // Eliminar campos que no se envían
       delete payload.numero;
@@ -900,7 +887,7 @@ export default function ReservaPage() {
       delete payload.persona;
       delete payload.titularComoPasajero;
 
-      console.log(payload);
+      console.log('payload: ', payload)
       // Llamada al mutate enviando formData
 
   // {
@@ -943,16 +930,14 @@ export default function ReservaPage() {
         duration: `${getDaysBetweenDates(selectedSalidaData?.fecha_salida, selectedSalidaData?.fecha_regreso)} días`,
         departureDate: formatearFecha(selectedSalidaData?.fecha_salida),
         returnDate: formatearFecha(selectedSalidaData?.fecha_regreso),
-        numberOfPeople: selectedTipoHabitacionData?.capacidad || 0,
-        hotel: selectedHotelData?.nombre || '',
-        hotelRating: selectedHotelData?.estrellas || 0,
-        roomType: selectedTipoHabitacionData?.tipo || '',
-        servicesIncluded: selectedPasajerosData?.length || 0,
-        deposit: Number(montoInicialAAbonar ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
-        depositPerPerson: Number(montoInicialAAbonar ?? 0),
-        totalPrice: Number(precioFinalPorPersona ?? 0) * Number(selectedTipoHabitacionData?.capacidad ?? 0),
-        pricePerPerson: Number(precioFinalPorPersona ?? 0),
-        currency: selectedPaqueteData?.moneda || 'USD',
+        numberOfPeople: cantidadActualPasajeros || 0,
+        servicesIncluded: selectedPaqueteData.servicios?.length || 0, 
+        depositPerPerson: `${selectedSalidaData.moneda.simbolo}
+                                    ${formatearSeparadorMiles.format(
+                                      Number(montoInicialAAbonar ?? 0) * cantidadActualPasajeros
+                                    )}`,
+        totalPrice: `${selectedSalidaData.moneda.simbolo} ${formatearSeparadorMiles.format(montoTotalBloqueos)}`,
+        currency: selectedSalidaData?.moneda,
       };
 
       // Guardar payload y datos del modal
@@ -961,6 +946,9 @@ export default function ReservaPage() {
       // Mostrar modal de confirmación
       setIsConfirmModalOpen(true);
     };
+
+
+    console.log('selectedSalidaData: ', selectedSalidaData)
 
 
   const handleGuardarDataEditado = async (dataForm: any) => {
@@ -998,7 +986,26 @@ export default function ReservaPage() {
     if (payloadReservationData?.payload) {
       // Ejecutar la mutación para crear la reserva
 
-      console.log(payloadReservationData?.payload)
+      // {
+//     "paquete_id": 178,
+//     "salida_id": 303,
+//     "bloqueos_data": [
+//         {
+//             "habitacion_id": 103,
+//             "cantidad": 3
+//         },
+//         {
+//             "habitacion_id": 104,
+//             "cantidad": 4
+//         }
+//     ],
+//     "titular_como_pasajero": false,
+//     "activo": true,
+//     "titular_id": 17,
+//     "monto_pagado": 0
+// }
+
+      console.log('payloadReservationData?.payload: ', payloadReservationData?.payload);
       mutate(payloadReservationData.payload);
     }
   };
@@ -1146,7 +1153,6 @@ export default function ReservaPage() {
       setSelectedSalidaData(undefined);
       setSelectedHotelId('');
       setSelectedHotelData(undefined);
-      setSelectedTipoHabitacionID('');
       setSelectedPersonaID('')
       handleDataNoPersonaSeleccionada(undefined)
       setIsEditingSena(false);
@@ -1173,11 +1179,10 @@ export default function ReservaPage() {
       
       setSelectedSalidaData(salida.length ? salida[0] : undefined)
 
-      // setHabitacionesResumenPrecios(hotel.resumen_precios);
+      // setHabitacionesOrdenadasPorPrecio(hotel.resumen_precios);
 
       setSelectedHotelId('');
       setSelectedHotelData(undefined);
-      setSelectedTipoHabitacionID('');
       setSelectedPersonaID('')
       handleDataNoPersonaSeleccionada(undefined)
       setIsEditingSena(false);
@@ -1192,7 +1197,7 @@ export default function ReservaPage() {
   }, [selectedPaqueteData, selectedPaqueteData?.salidas, selectedSalidaID, setValue]);
 
   useEffect(() => {
-    if(selectedSalidaID && selectedTipoHabitacionID && selectedHotelId && selectedSalidaData && selectedSalidaData?.senia){
+    if(selectedSalidaID && bloqueoData.length > 0 && selectedSalidaData?.senia){
       setSelectedPasajeros([]);
       setPasajerosSearchTerm("");;
       setSelectedPasajerosData([])
@@ -1202,7 +1207,7 @@ export default function ReservaPage() {
       console.log(selectedSalidaData)
       console.log(selectedSalidaData?.precio_moneda_alternativa?.senia) 
       console.log(selectedSalidaData?.senia)
-      console.log(selectedTipoHabitacionData?.capacidad)
+      // console.log(selectedTipoHabitacionData?.capacidad)
 
       const senia = Number(selectedSalidaData?.senia ?? 0)
       console.log(senia);
@@ -1215,8 +1220,8 @@ export default function ReservaPage() {
     return () => {
       
     };
-  }, [selectedSalidaID, selectedTipoHabitacionID, selectedHotelId, selectedSalidaData?.senia, 
-    selectedSalidaData, selectedTipoHabitacionData?.capacidad]);
+  }, [selectedSalidaID, bloqueoData, selectedSalidaData?.senia, 
+    selectedSalidaData ]);
 
   // if(startDebounce)
   //   dataPasajerosList = []
@@ -1253,35 +1258,35 @@ export default function ReservaPage() {
   }, [tipoPaqueteSelected, setValue, clearErrors]);
 
 
-  const handlePasajeroToggle = (permissionId: number, pasajero: any) => {
-    // 🔹 Primero actualizamos los ids seleccionados
-    setSelectedPasajeros((prev) => {
-      let updated;
+  // const handlePasajeroToggle = (permissionId: number, pasajero: any) => {
+  //   // 🔹 Primero actualizamos los ids seleccionados
+  //   setSelectedPasajeros((prev) => {
+  //     let updated;
 
-      if (prev.includes(permissionId)) {
-        updated = prev.filter((p) => p !== permissionId); // quitar
-      } else {
-        updated = [...prev, permissionId]; // agregar
-      }
+  //     if (prev.includes(permissionId)) {
+  //       updated = prev.filter((p) => p !== permissionId); // quitar
+  //     } else {
+  //       updated = [...prev, permissionId]; // agregar
+  //     }
 
-      return updated;
-    });
+  //     return updated;
+  //   });
 
-    // 🔹 Luego actualizamos los pasajeros seleccionados
-    setSelectedPasajerosData((prev) => {
-      let updated;
+  //   // 🔹 Luego actualizamos los pasajeros seleccionados
+  //   setSelectedPasajerosData((prev) => {
+  //     let updated;
 
-      const exists = prev.some((p: any) => p.id === permissionId);
+  //     const exists = prev.some((p: any) => p.id === permissionId);
 
-      if (exists) {
-        updated = prev.filter((p: any) => p.id !== permissionId); // quitar pasajero
-      } else {
-        updated = [...prev, pasajero]; // agregar pasajero
-      }
+  //     if (exists) {
+  //       updated = prev.filter((p: any) => p.id !== permissionId); // quitar pasajero
+  //     } else {
+  //       updated = [...prev, pasajero]; // agregar pasajero
+  //     }
 
-      return updated;
-    });
-  };
+  //     return updated;
+  //   });
+  // };
 
 
     const handlePaymentTypeChange = useCallback((type: 'minimum' | 'total') => {
@@ -1291,13 +1296,13 @@ export default function ReservaPage() {
     console.log(handlePaymentTypeChange);
 
 
-    useEffect(() => {
+    // useEffect(() => {
 
-      if(!selectedSalidaData || !selectedTipoHabitacionData || !selectedHotelData)
-        return;
+    //   if(!selectedSalidaData || !selectedPaqueteData )
+    //     return;
 
-      setPrecioFinalPorPersona(selectedTipoHabitacionData?.precio_calculado?.precio_venta_final ?? 0)
-    }, [selectedSalidaData, selectedTipoHabitacionData, selectedHotelData, selectedPaqueteData?.servicios]);
+    //   setPrecioFinalPorPersona(0)
+    // }, [selectedSalidaData, selectedPaqueteData?.servicios, selectedPaqueteData]);
 
     
   const senia = watch('senia');
@@ -1306,9 +1311,9 @@ export default function ReservaPage() {
 
   const titularComoPasajero = watch('titularComoPasajero');
 
-  console.log(titularComoPasajero)
+  console.log('titularComoPasajero: ', titularComoPasajero)
 
-  const cantidadActualPasajeros = selectedHotelId && selectedTipoHabitacionID && selectedPersonaID ? (watch('titularComoPasajero') ? selectedPasajerosData?.length + 1: selectedPasajerosData?.length) : 0;
+  const cantidadActualPasajeros = bloqueoData.reduce((acc, bloqueo) => acc + bloqueo.cantidad * bloqueo.capacidad, 0);
 
   useEffect(() => {
     console.log('El valor de titularComoPasajero cambió:', titularComoPasajero);
@@ -1355,14 +1360,97 @@ export default function ReservaPage() {
   };
 
 
+  const handleAumentarBloqueo = (habitacionId: number, capacidad: number) => {
+    setBloqueoData(prevBloqueoData => {
+      const copyBloqueoData = prevBloqueoData.map(bloqueo => ({...bloqueo}));
+      const bloqueoIndex = copyBloqueoData.findIndex(bloqueo => bloqueo.habitacion_id.toString() === habitacionId.toString())
+
+      if(bloqueoIndex > -1){
+        return prevBloqueoData.map((bloqueo, i) =>
+          i === bloqueoIndex ? { ...bloqueo, cantidad: bloqueo.cantidad + 1 } : bloqueo
+        );
+      }
+      
+      return [...prevBloqueoData, { habitacion_id: habitacionId, cantidad: 1, capacidad: capacidad }];
+    })
+  }
+  
+  const handleDisminuirBloqueo = (habitacionId: number) => {
+    setBloqueoData(prevBloqueoData => {
+      const bloqueoIndex = prevBloqueoData.findIndex(bloqueo => bloqueo.habitacion_id.toString() === habitacionId.toString())
+
+      if(bloqueoIndex > -1){
+        const bloqueoActual = prevBloqueoData[bloqueoIndex];
+
+        if(bloqueoActual.cantidad > 1){
+          return prevBloqueoData.map((bloqueo, i) =>
+            i === bloqueoIndex ? { ...bloqueo, cantidad: bloqueo.cantidad - 1 } : bloqueo
+          );
+        } 
+        else{
+          const newBloqueoData = prevBloqueoData.filter(bloqueo => bloqueo.habitacion_id.toString() !== habitacionId.toString())
+          return [...newBloqueoData]
+        }
+      }
+    
+      return [...prevBloqueoData]
+    })
+  }
+
+
   // const handleDescargar = () => {
   //    handleDescargarPDF(reservaRealizadaResponse?.id)
   // }
 
 
+  // const montoTotalBloqueos = useMemo(() =>
+  //   hotelesPorSalida
+  //     ?.flatMap((hotel: HotelReserva) => hotel.habitaciones)
+  //     ?.reduce((acc: number, habitacion: HabitacionHotel) => {
+  //       const bloqueo = bloqueoData.find(b => b.habitacion_id.toString() === habitacion.id.toString());
+  //       return bloqueo ? acc + bloqueo.cantidad * parseFloat(habitacion.precio_calculado.precio_venta_final) : acc;
+  //     }, 0)
+  //     ,
+
+  //   [bloqueoData]
+  // );
+
+
+ 
+  console.log(hotelesPorSalida);
+
+
+  const montoTotalBloqueos = useMemo(() => {
+      const bloqueosMap = new Map(
+        bloqueoData.map(b => [String(b.habitacion_id), b])
+      );
+
+      return hotelesPorSalida
+        ?.flatMap((hotel: HotelReserva) => hotel.habitaciones)
+        ?.reduce((acc: number, habitacion: HabitacionHotel) => {
+          const bloqueo = bloqueosMap.get(String(habitacion.id));
+
+          if (!bloqueo) return acc;
+
+          return (
+            acc +
+            (bloqueo.cantidad * bloqueo.capacidad) *
+              Number(habitacion.precio_calculado.precio_venta_final)
+          );
+        }, 0);
+  }, [bloqueoData]);
+
+
 
   return (
-    <>
+    
+    <BloqueoHabitacionContext.Provider
+      value={{
+        bloqueoData,
+        hotelesPorSalida,
+        montoTotalBloqueos
+      }}
+    >
       {onVerDetalles && <Modal onClose={handleCloseVerDetalles} claseCss={'mdsdsodal-detalles'}>
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
             <div className="modal-detalles-reserva bg-white/95 rounded-xl shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto backdrop-blur-sm">
@@ -1587,7 +1675,7 @@ export default function ReservaPage() {
                             </div>
                           </CardHeader>
                           <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
                                   {/* PAQUETE */}
                                 <div className="space-y-2 mi-select-wrapper">
                                   <Label htmlFor="paquete" className="text-gray-700 font-medium">
@@ -1623,7 +1711,7 @@ export default function ReservaPage() {
                         </Card>
 
                         {/* PASO 2 SELECCTOR DE SALIDAS */}
-                        {selectedPaqueteData &&
+                        {!!selectedPaqueteData &&
                           <Card className="space-y-2 md:col-span-2">
                             <CardHeader>
                               <div className="flex items-center gap-3">
@@ -1659,7 +1747,7 @@ export default function ReservaPage() {
                         }
 
 
-                        {/* PASO 3 HOTEL Y HABIRACIONES */}
+                        {/* PASO 3 HOTEL Y HABITACIONES */}
                         {selectedPaqueteData && selectedSalidaID &&
                           <Card className="space-y-2 md:col-span-2">
                             <CardHeader>
@@ -1669,10 +1757,10 @@ export default function ReservaPage() {
                                 </div>
                                 <div>
                                   <CardTitle className="flex items-center gap-2">
-                                    <CalendarDays className="h-5 w-5" />
-                                    Seleccionar Hotel y Habitación
+                                    <CalendarCheck className="h-5 w-5" />
+                                    Bloqueo de habitaciones
                                   </CardTitle>
-                                  <CardDescription>Este paquete es flexible, seleccione el hotel y tipo de habitación</CardDescription>
+                                  <CardDescription>Seleccione el hotel y tipo de habitación</CardDescription>
                                 </div>
                               </div>
 
@@ -1694,121 +1782,18 @@ export default function ReservaPage() {
                                   </div>
                                 }
                             </CardHeader>
-                            <CardContent className="h-[70vh] flex flex-col">
-
-                                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg w-fit mb-2">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      setViewModeHabitacionList('detailed')
-                                    }}
-                                    className={`
-                                      flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all cursor-pointer
-                                      ${viewModeHabitacionList === 'detailed'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                      }
-                                    `}
-                                  >
-                                    <List className="w-4 h-4" />
-                                    Lista Completa
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      setViewModeHabitacionList('grouped')
-                                    }}
-                                    className={`
-                                      flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all cursor-pointer
-                                      ${viewModeHabitacionList === 'grouped'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                      }
-                                    `}
-                                  >
-                                    <LayoutGrid className="w-4 h-4" />
-                                    Vista por Hotel
-                                  </button>
-                                </div>
-                                  
-
-                                  {viewModeHabitacionList === 'grouped' ? 
-                                    <HotelHabitacionSelector
-                                      esDistribuidor={!selectedPaqueteData.propio}
-                                      hoteles={hotelesPorSalida}
-                                      habitaciones={habitacionesPorSalida}
-                                      selectedHotelId={selectedHotelId}
-                                      selectedHabitacionId={selectedTipoHabitacionID}
-                                      selectedSalidaCupo={selectedSalidaData?.cupo ?? 0}
-                                      isLoading={isFetchingHotelesList}
-                                      onSelectHotel={(hotel) => {
-                                        setSelectedHotelId(hotel.id);
-                                        setSelectedHotelData(hotel);
-                                        setSelectedTipoHabitacionID("");
-                                      }}
-                                      onSelectHabitacion={(habitacion) => {
-                                        setSelectedTipoHabitacionID(habitacion.id);
-                                        setSelectedTipoHabitacionData(habitacion);
-                                      }}
-                                    />
-                                  :
-
-                                  // <p></p>
-
-                                  <>
-                                  {/* <p>SelectedTipoHabitacionID: {JSON.stringify(selectedTipoHabitacionID)}</p>
-                                  <p>SelectedHotelData: {JSON.stringify(selectedHotelData)}</p>
-                                  <p>SelectedTipoHabitacionID: {JSON.stringify(selectedTipoHabitacionID)}</p>
-                                  <p>SelectedTipoHabitacionData: {JSON.stringify(selectedTipoHabitacionData)}</p> */}
-                                  <HotelHabitacionSelectorListMode
-                                      hoteles={hotelesPorSalida}
-                                      esDistribuidor={!selectedPaqueteData.propio}
-                                      habitaciones={habitacionesPorSalida}
-                                      habitacionesResumenPrecios={habitacionesResumenPrecios}
-                                      selectedHotelId={selectedHotelId}
-                                      selectedHabitacionId={selectedTipoHabitacionID}
-                                      selectedSalidaCupo={selectedSalidaData?.cupo ?? 0}
-                                      isLoading={isFetchingHotelesList}
-                                      onSelectItem={({ hotel, habitacion }) => {
-                                        setSelectedHotelId(hotel.id);
-                                        setSelectedHotelData(hotel);
-
-                                        //habitacion_id
-                                        console.log(habitacionesResumenPrecios)
-
-                                        // Buscar la habitación correspondiente en habitacionesPorSalida del hotel seleccionado
-                                        const habitacionEnHotel = hotel.habitaciones?.find(
-                                          (h: any) => h.id.toString() === habitacion.habitacion_id.toString()
-                                        );
-
-                                        //id
-                                        console.log(habitacionEnHotel)
-
-                                        const cotizacionDelHotelFiltered = habitacionesResumenPrecios.filter(resumen => resumen.habitacion_id === habitacionEnHotel.id)
-                                        const cotizacion = cotizacionDelHotelFiltered[0];
-                                        console.log(cotizacion);
-                                        console.log(cotizacion.precio_moneda_alternativa);
-                                        setCotizacionMonedaAlternativa(cotizacion.precio_moneda_alternativa);
-
-                                        if (habitacionEnHotel) {
-                                          setSelectedTipoHabitacionID(habitacionEnHotel.id.toString());
-                                          setSelectedTipoHabitacionData(habitacionEnHotel);
-                                        }
-                                      }}
-                                    />
-                                  </>
-
-                                    
-                                  }
+                            <CardContent className="h-[70vh] flex flex-col overflow-x-auto">
+                                <BloqueoHabitacionesContainer
+                                    isLoading={isFetchingHotelesList}
+                                    handleAumentarBloqueo={handleAumentarBloqueo}
+                                    handleDisminuirBloqueo={handleDisminuirBloqueo}
+                                />
                             </CardContent>
                           </Card>
                         }
 
                         {/* PASO 4 INFORMACION DEL TITULAR */}
-                        {selectedTipoHabitacionID &&
+                        {bloqueoData.length > 0 &&
                           <Card className="space-y-2 md:col-span-2">
                             <CardHeader>
                               <div className="flex items-center gap-3">
@@ -1889,7 +1874,7 @@ export default function ReservaPage() {
 
                       
                       {/* PASO 5 SELECCION DE PASAJEROS */}
-                      {selectedTipoHabitacionID && selectedPersonaID && 
+                      {/* {bloqueoData.length && selectedPersonaID && 
                         <Card className="space-y-2 md:col-span-2">
                           <CardHeader>
                             <div className="flex items-center gap-3">
@@ -1910,10 +1895,7 @@ export default function ReservaPage() {
 
                           <CardContent>
                               <div className="space-y-2 md:col-span-2">
-                                {/* selectedTipoHabitacionData: {JSON.stringify(selectedTipoHabitacionData)}<br/> */}
-                                {/* selectedTipoHabitacionID: {JSON.stringify(selectedTipoHabitacionID)} 
-                                
-                                habitacionesPorSalida */}
+
                                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                                     {habitacionesPorSalida.filter((h: any) => (h.id.toString() === selectedTipoHabitacionID.toString()))
                                       .map((h: any) => <p className="text-sm font-medium text-blue-900">
@@ -1943,29 +1925,27 @@ export default function ReservaPage() {
                                   </p>
                                 </div>
 
-                                {/* Mostrar titular como pasajero si está marcado */}
-                                      {titularComoPasajero && selectedTitularData && (
-                                        <div className="mb-6 mt-6">
-                                          <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
-                                          <div className="p-4 bg-blue-50 rounded-lg">
-                                            <div className="flex items-center space-x-4">
-                                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                <Crown className="w-5 h-5 text-blue-600" />
-                                              </div>
-                                              <div>
-                                                <p className="font-medium text-gray-900">
-                                                  {selectedTitularData.nombre}
-                                                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                  {/* {DOCUMENT_TYPES[formData.persona.tipo_documento || 'cedula']}: {formData.persona.numero_documento} */}
-                                                  {selectedTitularData.documento}
-                                                </p>
-                                              </div>
-                                            </div>
+                                  {titularComoPasajero && selectedTitularData && (
+                                    <div className="mb-6 mt-6">
+                                      <h3 className="text-lg font-medium text-gray-900 mb-4">Titular (incluido como pasajero)</h3>
+                                      <div className="p-4 bg-blue-50 rounded-lg">
+                                        <div className="flex items-center space-x-4">
+                                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <Crown className="w-5 h-5 text-blue-600" />
+                                          </div>
+                                          <div>
+                                            <p className="font-medium text-gray-900">
+                                              {selectedTitularData.nombre}
+                                              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Titular</span>
+                                            </p>
+                                            <p className="text-sm text-gray-500">
+                                              {selectedTitularData.documento}
+                                            </p>
                                           </div>
                                         </div>
-                                      )}
+                                      </div>
+                                    </div>
+                                  )}
 
                               </div>
 
@@ -2029,7 +2009,7 @@ export default function ReservaPage() {
                                                   </div>
                                                   <div>
                                                     <p className="font-medium text-gray-900">
-                                                      {/* {getPrimerNombreApellido(pasajero.nombre, pasajero.apellido)} */}
+                                                      
                                                       {pasajero.nombre} {pasajero.apellido}
                                                     </p>
                                                     <p className="text-sm text-gray-500">
@@ -2046,7 +2026,7 @@ export default function ReservaPage() {
                                                   >
                                                     <X className="w-4 h-4" />
                                                   </button>
-                                                {/* )} */}
+                                              
                                               </div>
                                             ))}
                                           </div>
@@ -2054,18 +2034,11 @@ export default function ReservaPage() {
                                       )}
                                 </div>
 
-
-                                {/* cantidadActualPasajeros: {JSON.stringify(cantidadActualPasajeros)}<br/>
-                                selectedTipoHabitacionData: {JSON.stringify(selectedTipoHabitacionData)}<br/>
-                                selectedTipoHabitacionData.capacidad: {JSON.stringify(selectedTipoHabitacionData.capacidad)}<br/>
-                                cantidadActualPasajeros !== selectedTipoHabitacionData.capacidad: {JSON.stringify(cantidadActualPasajeros !== selectedTipoHabitacionData.capacidad)}<br/> */}
-
                               {selectedTipoHabitacionData && 
                                 cantidadActualPasajeros !== selectedTipoHabitacionData.capacidad &&
                                 <div className={`space-y-2 md:col-span-2 ${(cantidadActualPasajeros === 0 || cantidadActualPasajeros === 1 && titularComoPasajero) ? 'mt-8' : ''}`}>
                                     <Label className="text-gray-700 font-medium">Seleccione los pasajeros *</Label>
 
-                                    {/* INPUT DE BUQUEDA DE PASAJERO */}
                                     <div className="relative mb-4">
                                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                       <Input
@@ -2077,7 +2050,6 @@ export default function ReservaPage() {
                                       />
                                     </div>
 
-                                    {/* PASAJEROS SELECCIONADOS */}
                                     {selectedPasajeros.length > 0 && (
                                       <div className="flex items-center gap-2 mb-3">
                                         <Badge className="bg-blue-100 text-blue-700 border-blue-200">
@@ -2095,10 +2067,6 @@ export default function ReservaPage() {
                                         </Button>
                                       </div>
                                     )}
-
-                                    {/* <div>
-                                      dataPasajerosList: {JSON.stringify(dataPasajerosList)}
-                                    </div> */}
                                     
                                     <div
                                         className={`grid grid-cols-1 ${
@@ -2107,14 +2075,13 @@ export default function ReservaPage() {
                                             : 'md:grid-cols-1'
                                         } gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full`}
                                       >
-                                        {/* Loader */}
+                                      
                                         {(isFetchingPasajeros || startDebounce) && (
                                           <div className="w-full flex items-center justify-center h-56">
                                             <Loader2Icon className="animate-spin w-10 h-10 text-gray-300" />
                                           </div>
                                         )}
 
-                                        {/* Lista de resultados */}
                                         {pasajerosSearchTerm &&
                                           !isFetchingPasajeros &&
                                           !startDebounce &&
@@ -2160,7 +2127,6 @@ export default function ReservaPage() {
                                               </div>
                                             ))}
 
-                                        {/* Mensaje inicial */}
                                         {!pasajerosSearchTerm && (
                                           <div
                                             className={`relative flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors
@@ -2172,7 +2138,6 @@ export default function ReservaPage() {
                                           </div>
                                         )}
 
-                                        {/* Sin resultados */}
                                         {!isFetchingPasajeros &&
                                           !startDebounce &&
                                           pasajerosSearchTerm &&
@@ -2202,7 +2167,7 @@ export default function ReservaPage() {
                               } 
                           </CardContent>
                         </Card>
-                      }
+                      } */}
 
 
                       <div>
@@ -2215,13 +2180,13 @@ export default function ReservaPage() {
                       </div>
 
 
-                       {/* PASO 6 INFORMACION DEL TITULAR */}
-                        {selectedPaqueteID && selectedTipoHabitacionID && selectedPersonaID &&
+                       {/* PASO 6 INFORMACION DE LOS SERVICIOS */}
+                        {bloqueoData.length > 0 && selectedPersonaID &&
                           <Card className="space-y-2 md:col-span-2">
                             <CardHeader>
                               <div className="flex items-center gap-3">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white font-semibold">
-                                  6
+                                  5
                                 </div>
                                 <div>
                                   <CardTitle className="flex items-center gap-2">
@@ -2236,7 +2201,7 @@ export default function ReservaPage() {
                             </CardHeader>
 
                             <CardContent>
-                                <div className="grid md:grid-cols-2 gap-3">
+                                <div className="grid md:grid-cols-2 gap-3 overflow-y-auto max-h-60">
                                   {selectedPaqueteData.servicios.map((service: any) => (
                                     <div
                                       key={service.servicio_id}
@@ -2262,9 +2227,9 @@ export default function ReservaPage() {
                                   ))}
                                 </div>
 
-                                {/* <div className="space-y-2 md:col-span-2 mt-6"> */}
-                                    {/* 
-                                    <Label className="text-gray-700 font-medium">Servicios Adicionales Opcionales</Label>
+                                {/*<div className="space-y-2 md:col-span-2 mt-6">
+                                    
+                                     <Label className="text-gray-700 font-medium">Servicios Adicionales Opcionales</Label> 
     
                                     
                                     <div className="relative mb-4">
@@ -2275,10 +2240,10 @@ export default function ReservaPage() {
                                         onChange={(e) => setServiciosAdicionalesSearchTerm(e.target.value)}
                                         className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                       />
-                                    </div> */}
+                                    </div>
     
                                     
-                                    {/* {selectedServiciosAdicionales.length > 0 && (
+                                    {selectedServiciosAdicionales.length > 0 && (
                                       <div className="flex items-center gap-2 mb-3">
                                         <Badge className="bg-blue-100 text-blue-700 border-blue-200">
                                           {selectedServiciosAdicionales.length} servicios seleccionados
@@ -2294,10 +2259,10 @@ export default function ReservaPage() {
                                           Limpiar selección
                                         </Button>
                                       </div>
-                                    )} */}
+                                    )}
     
                                     
-                                    {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4 w-full">
                                       {isFetchingServicios && <div className="w-full flex items-center justify-center">
                                         <Loader2Icon className="animate-spin w-10 h-10 text-gray-300"/>
                                       </div>}
@@ -2434,7 +2399,7 @@ export default function ReservaPage() {
                                         </div>
                                       )}
       
-                                    </div> */}
+                                    </div>
     
                                     {/* <div className="flex items-center gap-2 pt-2">
                                       <Button
@@ -2479,18 +2444,18 @@ export default function ReservaPage() {
                                       </Button>
   
                                       {onGuardar && selectedServiciosAdicionales.length ===0 && <span className='text-red-400 text-sm'>Debes seleccinar al menos un servicio</span>}
-                                    </div> */}
+                                    </div> 
     
                                   
-                                {/* </div> */}
+                                </div> */}
                             </CardContent>
                           </Card>
-                        }
+                        } 
 
 
                       {/* PASO 7 RESUMEN DE LOS PRECIOS */}
                       {/* {cantidadActualPasajeros && cantidadActualPasajeros === selectedTipoHabitacionData?.capacidad && ( */}
-                      {selectedPaqueteID && selectedSalidaID && selectedTipoHabitacionID && selectedPersonaID && selectedSalidaData && (
+                      {selectedPaqueteID && selectedSalidaID && bloqueoData.length > 0 && selectedPersonaID && selectedSalidaData && (
                         <div className="space-y-2 md:col-span-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border-2 border-blue-300">
                           <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-gray-900">Resumen de Reserva</h2>
@@ -2517,14 +2482,12 @@ export default function ReservaPage() {
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-700">Número de personas:</span>
-                              <span className="font-medium">{selectedTipoHabitacionData?.capacidad}</span>
+                              <span className="font-medium">{cantidadActualPasajeros}</span>
                             </div>
-                            {/* {selectedHotel && selectedRoomType && ( */}
-                            {selectedHotelId && selectedTipoHabitacionID && (
+                            {/* {selectedHotelId && selectedTipoHabitacionID && (
                               <>
                                 <div className="flex justify-between text-sm">
                                   <span className="text-gray-700">Hotel:</span>
-                                  {/* <span className="font-medium">{selectedHotel.name}</span> */}
                                   <span className="font-medium">{selectedHotelData.nombre}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
@@ -2532,53 +2495,39 @@ export default function ReservaPage() {
                                   <span className="font-medium">{selectedTipoHabitacionData.tipo}</span>
                                 </div>
                               </>
-                            )}
-                            {/* {selectedPackage?.includedServices.length > 0 && ( */}
+                            )} */}
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-700">Servicios incluidos:</span>
-                                {/* <span className="font-medium">{selectedPackage.includedServices.length}</span> */}
                                 <span className="font-medium">{selectedPaqueteData?.servicios.length}</span>
                               </div>
                             {/* )} */}
                           </div>
 
+                          <BloqueoHabitacionesSeleccionadosCard/>
+
                           <div className="border-t-2 border-blue-300 pt-4">
                             <div className="flex justify-between items-center">
-                              {/* Título y selector */}
                               <div className="flex items-center gap-2">
                                 <span className="text-lg font-bold text-gray-900">Seña Mínima:</span>
                               </div>
 
-                              {/* Bloque de monto */}
+                              {/* Monto de seña */}
                               <div className="flex items-center justify-end gap-1 w-40">
-                                {/* Mostrar input editable solo si: no es TOTAL y está en modo edición */}
-                                {paymentType !== 'total' && isEditingSena ? (
-                                  <>
-                                    
-                                  </>
-                                ) : (
-                                  <>
-                                    {/* Si paymentType = total, se muestra el monto total bloqueado */}
-                                    <span
-                                      className={`text-3xl font-bold ${
-                                        paymentType === 'total' ? 'text-green-600' : 'text-blue-600'
-                                      }`}
-                                    >
-                                      {selectedSalidaData.moneda.simbolo}{formatearSeparadorMiles.format(
-                                        paymentType === 'total'
-                                          ? Number(precioFinalPorPersona ?? 0) *
-                                            Number(selectedTipoHabitacionData?.capacidad ?? 0)
-                                          : Number(montoInicialAAbonar ?? 0) *
-                                            Number(selectedTipoHabitacionData?.capacidad ?? 0)
-                                      )}
-                                    </span>
-                                  </>
-                                )}
+                                  <span className="text-3xl font-bold text-blue-600">
+                                    {selectedSalidaData.moneda.simbolo}
+                                    {formatearSeparadorMiles.format(
+                                      Number(montoInicialAAbonar ?? 0) * cantidadActualPasajeros
+                                    )}
+                                  </span>
                               </div>
                             </div>
-                              
 
-                            <p className="text-xs text-muted-foreground text-right">Precio en {selectedSalidaData?.precio_moneda_alternativa?.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(selectedSalidaData?.precio_moneda_alternativa?.senia ?? 0)}</span></p> 
+                            <p className="text-xs text-muted-foreground text-right">
+                              {`Precio en ${selectedSalidaData?.precio_moneda_alternativa?.moneda}`}
+                              <span className="text-gray-900 font-bold ml-1">
+                                {formatearSeparadorMiles.format(selectedSalidaData?.precio_moneda_alternativa?.senia ?? 0)}</span>
+                            </p> 
+                            
                             <p className="text-xs text-gray-600 text-right mt-1">
                               {formatearSeparadorMiles.format(Number(selectedSalidaData?.senia ?? 0))}{' '}
                               por persona 
@@ -2591,16 +2540,21 @@ export default function ReservaPage() {
                             <div className="flex justify-between items-center">
                               <span className="text-lg font-bold text-gray-900">Precio Total:</span>
                               <span className="text-3xl font-bold text-green-600">
-                                {selectedSalidaData.moneda.simbolo}{formatearSeparadorMiles.format(
-                                  precioFinalPorPersona * Number(selectedTipoHabitacionData?.capacidad ?? 0)
-                                )}
+                                {selectedSalidaData.moneda.simbolo}{formatearSeparadorMiles.format(montoTotalBloqueos)}
                               </span>
                             </div>
 
-                            <p className="text-xs text-muted-foreground text-right">Precio en {cotizacionMonedaAlternativa?.moneda} <span className="text-gray-900 font-bold">{formatearSeparadorMiles.format(cotizacionMonedaAlternativa?.precio_venta_final ?? 0)}</span></p> 
-                            <p className="text-xs text-gray-600 text-right mt-1">
-                              {formatearSeparadorMiles.format(precioFinalPorPersona)} por persona
-                            </p>
+                            {/* <p>
+                              {JSON.stringify(cotizacionMonedaAlternativa)}
+                            </p> */}
+                            <p className="text-xs text-muted-foreground text-right">Precio en 
+                              <span className="ml-1">{selectedSalidaData?.precio_moneda_alternativa?.moneda}  </span>
+                                <span className="ml-1 text-gray-900 font-bold">
+                                  { cotizacionMonedaAlternativa?.moneda === 'USD' ?
+                                    formatearSeparadorMiles.format((Number(montoTotalBloqueos) / Number(cotizacionMonedaAlternativa?.cotizacion))) : (Number(montoTotalBloqueos) * Number(cotizacionMonedaAlternativa?.cotizacion))
+                                  }
+                                </span>
+                            </p> 
                           </div>
 
                           <div className="mt-5 bg-gradient-to-r from-amber-50 to-orange-50 border-1 border-amber-300 rounded-lg p-3 shadow-md">
@@ -2941,7 +2895,7 @@ export default function ReservaPage() {
                             <TableCell>
                               <div>
                                 <div className="font-medium text-gray-900 pl-2">{data?.codigo}</div>
-                                <div className="text-sm text-gray-500 truncate max-w-xs pl-2">{formatearFecha(data?.fecha_reserva, false)}</div>
+                                <div className="text-sm text-gray-500 onto pl-2">{formatearFecha(data?.fecha_reserva, false)}</div>
                               </div>
                             </TableCell>
 
@@ -3009,8 +2963,6 @@ export default function ReservaPage() {
                                     style={{ width: `${Math.min(getPaymentPercentage(data), 100)}%` }}
                                   />
                                 </div>
-                                {/* const paymentStatus = getPaymentStatus(reserva);
-                  const paymentPercentage = getPaymentPercentage(reserva); */}
                               </div>
                             </TableCell>
 
@@ -3120,12 +3072,12 @@ export default function ReservaPage() {
                                       Ver detalles
                                     </DropdownMenuItem>
                                   }
-                                  {siTienePermiso("reservas", "modificar") &&
+                                  {/* {siTienePermiso("reservas", "modificar") &&
                                   <DropdownMenuItem className="hover:bg-emerald-50 cursor-pointer" onClick={() => handleEditar(data)}>
                                     <Edit className="h-4 w-4 mr-2 text-emerald-500" />
                                     Editar
                                   </DropdownMenuItem>
-                                  }
+                                  } */}
 
                                   {siTienePermiso("reservas", "modificar") && 
                                     <>
@@ -3406,23 +3358,26 @@ export default function ReservaPage() {
           onConfirm={handleConfirmReservation}
           reservationData={payloadReservationData.modalData}
           isPendingReservation={isPendingReservation}
-          // reservationData={sampleReservation}
         />
       )}
 
       {/* Modal de Pago de seña */}
+      {/* montoTotalBloqueos */}
+      {/* montoInicialAAbonar */}
       {isSenialModalOpen && (
-        <PagoSeniaModal
+        <PagoSeniaModal 
           isOpen={isSenialModalOpen}
-          onClose={handleCloseSeniaModal}
+          onClose={handleCloseSeniaModal} 
           onConfirm={handleConfirmSeniaPago}
           isPendingPagarSenia={isPendingPagarSenia || isPendingPagoTotal}
           reservationResponse={reservaRealizadaResponse}
-          seniaPorPersona={reservaRealizadaResponse?.pasajeros?.[0]?.seña_requerida || seniaPorPersona}
-          cantidadActualPasajeros={reservaRealizadaResponse?.cantidad_pasajeros || reservaRealizadaResponse?.habitacion?.capacidad || cantidadActualPasajeros}
-          precioFinalPorPersona={reservaRealizadaResponse?.pasajeros?.[0]?.precio_asignado || precioFinalPorPersona}
-          selectedPasajerosData={reservaRealizadaResponse?.pasajeros?.filter((p: any) => !p.es_titular).map((p: any) => p.persona) || []}
+          seniaPorPersona={seniaPorPersona}
+          cantidadActualPasajeros={cantidadActualPasajeros}
+          montoInicialAAbonarTotal={(montoInicialAAbonar ?? 0) * cantidadActualPasajeros} 
+          precioFinalPorPersona={selectedSalidaData?.precio_calculado?.precio_venta_final}
+          // selectedPasajerosData={reservaRealizadaResponse?.pasajeros?.filter((p: any) => !p.es_titular).map((p: any) => p.persona) || []}
           titular={reservaRealizadaResponse?.pasajeros?.find((p: any) => p.es_titular)?.persona || reservaRealizadaResponse?.titular}
+          titularComoPasajero={titularComoPasajero}
         />
       )}
 
@@ -3435,6 +3390,6 @@ export default function ReservaPage() {
           handleDescargarPDF={() => handleDescargarPDF(pagoSeniaRealizadaResponse?.comprobante?.id)}
         />}
 
-    </>
+    </BloqueoHabitacionContext.Provider>
   )
 }
