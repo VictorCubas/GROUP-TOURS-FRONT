@@ -367,7 +367,7 @@ export default function PaymentReceiptModal({
                 <h3 className="text-lg font-bold text-gray-900 mb-4 pb-2 border-b border-gray-200">
                   DISTRIBUCIÓN POR PASAJERO
                 </h3>
-                <div className="overflow-x-auto tabla-comprobante">
+                <div className="overflow-x-auto tabla-comprobante max-h-[40vh] overflow-y-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
