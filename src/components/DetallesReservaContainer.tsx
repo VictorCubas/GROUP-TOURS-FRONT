@@ -3,7 +3,6 @@ import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, RESERVATION_STATES } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Loader2Icon, Mail, Package, Phone, RefreshCcwIcon, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users, XCircle } from 'lucide-react';
-import { HotelEstrellas } from "@/components/HotelEstrellas";
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -1196,9 +1195,6 @@ return   <>
                                         {dataDetalleResp?.hotel?.nombre}
                                     </h4>
                                     <div className="flex items-center space-x-1">
-                                    <span className="text-sm text-gray-500 ml-1">
-                                        {/* <HotelEstrellas rating={dataDetalleResp.hotel.estrellas} /> */}
-                                    </span>
                                     </div>
                                 </div>
                                 </div>

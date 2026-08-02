@@ -139,11 +139,11 @@ export default function ReservaPage() {
   const [selectedPaqueteData, setSelectedPaqueteData] = useState<any | undefined>();
   const [personaNoSeleccionada, setPersonaNoSeleccionada] = useState<boolean | undefined>();
   const [selectedHotelId, setSelectedHotelId] = useState('');
-  const [selectedHotelData, setSelectedHotelData] = useState<any>();
+  // const [selectedHotelData, setSelectedHotelData] = useState<any>();
 
   const [habitacionesPorSalida, setHabitacionesPorSalida] = useState<any[]>([]);
   // const [precioFinalPorPersona, setPrecioFinalPorPersona] = useState<number>(0);
-  const [isEditingSena, setIsEditingSena] = useState(false)
+  // const [isEditingSena, setIsEditingSena] = useState(false)
   const [montoInicialAAbonar, setMontoInicialAAbonar] = useState<number>(0)
   const [seniaPorPersona, setSeniaPorPersona] = useState<number>(0)
   const [imagePreview, setImagePreview] = useState<string | undefined>(placeholderViaje);
@@ -160,6 +160,8 @@ export default function ReservaPage() {
 
   // const [paqueteNoSeleccionada, setPaqueteNoSeleccionada] = useState<boolean | undefined>();
   const [startDebounce, setStartDebounce] = useState<boolean>(false);
+
+  console.log(startDebounce)
   
   const [filtros, setFiltros] = useState({
                   activo: true,   // null = todos, true = solo activos
@@ -781,8 +783,8 @@ export default function ReservaPage() {
         setImagePreview(placeholderViaje);
         setSelectedSalidaID("");
         setSelectedHotelId('');
-        setSelectedHotelData(undefined);
-        setIsEditingSena(false);
+        // setSelectedHotelData(undefined);
+        // setIsEditingSena(false);
         setMontoInicialAAbonar(0);
         setSeniaPorPersona(0);
 
@@ -1051,50 +1053,22 @@ export default function ReservaPage() {
   }, [dataAEditar, reset]);
 
 
-  const handleEditar = (data: Reserva) => {
-  //   {
-  //   id: 5,
-  //   nombre: 'Paris Unico',
-  //   tipo_paquete: { id: 2, nombre: 'Aereo' },
-  //   destino: { id: 9, nombre: 'Paris', pais: { id: 19, nombre: 'Francia' } },
-  //   distribuidora: { id: 1, nombre: 'Consorcio Travel' },
-  //   moneda: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' },
-  //   servicios: [
-  //     { id: 9, nombre: 'Actividades Recreativas' },
-  //     { id: 7, nombre: 'Asistencia Básica al Pasajero' },
-  //     { id: 6, nombre: 'Desayuno Diario' },
-  //     { id: 8, nombre: 'Seguro de Viaje' }
-  //   ],
-  //   precio: 2000,
-  //   sena: 0,
-  //   fecha_inicio: null,
-  //   fecha_fin: null,
-  //   personalizado: true,
-  //   cantidad_pasajeros: null,
-  //   titularComoPasajero: false,
-  //   activo: true,
-  //   imagen: null,
-  //   imagen_url: null,
-  //   fecha_creacion: '2025-09-09T10:49:05+0000',
-  //   fecha_modificacion: '2025-09-09T10:49:05+0000',
-  //   numero: 1
+  // const handleEditar = (data: Reserva) => {
+
+  //   console.log('data: ', data)
+  //   setActiveTabCatalogo('form');
+  //   setDataAEditar(data);
+
+  //   setSelectedPersonaID(data!.titular.id)
+    
+
+  //   //COMENTADO TEMPORALMENTE
+  //     // setSelectedPaqueteID(data!.destino.id)
+  //     // setTipoPaqueteSelected(data!.tipo_paquete)
+  //     // setDistribuidoraSelected(data!.distribuidora);
+  //     // setSelectedPasajeros(servicios_ids)
+    
   // }
-
-  // const servicios_ids = data.servicios.map(servicio => servicio.id)
-    console.log('data: ', data)
-    setActiveTabCatalogo('form');
-    setDataAEditar(data);
-
-    setSelectedPersonaID(data!.titular.id)
-    
-
-    //COMENTADO TEMPORALMENTE
-      // setSelectedPaqueteID(data!.destino.id)
-      // setTipoPaqueteSelected(data!.tipo_paquete)
-      // setDistribuidoraSelected(data!.distribuidora);
-      // setSelectedPasajeros(servicios_ids)
-    
-  }
 
   const toggleActivar = (modulo: Reserva) => {
     setOnDesactivarData(true);
@@ -1152,10 +1126,10 @@ export default function ReservaPage() {
       setSelectedSalidaID("");
       setSelectedSalidaData(undefined);
       setSelectedHotelId('');
-      setSelectedHotelData(undefined);
+      // setSelectedHotelData(undefined);
       setSelectedPersonaID('')
       handleDataNoPersonaSeleccionada(undefined)
-      setIsEditingSena(false);
+      // setIsEditingSena(false);
       setMontoInicialAAbonar(0);
       setSeniaPorPersona(0);
       setValue('senia', '');
@@ -1182,10 +1156,10 @@ export default function ReservaPage() {
       // setHabitacionesOrdenadasPorPrecio(hotel.resumen_precios);
 
       setSelectedHotelId('');
-      setSelectedHotelData(undefined);
+      // setSelectedHotelData(undefined);
       setSelectedPersonaID('')
       handleDataNoPersonaSeleccionada(undefined)
-      setIsEditingSena(false);
+      // setIsEditingSena(false);
       setMontoInicialAAbonar(0);
       setSeniaPorPersona(0)
       setValue('senia', '');
@@ -1201,7 +1175,7 @@ export default function ReservaPage() {
       setSelectedPasajeros([]);
       setPasajerosSearchTerm("");;
       setSelectedPasajerosData([])
-      setIsEditingSena(false);
+      // setIsEditingSena(false);
       // setMontoInicialAAbonar(0);
 
       console.log(selectedSalidaData)
