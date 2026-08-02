@@ -318,6 +318,12 @@ div:has(> table) {
   min-height: 20vh;
 }
 
+.tabla-bloqueos [data-slot="table-container"] {
+  height: 20vh !important;
+  min-height: 10vh;
+  overflow-y: auto;
+}
+
 .absolute-center{
     position: absolute;
     top: 50%;
@@ -391,4 +397,10 @@ html{
 .moneda{
   width: 1.3rem;
   height: 1.2rem;
+}
+
+.accordion-trigger-bloqueo svg.lucide-chevron-down{
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-bottom: 0.5rem;
 }
