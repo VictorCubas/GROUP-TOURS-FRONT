@@ -136,7 +136,7 @@ export function DinamicSearchSelect<T extends Record<string, any>>({
       <div
         role="button"
         tabIndex={0}
-        className={`w-full justify-between h-10 px-3 bg-white border rounded-md flex items-center cursor-pointer ${
+        className={`w-full justify-between h-fit py-2 px-3 bg-white border rounded-md flex items-center cursor-pointer ${
           disabled ? "opacity-50 cursor-not-allowed" : ""
         }`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
