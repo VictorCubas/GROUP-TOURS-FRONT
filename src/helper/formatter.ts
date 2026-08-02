@@ -48,6 +48,7 @@ export const formatearMoneda = new Intl.NumberFormat('es-PY', {
 
 export const formatearSeparadorMiles = new Intl.NumberFormat('es-PY', {
     style: 'decimal',
+    // currency: 'PYG',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   });
