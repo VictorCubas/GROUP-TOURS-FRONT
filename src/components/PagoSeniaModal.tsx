@@ -1,18 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// import type { Moneda } from '@/types/reservas';
 import { Users, CheckCircle2, Loader2Icon, DollarSign, Wallet, AlertCircle, CreditCard, FileText, UserCheck, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from '@radix-ui/react-label';
 import { RadioGroup, RadioGroupItem } from '@radix-ui/react-radio-group';
 import { use, useState, useEffect } from 'react';
-import { Input } from './ui/input';
 import { IoCashOutline } from 'react-icons/io5';
 import { formatearSeparadorMiles } from '@/helper/formatter';
 import { ToastContext } from '@/context/ToastContext';
 import { Badge } from './ui/badge';
 import { AlertEstadoCaja } from './caja/AlertEstadoCaja';
 import { verificarUsuarioTieneCajaAbierta } from '@/components/utils/httpCajas';
+import { useBloqueoHabitacionContext } from '@/context/BloqueoHabitacionContext';
 
 
 interface PagoSeniaModalProps {
@@ -24,8 +23,10 @@ interface PagoSeniaModalProps {
   seniaPorPersona: number;
   cantidadActualPasajeros: number;
   precioFinalPorPersona: number;
-  selectedPasajerosData: any;
+  montoInicialAAbonarTotal: number;
+  // selectedPasajerosData: any;
   titular: any
+  titularComoPasajero: boolean
 }
 
 export default function PagoSeniaModal({
@@ -36,21 +37,21 @@ export default function PagoSeniaModal({
   reservationResponse,
   seniaPorPersona,
   cantidadActualPasajeros,
+  montoInicialAAbonarTotal,
   precioFinalPorPersona,
-  selectedPasajerosData,
-  titular
+  // selectedPasajerosData,
+  titular,
+  titularComoPasajero
 }: PagoSeniaModalProps) {
   const {handleShowToast} = use(ToastContext);
   const [paymentType, setPaymentType] = useState<"deposit" | "full">("deposit")
   const [modalidadFacturacion, setModalidadFacturacion] = useState<"global" | "individual" | "credito" | "">("")
   const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer" | 'cash'>("cash")
-  const [passengerDeposits, setPassengerDeposits] = useState<string[]>(
-    Array.from({ length: cantidadActualPasajeros }, () => seniaPorPersona.toString())
-  )
 
   // Estado para guardar información de la caja
   const [estadoCaja, setEstadoCaja] = useState<any>(null);
   const [loadingEstadoCaja, setLoadingEstadoCaja] = useState(false);
+  const { montoTotalBloqueos } = useBloqueoHabitacionContext();
 
   // Verificar estado de caja cuando se abre el modal
   useEffect(() => {
@@ -71,26 +72,15 @@ export default function PagoSeniaModal({
   }, [isOpen]);
 
   // Calcular el total de depósitos
-  const totalDepositAmount = passengerDeposits.reduce((sum, amount) => sum + Number(amount || 0), 0)
   const totalDepositRequired = seniaPorPersona * cantidadActualPasajeros
-  const isValidDeposit = passengerDeposits.every(amount => Number(amount || 0) >= seniaPorPersona)
-
-  // Manejar cambios en los inputs de seña por pasajero
-  const handlePassengerDepositChange = (index: number, value: string) => {
-    const newDeposits = [...passengerDeposits]
-    // Permitir strings vacíos, así el usuario puede borrar todo el contenido
-    newDeposits[index] = value
-    setPassengerDeposits(newDeposits)
-  }
-
 
 
   // Función para generar el payload del pago de seña
   const generarPayloadPago = () => {
     console.log(reservationResponse?.pasajeros);
     console.log(cantidadActualPasajeros);
-    console.log(selectedPasajerosData);
-    const titularViaja = reservationResponse?.pasajeros?.some((p: any) => p.es_titular);
+    // console.log(selectedPasajerosData);
+    // const titularViaja = reservationResponse?.pasajeros?.some((p: any) => p.es_titular);
     const distribuciones: Array<{ pasajero: number | string; monto: number }> = [];
 
     // Obtener el método de pago mapeado
@@ -103,56 +93,20 @@ export default function PagoSeniaModal({
     // Contador para pasajeros pendientes
     let contadorPendientes = 1;
 
+
+    //genera la distribucion de pagos
     for (let index = 0; index < cantidadActualPasajeros; index++) {
-      const monto = Number(passengerDeposits[index] || 0);
+      const monto = seniaPorPersona;
 
-      if (titularViaja) {
-        // Caso 1: El titular SÍ viaja
-        if (index === 0) {
-          // El primer pasajero es el titular
-          const pasajeroTitular = reservationResponse?.pasajeros?.find((p: any) => p.es_titular);
-          if (pasajeroTitular?.id) {
-            distribuciones.push({ pasajero: pasajeroTitular.id, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
-          } else {
-            distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
-          }
-        } else {
-          // Los demás pasajeros
-          const pasajeroIndex = index - 1;
-          const pasajero = selectedPasajerosData?.[pasajeroIndex];
-          const pasajeroEnReserva = reservationResponse?.pasajeros?.find(
-            (p: any) => {
-              console.log(p)
-              return !p.es_titular && p.persona.id === pasajero?.id
-            }
-          );
-
-          console.log(pasajeroEnReserva)
-
-          if (pasajeroEnReserva?.id) {
-            distribuciones.push({ pasajero: pasajeroEnReserva.id, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
-          } else {
-            distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
-          }
-        }
+      if (titularComoPasajero && index === 0) {
+        distribuciones.push({ pasajero: "titular", monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
       } else {
-        // Caso 2: El titular NO viaja
-        const pasajero = selectedPasajerosData?.[index];
-        const pasajeroEnReserva = reservationResponse?.pasajeros?.find(
-          (p: any) => p.persona === pasajero?.id
-        );
-
-        if (pasajeroEnReserva?.id) {
-          distribuciones.push({ pasajero: pasajeroEnReserva.id, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
-        } else {
-          distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona});
-        }
+        distribuciones.push({ pasajero: `pendiente_${contadorPendientes++}`, monto: paymentType === 'deposit' ? monto : precioFinalPorPersona });
       }
     }
 
     const payload: any = {
       metodo_pago: metodosPagoMap[paymentMethod] || 'efectivo',
-      // referencia: `${metodosPagoMap[paymentMethod].toUpperCase()}-${Date.now()}`,
       distribuciones
     };
 
@@ -214,49 +168,15 @@ export default function PagoSeniaModal({
   console.log('seniaPorPersona:', seniaPorPersona)
   console.log('cantidadActualPasajeros:', cantidadActualPasajeros)
   console.log('precioFinalPorPersona:', precioFinalPorPersona)
-  console.log('selectedPasajerosData:', selectedPasajerosData);
+  // console.log('selectedPasajerosData:', selectedPasajerosData);
   console.log('titular:', titular);
+  console.log('titularComoPasajero:', titularComoPasajero);
   console.log('Titular viaja?:', reservationResponse?.pasajeros?.some((p: any) => p.es_titular));
   console.log('Crédito disponible:', creditoDisponible);
   console.log('=== Payload Generado ===');
   console.log(JSON.stringify(generarPayloadPago(), null, 2));
 
   if (!isOpen) return null;
-
-
-    const getPassengerLabel = (index: number): string => {
-    // Verificar si hay un titular que viaja (es_titular en el array de pasajeros de la reserva)
-    const titularViaja = reservationResponse?.pasajeros?.some((p: any) => p.es_titular);
-
-    if (titularViaja) {
-      // Caso 1: El titular SÍ viaja
-      // El titular está en index 0, los demás pasajeros en 1, 2, 3...
-      if (index === 0 && titular) {
-        return `${titular.nombre} ${titular.apellido} (Titular)`;
-      }
-
-      // Para los demás pasajeros, usar selectedPasajerosData
-      if (selectedPasajerosData && selectedPasajerosData.length > 0) {
-        const pasajeroIndex = index - 1; // Ajustamos el índice porque el titular ocupa la posición 0
-        if (pasajeroIndex >= 0 && pasajeroIndex < selectedPasajerosData.length) {
-          const pasajero = selectedPasajerosData[pasajeroIndex];
-          return `${pasajero.nombre} ${pasajero.apellido}`;
-        }
-      }
-    } else {
-      // Caso 2: El titular NO viaja
-      // Todos los pasajeros vienen de selectedPasajerosData (sin titular)
-      if (selectedPasajerosData && selectedPasajerosData.length > 0) {
-        if (index >= 0 && index < selectedPasajerosData.length) {
-          const pasajero = selectedPasajerosData[index];
-          return `${pasajero.nombre} ${pasajero.apellido}`;
-        }
-      }
-    }
-
-    // Fallback si no hay datos - pasajero por asignar
-    return `Pasajero ${index + 1} (Por asignar)`;
-  }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -318,7 +238,7 @@ export default function PagoSeniaModal({
                             <p className="font-semibold">Pago de Seña</p>
                             <p className="text-sm text-gray-600">
                               {/* Pagar seña mínima de ${data.totalDeposit.toLocaleString("es-AR")} (distribuida por pasajero) */}
-                              Pagar seña mínima de {formatearSeparadorMiles.format(seniaPorPersona * cantidadActualPasajeros)} (distribuida por pasajero)
+                              Pagar seña mínima de {formatearSeparadorMiles.format(totalDepositRequired)} (distribuida por pasajero)
                             </p>
                           </div>
                         </Label>
@@ -339,7 +259,7 @@ export default function PagoSeniaModal({
                           <div>
                             <p className="font-semibold">Pago Total</p>
                             <p className="text-sm text-gray-600">
-                              Pagar el monto completo de {formatearSeparadorMiles.format(precioFinalPorPersona * cantidadActualPasajeros)}
+                              Pagar el monto completo de {formatearSeparadorMiles.format(montoTotalBloqueos)}
                             </p>
                           </div>
                         </Label>
@@ -355,32 +275,9 @@ export default function PagoSeniaModal({
                       </div>
 
                       <p className="text-sm text-gray-600 mb-4">
-                        Cada pasajero debe pagar un mínimo de <strong>{formatearSeparadorMiles.format(seniaPorPersona)}</strong>,
+                        Cada pasajero debe pagar un mínimo de <strong>{formatearSeparadorMiles.format(totalDepositRequired)}</strong>,
                         pero puede señar más si lo desea.
                       </p>
-
-                      <div className="space-y-3">
-                        {Array.from({ length: cantidadActualPasajeros }).map((_, index) => (
-                          <div key={index} className="flex items-center gap-4 bg-white rounded-lg p-4 border">
-                            <Label className="font-medium min-w-[120px]">
-                              {getPassengerLabel(index)}:
-                            </Label>
-                            <div className="flex-1 flex items-center gap-2">
-                              <span className="text-gray-600">$</span>
-                              <Input
-                                type="number"
-                                min={seniaPorPersona}
-                                value={passengerDeposits[index]}
-                                onChange={(e) => handlePassengerDepositChange(index, e.target.value)}
-                                className="flex-1"
-                              />
-                            </div>
-                            {Number(passengerDeposits[index] || 0) < seniaPorPersona && (
-                              <span className="text-red-600 text-sm">Mínimo: {formatearSeparadorMiles.format(seniaPorPersona)}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
 
                       <div className="border-t border-blue-200 pt-4 mt-4 space-y-2">
                         <div className="flex justify-between items-center text-gray-700">
@@ -391,23 +288,17 @@ export default function PagoSeniaModal({
                         <div className="flex justify-between items-center">
                           <span className="text-xl font-bold">Total a Pagar:</span>
                           <span
-                            className={`text-3xl font-bold ${totalDepositAmount >= totalDepositRequired ? "text-green-600" : "text-red-600"}`}
+                            className="text-3xl font-bold text-green-600"
                           >
-                            {formatearSeparadorMiles.format(totalDepositAmount)}
+                            {formatearSeparadorMiles.format(montoInicialAAbonarTotal)}
                           </span>
                         </div>
 
-                        {!isValidDeposit && (
-                          <p className="text-red-600 text-sm flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4" />
-                            Todos los pasajeros deben pagar al menos el mínimo requerido
-                          </p>
-                        )}
                       </div>
 
                       <div className="text-sm text-gray-600 mt-4 bg-white rounded p-3">
-                        <p>Precio total del paquete: {formatearSeparadorMiles.format(precioFinalPorPersona * cantidadActualPasajeros)}</p>
-                        <p>Saldo restante: {formatearSeparadorMiles.format((precioFinalPorPersona * cantidadActualPasajeros) - totalDepositAmount)}</p>
+                        <p>Precio total del paquete: {formatearSeparadorMiles.format(montoTotalBloqueos)}</p>
+                        <p>Saldo restante: {formatearSeparadorMiles.format(montoTotalBloqueos - montoInicialAAbonarTotal)}</p>
                       </div>
                     </div>
                   ) : (
@@ -424,7 +315,7 @@ export default function PagoSeniaModal({
                       <div className="bg-white rounded-lg p-6 border-2 border-green-300">
                         <div className="flex justify-between items-center mb-4">
                           <span className="text-lg font-semibold">Monto Total:</span>
-                          <span className="text-4xl font-bold text-green-600">{formatearSeparadorMiles.format(precioFinalPorPersona * cantidadActualPasajeros)}</span>
+                          <span className="text-4xl font-bold text-green-600">{formatearSeparadorMiles.format(montoTotalBloqueos)}</span>
                         </div>
 
                         <div className="text-sm text-gray-600 space-y-1 bg-green-50 rounded p-3">
@@ -520,19 +411,18 @@ export default function PagoSeniaModal({
                                     <p className="font-medium text-gray-900">Disponible inmediatamente</p>
                                     <p className="mt-1 text-gray-600">
                                       Esta factura se puede generar al momento de crear la reserva o inmediatamente después, abonando
-                                      únicamente la seña de sadsd
-                                      {/* ${minimumDeposit.toLocaleString()}. */}
+                                      únicamente la seña de {formatearSeparadorMiles.format(montoInicialAAbonarTotal)}
                                     </p>
                                     <div className="mt-2 space-y-1 text-xs text-gray-600">
-                                      <p>• Monto facturado: $123123
-                                        {/* {totalPrice.toLocaleString()} */}
-                                        </p>
-                                      <p>• Seña requerida: $12312
-                                        {/* {minimumDeposit.toLocaleString()} */}
-                                        </p>
-                                      <p>• Saldo pendiente: $312321
-                                        {/* {remainingBalance.toLocaleString()} */}
-                                        </p>
+                                      <p>• Monto facturado: 
+                                        {formatearSeparadorMiles.format(montoTotalBloqueos)}
+                                      </p>
+                                      <p>• Seña por persona requerida: 
+                                        {formatearSeparadorMiles.format(seniaPorPersona)}
+                                      </p>
+                                      <p>
+                                        • Saldo pendiente: {formatearSeparadorMiles.format(montoTotalBloqueos - montoInicialAAbonarTotal)}
+                                      </p>
                                     </div>
                                   </div>
                                 </div>
