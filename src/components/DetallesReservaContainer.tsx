@@ -2,7 +2,8 @@
 import { formatearFecha, formatearSeparadorMiles, getPrimerNombreApellido } from '@/helper/formatter';
 import { getPaymentPercentage, getPaymentStatus, PAYMENT_STATUS, DOCUMENT_TYPES, RESERVATION_STATES } from '@/types/reservas';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Loader2Icon, Mail, Package, Phone, RefreshCcwIcon, Star, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users, XCircle } from 'lucide-react';
+import { AlertCircle, Baby, Building, Calendar, CheckCircle, Clock, CreditCard, Crown, DollarSign, Download, FileText, Globe, Loader2, Loader2Icon, Mail, Package, Phone, RefreshCcwIcon, Ticket, User, UserCheck, UserCheck2, UserPlus2, Users, XCircle } from 'lucide-react';
+import { HotelEstrellas } from "@/components/HotelEstrellas";
 import { fetchReservaDetallesById } from './utils/httpReservas';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -159,21 +160,6 @@ const DetallesReservaContainer: React.FC<DetallesReservaContainerProps> = ({
         }
     }, [dataDetalleResp?.califica_cancelacion_automatica, reservaCancelada, isCancelarReservaModalOpen, cancelacionAutomaticaProcesada]);
 
-    const renderStars = (rating: number) => {
-        return (
-            <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }, (_, index) => (
-                <Star
-                    key={index}
-                    className={`h-3 w-3 ${
-                    index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                    }`}
-                />
-                ))}
-                <span className="ml-1 text-sm text-gray-600">({rating})</span>
-            </div>
-        );
-    };
 
     const paymentStatus = getPaymentStatus(dataDetalleResp);
     const paymentProgress = getPaymentPercentage(dataDetalleResp);
@@ -1211,7 +1197,7 @@ return   <>
                                     </h4>
                                     <div className="flex items-center space-x-1">
                                     <span className="text-sm text-gray-500 ml-1">
-                                        {renderStars(dataDetalleResp.hotel.estrellas)}
+                                        {/* <HotelEstrellas rating={dataDetalleResp.hotel.estrellas} /> */}
                                     </span>
                                     </div>
                                 </div>
