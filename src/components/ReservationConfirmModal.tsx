@@ -1,6 +1,7 @@
 import type { Moneda } from '@/types/reservas';
-import { X, Calendar, Hotel, Users, BedDouble, CheckCircle2, Star, Loader2Icon } from 'lucide-react';
+import { X, Calendar, Users, CheckCircle2, Loader2Icon } from 'lucide-react';
 import { Button } from './ui/button';
+import { IoCash } from 'react-icons/io5';
 
 interface ReservationData {
   package: string;
@@ -8,14 +9,9 @@ interface ReservationData {
   departureDate: string;
   returnDate: string;
   numberOfPeople: number;
-  hotel: string;
-  hotelRating: number;
-  roomType: string;
   servicesIncluded: number;
-  deposit: number;
-  depositPerPerson: number;
-  totalPrice: number;
-  pricePerPerson: number;
+  depositPerPerson: string;
+  totalPrice: string;
   currency: Moneda;
 }
 
@@ -36,28 +32,6 @@ export default function ReservationConfirmModal({
 }: ReservationConfirmModalProps) {
   if (!isOpen) return null;
 
-
-  // :19:40.846	      
-  // {
-  //   package: 'Rio Aereo Flexibble x5',
-  //   duration: '7 días',
-  //   departureDate: '25/10/2025 00:00',
-  //   returnDate: '01/11/2025 00:00',
-  //   numberOfPeople: 2,
-  //   hotel: '',
-  //   hotelRating: 4,
-  //   roomType: 'doble',
-  //   servicesIncluded: 0,
-  //   deposit: 440,
-  //   depositPerPerson: 220,
-  //   totalPrice: 2600,
-  //   pricePerPerson: 1300,
-  //   currency: { id: 2, nombre: 'Dolar', simbolo: '$', codigo: 'USD' }
-  // }
-
-  console.log(reservationData)
-
-
   // Función para extraer solo la fecha (sin hora)
   const extractDate = (dateString: string) => {
     if (!dateString) return '';
@@ -66,21 +40,6 @@ export default function ReservationConfirmModal({
   };
 
 
-  const renderStars = (rating: number) => {
-        return (
-          <div className="flex items-center gap-1">
-            {Array.from({ length: 5 }, (_, index) => (
-              <Star
-                key={index}
-                className={`h-3 w-3 ${
-                  index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                }`}
-              />
-            ))}
-            <span className="ml-1 text-sm text-gray-600">({rating})</span>
-          </div>
-        );
-      };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -114,7 +73,7 @@ export default function ReservationConfirmModal({
               </div>
               <div className="text-right">
                 {/* <p className="text-xs text-gray-500 mb-1">{reservationData.currency} Dólar</p> */}
-                <p className="text-xs text-gray-500 mb-1">{reservationData.currency.simbolo} Dólar</p>
+                <p className="text-xs text-gray-500 mb-1">{reservationData.currency.simbolo} {reservationData.currency.nombre}</p>
               </div>
             </div>
           </div>
@@ -174,20 +133,17 @@ export default function ReservationConfirmModal({
           <div className="border border-gray-200 rounded-lg p-5">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-amber-100 p-2 rounded-lg">
-                <Hotel className="w-5 h-5 text-amber-600" />
+                <IoCash className="w-5 h-5 text-amber-600" />
               </div>
-              <h4 className="font-semibold text-gray-900">Alojamiento</h4>
+              <h4 className="font-semibold text-gray-900">Monto de pagos</h4>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
+              {/* <div>
                 <span className="text-gray-600">Hotel:</span>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="font-medium text-gray-900">{reservationData.hotel}</span>
                   <div className="flex">
-                    {/* {[...Array(reservationData.hotelRating)].map((_, i) => (
-                      <span key={i} className="text-amber-400 text-xs">★</span>
-                    ))} */}
-                    {renderStars(reservationData.hotelRating)}
+                    <HotelEstrellas rating={reservationData.hotelRating} />
                   </div>
                 </div>
               </div>
@@ -197,9 +153,17 @@ export default function ReservationConfirmModal({
                   <BedDouble className="w-4 h-4 text-gray-400" />
                   <span className="font-medium text-gray-900 capitalize">
                     {reservationData.roomType}
-                    {/* jrtjrthr */}
                   </span>
                 </div>
+              </div> */}
+              <div>
+                <p className="text-[12px] text-gray-400">Seña mínima</p>
+                <p className="text-[14px] font-semibold text-blue-600 mt-0.5">{reservationData?.depositPerPerson}</p>
+                <p className="text-[12px] text-gray-400">Por persona</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[12px] text-gray-400">Total</p>
+                <p className="text-[17px] font-bold text-gray-900 mt-0.5">{reservationData?.totalPrice}</p>
               </div>
             </div>
           </div>
