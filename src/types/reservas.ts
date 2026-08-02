@@ -346,3 +346,70 @@ export interface CancelarReservaResponse {
     facturas_afectadas: number;
   };
 }
+
+
+export interface BloqueoData{
+   habitacion_id: number,
+   cantidad: number,
+   capacidad: number
+}
+
+export interface HotelReserva {
+  habitaciones: HabitacionHotel[];
+  id: string | number;
+  nombre: string;
+  ciudad_nombre: string;
+  pais_nombre: string;
+  descripcion: string;
+  estrellas: number;
+  activo: boolean;
+  direccion: string;
+  ciudad: number;
+  pais_id: number;
+  cadena: string | null;
+  servicios: number[],
+  servicios_detalle: ServicioDetalle[]
+  fecha_creacion: string,
+  fecha_modificacion: string
+}
+
+
+export interface HabitacionHotel{
+  id: number;
+  hotel: number;
+  tipo_habitacion: number;
+  tipo_habitacion_nombre: string;
+  capacidad: number;
+  precio_noche: number | null;
+  moneda: number | null;
+  moneda_nombre: string | null;
+  moneda_simbolo: string | null;
+  moneda_codigo: string | null;
+  servicios: number[];
+  cupo: number;
+  precio_calculado: PrecioCalculado;
+  activo: boolean;
+  fecha_creacion: string; // Formato ISO 8601 con zona horaria
+  fecha_modificacion: string;
+}
+
+
+export interface PrecioCalculado {
+  noches: number;
+  precio_catalogo: string;
+  precio_origen: string;
+  comision_porcentaje: number | null;
+  factor_aplicado: string;
+  precio_venta_final: string;
+  precio_moneda_alternativa: PrecioMonedaAlternativa
+}
+
+interface PrecioMonedaAlternativa {
+  moneda: string;
+  precio_venta_final: string;
+  cotizacion: string;
+  fecha_cotizacion: string;
+}interface ServicioDetalle {
+  id: number;
+  nombre: string;
+}
