@@ -34,7 +34,7 @@ export interface MonedaAlternativaCotizada {
 
 interface BloqueoHabitacionesContainerProps {
   isLoading?: boolean;
-  handleAumentarBloqueo: (habitacionId: number) => void
+  handleAumentarBloqueo: (habitacionId: number, capacidad: number) => void
   handleDisminuirBloqueo: (habitacionId: number) => void
 }
 
@@ -44,10 +44,8 @@ const BloqueoHabitacionesContainer: FC<BloqueoHabitacionesContainerProps> = ({
     handleDisminuirBloqueo,
     isLoading = false,
 }) => {
-  const { bloqueoData, hotelesPorSalida, montoTotalBloqueos} = useBloqueoHabitacionContext();
+  const { bloqueoData, hotelesPorSalida } = useBloqueoHabitacionContext();
 
-
-  console.log('montoTotalBloqueos: ', montoTotalBloqueos)
 
   const getStyleCuposDisponiblePorHabitacion = (cupos: number) => {
     if (cupos === 0) return "bg-red-600 text-white text-red-600 font-semibold rounded-xl px-2 py-0";
@@ -114,7 +112,17 @@ const BloqueoHabitacionesContainer: FC<BloqueoHabitacionesContainerProps> = ({
                 </AccordionTrigger>
                 <AccordionContent className="border-t border-gray-100">
                   {hotel.habitaciones.map((habitacion: HabitacionHotel) => {
-                    const cantidadBloqueada = bloqueoData.find(b => b.habitacion_id.toString() === habitacion.id.toString())?.cantidad ?? 0;
+                    // const capacidad = bloqueoData.find(b => b.habitacion_id.toString() === habitacion.id.toString())?.capacidad ?? 0;
+                    const bloqueo = bloqueoData.find(b => b.habitacion_id.toString() === habitacion.id.toString()) ?? null;
+
+                    let capacidad = 0;
+                    let cantidadBloqueada = 0;
+
+                    if(bloqueo){
+                      capacidad = bloqueo.capacidad;
+                      cantidadBloqueada = bloqueo.cantidad
+                    }
+                    
                     
                     return (<div key={habitacion.id} className={`px-5 py-4 border-b border-gray-100 overflow-x-auto`}>
                           <div className="flex items-center justify-between overflow-x-auto">
@@ -175,7 +183,7 @@ const BloqueoHabitacionesContainer: FC<BloqueoHabitacionesContainerProps> = ({
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => handleAumentarBloqueo(habitacion.id)}
+                                    onClick={() => handleAumentarBloqueo(habitacion.id, habitacion.capacidad)}
                                     disabled={cantidadBloqueada >= habitacion.cupo}
                                     className="cursor-pointer w-8 h-8 ml-4 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                   >
@@ -186,7 +194,7 @@ const BloqueoHabitacionesContainer: FC<BloqueoHabitacionesContainerProps> = ({
                               {/* {isSelected && ( */}
                                 <div className="text-sm text-gray-700">
                                   Subtotal: <span className="font-semibold text-gray-900">
-                                    {formatearSeparadorMiles.format(cantidadBloqueada * parseFloat(habitacion.precio_calculado.precio_venta_final))}
+                                    {formatearSeparadorMiles.format((cantidadBloqueada * capacidad) * parseFloat(habitacion.precio_calculado.precio_venta_final))}
                                   </span>
                                 </div>
                               {/* )} */}
